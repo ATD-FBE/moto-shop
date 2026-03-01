@@ -63,7 +63,7 @@ const TrackedImage = forwardRef((props, ref) => {
         <div className={cn('tracked-image-container', className)}>
             <FadeLoader
                 className={cn('tracked-image-loader-spinner', { 'visible': hasStarted && !isLoaded })}
-                color="rgba(138, 210, 250, 1)"
+                color="rgba(115, 200, 248, 1)"
                 height={15}
                 width={4}
                 radius={2}

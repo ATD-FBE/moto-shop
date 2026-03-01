@@ -3140,19 +3140,20 @@ mark.highlighted-text {
         height: 100%;
         background-color: $background-color-menu;
 
-        .main-title-background-image {
+        .main-title-background-image.tracked-image-container {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            inset: 0;
             opacity: 50%;
+
+            .tracked-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
         }
         h1 {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
 
             a {
                 height: 100%;
@@ -3564,38 +3565,39 @@ main {
         position: relative;
         width: 100%;
         max-width: #{$total-w}px; // Ширина картинки + границы
-        aspect-ratio: #{$total-w} / #{$total-h}; // Резервирование места (картинка + границы)
+        aspect-ratio: #{$total-w} / #{$total-h}; // Резервирование места для лоадера (картинка + границы)
         border: #{$border-thickness}px solid $color-main-dark-inactive;
         background-color: $color-main-light;
         overflow: hidden;
 
-        .home-banner-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            vertical-align: middle;
+        .home-banner-image.tracked-image-container {
+            .tracked-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
         }
 
         .home-hero-text {
             position: absolute;
             right: 0;
-            top: 18%;
+            top: 50%;
             padding-right: 20px;
             color: $color-main-dark;
             font-size: 12pt;
             font-weight: bold;
             font-style: italic;
             text-align: right;
+            transform: translate(35px, -50%);
             opacity: 0;
-            transform: translateX(30px);
             transition:
-                opacity 0.5s ease-out,
-                transform 0.5s ease-out;
+                opacity 0.55s ease-out,
+                transform 0.55s ease-out;
             pointer-events: none;
 
             &.visible {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translate(0, -50%);
                 pointer-events: auto;
             }
 
@@ -3739,11 +3741,15 @@ main {
         font-size: 16pt;
         text-align: justify;
 
-        .about-shop-image {
+        .about-shop-image.tracked-image-container {
+            width: 464px;
             max-width: 50%;
+            aspect-ratio: 464 / 309; // Резервирование места для лоадера
             float: left;
             margin: 0 16px 4px 0;
+            background-color: $color-main-light;
         }
+        
         ul.no-list-markers {
             list-style-type: none;
         }
@@ -3927,6 +3933,7 @@ main {
                         margin-bottom: $main-content-spacing;
                         max-width: 100%;
                         max-height: 250px;
+                        aspect-ratio: 250 / 250; // Резервирование места для лоадера по высоте
                     }
                     .promo-description {
                         margin-bottom: calc($main-content-spacing * 2);
@@ -8203,7 +8210,6 @@ main {
     .home-page {
         .home-hero {
             .home-hero-text {
-                top: 20%;
                 padding-right: 12px;
                 font-size: 11pt;
         
@@ -8296,7 +8302,6 @@ main {
     .home-page {
         .home-hero {
             .home-hero-text {
-                top: 20%;
                 padding-right: 8px;
                 font-size: 10pt;
         
@@ -8525,7 +8530,6 @@ main {
     .home-page {
         .home-hero {
             .home-hero-text {
-                top: 10%;
                 padding-right: 6px;
                 font-size: 10pt;
                 font-weight: normal;
@@ -8554,6 +8558,10 @@ main {
                 }
             }
         }
+    }
+
+    .about-shop-page {
+        width: 100%;
     }
 
     .product-details-page {
@@ -8916,6 +8924,20 @@ main {
     }
 }
 
+@media (max-width: 600px) {
+    .home-page {
+        .home-hero {
+            .home-hero-text {
+                p {
+                    &:not(:last-child) {
+                        margin-bottom: 4px;
+                    }
+                }
+            }
+        }
+    }
+}
+
 @media (max-width: 540px) {
     $order-content-spacing: 6px;
 
@@ -9121,7 +9143,6 @@ main {
 
         .home-hero {
             .home-hero-text {
-                top: 38%;
                 padding-right: 10px;
                 font-size: 14pt;
                 font-weight: bold;
@@ -9146,16 +9167,20 @@ main {
     }
 
     .about-shop-page {
-        width: 100%;
-    
         .about-shop-main {
             font-size: 14pt;
 
-            .about-shop-image {
+            .about-shop-image.tracked-image-container {
                 width: 100%;
                 max-width: none;
                 margin: 0 0 12px 0;
                 float: none;
+
+                .tracked-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
             }
         }
     }
@@ -9644,7 +9669,6 @@ main {
     .home-page {
         .home-hero {
             .home-hero-text {
-                top: 38%;
                 padding-right: 6px;
                 font-size: 11pt;
             }
