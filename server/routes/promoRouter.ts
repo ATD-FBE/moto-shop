@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import config from '../config/config.js';
 import { PROMO_STORAGE_PATH } from '../config/paths.js';
 import createMulterConfig from '../utils/multerConfig.js';
@@ -30,7 +30,7 @@ const uploadImage = createMulterConfig({
     maxSizeMB: MAX_PROMO_IMAGE_SIZE_MB
 });
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handlePromoListRequest);
 router.get('/:promoId', verifyAuth, verifyUser, verifyRole('admin'), handlePromoRequest);

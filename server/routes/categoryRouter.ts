@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleCategoryListRequest,
@@ -7,7 +7,7 @@ import {
     handleCategoryDeleteRequest
 } from '../controllers/categoryController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', handleCategoryListRequest);
 router.post('/', verifyAuth, verifyUser, verifyRole('admin'), handleCategoryCreateRequest);

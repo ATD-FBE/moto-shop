@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleCartItemListRequest,
@@ -10,7 +10,7 @@ import {
     handleCartClearRequest
 } from '../controllers/cartController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', verifyAuth, verifyUser, verifyRole('customer'), handleCartItemListRequest);
 router.post('/guest', handleGuestCartItemListRequest);

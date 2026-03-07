@@ -1,7 +1,7 @@
 import PdfPrinter from 'pdfmake';
 import { join } from 'path';
 import { SERVER_ROOT } from '../config/paths.js';
-import { COMPANY_DETAILS } from '../../shared/company.js';
+import { COMPANY_DETAILS } from '../../shared/company.ts';
 
 export const generateCompanyDetailsPdf = () => {
     const docDefinition = {

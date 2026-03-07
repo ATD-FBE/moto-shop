@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleAuthCheckRequest,
@@ -12,7 +12,7 @@ import {
     handleAuthCheckoutPrefsUpdateRequest
 } from '../controllers/authController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/check', verifyAuth, handleAuthCheckRequest);
 router.get('/checkout-preferences', verifyAuth, verifyUser, verifyRole('customer'), handleAuthCheckoutPrefsRequest);

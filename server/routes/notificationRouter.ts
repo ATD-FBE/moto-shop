@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleNotificationListRequest,
@@ -10,7 +10,7 @@ import {
     handleNotificationMarkAsReadRequest
 } from '../controllers/notificationController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleNotificationListRequest);
 router.get('/:notificationId', verifyAuth, verifyUser, verifyRole('admin'), handleNotificationRequest);

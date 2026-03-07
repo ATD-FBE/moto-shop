@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { COMPANY_DETAILS } from '@shared/company.js';
+import { COMPANY_DETAILS } from '@shared/company.ts';
 
 const MainFooter = forwardRef(function (_, ref) {
     const currentYear = new Date().getFullYear();

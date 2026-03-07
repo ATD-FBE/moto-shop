@@ -97,7 +97,7 @@ process.on('unhandledRejection', (reason) => {
 });
 process.on('exit', () => log.info('Process exit'));
 
-const createServer = (protocol, host) => {
+const createServer = (protocol: string, host: string) => {
     if (protocol === 'https' && ENV !== 'production') {
         const keyPath = `./certs/${host}-key.pem`;
         const certPath = `./certs/${host}.pem`;
@@ -130,7 +130,7 @@ const startServer = async () => {
             log.info(`Сервер запущен по адресу: ${PROTOCOL}://${DOMAIN}:${SERVER_PORT}`);
         });
 
-        server.on('error', (err) => {
+        server.on('error', (err: NodeJS.ErrnoException) => {
             if (err.code === 'EADDRINUSE') {
                 log.error(`Порт ${SERVER_PORT} уже испльзуется`);
             } else {
@@ -141,7 +141,7 @@ const startServer = async () => {
             process.exit(1);
         });
     } catch (err) {
-        log.error('Не удалось запустить сервер', err);
+        log.error('Не удалось запустить сервер', err instanceof Error ? err.message : err);
         process.exit(1);
     }
 };

@@ -19,7 +19,7 @@ import {
     FINANCIALS_EVENT,
     TRANSACTION_TYPE
 } from '../../shared/constants.js';
-import { COMPANY_DETAILS } from '../../shared/company.js';
+import { COMPANY_DETAILS } from '../../shared/company.ts';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
 

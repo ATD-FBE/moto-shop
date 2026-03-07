@@ -1,5 +1,41 @@
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface ICompanyDetails {
+    _id: string;
+    companyName: string;
+    shopName: string;
+    inn: string;
+    ogrn: string;
+    phone: string;
+    emails: {
+        info: string;
+        payments: string;
+        opt: string;
+    };
+    legalAddress: string;
+    displayAddress: string;
+    bank: {
+        name: string;
+        bik: string;
+        rs: string;
+        ks: string;
+    };
+}
+
+export interface IWorkingHours {
+    days: string;
+    time: string;
+    closed?: boolean;
+}
+
+/////////////////
+/// CONSTANTS ///
+/////////////////
+
 // Информация о магазине
-export const COMPANY_DETAILS = {
+export const COMPANY_DETAILS: ICompanyDetails = {
     _id: 'static',
     companyName: 'ИП Тристараев Пётр Игнатьевич',
     shopName: 'Мото-Магазин',
@@ -23,7 +59,8 @@ export const COMPANY_DETAILS = {
     }
 };
 
-export const WORKING_HOURS = [
+// График работы
+export const WORKING_HOURS: IWorkingHours[] = [
     { days: 'Пн–Пт', time: '08:00-17:00' },
     { days: 'Сб–Вс', time: 'выходной', closed: true },
 ];

@@ -1,9 +1,9 @@
-import express from 'express';
+import { Router } from 'express';
 import {
     handleCompanyDetailsPdfRequest
 } from '../controllers/companyController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/details/pdf', handleCompanyDetailsPdfRequest);
 

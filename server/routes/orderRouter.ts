@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleOrderListRequest,
@@ -21,7 +21,7 @@ import {
     handleWebhook
 } from '../controllers/order/orderFinancialsController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleOrderListRequest);
 router.get('/:orderId', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleOrderRequest);

@@ -71,8 +71,8 @@ export default {
     protocol: process.env.PROTOCOL || 'http',
     host: process.env.HOST || 'localhost',
     domain: process.env.DOMAIN || 'localhost',
-    clientPort: process.env.CLIENT_PORT || 3000,
-    serverPort: process.env.PORT || process.env.SERVER_PORT || 3001,
+    clientPort: Number(process.env.CLIENT_PORT) || 3000,
+    serverPort: Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 3001,
     jwt: {
         accessSecretKey: process.env.JWT_ACCESS_SECRET_KEY,
         refreshSecretKey: process.env.JWT_REFRESH_SECRET_KEY,

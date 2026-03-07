@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleOrderDraftRequest,
@@ -8,7 +8,7 @@ import {
     handleOrderDraftDeleteRequest
 } from '../controllers/checkoutController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.post('/:orderId/prepare', verifyAuth, verifyUser, verifyRole('customer'), handleOrderDraftRequest);
 router.post('/:orderId/confirm', verifyAuth, verifyUser, verifyRole('customer'), handleOrderDraftConfirmRequest);

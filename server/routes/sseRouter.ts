@@ -1,11 +1,11 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleSseNotificationsRequest,
     handleSseOrderManagementRequest
 } from '../controllers/sseController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/notifications', verifyAuth, verifyUser, verifyRole('customer'), handleSseNotificationsRequest);
 router.get('/order-management', verifyAuth, verifyUser, verifyRole('admin'), handleSseOrderManagementRequest);

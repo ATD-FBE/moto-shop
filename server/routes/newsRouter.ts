@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser, optionalRole
@@ -11,7 +11,7 @@ import {
     handleNewsDeleteRequest
 } from '../controllers/newsController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handleNewsListRequest);
 router.get('/:newsId', verifyAuth, verifyUser, verifyRole('admin'), handleNewsRequest);

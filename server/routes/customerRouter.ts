@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
 import {
     handleCustomerListRequest,
@@ -7,7 +7,7 @@ import {
     handleCustomerBanToggleRequest
 } from '../controllers/customerController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerListRequest);
 router.get('/:customerId/orders', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerOrderListRequest);

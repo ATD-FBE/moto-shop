@@ -43,19 +43,32 @@ export default {
     module: {
         rules: [
             {
-                test: /\.jsx?$/,
+                test: /\.(j|t)sx?$/, 
                 exclude: /(node_modules)/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-react']
+                        presets: [
+                            '@babel/preset-env', 
+                            '@babel/preset-react',
+                            '@babel/preset-typescript' 
+                        ]
                     }
                 }
             },
             {
-                test: /\.js$/,
-                include: [join(PROJECT_ROOT, 'shared')],
-                use: 'babel-loader'
+                test: /\.(j|t)sx?$/, 
+                exclude: /node_modules/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: [
+                            '@babel/preset-env',
+                            '@babel/preset-react',
+                            '@babel/preset-typescript'
+                        ]
+                    }
+                }
             },
             {
                 test: /\.scss$/,
@@ -73,7 +86,7 @@ export default {
         ]
     },
     resolve: {
-        extensions: ['.js', '.jsx'],
+        extensions: ['.js', '.jsx', '.ts', 'tsx'],
         alias: {
             '@': join(CLIENT_ROOT, 'src'),
             '@shared': join(PROJECT_ROOT, 'shared')

@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import config from '../config/config.js';
 import { PRODUCT_STORAGE_PATH } from '../config/paths.js';
 import createMulterConfig from '../utils/multerConfig.js';
@@ -22,7 +22,7 @@ import {
     SERVER_CONSTANTS
 } from '../../shared/constants.js';
 
-const { MULTER_MODE } = SERVER_CONSTANTS;
+const { MULTER_MODE } = SERVER_CONSTANTS
 
 const uploadImages = createMulterConfig({
     type: 'array',
@@ -34,7 +34,7 @@ const uploadImages = createMulterConfig({
     maxSizeMB: MAX_PRODUCT_IMAGE_SIZE_MB
 });
 
-const router = express.Router();
+const router: Router = Router();
 
 router.get('/', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handleProductListRequest);
 router.get('/:productId', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handleProductRequest);
