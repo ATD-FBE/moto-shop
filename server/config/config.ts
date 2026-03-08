@@ -8,21 +8,66 @@ const { MONGO_MODE, STORAGE_TYPE, MULTER_MODE } = SERVER_CONSTANTS;
 const environment = process.env.NODE_ENV || 'development';
 dotenv.config({ path: join(CONFIG_PATH, `.env.${environment}`) });
 
-const resolveMongoUri = () => {
+/////////////
+/// TYPES ///
+/////////////
+
+export type BucketType = 'public' | 'private';
+
+//////////////////
+/// INTERFACES ///
+//////////////////
+
+interface IStorageConfig {
+    type: typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
+    multerMode: typeof MULTER_MODE[keyof typeof MULTER_MODE]
+    bucket?: string;
+    bucketType?: BucketType;
+    accessKey?: string;
+    secretKey?: string;
+    region?: string;
+    endpoint?: string;
+}
+
+interface IAppConfig {
+    readonly env: string;
+    readonly protocol: string;
+    readonly host: string;
+    readonly domain: string;
+    readonly clientPort: number;
+    readonly serverPort: number;
+    readonly jwt: {
+        readonly accessSecretKey: string;
+        readonly refreshSecretKey: string;
+    };
+    readonly adminRegCode: string;
+    readonly databaseUrl: string;
+    readonly storage: IStorageConfig; // Тот самый интерфейс, что мы писали
+    readonly yooKassa: {
+        readonly shopId: string;
+        readonly secretKey: string;
+    };
+}
+
+/////////////////
+/// FUNCTIONS ///
+/////////////////
+
+const resolveMongoUri = (): string => {
     const mode = process.env.MONGO_MODE;
 
     if (mode === MONGO_MODE.LOCAL) {
-        return process.env.MONGO_URI_LOCAL;
+        return process.env.MONGO_URI_LOCAL!;
     }
 
     if (mode === MONGO_MODE.ATLAS) {
-        return process.env.MONGO_URI_ATLAS;
+        return process.env.MONGO_URI_ATLAS!;
     }
 
     throw new Error(`Некорректный режим MongoDB: ${mode}`);
 };
 
-const resolveStorageConfig = () => {
+const resolveStorageConfig = (): IStorageConfig => {
     const type = process.env.STORAGE_TYPE;
 
     if (type === STORAGE_TYPE.FS) {
@@ -41,12 +86,14 @@ const resolveStorageConfig = () => {
             STORAGE_S3_REGION,
             STORAGE_S3_ENDPOINT
         } = process.env;
-    
+
         if (
             !STORAGE_S3_BUCKET ||
             !STORAGE_S3_BUCKET_TYPE ||
             !STORAGE_S3_ACCESS_KEY ||
-            !STORAGE_S3_SECRET_KEY
+            !STORAGE_S3_SECRET_KEY ||
+            !STORAGE_S3_REGION ||
+            !STORAGE_S3_ENDPOINT
         ) {
             throw new Error('S3 storage выбран, но переменные окружения заданы не полностью');
         }
@@ -54,25 +101,25 @@ const resolveStorageConfig = () => {
         return {
             type: STORAGE_TYPE.S3,
             multerMode: MULTER_MODE.MEMORY,
-            bucket: STORAGE_S3_BUCKET,
-            bucketType: STORAGE_S3_BUCKET_TYPE,
-            accessKey: STORAGE_S3_ACCESS_KEY,
-            secretKey: STORAGE_S3_SECRET_KEY,
-            region: STORAGE_S3_REGION,
-            endpoint: STORAGE_S3_ENDPOINT
+            bucket: STORAGE_S3_BUCKET!,
+            bucketType: STORAGE_S3_BUCKET_TYPE!,
+            accessKey: STORAGE_S3_ACCESS_KEY!,
+            secretKey: STORAGE_S3_SECRET_KEY!,
+            region: STORAGE_S3_REGION!,
+            endpoint: STORAGE_S3_ENDPOINT!
         };
     }
 
     throw new Error(`Неизвестный тип файлового хранилища: ${type}`);
 };
 
-export default {
+const config: IAppConfig = {
     env: environment,
     protocol: process.env.PROTOCOL || 'http',
     host: process.env.HOST || 'localhost',
     domain: process.env.DOMAIN || 'localhost',
     clientPort: Number(process.env.CLIENT_PORT) || 3000,
-    serverPort: Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 3001,
+    serverPort: Number(process.env.PORT || process.env.SERVER_PORT) || 3001,
     jwt: {
         accessSecretKey: process.env.JWT_ACCESS_SECRET_KEY,
         refreshSecretKey: process.env.JWT_REFRESH_SECRET_KEY,
@@ -85,3 +132,5 @@ export default {
         secretKey: process.env.YOOKASSA_SECRET_KEY
     }
 };
+
+export default config;

@@ -71,11 +71,12 @@
         "webpack-dev-server": "^5.2.3"
     },
     "scripts": {
+        "tsc": "tsc --noEmit",
         "start": "cross-env NODE_ENV=development concurrently \"nodemon --exec tsx server/server.ts\" \"npm run dev\" \"npm run ngrok:dev\"",
         "test": "cross-env NODE_ENV=testing concurrently \"nodemon --exec tsx server/server.ts\" \"npm run dev\" \"npm run ngrok:test\"",
         "prod": "cross-env NODE_ENV=production tsx server/server.ts",
-        "dev": "webpack serve",
-        "build": "cross-env NODE_ENV=production webpack-cli",
+        "dev": "cross-env NODE_OPTIONS=\"--import tsx\" webpack serve",
+        "build": "cross-env NODE_OPTIONS=\"--import tsx\" NODE_ENV=production webpack-cli",
         "ngrok:dev": "env-cmd -f server/config/.env.development --use-shell \"cmd /c ngrok http %SERVER_PORT%\"",
         "ngrok:test": "env-cmd -f server/config/.env.testing --use-shell \"cmd /c ngrok http %HOST%:%SERVER_PORT%\""
     }

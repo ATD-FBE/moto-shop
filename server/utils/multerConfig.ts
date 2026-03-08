@@ -1,20 +1,67 @@
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
-import multer from 'multer';
+import { Request, Response, NextFunction } from 'express';
+import multer, { FileFilterCallback } from 'multer';
 import { typeCheck } from './typeValidation.js';
 import { SERVER_CONSTANTS } from '../../shared/constants.js';
 
 const { MULTER_MODE } = SERVER_CONSTANTS;
 
-const generateStorageFilename = (originalname) => `${randomUUID()}${extname(originalname)}`;
+const allowedConfigTypes = ['single', 'array', 'fields', 'any'] as const;
 
-const setFilename = (file) => {
+//////////////////
+/// INTERFACES ///
+//////////////////
+
+interface IMulterErrorContext {
+    field: string;
+    filesLimit: number;
+    maxSizeMB: number;
+    message: string;
+}
+
+interface IMulterErrorSpec {
+    type: string;
+    message: string;
+}
+
+interface IMulterField {
+    name: string;
+    maxCount?: number;
+}
+
+interface IMulterConfigArgs {
+    type: (typeof allowedConfigTypes)[number];
+    fields: 
+        | string               // Для 'single' и простого 'array'
+        | IMulterField         // Для 'array' с лимитом
+        | IMulterField[];      // Для 'fields' (массив объектов)
+    storageMode?: typeof MULTER_MODE[keyof typeof MULTER_MODE];
+    storagePath?: string | null;
+    allowedMimeTypes: string[];
+    filesLimit?: number;
+    maxSizeMB: number;
+}
+
+interface IExtendedError extends Error {
+    isMulterError?: boolean;
+    code?: string;
+    field?: string;
+}
+
+/////////////////
+/// FUNCTIONS ///
+/////////////////
+
+const generateStorageFilename = (originalname: string) => `${randomUUID()}${extname(originalname)}`;
+
+const setFilename = (file: Express.Multer.File) => {
     if (file && !file.filename) {
         file.filename = generateStorageFilename(file.originalname);
     }
 };
 
-const getMulterErrorMap = (context) => ({
+const getMulterErrorMap = (context: IMulterErrorContext): Record<string, IMulterErrorSpec> => ({
     LIMIT_UNEXPECTED_FILE: { // Возникает при превышении лимита количества файлов ОДНОГО ПОЛЯ
         type: 'unexpectedFile',
         message: `Получен неожиданный файл в поле ${context.field}`
@@ -36,15 +83,13 @@ const getMulterErrorMap = (context) => ({
 const createMulterConfig = ({
     type,
     fields,
-    filesLimit = 1,
     storageMode = MULTER_MODE.DISK,
     storagePath,
     allowedMimeTypes,
+    filesLimit = 1,
     maxSizeMB
-}) => {
+}: IMulterConfigArgs) => {
     // Проверки параметров
-    const allowedConfigTypes = ['single', 'array', 'fields', 'any'];
-
     if (!allowedConfigTypes.includes(type)) {
         throw new TypeError(`type должен быть одним из: ${allowedConfigTypes.join(', ')}`);
     }
@@ -61,11 +106,11 @@ const createMulterConfig = ({
                 !typeCheck.string(fields) &&
                 !(
                     typeCheck.object(fields) &&
-                    typeCheck.string(fields.name) &&
+                    typeCheck.string((fields as IMulterField).name) &&
                     (
-                        fields.maxCount !== undefined &&
-                        Number.isInteger(Number(fields.maxCount)) &&
-                        fields.maxCount >= 0
+                        (fields as IMulterField).maxCount !== undefined &&
+                        Number.isInteger(Number((fields as IMulterField).maxCount)) &&
+                        (fields as IMulterField).maxCount! >= 0
                     )
                 )
             ) {
@@ -77,7 +122,7 @@ const createMulterConfig = ({
         case 'fields':
             if (
                 !typeCheck.array(fields) ||
-                !fields.every(field =>
+                !(fields as IMulterField[]).every((field: IMulterField) =>
                     typeCheck.object(field) &&
                     typeCheck.string(field.name) &&
                     (
@@ -107,7 +152,7 @@ const createMulterConfig = ({
         throw new TypeError('Некорректный storageMode');
     }
 
-    if (storageMode === MULTER_MODE.DISK && (!typeCheck.string(storagePath) || storagePath.trim() === '')) {
+    if (storageMode === MULTER_MODE.DISK && (!typeCheck.string(storagePath) || storagePath!.trim() === '')) {
         throw new TypeError('storagePath должен быть непустой строкой');
     }
 
@@ -128,7 +173,7 @@ const createMulterConfig = ({
         ? multer.memoryStorage()
         : multer.diskStorage({
             destination: (req, file, cb) => {
-                cb(null, storagePath);
+                cb(null, storagePath!);
             },
             filename: (req, file, cb) => {
                 cb(null, generateStorageFilename(file.originalname));
@@ -136,16 +181,18 @@ const createMulterConfig = ({
         });
 
     // Фильтрация файлов
-    const fileFilter = (req, file, cb) => {
+    const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
         // Проверка формата файла
         const mimeSet = new Set(allowedMimeTypes);
 
         if (!mimeSet.has(file.mimetype)) {
-            const error = new Error(`Недопустимый формат файла в поле ${file.fieldname}`);
+            const error = new Error(`Недопустимый формат файла в поле ${file.fieldname}`) as IExtendedError;
+
             error.isMulterError = true;
             error.code = 'INVALID_FORMAT';
             error.field = file.fieldname;
-            return cb(error, false);
+
+            return cb(error as any, false);
         }
         
         cb(null, true);
@@ -163,17 +210,17 @@ const createMulterConfig = ({
     // Определение типа загрузки файла(-ов)
     const multerUpload = (() => {
         switch (type) {
-            case 'single': return multerConfig.single(fields);
+            case 'single': return multerConfig.single(fields as string);
             case 'array': return typeCheck.string(fields)
-                ? multerConfig.array(fields)
-                : multerConfig.array(fields.name, fields.maxCount);
-            case 'fields': return multerConfig.fields(fields);
+                ? multerConfig.array(fields as string)
+                : multerConfig.array((fields as IMulterField).name, (fields as IMulterField).maxCount);
+            case 'fields': return multerConfig.fields(fields as IMulterField[]);
             default: return multerConfig.any();
         }
     })();
 
     // Обработчик ошибок Multer
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         multerUpload(req, res, (err) => {
             if (err) {
                 const isMulterError = err instanceof multer.MulterError || err.isMulterError;

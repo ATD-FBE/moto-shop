@@ -1,8 +1,8 @@
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
+//////////////////
+/// INTERFACES ///
+//////////////////
 
-export interface ICompanyDetails {
+interface ICompanyDetails {
     _id: string;
     companyName: string;
     shopName: string;
@@ -24,7 +24,7 @@ export interface ICompanyDetails {
     };
 }
 
-export interface IWorkingHours {
+interface IWorkingHours {
     days: string;
     time: string;
     closed?: boolean;

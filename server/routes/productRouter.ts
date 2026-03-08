@@ -22,7 +22,7 @@ import {
     SERVER_CONSTANTS
 } from '../../shared/constants.js';
 
-const { MULTER_MODE } = SERVER_CONSTANTS
+const { MULTER_MODE } = SERVER_CONSTANTS;
 
 const uploadImages = createMulterConfig({
     type: 'array',

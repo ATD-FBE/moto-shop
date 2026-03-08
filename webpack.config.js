@@ -44,20 +44,6 @@ export default {
         rules: [
             {
                 test: /\.(j|t)sx?$/, 
-                exclude: /(node_modules)/,
-                use: {
-                    loader: 'babel-loader',
-                    options: {
-                        presets: [
-                            '@babel/preset-env', 
-                            '@babel/preset-react',
-                            '@babel/preset-typescript' 
-                        ]
-                    }
-                }
-            },
-            {
-                test: /\.(j|t)sx?$/, 
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
@@ -86,7 +72,11 @@ export default {
         ]
     },
     resolve: {
-        extensions: ['.js', '.jsx', '.ts', 'tsx'],
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        extensionAlias: {
+            '.js': ['.js', '.ts'],
+            '.jsx': ['.jsx', '.tsx']
+        },
         alias: {
             '@': join(CLIENT_ROOT, 'src'),
             '@shared': join(PROJECT_ROOT, 'shared')
