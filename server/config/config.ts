@@ -42,7 +42,7 @@ interface IAppConfig {
     };
     readonly adminRegCode: string;
     readonly databaseUrl: string;
-    readonly storage: IStorageConfig; // Тот самый интерфейс, что мы писали
+    readonly storage: IStorageConfig;
     readonly yooKassa: {
         readonly shopId: string;
         readonly secretKey: string;
@@ -56,61 +56,68 @@ interface IAppConfig {
 const resolveMongoUri = (): string => {
     const mode = process.env.MONGO_MODE;
 
-    if (mode === MONGO_MODE.LOCAL) {
-        return process.env.MONGO_URI_LOCAL!;
-    }
+    switch (mode) {
+        case MONGO_MODE.LOCAL:
+            const localUri = process.env.MONGO_URI_LOCAL;
+            if (!localUri) throw new Error('MONGO_URI_LOCAL не задан в переменных окружения');
+            return localUri;
 
-    if (mode === MONGO_MODE.ATLAS) {
-        return process.env.MONGO_URI_ATLAS!;
-    }
+        case MONGO_MODE.ATLAS:
+            const atlasUri = process.env.MONGO_URI_ATLAS;
+            if (!atlasUri) throw new Error('MONGO_URI_ATLAS не задан в переменных окружения');
+            return atlasUri;
 
-    throw new Error(`Некорректный режим MongoDB: ${mode}`);
+        default:
+            throw new Error(`Некорректный режим MongoDB: ${mode}`);
+    }
 };
 
 const resolveStorageConfig = (): IStorageConfig => {
     const type = process.env.STORAGE_TYPE;
 
-    if (type === STORAGE_TYPE.FS) {
-        return {
-            type: STORAGE_TYPE.FS,
-            multerMode: MULTER_MODE.DISK
-        };
-    }
+    switch (type) {
+        case STORAGE_TYPE.FS:
+            return {
+                type: STORAGE_TYPE.FS,
+                multerMode: MULTER_MODE.DISK
+            };
 
-    if (type === STORAGE_TYPE.S3) {
-        const {
-            STORAGE_S3_BUCKET,
-            STORAGE_S3_BUCKET_TYPE,
-            STORAGE_S3_ACCESS_KEY,
-            STORAGE_S3_SECRET_KEY,
-            STORAGE_S3_REGION,
-            STORAGE_S3_ENDPOINT
-        } = process.env;
-
-        if (
-            !STORAGE_S3_BUCKET ||
-            !STORAGE_S3_BUCKET_TYPE ||
-            !STORAGE_S3_ACCESS_KEY ||
-            !STORAGE_S3_SECRET_KEY ||
-            !STORAGE_S3_REGION ||
-            !STORAGE_S3_ENDPOINT
-        ) {
-            throw new Error('S3 storage выбран, но переменные окружения заданы не полностью');
-        }
+        case STORAGE_TYPE.S3: {
+            const {
+                STORAGE_S3_BUCKET,
+                STORAGE_S3_BUCKET_TYPE,
+                STORAGE_S3_ACCESS_KEY,
+                STORAGE_S3_SECRET_KEY,
+                STORAGE_S3_REGION,
+                STORAGE_S3_ENDPOINT
+            } = process.env;
     
-        return {
-            type: STORAGE_TYPE.S3,
-            multerMode: MULTER_MODE.MEMORY,
-            bucket: STORAGE_S3_BUCKET!,
-            bucketType: STORAGE_S3_BUCKET_TYPE!,
-            accessKey: STORAGE_S3_ACCESS_KEY!,
-            secretKey: STORAGE_S3_SECRET_KEY!,
-            region: STORAGE_S3_REGION!,
-            endpoint: STORAGE_S3_ENDPOINT!
-        };
-    }
+            if (
+                !STORAGE_S3_BUCKET ||
+                !STORAGE_S3_BUCKET_TYPE ||
+                !STORAGE_S3_ACCESS_KEY ||
+                !STORAGE_S3_SECRET_KEY ||
+                !STORAGE_S3_REGION ||
+                !STORAGE_S3_ENDPOINT
+            ) {
+                throw new Error('S3 storage выбран, но переменные окружения заданы не полностью');
+            }
+        
+            return {
+                type: STORAGE_TYPE.S3,
+                multerMode: MULTER_MODE.MEMORY,
+                bucket: STORAGE_S3_BUCKET!,
+                bucketType: STORAGE_S3_BUCKET_TYPE!,
+                accessKey: STORAGE_S3_ACCESS_KEY!,
+                secretKey: STORAGE_S3_SECRET_KEY!,
+                region: STORAGE_S3_REGION!,
+                endpoint: STORAGE_S3_ENDPOINT!
+            };
+        }
 
-    throw new Error(`Неизвестный тип файлового хранилища: ${type}`);
+        default:
+            throw new Error(`Неизвестный тип файлового хранилища: ${type}`);
+    }
 };
 
 const config: IAppConfig = {

@@ -17,8 +17,8 @@ declare global {
             JWT_REFRESH_SECRET_KEY: string;
             ADMIN_REG_CODE: string;
             MONGO_MODE: typeof MONGO_MODE[keyof typeof MONGO_MODE];
-            MONGO_URL_LOCAL?: string;
-            MONGO_URL_ATLAS?: string;
+            MONGO_URI_LOCAL?: string;
+            MONGO_URI_ATLAS?: string;
             STORAGE_TYPE: typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
             STORAGE_S3_BUCKET?: string;
             STORAGE_S3_BUCKET_TYPE?: BucketType;
