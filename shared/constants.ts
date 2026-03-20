@@ -2,6 +2,9 @@
 /// TYPES ///
 /////////////
 
+export type TAllowedImageMimeType = typeof ALLOWED_IMAGE_MIME_TYPES[number];
+export type TAllowedMimeType = TAllowedImageMimeType;
+
 export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
 
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
@@ -101,6 +104,7 @@ export const CUSTOMER_TABLE_ORDERS_LOAD_STEP = 2;
 export const CURRENCY_EPS = 0.05;
 
 export const USER_ROLE = {
+    SYSTEM: 'system',
     ADMIN: 'admin',
     CUSTOMER: 'customer'
 } as const;

@@ -6,12 +6,14 @@ import {
     handleCustomerDiscountUpdateRequest,
     handleCustomerBanToggleRequest
 } from '../controllers/customerController.js';
+import { USER_ROLE } from '../../shared/constants.js';
 
 const router: Router = Router();
+const { ADMIN } = USER_ROLE;
 
-router.get('/', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerListRequest);
-router.get('/:customerId/orders', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerOrderListRequest);
-router.patch('/:customerId/discount', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerDiscountUpdateRequest);
-router.patch('/:customerId/ban', verifyAuth, verifyUser, verifyRole('admin'), handleCustomerBanToggleRequest);
+router.get('/', verifyAuth, verifyUser, verifyRole(ADMIN), handleCustomerListRequest);
+router.get('/:customerId/orders', verifyAuth, verifyUser, verifyRole(ADMIN), handleCustomerOrderListRequest);
+router.patch('/:customerId/discount', verifyAuth, verifyUser, verifyRole(ADMIN), handleCustomerDiscountUpdateRequest);
+router.patch('/:customerId/ban', verifyAuth, verifyUser, verifyRole(ADMIN), handleCustomerBanToggleRequest);
 
 export default router;

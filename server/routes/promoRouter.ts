@@ -16,9 +16,11 @@ import {
 import {
     ALLOWED_IMAGE_MIME_TYPES,
     MAX_PROMO_IMAGE_SIZE_MB,
+    USER_ROLE,
     SERVER_CONSTANTS
 } from '../../shared/constants.js';
 
+const { ADMIN, CUSTOMER } = USER_ROLE;
 const { MULTER_MODE } = SERVER_CONSTANTS;
 
 const uploadImage = createMulterConfig({
@@ -32,10 +34,10 @@ const uploadImage = createMulterConfig({
 
 const router: Router = Router();
 
-router.get('/', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handlePromoListRequest);
-router.get('/:promoId', verifyAuth, verifyUser, verifyRole('admin'), handlePromoRequest);
-router.post('/', verifyAuth, verifyUser, verifyRole('admin'), uploadImage, handlePromoCreateRequest);
-router.put('/:promoId', verifyAuth, verifyUser, verifyRole('admin'), uploadImage, handlePromoUpdateRequest);
-router.delete('/:promoId', verifyAuth, verifyUser, verifyRole('admin'), handlePromoDeleteRequest);
+router.get('/', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handlePromoListRequest);
+router.get('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoRequest);
+router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoCreateRequest);
+router.put('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoUpdateRequest);
+router.delete('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoDeleteRequest);
 
 export default router;

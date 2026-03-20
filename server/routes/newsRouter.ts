@@ -10,13 +10,15 @@ import {
     handleNewsUpdateRequest,
     handleNewsDeleteRequest
 } from '../controllers/newsController.js';
+import { USER_ROLE } from '../../shared/constants.js';
 
 const router: Router = Router();
+const { ADMIN, CUSTOMER } = USER_ROLE;
 
-router.get('/', optionalAuth, optionalUser, optionalRole('admin', 'customer'), handleNewsListRequest);
-router.get('/:newsId', verifyAuth, verifyUser, verifyRole('admin'), handleNewsRequest);
-router.post('/', verifyAuth, verifyUser, verifyRole('admin'), handleNewsCreateRequest);
-router.put('/:newsId', verifyAuth, verifyUser, verifyRole('admin'), handleNewsUpdateRequest);
-router.delete('/:newsId', verifyAuth, verifyUser, verifyRole('admin'), handleNewsDeleteRequest);
+router.get('/', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handleNewsListRequest);
+router.get('/:newsId', verifyAuth, verifyUser, verifyRole(ADMIN), handleNewsRequest);
+router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), handleNewsCreateRequest);
+router.put('/:newsId', verifyAuth, verifyUser, verifyRole(ADMIN), handleNewsUpdateRequest);
+router.delete('/:newsId', verifyAuth, verifyUser, verifyRole(ADMIN), handleNewsDeleteRequest);
 
 export default router; 

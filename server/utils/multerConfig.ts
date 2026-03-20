@@ -2,8 +2,9 @@ import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
+import { TMulterMode } from '../config/config.js';
 import { typeCheck } from './typeValidation.js';
-import { SERVER_CONSTANTS } from '../../shared/constants.js';
+import { TAllowedMimeType, SERVER_CONSTANTS } from '../../shared/constants.js';
 
 const { MULTER_MODE } = SERVER_CONSTANTS;
 
@@ -31,14 +32,14 @@ interface IMulterField {
 }
 
 interface IMulterConfigArgs {
-    type: (typeof allowedConfigTypes)[number];
+    type: typeof allowedConfigTypes[number];
     fields: 
         | string               // Для 'single' и простого 'array'
         | IMulterField         // Для 'array' с лимитом
         | IMulterField[];      // Для 'fields' (массив объектов)
-    storageMode?: typeof MULTER_MODE[keyof typeof MULTER_MODE];
+    storageMode?: TMulterMode;
     storagePath?: string | null;
-    allowedMimeTypes: string[];
+    readonly allowedMimeTypes: readonly TAllowedMimeType[];
     filesLimit?: number;
     maxSizeMB: number;
 }

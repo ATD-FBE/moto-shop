@@ -20,24 +20,26 @@ import {
     handleOrderOnlineRefundsCreateRequest,
     handleWebhook
 } from '../controllers/order/orderFinancialsController.js';
+import { USER_ROLE } from '../../shared/constants.js';
 
 const router: Router = Router();
+const { ADMIN, CUSTOMER } = USER_ROLE;
 
-router.get('/', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleOrderListRequest);
-router.get('/:orderId', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleOrderRequest);
-router.get('/:orderId/items/availability', verifyAuth, verifyUser, verifyRole('admin'), handleOrderItemsAvailabilityRequest);
-router.get('/:orderId/financials/invoice/pdf', verifyAuth, verifyUser, verifyRole('admin', 'customer'), handleOrderInvoicePdfRequest);
-router.get('/:orderId/financials/remaining', verifyAuth, verifyUser, verifyRole('customer'), handleOrderRemainingAmountRequest);
+router.get('/', verifyAuth, verifyUser, verifyRole(ADMIN, CUSTOMER), handleOrderListRequest);
+router.get('/:orderId', verifyAuth, verifyUser, verifyRole(ADMIN, CUSTOMER), handleOrderRequest);
+router.get('/:orderId/items/availability', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderItemsAvailabilityRequest);
+router.get('/:orderId/financials/invoice/pdf', verifyAuth, verifyUser, verifyRole(ADMIN, CUSTOMER), handleOrderInvoicePdfRequest);
+router.get('/:orderId/financials/remaining', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleOrderRemainingAmountRequest);
 router.post('/webhook', handleWebhook);
-router.post('/:orderId/repeat', verifyAuth, verifyUser, verifyRole('customer'), handleOrderRepeatRequest);
-router.post('/:orderId/financials/payments/online', verifyAuth, verifyUser, verifyRole('customer'), handleOrderOnlinePaymentCreateRequest);
-router.post('/:orderId/financials/refunds/online/full', verifyAuth, verifyUser, verifyRole('admin'), handleOrderOnlineRefundsCreateRequest);
-router.patch('/:orderId', verifyAuth, verifyUser, verifyRole('admin'), handleOrderDetailsUpdateRequest);
-router.patch('/:orderId/items', verifyAuth, verifyUser, verifyRole('admin'), handleOrderItemsUpdateRequest);
-router.patch('/:orderId/status', verifyAuth, verifyUser, verifyRole('admin'), handleOrderStatusUpdateRequest);
-router.patch('/:orderId/internal-note', verifyAuth, verifyUser, verifyRole('admin'), handleOrderInternalNoteUpdateRequest);
-router.patch('/:orderId/financials/events/:eventId/void', verifyAuth, verifyUser, verifyRole('admin'), handleOrderFinancialsEventVoidRequest);
-router.patch('/:orderId/financials/payments/offline', verifyAuth, verifyUser, verifyRole('admin'), handleOrderOfflinePaymentApplyRequest);
-router.patch('/:orderId/financials/refunds/offline', verifyAuth, verifyUser, verifyRole('admin'), handleOrderOfflineRefundApplyRequest);
+router.post('/:orderId/repeat', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleOrderRepeatRequest);
+router.post('/:orderId/financials/payments/online', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleOrderOnlinePaymentCreateRequest);
+router.post('/:orderId/financials/refunds/online/full', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderOnlineRefundsCreateRequest);
+router.patch('/:orderId', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderDetailsUpdateRequest);
+router.patch('/:orderId/items', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderItemsUpdateRequest);
+router.patch('/:orderId/status', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderStatusUpdateRequest);
+router.patch('/:orderId/internal-note', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderInternalNoteUpdateRequest);
+router.patch('/:orderId/financials/events/:eventId/void', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderFinancialsEventVoidRequest);
+router.patch('/:orderId/financials/payments/offline', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderOfflinePaymentApplyRequest);
+router.patch('/:orderId/financials/refunds/offline', verifyAuth, verifyUser, verifyRole(ADMIN), handleOrderOfflineRefundApplyRequest);
 
 export default router;
