@@ -2,6 +2,8 @@
 /// TYPES ///
 /////////////
 
+export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
+
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 
 export type TProductThumbnailPresets =
@@ -87,16 +89,13 @@ interface IFinancialsEventConfig {
 export const MAX_DATE_TS = 8640000000000000;
 export const UNSORTED_CATEGORY_SLUG = 'unsorted';
 export const PROMO_ANNOUNCE_OFFSET_DAYS = 3;
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const MAX_PROMO_IMAGE_SIZE_MB = 0.5;
 export const MAX_PRODUCT_IMAGE_SIZE_MB = 1;
 export const PRODUCT_FILES_LIMIT = 20;
-export const PRODUCT_UNITS = ['ед.', 'шт.', 'пар.', 'компл.', 'наб.', 'уп.', 'пач.', 'м', 'л'];
+export const PRODUCT_UNITS = ['ед.', 'шт.', 'пар.', 'компл.', 'наб.', 'уп.', 'пач.', 'м', 'л'] as const;
 export const PRODUCT_BRAND_NEW_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
 export const PRODUCT_RESTOCK_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
-export const DISCOUNT_SOURCES = ['customer', 'product', 'none'];
-export const SEARCH_TYPES = { REGEX: 'regex', TEXT: 'text' };
-export const DEFAULT_SEARCH_TYPE = SEARCH_TYPES.REGEX;
 export const MIN_ORDER_AMOUNT = 1000;
 export const CUSTOMER_TABLE_ORDERS_LOAD_STEP = 2;
 export const CURRENCY_EPS = 0.05;
@@ -105,6 +104,19 @@ export const USER_ROLE = {
     ADMIN: 'admin',
     CUSTOMER: 'customer'
 } as const;
+
+export const DISCOUNT_SOURCE = {
+    NONE: 'none',
+    CUSTOMER: 'customer',
+    PRODUCT: 'product'
+} as const;
+
+export const SEARCH_TYPES = {
+    REGEX: 'regex',
+    TEXT: 'text'
+} as const;
+
+export const DEFAULT_SEARCH_TYPE = SEARCH_TYPES.REGEX;
 
 export const PRODUCT_THUMBNAIL_PRESETS = {
     small: 80,

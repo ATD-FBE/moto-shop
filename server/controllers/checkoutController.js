@@ -25,7 +25,7 @@ import { parseValidationErrors } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
 import { calculateOrderTotals } from '../../shared/calculations.js';
 import {
-    DISCOUNT_SOURCES,
+    DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
     ORDER_MODEL_TYPE,
     DELIVERY_METHOD,
@@ -227,7 +227,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             appliedDiscountSnapshot < 0 ||
             appliedDiscountSnapshot > 100 ||
             !typeCheck.string(appliedDiscountSourceSnapshot) ||
-            !DISCOUNT_SOURCES.includes(appliedDiscountSourceSnapshot)
+            !Object.values(DISCOUNT_SOURCE).includes(appliedDiscountSourceSnapshot)
         ) {
             return safeSendResponse(res, 400, {
                 message: 'Неверный формат данных: cartProductSnapshots'

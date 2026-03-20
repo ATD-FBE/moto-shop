@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { validationRules } from '../../../../shared/fieldRules.js';
-import { DISCOUNT_SOURCES, PRODUCT_UNITS } from '../../../../shared/constants.js';
+import { DISCOUNT_SOURCE, PRODUCT_UNITS } from '../../../../shared/constants.js';
 
 const { Schema } = mongoose;
 
@@ -37,7 +37,7 @@ export const DraftOrderItemSchema = new Schema({
     },
     appliedDiscountSourceSnapshot: {
         type: String,
-        enum: DISCOUNT_SOURCES,
+        enum: Object.values(DISCOUNT_SOURCE),
         required: true
     }
 }, {
@@ -81,7 +81,7 @@ export const FinalOrderItemSchema = new Schema({
     },
     appliedDiscountSource: {
         type: String,
-        enum: DISCOUNT_SOURCES,
+        enum: Object.values(DISCOUNT_SOURCE),
         required: true
     },
     finalUnitPrice: { // originalUnitPrice * (1 - appliedDiscount / 100)

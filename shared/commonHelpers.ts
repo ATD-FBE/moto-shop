@@ -1,4 +1,4 @@
-import { CURRENCY_EPS } from './constants.js';
+import { TDiscountSource, DISCOUNT_SOURCE, CURRENCY_EPS } from './constants.js';
 import { IFinancialsEventEntry }  from './types/index.js';
 
 //////////////////
@@ -7,7 +7,7 @@ import { IFinancialsEventEntry }  from './types/index.js';
 
 interface IAppliedDiscount {
     appliedDiscount: number;
-    appliedDiscountSource: 'none' | 'product' | 'customer';
+    appliedDiscountSource: TDiscountSource;
 }
 
 interface IDotNotationPatch {
@@ -73,8 +73,8 @@ export const getAppliedDiscountData = (
 ): IAppliedDiscount => {
     const effectiveDiscount = Math.max(productDiscount, customerDiscount);
     const discountSource = !effectiveDiscount
-        ? 'none'
-        : productDiscount > customerDiscount ? 'product' : 'customer';
+        ? DISCOUNT_SOURCE.NONE
+        : productDiscount > customerDiscount ? DISCOUNT_SOURCE.PRODUCT : DISCOUNT_SOURCE.CUSTOMER;
         
     return {
         appliedDiscount: effectiveDiscount,
