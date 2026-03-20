@@ -205,7 +205,7 @@ export default function OrderDetailsBase({
             />
         </div>
     );
-};
+}
 
 function OrdersDetailsLoadStatus({ loadStatus, reloadOrderDetails }) {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {

@@ -19,4 +19,4 @@ export default function CartBadge() {
             </span>
         </div>
     );
-};
+}

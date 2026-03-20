@@ -14,4 +14,4 @@ export default function RouteGuard({ access }) {
             </ProtectedRoute>
         </GlobalRedirect>
     );
-};
+}

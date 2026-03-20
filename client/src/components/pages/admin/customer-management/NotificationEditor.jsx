@@ -474,4 +474,4 @@ export default function NotificationEditor({
             </form>
         </div>
     );
-};
+}

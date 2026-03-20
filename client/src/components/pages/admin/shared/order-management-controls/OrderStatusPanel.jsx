@@ -82,4 +82,4 @@ export default function OrderStatusPanel({
             </div>
         </div>
     );
-};
+}

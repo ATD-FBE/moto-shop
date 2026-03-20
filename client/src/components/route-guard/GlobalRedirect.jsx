@@ -17,4 +17,4 @@ export default function GlobalRedirect({ children }) {
     }
 
     return children;
-};
+}

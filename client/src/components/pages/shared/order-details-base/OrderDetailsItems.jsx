@@ -431,4 +431,4 @@ export default function OrderDetailsItems({
             </div>
         </div>
     );
-};
+}

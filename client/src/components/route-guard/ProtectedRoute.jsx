@@ -47,4 +47,4 @@ export default function ProtectedRoute({ access, children }) {
         default:
             return children;
     }
-};
+}

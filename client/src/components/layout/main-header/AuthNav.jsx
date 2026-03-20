@@ -54,4 +54,4 @@ export default function AuthNav({ userRole, userName, navigationMap, setActiveCl
             </nav>
         </div>
     );
-};
+}

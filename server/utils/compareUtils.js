@@ -1,6 +1,6 @@
 import { isObject } from './normalizeUtils.js';
 
-export function isArrayContentDifferent(arr1, arr2, options = { orderMatters: false }) {
+export const isArrayContentDifferent = (arr1, arr2, options = { orderMatters: false }) => {
     if (!Array.isArray(arr1) || !Array.isArray(arr2)) return true;
     if (arr1.length !== arr2.length) return true;
 

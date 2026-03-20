@@ -8,4 +8,4 @@ export default function safeSendResponse(res, statusCode, data = {}) {
     }
 
     res.status(statusCode).json(data);
-};
+}

@@ -66,4 +66,4 @@ export default function DropdownNav({ anchorRef, burgerMenuRef, show, children }
 
         dropdownPortalRoot
     );
-};
+}

@@ -36,4 +36,4 @@ export default function SearchControls({ placeholder = '', uiBlocked, search, se
             </button>
         </div>
     );
-};
+}

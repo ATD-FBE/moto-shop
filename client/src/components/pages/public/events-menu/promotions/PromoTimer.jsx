@@ -51,4 +51,4 @@ export default function PromoTimer({ startDate, endDate }) {
             </span>
         </p>
     );
-};
+}

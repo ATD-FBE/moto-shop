@@ -11,4 +11,4 @@ export default function SectionEditButton({ section, isFormExpanded, toggleSecti
             Редактировать
         </button>
     );
-};
+}

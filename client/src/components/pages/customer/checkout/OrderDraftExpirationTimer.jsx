@@ -68,4 +68,4 @@ export default function OrderDraftExpirationTimer({ expirationTime, isCancelled,
             </p>
         </div>
     );
-};
+}

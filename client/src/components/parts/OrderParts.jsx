@@ -49,7 +49,7 @@ export function OrderCardOverview({
             {` от ${confirmedDateTime} — ${orderSummaryDisplay}`}
         </div>
     );
-};
+}
 
 export function OrderCardInfoGrid({
     id,
@@ -159,7 +159,7 @@ export function OrderCardInfoGrid({
             </div>
         </div>
     );
-};
+}
 
 export function OrderCardStatusSummary({
     lastActivityAt,
@@ -188,7 +188,7 @@ export function OrderCardStatusSummary({
             <OrderLastFinancialsEvent lastFinancialsEventEntry={lastFinancialsEventEntry} />
         </div>
     );
-};
+}
 
 export function OrderLastFinancialsEvent({ lastFinancialsEventEntry, showDate = false }) {
     if (!lastFinancialsEventEntry) return null;
@@ -213,7 +213,7 @@ export function OrderLastFinancialsEvent({ lastFinancialsEventEntry, showDate = 
             {' руб.'}
         </p>
     );
-};
+}
 
 export function OrderInvoiceButton({ orderId }) {
     const isUnmountedRef = useRef(false);
@@ -253,7 +253,7 @@ export function OrderInvoiceButton({ orderId }) {
             📥
         </button>
     );
-};
+}
 
 export function OrderRefreshButton({
     orderId,
@@ -307,4 +307,4 @@ export function OrderRefreshButton({
             Обновить
         </button>
     );
-};
+}

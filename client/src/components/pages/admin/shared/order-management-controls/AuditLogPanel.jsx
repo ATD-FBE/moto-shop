@@ -31,4 +31,4 @@ export default function AuditLogPanel({ auditLog }) {
             </div>
         </div>
     );
-};
+}

@@ -22,4 +22,4 @@ export default function InternalNotePanel({ orderId, internalNote }) {
             </div>
         </div>
     );
-};
+}

@@ -89,4 +89,4 @@ export default function NewNotificationsAlert({
             </button>
         </div>
     );
-};
+}

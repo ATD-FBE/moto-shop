@@ -48,4 +48,4 @@ export default function SortingControls({ uiBlocked, options, sort, setSort }) {
             </div>
         </div>
     );
-};
+}

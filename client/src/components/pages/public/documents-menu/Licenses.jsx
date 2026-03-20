@@ -28,4 +28,4 @@ export default function Licenses() {
             </div>
         </div>
     );
-};
+}

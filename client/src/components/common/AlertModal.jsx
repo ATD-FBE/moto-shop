@@ -156,4 +156,4 @@ export default function AlertModal() {
         
         modalPortalRoot
     );
-};
+}

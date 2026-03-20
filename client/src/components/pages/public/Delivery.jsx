@@ -159,4 +159,4 @@ export default function Delivery() {
             </div>
         </div>
     );
-};
+}

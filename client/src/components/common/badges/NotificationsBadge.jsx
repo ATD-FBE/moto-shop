@@ -9,4 +9,4 @@ export default function NotificationsBadge() {
             <span className="badge">{unreadCount}</span>
         </div>
     ) : null;
-};
+}

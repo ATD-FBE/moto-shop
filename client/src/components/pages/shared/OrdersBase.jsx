@@ -306,7 +306,7 @@ export default function OrdersBase({
             })}
         </div>
     );
-};
+}
 
 function OrdersMain({
     loadStatus,

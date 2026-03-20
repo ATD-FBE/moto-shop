@@ -667,4 +667,4 @@ export default function CardOnlinePayment() {
             </form>
         </div>
     );
-};
+}

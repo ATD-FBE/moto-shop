@@ -34,4 +34,4 @@ export default function useMeasureMaxWidth(elements, options = {}) {
     }, [enabled, elements]);
 
     return maxWidth;
-};
+}

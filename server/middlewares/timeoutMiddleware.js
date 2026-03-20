@@ -2,18 +2,16 @@ import { SERVER_CONSTANTS } from '../../shared/constants.js';
 
 const { ERROR_SIGNALS } = SERVER_CONSTANTS;
 
-export function requestTimeout(duration) {
-    return (req, res, next) => {
-        res.setTimeout(duration, () => {
-            req.connectionTimeout = true;
+export const requestTimeout = (duration) => (req, res, next) => {
+    res.setTimeout(duration, () => {
+        req.connectionTimeout = true;
 
-            const error = new Error('Время выполнения запроса истекло');
-            error.statusCode = 408;
-            next(error);
-        });
-        
-        next();
-    };
+        const error = new Error('Время выполнения запроса истекло');
+        error.statusCode = 408;
+        next(error);
+    });
+    
+    next();
 };
 
 export const checkTimeout = (req) => {

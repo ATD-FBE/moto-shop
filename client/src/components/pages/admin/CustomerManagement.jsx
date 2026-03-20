@@ -343,4 +343,4 @@ export default function CustomerManagement() {
             />
         </div>
     );
-};
+}

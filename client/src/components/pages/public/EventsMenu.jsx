@@ -23,4 +23,4 @@ export default function EventsMenu() {
             </div>
         </div>
     );
-};
+}

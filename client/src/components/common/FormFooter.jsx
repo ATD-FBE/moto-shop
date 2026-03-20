@@ -47,4 +47,4 @@ export default function FormFooter({
             </div>
         </div>
     );
-};
+}

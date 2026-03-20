@@ -1,4 +1,3 @@
-import React from 'react';
 import { FadeLoader } from 'react-spinners';
 import cn from 'classnames';
 
@@ -17,4 +16,4 @@ export default function GlobalLoader({ visibility = true }) {
             />
         </div>
     );
-};
+}

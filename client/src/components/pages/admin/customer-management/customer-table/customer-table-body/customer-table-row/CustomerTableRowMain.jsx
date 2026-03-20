@@ -319,4 +319,4 @@ export default function CustomerTableRowMain({
             </div>
         </div>
     );
-};
+}

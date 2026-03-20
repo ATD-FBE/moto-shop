@@ -118,4 +118,4 @@ export default function CategorySelectionPanel({
             </div>
         </div>
     );
-};
+}

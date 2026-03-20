@@ -17,4 +17,4 @@ export default function BackgroundImage() {
             <div className="overlay"></div>
         </div>
     );
-};
+}

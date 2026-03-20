@@ -18,4 +18,4 @@ export default function CustomerNotifications() {
             renderNewNotificationsAlert={props => <NewNotificationsAlert {...props} />}
         />
     );
-};
+}

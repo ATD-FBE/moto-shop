@@ -91,4 +91,4 @@ export default function Collapsible({
             {children}
         </div>
     );
-};
+}

@@ -79,7 +79,7 @@ export default function ErrorLogs() {
             />
         </div>
     );
-};
+}
 
 function ErrorLogsMain({
     loadStatus,

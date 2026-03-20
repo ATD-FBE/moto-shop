@@ -37,4 +37,4 @@ export default function CheckoutSummary({ orderTotals }) {
             </div>
         </div>
     );
-};
+}

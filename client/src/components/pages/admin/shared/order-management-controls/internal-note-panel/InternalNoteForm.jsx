@@ -314,4 +314,4 @@ export default function InternalNoteForm({ orderId, internalNote }) {
             />
         </form>
     );
-};
+}

@@ -121,4 +121,4 @@ export default function SseNotifications() {
     }, [unreadNotificationsCount]);
 
     return null;
-};
+}

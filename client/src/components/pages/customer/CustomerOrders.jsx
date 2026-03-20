@@ -21,4 +21,4 @@ export default function CustomerOrders() {
             renderOrderRepeatButton={props => <OrderRepeatButton {...props} />}
         />
     );
-};
+}

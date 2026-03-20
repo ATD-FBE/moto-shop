@@ -25,4 +25,4 @@ export default function useDeviceInfo() {
     }, [dispatch]);
 
     return null;
-};
+}

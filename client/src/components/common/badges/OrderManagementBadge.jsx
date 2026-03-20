@@ -9,4 +9,4 @@ export default function OrderManagementBadge() {
             <span className="badge">{activeCount}</span>
         </div>
     ) : null;
-};
+}

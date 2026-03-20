@@ -136,4 +136,4 @@ export default function PaginationPages({
             </div>
         </div>
     );
-};
+}

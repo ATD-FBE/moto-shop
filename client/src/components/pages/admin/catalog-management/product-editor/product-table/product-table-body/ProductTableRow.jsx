@@ -49,4 +49,4 @@ export default function ProductTableRow({
             </Collapsible>
         </div>
     );
-};
+}

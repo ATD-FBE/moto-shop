@@ -203,7 +203,7 @@ export default function NotificationsBase({
             })}
         </div>
     );
-};
+}
 
 function NotificationsMain({
     loadStatus,

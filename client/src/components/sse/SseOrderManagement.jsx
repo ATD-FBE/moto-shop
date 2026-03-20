@@ -141,4 +141,4 @@ export default function SseOrderManagement() {
     }, [managedActiveOrdersCount]);
 
     return null;
-};
+}

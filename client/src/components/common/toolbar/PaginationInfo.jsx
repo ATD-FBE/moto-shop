@@ -25,4 +25,4 @@ export default function PaginationInfo({ loadStatus, page, limit, totalItems, la
             <p>{label}: {resultsInfo}</p>
         </div>
     );
-};
+}

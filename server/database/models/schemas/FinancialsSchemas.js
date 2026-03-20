@@ -1,14 +1,13 @@
 import mongoose from 'mongoose';
 import {
-    PAYMENT_METHOD_OPTIONS,
-    REFUND_METHOD_OPTIONS,
+    PAYMENT_METHOD,
+    REFUND_METHOD,
     TRANSACTION_TYPE,
     ONLINE_TRANSACTION_STATUS,
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER,
     FINANCIALS_STATE,
-    FINANCIALS_STATE_CONFIG,
-    FINANCIALS_EVENT_CONFIG
+    FINANCIALS_EVENT
 } from '../../../../shared/constants.js';
 import { validationRules } from '../../../../shared/fieldRules.js';
 
@@ -17,7 +16,7 @@ const { Schema } = mongoose;
 const baseFinancialsFields = {
     defaultPaymentMethod: {
         type: String,
-        enum: PAYMENT_METHOD_OPTIONS.map(opt => opt.value),
+        enum: Object.values(PAYMENT_METHOD),
         set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
     }
 };
@@ -110,7 +109,7 @@ export const FinalFinancialsSchema = new Schema({
     },
     state: {
         type: String,
-        enum: Object.keys(FINANCIALS_STATE_CONFIG),
+        enum: Object.values(FINANCIALS_STATE),
         default: FINANCIALS_STATE.PAID_PENDING
     },
     totalPaid: { // Агрегируемая сумма поступления всех траншей оплат
@@ -131,13 +130,13 @@ export const FinalFinancialsSchema = new Schema({
         event: {
             type: String,
             required: true,
-            enum: Object.keys(FINANCIALS_EVENT_CONFIG)
+            enum: Object.values(FINANCIALS_EVENT)
         },
         action: {
             method: {
                 type: String,
                 required: true,
-                enum: [...PAYMENT_METHOD_OPTIONS, ...REFUND_METHOD_OPTIONS].map(opt => opt.value)
+                enum: [...Object.values(PAYMENT_METHOD), ...Object.values(REFUND_METHOD)]
             },
             amount: { // Сумма транша/попытки оплаты/возврата
                 type: Number,

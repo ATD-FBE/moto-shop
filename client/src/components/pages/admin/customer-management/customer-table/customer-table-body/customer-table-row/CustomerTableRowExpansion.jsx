@@ -7,4 +7,4 @@ export default function CustomerTableRowExpansion({ ...props }) {
             <CustomerTableOrders {...props} />
         </div>
     );
-};
+}

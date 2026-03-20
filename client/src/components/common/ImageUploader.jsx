@@ -109,4 +109,4 @@ export default function ImageUploader({
             </button>
         </div>
     );
-};
+}

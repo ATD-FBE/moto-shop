@@ -550,7 +550,7 @@ export default function Cart() {
             </section>
         </div>
     );
-};
+}
 
 function CartItemList({
     cartItemRefs,

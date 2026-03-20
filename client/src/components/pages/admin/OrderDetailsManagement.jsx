@@ -28,4 +28,4 @@ export default function OrderDetailsManagement() {
             renderManagementNotes={props => <OrderManagementNotes {...props} />}
         />
     );
-};
+}

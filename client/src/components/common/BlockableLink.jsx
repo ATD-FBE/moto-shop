@@ -28,4 +28,4 @@ export default function BlockableLink({ to, children, ...props }) {
             {children}
         </Link>
     );
-};
+}

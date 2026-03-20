@@ -924,7 +924,7 @@ export default function CheckoutForm({
             />
         </form>
     );
-};
+}
 
 function OrderItems({
     orderItemList,

@@ -20,4 +20,4 @@ export default function OrderManagement() {
             renderNewManagedActiveOrdersAlert={props => <NewActiveOrdersAlert {...props} />}
         />
     );
-};
+}

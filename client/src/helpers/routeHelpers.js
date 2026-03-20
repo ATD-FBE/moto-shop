@@ -112,7 +112,7 @@ export const buildBreadcrumbMap = (routeConfig) => {
     }, {});
 };
 
-export function parseRouteParams({ routeKey, params, routeConfig }) {
+export const parseRouteParams = ({ routeKey, params, routeConfig }) => {
     const route = routeConfig[routeKey];
     if (!route?.paramSchema) return {};
 

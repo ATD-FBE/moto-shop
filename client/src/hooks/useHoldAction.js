@@ -44,4 +44,4 @@ export default function useHoldAction(
     }, [stop]);
 
     return { start, stop };
-};
+}

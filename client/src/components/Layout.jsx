@@ -97,4 +97,4 @@ export default function Layout() {
             {showSseOrderManagement && <SseOrderManagement />}
         </div>
     );
-};
+}

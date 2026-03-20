@@ -14,4 +14,4 @@ export default function MainTitle() {
             <h1><BlockableLink to="/">Мото-Магазин</BlockableLink></h1>
         </div>
     );
-};
+}

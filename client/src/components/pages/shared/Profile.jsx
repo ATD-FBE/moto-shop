@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useReducer, useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
@@ -520,4 +520,4 @@ export default function Profile() {
             </form>
         </div>
     );
-};
+}

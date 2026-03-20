@@ -14,4 +14,4 @@ export default function moveKeyToEndInFormData(formData, keyToMoveLast) {
     }
 
     return newFormData;
-};
+}

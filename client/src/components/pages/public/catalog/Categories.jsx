@@ -74,7 +74,7 @@ export default function Categories({
             />
         </div>
     );
-};
+}
 
 function CategoryList({
     loadStatus,

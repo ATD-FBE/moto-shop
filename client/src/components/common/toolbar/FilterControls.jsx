@@ -281,4 +281,4 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
             </div>
         </div>
     );
-};
+}

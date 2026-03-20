@@ -1,7 +1,7 @@
 import log from '../utils/logger.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
 
-export function errorTracker(req, res, next) {
+export const errorTracker = (req, res, next) => {
     req.connectionAborted = false;
     req.connectionTimeout = false;
 
@@ -27,7 +27,7 @@ export function errorTracker(req, res, next) {
     next();
 };
 
-export function globalErrorHandler(err, req, res, next) {
+export const globalErrorHandler = (err, req, res, next) => {
     if (err.isTimeoutAbort) return;
 
     const statusCode = err.statusCode || 500;

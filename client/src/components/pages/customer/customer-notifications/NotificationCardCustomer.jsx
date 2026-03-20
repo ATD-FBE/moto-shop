@@ -101,4 +101,4 @@ export default function NotificationCardCustomer({
             </p>
         </article>
     );
-};
+}

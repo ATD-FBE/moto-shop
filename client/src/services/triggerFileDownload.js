@@ -7,4 +7,4 @@ export default function triggerFileDownload(blob, filename) {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-};
+}

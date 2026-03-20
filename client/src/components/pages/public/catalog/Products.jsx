@@ -93,7 +93,7 @@ export default function Products({
             />
         </div>
     );
-};
+}
 
 function ProductsMain({
     loadStatus,

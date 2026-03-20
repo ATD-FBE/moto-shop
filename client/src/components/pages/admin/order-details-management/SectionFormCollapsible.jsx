@@ -12,4 +12,4 @@ export default function SectionFormCollapsible({ isExpanded, ...props }) {
             <SectionForm {...props} />
         </Collapsible>
     );
-};
+}

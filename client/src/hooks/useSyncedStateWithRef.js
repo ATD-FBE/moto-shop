@@ -13,4 +13,4 @@ export default function useSyncedStateWithRef(initialValue) {
     };
 
     return [state, set, ref];
-};
+}

@@ -722,4 +722,4 @@ export default function SectionForm({
             />
         </form>
     );
-};
+}

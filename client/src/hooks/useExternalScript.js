@@ -105,4 +105,4 @@ export default function useExternalScript({
     }, [src, selector, globalVar, loadAttempt]); // Без attrs и removeOnUnmount
 
     return { status, reload };
-};
+}

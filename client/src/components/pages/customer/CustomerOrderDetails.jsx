@@ -22,4 +22,4 @@ export default function CustomerOrderDetails() {
             renderOrderRepeatButton={props => <OrderRepeatButton {...props} />}
         />
     );
-};
+}

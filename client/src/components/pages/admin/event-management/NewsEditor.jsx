@@ -359,4 +359,4 @@ export default function NewsEditor({ newsId }) {
             </form>
         </div>
     );
-};
+}

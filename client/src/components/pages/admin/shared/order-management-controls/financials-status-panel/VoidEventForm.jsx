@@ -305,4 +305,4 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             />
         </form>
     );
-};
+}

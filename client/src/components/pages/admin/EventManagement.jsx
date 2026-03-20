@@ -26,4 +26,4 @@ export default function EventManagement() {
             </div>
         </div>
     );
-};
+}

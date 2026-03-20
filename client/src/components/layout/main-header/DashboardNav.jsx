@@ -27,4 +27,4 @@ export default function DashboardNav({ userRole, navigationMap, setActiveClass, 
             </ul>
         </nav>
     );
-};
+}

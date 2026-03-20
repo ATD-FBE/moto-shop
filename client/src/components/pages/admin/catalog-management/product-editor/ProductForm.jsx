@@ -811,4 +811,4 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             />
         </form>
     );
-};
+}
