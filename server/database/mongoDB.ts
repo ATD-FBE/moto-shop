@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import Category from './models/Category.js';
 import config from '../config/config.js';
 import log from '../utils/logger.js';
+import { toError } from '../../shared/commonHelpers.js';
 import { UNSORTED_CATEGORY_SLUG } from '../../shared/constants.js';
 
-const createUnsortedCategory = async () => {
+const createUnsortedCategory = async (): Promise<void> => {
     let unsortedCat = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG });
 
     if (!unsortedCat) {
@@ -24,25 +25,27 @@ const createUnsortedCategory = async () => {
     }
 };
 
-export const connectMongoDB = async () => {
+export const connectMongoDB = async (): Promise<void> => {
     try {
-        await mongoose.connect(config.databaseUrl);
+        await mongoose.connect(config.database.uri);
         await createUnsortedCategory();
         log.info('MongoDB подключён');
     } catch (err) {
-        log.error('Ошибка подключения MongoDB:', err);
-        throw err;
+        const error = toError(err);
+        log.error('Ошибка подключения MongoDB:', error);
+        throw error;
     }
 };
 
-export const shutdownMongoDB = async (signal) => {
+export const shutdownMongoDB = async (signal: string): Promise<void> => {
     log.info(`Сигнал ${signal} получен. Отключение MongoDB...`);
 
     try {
         await mongoose.disconnect();
         log.info('Соединение с MongoDB закрыто');
     } catch (err) {
-        log.error('Ошибка закрытия соединения с MongoDB:', err);
+        const error = toError(err);
+        log.error('Ошибка закрытия соединения с MongoDB:', error);
     } finally {
         const errors = ['uncaughtException', 'unhandledRejection', 'SERVER_ERROR'];
         process.exit(errors.includes(signal) ? 1 : 0);

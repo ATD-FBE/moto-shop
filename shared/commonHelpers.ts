@@ -1,28 +1,57 @@
 import { CURRENCY_EPS } from './constants.js';
+import { IFinancialsEventEntry }  from './types/index.js';
 
-export const formatDateToLocalString = (date) => {
-    const pad = (n) => String(n).padStart(2, '0');
+//////////////////
+/// INTERFACES ///
+//////////////////
+
+interface IAppliedDiscount {
+    appliedDiscount: number;
+    appliedDiscountSource: string;
+}
+
+interface IDotNotationPatch {
+    path: string;
+    value: any;
+}
+
+/////////////////
+/// FUNCTIONS ///
+/////////////////
+
+export const toError = (err: unknown): Error => {
+    if (err instanceof Error) return err;
+    return new Error(String(err));
+};
+
+export const formatDateToLocalString = (date: Date): string => {
+    const pad = (n: number): string => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-export const formatDateToMoscowLog = (date) => {
-    const moscowDate = new Date(new Date(date).toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+export const formatDateToMoscowLog = (date: Date): string => {
+    const moscowDate: Date = new Date(new Date(date).toLocaleString('en-US', {
+        timeZone: 'Europe/Moscow'
+    }));
 
-    const pad = (n) => String(n).padStart(2, '0');
+    const pad = (n: number): string => String(n).padStart(2, '0');
     
     return `${moscowDate.getFullYear()}-${pad(moscowDate.getMonth() + 1)}-${pad(moscowDate.getDate())}` +
         ` ${pad(moscowDate.getHours())}:${pad(moscowDate.getMinutes())}:${pad(moscowDate.getSeconds())}` +
         ' MSK';
 };
 
-export const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export const ensureArray = (val) => {
+export const ensureArray = (val: unknown) => {
     if (val === undefined) return [];
     return Array.isArray(val) ? val : [val];
 };
 
-export const trimSetByFilter = (originalSet, allowedSet) => {
+export const trimSetByFilter = (
+    originalSet: Set<string>,
+    allowedSet: Set<string>
+): [Set<string>, boolean] => {
     const trimmedSet = new Set(originalSet);
     let changed = false;
 
@@ -37,7 +66,10 @@ export const trimSetByFilter = (originalSet, allowedSet) => {
 };
 
 // Формирование данных по скидке
-export const getAppliedDiscountData = (productDiscount, customerDiscount) => {
+export const getAppliedDiscountData = (
+    productDiscount: number,
+    customerDiscount: number
+): IAppliedDiscount => {
     const effectiveDiscount = Math.max(productDiscount, customerDiscount);
     const discountSource = !effectiveDiscount
         ? 'none'
@@ -49,11 +81,15 @@ export const getAppliedDiscountData = (productDiscount, customerDiscount) => {
     };
 };
 
-export const isEqualCurrency = (a, b, eps = CURRENCY_EPS) => Math.abs(a - b) < eps;
+export const isEqualCurrency = (a: number, b: number, eps: number = CURRENCY_EPS): boolean =>
+    Math.abs(a - b) < eps;
 
-export const applyDotNotationPatches = (obj, patches) => {
+export const applyDotNotationPatches = <T extends Record<string, any>>(
+    obj: T, 
+    patches: IDotNotationPatch[]
+): void => {
     patches.forEach(({ path, value }) => {
-        const parts = [];
+        const parts: (string | number)[] = [];
 
         path.split('.').forEach(part => {
             // RegExp: (ключ объекта или массив)([(индекс массива, если есть)])
@@ -69,7 +105,7 @@ export const applyDotNotationPatches = (obj, patches) => {
             }
         });
 
-        let current = obj;
+        let current: any = obj;
 
         for (let i = 0; i < parts.length; i++) {
             const isLast = i === parts.length - 1;
@@ -104,7 +140,9 @@ export const applyDotNotationPatches = (obj, patches) => {
     });
 };
 
-export const getLastFinancialsEventEntry = (history) => {
+export const getLastFinancialsEventEntry = (
+    history: IFinancialsEventEntry[]
+): IFinancialsEventEntry | null => {
     for (let i = history.length - 1; i >= 0; i--) {
         if (!history[i].voided?.flag) {
             return history[i];
@@ -114,7 +152,7 @@ export const getLastFinancialsEventEntry = (history) => {
     return null; // Для удаления из истории на странице всех заказов
 };
 
-export const makeOrderItemQuantityFieldName = (productId) => `item-${productId}-quantity`;
+export const makeOrderItemQuantityFieldName = (productId: string): string => `item-${productId}-quantity`;
 
-export const getCustomerOrderDetailsPath = (orderNumber, orderId) =>
+export const getCustomerOrderDetailsPath = (orderNumber: string, orderId: string): string =>
     `/customer/orders/${orderNumber ?? ''}~${orderId}`;

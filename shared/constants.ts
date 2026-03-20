@@ -2,30 +2,38 @@
 /// TYPES ///
 /////////////
 
-type TProductThumbnailPresets = typeof PRODUCT_THUMBNAIL_PRESETS[keyof typeof PRODUCT_THUMBNAIL_PRESETS];
+export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 
-type TIntent = typeof INTENT[keyof typeof INTENT];
+export type TProductThumbnailPresets =
+    typeof PRODUCT_THUMBNAIL_PRESETS[keyof typeof PRODUCT_THUMBNAIL_PRESETS];
 
-type TBaseDeliveryMethod = typeof DELIVERY_METHOD[keyof typeof DELIVERY_METHOD];
-type TDeliveryMethod = TBaseDeliveryMethod | 'all';
+export type TIntent = typeof INTENT[keyof typeof INTENT];
 
-type TPaymentMethod = typeof PAYMENT_METHOD[keyof typeof PAYMENT_METHOD];
+export type TDeliveryMethod = typeof DELIVERY_METHOD[keyof typeof DELIVERY_METHOD];
+export type TDeliveryMethodScope = TDeliveryMethod | 'all';
 
-type TRefundMethod = typeof REFUND_METHOD[keyof typeof REFUND_METHOD];
+export type TPaymentMethod = typeof PAYMENT_METHOD[keyof typeof PAYMENT_METHOD];
 
-type TTransactionType = typeof TRANSACTION_TYPE[keyof typeof TRANSACTION_TYPE];
+export type TRefundMethod = typeof REFUND_METHOD[keyof typeof REFUND_METHOD];
 
-type TOnlineTransactionStatus = typeof ONLINE_TRANSACTION_STATUS[keyof typeof ONLINE_TRANSACTION_STATUS];
+export type TTransactionType = typeof TRANSACTION_TYPE[keyof typeof TRANSACTION_TYPE];
 
-type TOrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
+export type TOnlineTransactionStatus =
+    typeof ONLINE_TRANSACTION_STATUS[keyof typeof ONLINE_TRANSACTION_STATUS];
 
-type TFinancialsState = typeof FINANCIALS_STATE[keyof typeof FINANCIALS_STATE];
+export type TBankProvider = typeof BANK_PROVIDER[keyof typeof BANK_PROVIDER];
 
-type TFinancialsEvent = typeof FINANCIALS_EVENT[keyof typeof FINANCIALS_EVENT];
+export type TCardOnlineProvider = typeof CARD_ONLINE_PROVIDER[keyof typeof CARD_ONLINE_PROVIDER];
 
-type TRequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
+export type TOrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
-type TFormStatus = typeof FORM_STATUS[keyof typeof FORM_STATUS];
+export type TFinancialsState = typeof FINANCIALS_STATE[keyof typeof FINANCIALS_STATE];
+
+export type TFinancialsEvent = typeof FINANCIALS_EVENT[keyof typeof FINANCIALS_EVENT];
+
+export type TRequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
+
+export type TFormStatus = typeof FORM_STATUS[keyof typeof FORM_STATUS];
 
 type TClientConstants = typeof CLIENT_CONSTANTS_DATA;
 type TServerConstants = typeof SERVER_CONSTANTS_DATA;
@@ -54,7 +62,7 @@ interface IOrderStatusConfig {
         label: string;
         className: string;
         actionBtnLabel: string | null;
-        readonly deliveryMethods: readonly TDeliveryMethod[];
+        readonly deliveryMethods: readonly TDeliveryMethodScope[];
         rollbackAllowed?: boolean;
     } | null;
 }
@@ -92,6 +100,11 @@ export const DEFAULT_SEARCH_TYPE = SEARCH_TYPES.REGEX;
 export const MIN_ORDER_AMOUNT = 1000;
 export const CUSTOMER_TABLE_ORDERS_LOAD_STEP = 2;
 export const CURRENCY_EPS = 0.05;
+
+export const USER_ROLE = {
+    ADMIN: 'admin',
+    CUSTOMER: 'customer'
+} as const;
 
 export const PRODUCT_THUMBNAIL_PRESETS = {
     small: 80,

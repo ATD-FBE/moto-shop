@@ -12,21 +12,32 @@ dotenv.config({ path: join(CONFIG_PATH, `.env.${environment}`) });
 /// TYPES ///
 /////////////
 
-export type BucketType = 'public' | 'private';
+export type TStorageType = typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
+
+export type TMulterMode = typeof MULTER_MODE[keyof typeof MULTER_MODE];
+
+export type TMongoMode = typeof MONGO_MODE[keyof typeof MONGO_MODE];
+
+export type TBucketType = 'public' | 'private';
 
 //////////////////
 /// INTERFACES ///
 //////////////////
 
+interface IDatabaseConfig {
+    readonly mode: TMongoMode;
+    readonly uri: string;
+}
+
 interface IStorageConfig {
-    type: typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
-    multerMode: typeof MULTER_MODE[keyof typeof MULTER_MODE]
-    bucket?: string;
-    bucketType?: BucketType;
-    accessKey?: string;
-    secretKey?: string;
-    region?: string;
-    endpoint?: string;
+    readonly type: TStorageType;
+    readonly multerMode: TMulterMode;
+    readonly bucket?: string;
+    readonly bucketType?: TBucketType;
+    readonly accessKey?: string;
+    readonly secretKey?: string;
+    readonly region?: string;
+    readonly endpoint?: string;
 }
 
 interface IAppConfig {
@@ -41,7 +52,11 @@ interface IAppConfig {
         readonly refreshSecretKey: string;
     };
     readonly adminRegCode: string;
-    readonly databaseUrl: string;
+    readonly database: {
+        readonly mode: TMongoMode;
+        readonly uri: string;
+
+    };
     readonly storage: IStorageConfig;
     readonly yooKassa: {
         readonly shopId: string;
@@ -53,19 +68,19 @@ interface IAppConfig {
 /// FUNCTIONS ///
 /////////////////
 
-const resolveMongoUri = (): string => {
+const resolveDatabaseConfig = (): IDatabaseConfig => {
     const mode = process.env.MONGO_MODE;
 
     switch (mode) {
         case MONGO_MODE.LOCAL:
             const localUri = process.env.MONGO_URI_LOCAL;
             if (!localUri) throw new Error('MONGO_URI_LOCAL не задан в переменных окружения');
-            return localUri;
+            return { mode, uri: localUri };
 
         case MONGO_MODE.ATLAS:
             const atlasUri = process.env.MONGO_URI_ATLAS;
             if (!atlasUri) throw new Error('MONGO_URI_ATLAS не задан в переменных окружения');
-            return atlasUri;
+            return { mode, uri: atlasUri };
 
         default:
             throw new Error(`Некорректный режим MongoDB: ${mode}`);
@@ -132,7 +147,7 @@ const config: IAppConfig = {
         refreshSecretKey: process.env.JWT_REFRESH_SECRET_KEY,
     },
     adminRegCode: process.env.ADMIN_REG_CODE,
-    databaseUrl: resolveMongoUri(),
+    database: resolveDatabaseConfig(),
     storage: resolveStorageConfig(),
     yooKassa: {
         shopId: process.env.YOOKASSA_SHOP_ID,

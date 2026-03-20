@@ -46,6 +46,7 @@ import { isCriticalError } from './utils/errorUtils.js';
 import { startExpiredOrderDraftCleaner } from './services/cron/expiredOrderDraftCleaner.js';
 import { startInitOnlineTransactionCleaner } from './services/cron/initOnlineTransactionCleaner.js';
 import log from './utils/logger.js';
+import { toError } from '../shared/commonHelpers.js';
 
 const app = express();
 const apiRouter = express.Router();
@@ -85,19 +86,26 @@ app.use('/sse', sseCorsMiddleware, sseRouter);
 app.get('*', serveReactApp); // Работает в продакшне
 app.use(globalErrorHandler);
 
-process.on('SIGINT', () => shutdownMongoDB('SIGINT'));
-process.on('SIGTERM', () => shutdownMongoDB('SIGTERM'));
-process.on('uncaughtException', (err) => {
-    log.error('Uncaught exception:', err);
-    if (isCriticalError(err)) shutdownMongoDB('uncaughtException');
+process.on('SIGINT', (): void => {
+    shutdownMongoDB('SIGINT');
 });
-process.on('unhandledRejection', (reason) => {
+process.on('SIGTERM', (): void => {
+    shutdownMongoDB('SIGTERM');
+});
+process.on('uncaughtException', (err): void => {
+    const error = toError(err);
+    log.error('Uncaught exception:', error);
+    if (isCriticalError(error)) shutdownMongoDB('uncaughtException');
+});
+process.on('unhandledRejection', (reason: unknown): void => {
     log.error('Unhandled Rejection в коде', reason instanceof Error ? reason : { reason });
     if (isCriticalError(reason)) shutdownMongoDB('unhandledRejection');
 });
-process.on('exit', () => log.info('Process exit'));
+process.on('exit', (): void => {
+    log.info('Process exit');
+});
 
-const createServer = (protocol: string, host: string) => {
+const createServer = (protocol: string, host: string): http.Server | https.Server => {
     if (protocol === 'https' && ENV !== 'production') {
         const keyPath = `./certs/${host}-key.pem`;
         const certPath = `./certs/${host}.pem`;
@@ -113,12 +121,12 @@ const createServer = (protocol: string, host: string) => {
     return http.createServer(app);
 };
 
-const startCronJobs = () => {
+const startCronJobs = (): void => {
     startExpiredOrderDraftCleaner();
     startInitOnlineTransactionCleaner();
 };
 
-const startServer = async () => {
+const startServer = async (): Promise<void> => {
     try {
         await connectMongoDB();
         await storageService.initStorage();
@@ -141,7 +149,8 @@ const startServer = async () => {
             process.exit(1);
         });
     } catch (err) {
-        log.error('Не удалось запустить сервер', err instanceof Error ? err.message : err);
+        const error = toError(err);
+        log.error('Не удалось запустить сервер', error);
         process.exit(1);
     }
 };
