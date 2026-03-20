@@ -7,7 +7,7 @@ import { IFinancialsEventEntry }  from './types/index.js';
 
 interface IAppliedDiscount {
     appliedDiscount: number;
-    appliedDiscountSource: string;
+    appliedDiscountSource: 'none' | 'product' | 'customer';
 }
 
 interface IDotNotationPatch {
@@ -24,26 +24,27 @@ export const toError = (err: unknown): Error => {
     return new Error(String(err));
 };
 
-export const formatDateToLocalString = (date: Date): string => {
-    const pad = (n: number): string => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-};
+const padTwoDigits = (n: number): string => String(n).padStart(2, '0');
+
+export const formatDateToLocalString = (date: Date): string =>
+    `${date.getFullYear()}-${padTwoDigits(date.getMonth() + 1)}-${padTwoDigits(date.getDate())}`;
 
 export const formatDateToMoscowLog = (date: Date): string => {
-    const moscowDate: Date = new Date(new Date(date).toLocaleString('en-US', {
-        timeZone: 'Europe/Moscow'
-    }));
+    const moscowDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
 
-    const pad = (n: number): string => String(n).padStart(2, '0');
-    
-    return `${moscowDate.getFullYear()}-${pad(moscowDate.getMonth() + 1)}-${pad(moscowDate.getDate())}` +
-        ` ${pad(moscowDate.getHours())}:${pad(moscowDate.getMinutes())}:${pad(moscowDate.getSeconds())}` +
-        ' MSK';
+    const year = moscowDate.getFullYear();
+    const month = padTwoDigits(moscowDate.getMonth() + 1);
+    const day = padTwoDigits(moscowDate.getDate());
+    const hours = padTwoDigits(moscowDate.getHours());
+    const minutes = padTwoDigits(moscowDate.getMinutes());
+    const seconds = padTwoDigits(moscowDate.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} MSK`;
 };
 
 export const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export const ensureArray = (val: unknown) => {
+export const ensureArray = <T>(val: T | T[] | undefined): T[] => {
     if (val === undefined) return [];
     return Array.isArray(val) ? val : [val];
 };
