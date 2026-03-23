@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import cn from 'classnames';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
 import { formatDateToLocalString } from '@shared/commonHelpers.js';

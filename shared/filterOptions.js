@@ -110,25 +110,25 @@ export const ordersFilterOptions = [
         label: 'Статус заказа',
         type: 'string',
         paramName: 'orderStatus',
-        defaultValue: '',
         valueOptions: [
             { value: '', label: 'Любой' },
             { value: 'active', label: 'Активный', matches: ORDER_ACTIVE_STATUSES },
             { value: ORDER_STATUS.COMPLETED, label: 'Выполненный' },
             { value: ORDER_STATUS.CANCELLED, label: 'Отменённый' }
-        ]
+        ],
+        defaultValue: ''
     },
     {
         dbField: 'financials.state',
         label: 'Финансовый статус',
         type: 'string',
         paramName: 'financialsState',
-        defaultValue: '',
         valueOptions: [
             { value: '', label: 'Любой' },
             { value: 'inProgress', label: 'Открытый', matches: FINANCIALS_ACTIVE_STATES },
             { value: 'final', label: 'Закрытый', matches: FINANCIALS_FINAL_STATES }
-        ]
+        ],
+        defaultValue: ''
     }
 ];
 

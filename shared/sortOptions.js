@@ -1,5 +1,5 @@
 export const productsSortOptions = [
-    { dbField: 'name', label: 'Наименование', caseInsensitive: true, defaultOrder: 'asc' },
+    { dbField: 'name', label: 'Наименование', defaultOrder: 'asc', caseInsensitive: true },
     { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc', caseInsensitive: true },
     { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc', caseInsensitive: true },
     { dbField: 'lastRestockAt', label: 'Дата пополнения', defaultOrder: 'desc' },

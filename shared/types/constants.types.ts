@@ -23,6 +23,7 @@ export type TAllowedMimeType = TAllowedImageMimeType;
 export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
 
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
+export type TActiveUserRole = Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
 
 export type TProductThumbnailPresets = typeof PRODUCT_THUMBNAIL_PRESETS[keyof typeof PRODUCT_THUMBNAIL_PRESETS];
 
