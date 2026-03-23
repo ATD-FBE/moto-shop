@@ -10,17 +10,15 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import {
     PAYMENT_METHOD,
     OFFLINE_PAYMENT_METHOD_OPTIONS,
     OFFLINE_PAYMENT_METHODS,
     BANK_PROVIDER_OPTIONS,
     ORDER_STATUS,
-    CASH_ON_RECEIPT_ALLOWED_STATUSES,
-    CLIENT_CONSTANTS
+    CASH_ON_RECEIPT_ALLOWED_STATUSES
 } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
 
 const getSubmitStates = (markAsFailed) => {
     const base = BASE_SUBMIT_STATES;

@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
-import { escapeRegExp } from '../../shared/commonHelpers.js';
-import { SEARCH_TYPES, MAX_DATE_TS, DEFAULT_SEARCH_TYPE } from '../../shared/constants.js';
 import log from './logger.js';
+import { SEARCH_TYPES, DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { escapeRegExp } from '@shared/commonHelpers.js';
+import { MAX_DATE_TS } from '@shared/constants.js';
 
 export const buildSearchMatch = (search, allowedSearchFields, searchType) => {
     const searchMatch = {};

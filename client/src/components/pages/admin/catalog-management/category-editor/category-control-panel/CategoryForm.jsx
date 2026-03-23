@@ -7,9 +7,7 @@ import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { sendCategoryCreateRequest, sendCategoryUpdateRequest } from '@/api/categoryRequests.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } = CLIENT_CONSTANTS;
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
 
 const getSubmitStates = (isEditMode) => {
     const base = BASE_SUBMIT_STATES;

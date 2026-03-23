@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { sendErrorLogsRequest } from '@/api/logRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function ErrorLogs() {
     const [loading, setLoading] = useState(false);

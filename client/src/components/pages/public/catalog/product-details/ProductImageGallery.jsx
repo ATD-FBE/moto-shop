@@ -1,15 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ImageSlider from './product-image-gallery/ImageSlider.jsx';
 import ImageThumbnails from './product-image-gallery/ImageThumbnails.jsx';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const {
+import {
     DATA_LOAD_STATUS,
     PRODUCT_IMAGE_LOADER,
     PRODUCT_IMAGE_PLACEHOLDER,
     PRODUCT_AUTOSLIDE_TIMER
-} = CLIENT_CONSTANTS;
+} from '@/config/constants.js';
 
 export default function ProductImageGallery({
     loadStatus,

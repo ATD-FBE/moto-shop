@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
 import parse from 'html-react-parser';
@@ -6,9 +6,7 @@ import cn from 'classnames';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
 import { getAlertModalCallbacks, closeAlertModal } from '@/services/modalAlertService.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { MODAL_ANIMATION_DURATION } = CLIENT_CONSTANTS;
+import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
 
 const alertIconByType = {
     info: '❕',

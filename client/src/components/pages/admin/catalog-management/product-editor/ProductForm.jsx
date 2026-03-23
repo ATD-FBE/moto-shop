@@ -17,9 +17,8 @@ import {
     PRODUCT_FILES_LIMIT,
     MAX_PRODUCT_IMAGE_SIZE_MB
 } from '@shared/constants.js';
-import { UNSORTED_CATEGORY_SLUG, PRODUCT_UNITS, CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import { UNSORTED_CATEGORY_SLUG, PRODUCT_UNITS } from '@shared/constants.js';
 
 const getSubmitStates = (isEditMode) => {
     const base = BASE_SUBMIT_STATES;

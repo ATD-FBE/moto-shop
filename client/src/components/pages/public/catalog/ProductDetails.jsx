@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ProductImageGallery from './product-details/ProductImageGallery.jsx';
@@ -10,9 +10,8 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { formatProductTitle } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { DATA_LOAD_STATUS, REQUEST_STATUS, NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { DATA_LOAD_STATUS, NO_VALUE_LABEL } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export default function ProductDetails() {
     const isTouchDevice = useSelector(state => state.ui.isTouchDevice);

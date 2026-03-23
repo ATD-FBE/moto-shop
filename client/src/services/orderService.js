@@ -1,4 +1,5 @@
 import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
+import { TEXT_LOG_LINE_BREAK, NO_VALUE_LABEL } from '@/config/constants.js';
 import { formatDateToMoscowLog } from '@shared/commonHelpers.js';
 import {
     DELIVERY_METHOD,
@@ -6,11 +7,8 @@ import {
     REFUND_METHOD_OPTIONS,
     BANK_PROVIDER_OPTIONS,
     CARD_ONLINE_PROVIDER_OPTIONS,
-    FINANCIALS_EVENT_CONFIG,
-    CLIENT_CONSTANTS
+    FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
-
-const { TEXT_LOG_LINE_BREAK, NO_VALUE_LABEL } = CLIENT_CONSTANTS;
 
 const METHOD_MAP = [...PAYMENT_METHOD_OPTIONS, ...REFUND_METHOD_OPTIONS]
     .reduce((map, opt) => {

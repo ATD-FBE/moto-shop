@@ -11,15 +11,9 @@ import {
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import {
-    CLIENT_CONSTANTS,
-    DELIVERY_METHOD,
-    DELIVERY_METHOD_OPTIONS,
-    PAYMENT_METHOD_OPTIONS
-} from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@shared/constants.js';
 
 const getSubmitStates = () => {
     const base = BASE_SUBMIT_STATES;

@@ -4,9 +4,9 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { sendAuthRefreshRequest } from '../authRequests.js';
 import waitForRequestDelay from '@/helpers/waitForRequestDelay.js';
 import { handleLogout } from '@/services/authService.js';
-import { CLIENT_CONSTANTS, NETWORK_FAIL_STATUS_CODE } from '@shared/constants.js';
-
-const { PROD_ENV, REQUEST_STATUS } = CLIENT_CONSTANTS;
+import { PROD_ENV } from '@/config/constants.js';
+import { NETWORK_FAIL_STATUS_CODE } from '@/helpers/statusResolver.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 const defaultConfig = {
     authRequired: true,

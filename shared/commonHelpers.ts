@@ -1,23 +1,5 @@
-import { TDiscountSource, DISCOUNT_SOURCE, CURRENCY_EPS } from './constants.js';
-import { IFinancialsEventEntry }  from './types/index.js';
-
-//////////////////
-/// INTERFACES ///
-//////////////////
-
-interface IAppliedDiscount {
-    appliedDiscount: number;
-    appliedDiscountSource: TDiscountSource;
-}
-
-interface IDotNotationPatch {
-    path: string;
-    value: any;
-}
-
-/////////////////
-/// FUNCTIONS ///
-/////////////////
+import { DISCOUNT_SOURCE, CURRENCY_EPS } from './constants.js';
+import type { IAppliedDiscount, IDotNotationPatch, IFinancialsEventEntry }  from './types/index.js';
 
 export const toError = (err: unknown): Error => {
     if (err instanceof Error) return err;

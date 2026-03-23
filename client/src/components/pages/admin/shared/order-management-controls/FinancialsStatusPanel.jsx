@@ -1,4 +1,4 @@
-import React, { useState, useEffect }  from 'react';
+import { useState, useEffect }  from 'react';
 import cn from 'classnames';
 import { OrderLastFinancialsEvent } from '@/components/parts/OrderParts.jsx';
 import PaymentForm from './financials-status-panel/PaymentForm.jsx';
@@ -7,17 +7,15 @@ import VoidEventForm from './financials-status-panel/VoidEventForm.jsx';
 import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { formatFinancialsEventHistoryLogs } from '@/services/orderService.js';
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
 import { getOrderCardRefundStats } from '@shared/calculations.js';
 import {
     ORDER_STATUS,
     FINANCIALS_STATE_CONFIG,
     FINANCIALS_PAID_FINAL_STATES,
-    FINANCIALS_CANCEL_FINAL_STATES,
-    CLIENT_CONSTANTS
+    FINANCIALS_CANCEL_FINAL_STATES
 } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
 
 export default function FinancialsStatusPanel({
     showExtras,

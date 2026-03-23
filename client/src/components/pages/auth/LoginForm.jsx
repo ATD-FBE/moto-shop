@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
@@ -12,9 +12,7 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 
 const getSubmitStates = () => {
     const { DEFAULT, UNAUTH, BAD_REQUEST, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;

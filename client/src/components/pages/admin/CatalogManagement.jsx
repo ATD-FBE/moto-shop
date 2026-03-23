@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import CategoryEditor from './catalog-management/CategoryEditor.jsx';
@@ -15,11 +15,12 @@ import {
 } from '@/helpers/initParamsHelper.js';
 import { buildCategoryTreeAndMap } from '@/helpers/categoryHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productEditorSortOptions } from '@shared/sortOptions.js';
 import { productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export default function CatalogManagement() {
     const isAuthenticated = useSelector(state => state.auth.isAuthenticated);

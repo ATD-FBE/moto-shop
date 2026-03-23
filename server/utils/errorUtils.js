@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { typeCheck } from './typeValidation.js';
-import { fieldErrorMessages } from '../../shared/fieldRules.js';
-import { FILE_FIELD_MAP } from '../../shared/constants.js';
+import { fieldErrorMessages } from '@shared/fieldRules.js';
+import { FILE_FIELD_MAP } from '@server/config/constants.js';
 
 export const isCriticalError = (error) => {
     return error instanceof mongoose.Error ||
@@ -29,8 +29,8 @@ export const parseValidationErrors = (err, entityType) => {
         const error = err.errors[field]; // В валидаторе Mongoose используется полный путь поля
 
         if (field === 'globalFiles') {
+            const message = error.message || 'Неизвестная ошибка файлового поля';
             const fileFields = FILE_FIELD_MAP[entityType];
-            const message = err.errors[field].message || 'Неизвестная ошибка файлового поля';
             fileFields.forEach(field => fieldErrors[field] = message);
         } else {
             // Если поле вложено field будет иметь вид дот-нотации ('delivery.shippingAddress.city')
@@ -49,7 +49,7 @@ export const parseValidationErrors = (err, entityType) => {
                     messages.unique ||
                     fieldErrorMessages.DEFAULT;
             } else if (error.kind === 'user defined') {
-                const errorType = error.message; // Тип ошибки можно передавать через сообщение
+                const errorType = error.message; // Тип ошибки передаётся через сообщение
 
                 if (errorType && errorType in messages) {
                     fieldErrors[fieldName] = messages[errorType];

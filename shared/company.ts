@@ -1,38 +1,4 @@
-//////////////////
-/// INTERFACES ///
-//////////////////
-
-interface ICompanyDetails {
-    _id: string;
-    companyName: string;
-    shopName: string;
-    inn: string;
-    ogrn: string;
-    phone: string;
-    emails: {
-        info: string;
-        payments: string;
-        opt: string;
-    };
-    legalAddress: string;
-    displayAddress: string;
-    bank: {
-        name: string;
-        bik: string;
-        rs: string;
-        ks: string;
-    };
-}
-
-interface IWorkingHours {
-    days: string;
-    time: string;
-    closed?: boolean;
-}
-
-/////////////////
-/// CONSTANTS ///
-/////////////////
+import type { ICompanyDetails, IWorkingHours } from '@shared/types/index.js';
 
 // Информация о магазине
 export const COMPANY_DETAILS: ICompanyDetails = {

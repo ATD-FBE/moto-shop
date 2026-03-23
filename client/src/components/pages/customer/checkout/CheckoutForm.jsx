@@ -23,16 +23,7 @@ import {
 } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
-    CLIENT_CONSTANTS,
-    DELIVERY_METHOD,
-    DELIVERY_METHOD_OPTIONS,
-    PAYMENT_METHOD_OPTIONS,
-    MIN_ORDER_AMOUNT
-} from '@shared/constants.js';
-
-const {
     FORM_STATUS,
     NO_VALUE_LABEL,
     PRODUCT_IMAGE_PLACEHOLDER,
@@ -40,7 +31,14 @@ const {
     FIELD_SAVE_STATUS,
     FIELD_SAVE_STATUS_MESSAGES,
     SUCCESS_DELAY
-} = CLIENT_CONSTANTS;
+} from '@/config/constants.js';
+import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import {
+    DELIVERY_METHOD,
+    DELIVERY_METHOD_OPTIONS,
+    PAYMENT_METHOD_OPTIONS,
+    MIN_ORDER_AMOUNT
+} from '@shared/constants.js';
 
 const isDeliveryRequired = (deliveryMethod) =>
     deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;

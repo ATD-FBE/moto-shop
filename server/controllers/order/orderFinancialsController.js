@@ -1,7 +1,7 @@
-import Order from '../../database/models/Order.js';
-import { getCustomerOrderDetailsUrl } from '../../config/urls.js';
-import { checkTimeout } from '../../middlewares/timeoutMiddleware.js';
-import * as sseOrderManagement from '../../services/sse/sseOrderManagementService.js';
+import Order from '@server/database/models/Order.js';
+import { getCustomerOrderDetailsUrl } from '@server/config/urls.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     orderDotNotationMap,
     generateOrderInvoicePdf,
@@ -11,25 +11,25 @@ import {
     applyOrderFinancials,
     updateCustomerTotalSpent,
     clearOrderOnlineTransaction
-} from '../../services/orderService.js';
+} from '@server/services/orderService.js';
 import {
     createOnlinePayment,
     createOnlineRefunds,
     detectWebhookProvider,
     verifyWebhookAuthenticity,
     normalizeWebhook
-} from '../../services/online-transactions/onlineTransactionsService.js';
-import { logCriticalEvent } from '../../services/criticalEventService.js';
-import { typeCheck, validateInputTypes } from '../../utils/typeValidation.js';
-import { runInTransaction } from '../../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../../utils/errorUtils.js';
-import { parseValidationErrors } from '../../utils/errorUtils.js';
-import log from '../../utils/logger.js';
-import safeSendResponse from '../../utils/safeSendResponse.js';
-import { isEqualCurrency, getLastFinancialsEventEntry } from '../../../shared/commonHelpers.js';
-import { calculateOrderFinancials, getOrderCardRefundStats } from '../../../shared/calculations.js';
+} from '@server/services/online-transactions/onlineTransactionsService.js';
+import { logCriticalEvent } from '@server/services/criticalEventService.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import log from '@server/utils/logger.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { isEqualCurrency, getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
+import { calculateOrderFinancials, getOrderCardRefundStats } from '@shared/calculations.js';
 import {
-    ORDER_MODEL_TYPE,
     PAYMENT_METHOD,
     OFFLINE_PAYMENT_METHODS,
     ONLINE_PAYMENT_METHODS,
@@ -45,7 +45,7 @@ import {
     CASH_ON_RECEIPT_ALLOWED_STATUSES,
     SUCCESSFUL_FINANCIALS_EVENTS,
     REQUEST_STATUS
-} from '../../../shared/constants.js';
+} from '@shared/constants.js';
 
 /// Генерация и загрузка счёта заказа в pdf ///
 export const handleOrderInvoicePdfRequest = async (req, res, next) => {

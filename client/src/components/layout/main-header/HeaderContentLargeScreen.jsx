@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import cn from 'classnames';
 import ResourceLoader from './ResourceLoader.jsx';
@@ -6,9 +5,7 @@ import MainTitle from './MainTitle.jsx';
 import MainNav from './MainNav.jsx';
 import AuthNav from './AuthNav.jsx';
 import DashboardNav from './DashboardNav.jsx';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { DASHBOARD_TITLES } = CLIENT_CONSTANTS;
+import { DASHBOARD_TITLES } from '@/config/constants.js';
 
 export default function HeaderContentLargeScreen({
     userRole,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import {
@@ -11,14 +11,13 @@ import { sendCustomerOrderListRequest } from '@/api/customerRequests.js';
 import { pluralize } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
+import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 import {
     CUSTOMER_TABLE_ORDERS_LOAD_STEP,
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
-    CLIENT_CONSTANTS
+    REQUEST_STATUS
 } from '@shared/constants.js';
-
-const { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, REQUEST_STATUS } = CLIENT_CONSTANTS;
 
 export default function CustomerTableOrders({ customerId, customerName, isExpanded }) {
     const [lastUsedLimit, setLastUsedLimit] = useState(CUSTOMER_TABLE_ORDERS_LOAD_STEP);

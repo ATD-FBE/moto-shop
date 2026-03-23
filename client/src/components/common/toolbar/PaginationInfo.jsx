@@ -1,5 +1,4 @@
-import React from 'react';
-import { DATA_LOAD_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 
 export default function PaginationInfo({ loadStatus, page, limit, totalItems, label }) {
     let resultsInfo = '';

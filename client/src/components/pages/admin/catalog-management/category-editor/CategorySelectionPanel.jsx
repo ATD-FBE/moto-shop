@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import cn from 'classnames';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import { findCategoryPath } from '@/helpers/categoryHelpers.js';
-import { DATA_LOAD_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 
 const loadStatusMap = {
     [DATA_LOAD_STATUS.LOADING]: {

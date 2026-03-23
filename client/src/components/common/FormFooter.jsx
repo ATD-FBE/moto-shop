@@ -1,8 +1,5 @@
-import React from 'react';
 import cn from 'classnames';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { FORM_STATUS } = CLIENT_CONSTANTS;
+import { FORM_STATUS } from '@/config/constants.js';
 
 export default function FormFooter({
     submitStates,

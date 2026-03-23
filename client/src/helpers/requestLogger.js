@@ -1,6 +1,5 @@
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { REQUEST_STATUS, PROD_ENV } = CLIENT_CONSTANTS;
+import { PROD_ENV } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export const logRequestStatus = ({ context, status, message, details, unhandled = false }) => {
     const contextText = context ? `[${context.toUpperCase()}] ` : '';

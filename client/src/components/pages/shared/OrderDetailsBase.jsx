@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
@@ -15,13 +15,13 @@ import {
     buildShippingAddressDisplay,
     getShippingCostDisplay
 } from '@/services/orderService.js';
+import { NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/config/constants.js';
 import {
     applyDotNotationPatches,
     getLastFinancialsEventEntry,
     isEqualCurrency
 } from '@shared/commonHelpers.js';
 import {
-    DATA_LOAD_STATUS,
     REQUEST_STATUS,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD,
@@ -33,11 +33,8 @@ import {
     ORDER_ACTIVE_STATUSES,
     ORDER_FINAL_STATUSES,
     FINANCIALS_STATE_CONFIG,
-    FINANCIALS_EVENT_CONFIG,
-    CLIENT_CONSTANTS
+    FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
 
 export default function OrderDetailsBase({
     routeKey = '',

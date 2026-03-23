@@ -1,8 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ProductTableRow from './product-table-body/ProductTableRow.jsx';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } = CLIENT_CONSTANTS;
+import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 
 export default function ProductTableBody({
     loadStatus,

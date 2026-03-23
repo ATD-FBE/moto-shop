@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import CategoryForm from './category-control-panel/CategoryForm.jsx';
 import { buildSafeParentCategoryMap } from '@/helpers/categoryHelpers.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
+import { CATEGORY_ROOT_LABEL } from '@/config/constants.js';
 
-const { CATEGORY_ROOT_LABEL } = CLIENT_CONSTANTS;
 const FORM_CREATE = 'create';
 const FORM_EDIT = 'edit';
  

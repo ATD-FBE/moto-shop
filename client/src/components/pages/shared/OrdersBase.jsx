@@ -21,6 +21,7 @@ import {
     buildShippingAddressDisplay,
     getShippingCostDisplay
 } from '@/services/orderService.js';
+import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -33,15 +34,8 @@ import {
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
     ORDER_FINAL_STATUSES,
-    CLIENT_CONSTANTS
+    REQUEST_STATUS
 } from '@shared/constants.js';
-
-const {
-    LOAD_STATUS_MIN_HEIGHT,
-    DATA_LOAD_STATUS,
-    REQUEST_STATUS,
-    PRODUCT_IMAGE_PLACEHOLDER
-} = CLIENT_CONSTANTS;
  
 export default function OrdersBase({
     headerContent,

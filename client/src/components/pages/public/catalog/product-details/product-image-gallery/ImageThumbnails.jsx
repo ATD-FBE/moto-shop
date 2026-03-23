@@ -1,7 +1,6 @@
-import React from 'react';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
-import { DATA_LOAD_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 
 const loadStatusMap = {
     [DATA_LOAD_STATUS.LOADING]: {

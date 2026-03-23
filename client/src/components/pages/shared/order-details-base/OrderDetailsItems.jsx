@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
@@ -6,11 +6,10 @@ import { sendOrderItemsAvailabilityRequest } from '@/api/orderRequests.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
+import { PRODUCT_IMAGE_PLACEHOLDER, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { REQUEST_STATUS, CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { PRODUCT_IMAGE_PLACEHOLDER, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 const getFieldConfigs = (orderItemList, itemsAvailabilityMap) => {
     const fieldConfigs = orderItemList.map(item => ({

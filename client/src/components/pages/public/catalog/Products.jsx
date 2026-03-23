@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import cn from 'classnames';
 import Toolbar from '@/components/common/Toolbar.jsx';
@@ -9,9 +9,7 @@ import ZoomController from '@/components/common/ZoomController.jsx';
 import { routeConfig } from '@/config/appRouting.js';
 import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } = CLIENT_CONSTANTS;
+import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
 
 export default function Products({
     loadStatus,

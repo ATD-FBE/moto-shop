@@ -1,10 +1,7 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import ProductQuantitySelector from '@/components/common/ProductQuantitySelector.jsx';
 import { formatCurrency } from '@/helpers/textHelpers.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export default function ProductInfo({
     id,

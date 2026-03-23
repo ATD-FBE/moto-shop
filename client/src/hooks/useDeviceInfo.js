@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { markAsTouchDevice, setScreenSize } from '@/redux/slices/uiSlice.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { SCREEN_SIZE } = CLIENT_CONSTANTS;
+import { SCREEN_SIZE } from '@/config/constants.js';
 
 export default function useDeviceInfo() {
     const dispatch = useDispatch();

@@ -1,6 +1,6 @@
-import { TMulterMode } from '@server/types/index.js';
-import { TAllowedMimeType } from '@shared/constants.js';
 import { allowedConfigTypes } from '@server/utils/multerConfig.js';
+import type { TMulterMode } from './config.types.js';
+import type { TAllowedMimeType } from '@shared/types/index.js';
 
 export interface IMulterErrorContext {
     field: string;
@@ -27,7 +27,7 @@ export interface IMulterConfigArgs {
         | IMulterField[];      // Для 'fields' (массив объектов)
     storageMode?: TMulterMode;
     storagePath?: string | null;
-    readonly allowedMimeTypes: readonly TAllowedMimeType[];
+    allowedMimeTypes: readonly TAllowedMimeType[];
     filesLimit?: number;
     maxSizeMB: number;
 }

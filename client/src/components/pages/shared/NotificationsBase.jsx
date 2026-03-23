@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Toolbar from '@/components/common/Toolbar.jsx';
@@ -7,9 +7,8 @@ import { notificationsSortOptions } from '@shared/sortOptions.js';
 import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { sendNotificationListRequest } from '@/api/notificationRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, REQUEST_STATUS } = CLIENT_CONSTANTS;
+import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function NotificationsBase({
     showSort = false,

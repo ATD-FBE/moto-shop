@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { navigationMap } from '@/config/appRouting.js';
@@ -6,9 +6,7 @@ import HeaderContentSmallScreen from './main-header/HeaderContentSmallScreen.jsx
 import HeaderContentMediumScreen from './main-header/HeaderContentMediumScreen.jsx';
 import HeaderContentLargeScreen from './main-header/HeaderContentLargeScreen.jsx';
 import { setDashboardPanelActivity } from '@/redux/slices/uiSlice.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { SCREEN_SIZE } = CLIENT_CONSTANTS;
+import { SCREEN_SIZE } from '@/config/constants.js';
 
 const MainHeader = forwardRef(function (_, ref) {
     const { screenSize } = useSelector(state => state.ui);

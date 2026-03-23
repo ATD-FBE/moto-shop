@@ -32,10 +32,9 @@ import {
 } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { DATA_LOAD_STATUS, SCREEN_SIZE, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
-import { CLIENT_CONSTANTS, MIN_ORDER_AMOUNT } from '@shared/constants.js';
-
-const { DATA_LOAD_STATUS, REQUEST_STATUS, SCREEN_SIZE, PRODUCT_IMAGE_PLACEHOLDER } = CLIENT_CONSTANTS;
+import { MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
  
 export default function Cart() {
     const { isTouchDevice, screenSize, dashboardPanelActive } = useSelector(state => state.ui);

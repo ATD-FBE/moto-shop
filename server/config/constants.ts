@@ -24,6 +24,23 @@ export const ERROR_SIGNALS = {
     TIMEOUT_ABORT: 'timeout_abort'
 } as const;
 
+export const ORDER_MODEL_TYPE = {
+    DRAFT: 'draft',
+    FINAL: 'final'
+} as const;
+
+export const SEARCH_TYPES = {
+    REGEX: 'regex',
+    TEXT: 'text'
+} as const;
+
+export const DEFAULT_SEARCH_TYPE = SEARCH_TYPES.REGEX;
+
+export const FILE_FIELD_MAP = {
+    promotion: ['image'],
+    product: ['images']
+} as const;
+
 export const ACCESS_TOKEN_MAX_AGE = 1 * 60 * 60 * 1000; // 1 час
 //export const ACCESS_TOKEN_MAX_AGE = 10 * 1000;
 

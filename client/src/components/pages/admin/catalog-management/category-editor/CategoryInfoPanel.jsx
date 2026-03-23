@@ -1,7 +1,4 @@
-import React from 'react';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { CATEGORY_ROOT_LABEL, NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { CATEGORY_ROOT_LABEL, NO_VALUE_LABEL } from '@/config/constants.js';
  
 export default function CategoryInfoPanel({ categoryMap, selectedCategoryId }) {
     const selectedCategory = categoryMap[selectedCategoryId];

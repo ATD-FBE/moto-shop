@@ -6,6 +6,7 @@ import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
+import { FIELD_UI_STATUS } from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import {
@@ -16,11 +17,8 @@ import {
     ORDER_STATUS,
     ORDER_STATUS_CONFIG,
     ORDER_ACTIVE_STATUSES,
-    ORDER_ACTION,
-    CLIENT_CONSTANTS
+    ORDER_ACTION
 } from '@shared/constants.js';
-
-const { FIELD_UI_STATUS } = CLIENT_CONSTANTS;
 
 const fieldConfigs = [
     {

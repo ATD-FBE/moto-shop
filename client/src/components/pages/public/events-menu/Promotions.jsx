@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
@@ -8,7 +8,8 @@ import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { sendPromoListRequest, sendPromoDeleteRequest } from '@/api/promoRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function Promotions() {
     const { isAuthenticated, user } = useSelector(state => state.auth);

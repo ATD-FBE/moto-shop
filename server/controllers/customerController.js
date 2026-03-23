@@ -1,23 +1,23 @@
 import mongoose from 'mongoose';
-import User from '../database/models/User.js';
-import Order from '../database/models/Order.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { prepareOrderData } from '../services/orderService.js';
+import User from '@server/database/models/User.js';
+import Order from '@server/database/models/Order.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { prepareOrderData } from '@server/services/orderService.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
-} from '../utils/aggregationBuilders.js';
-import { validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { customersFilterOptions } from '../../shared/filterOptions.js';
-import { customersSortOptions } from '../../shared/sortOptions.js';
-import { customersPageLimitOptions } from '../../shared/pageLimitOptions.js';
-import { DEFAULT_SEARCH_TYPE } from '../../shared/constants.js';
-import { validationRules, fieldErrorMessages } from '../../shared/fieldRules.js';
-import { ORDER_STATUS } from '../../shared/constants.js';
+} from '@server/utils/aggregationBuilders.js';
+import { validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { customersFilterOptions } from '@shared/filterOptions.js';
+import { customersSortOptions } from '@shared/sortOptions.js';
+import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
+import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { ORDER_STATUS } from '@shared/constants.js';
 
 /// Загрузка ID всех отфильтрованных клиентов и их данных для одной страницы ///
 export const handleCustomerListRequest = async (req, res, next) => {

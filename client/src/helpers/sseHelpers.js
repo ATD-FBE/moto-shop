@@ -1,6 +1,4 @@
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { PROD_ENV, PROTOCOL, HOST, SERVER_PORT } = CLIENT_CONSTANTS;
+import { PROD_ENV, PROTOCOL, HOST, SERVER_PORT } from '@/config/constants.js';
 
 export const getSseUrl = (path) =>
     PROD_ENV

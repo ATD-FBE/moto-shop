@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Collapsible from '@/components/common/Collapsible.jsx';
@@ -22,8 +22,9 @@ import {
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function CustomerManagement() {
     const [initialized, setInitialized] = useState(false);

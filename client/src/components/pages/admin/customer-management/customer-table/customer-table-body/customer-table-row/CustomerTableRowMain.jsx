@@ -1,10 +1,8 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 
 // Конфиги и состояния полей общие для текущей строки (клиента)
 // Обрабатывается ОДНО поле (каждое поле отправляется отдельной формой)

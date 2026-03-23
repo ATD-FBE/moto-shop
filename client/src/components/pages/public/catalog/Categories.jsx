@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import { findCategoryPath, getAllExpandableCategoryIds } from '@/helpers/categoryHelpers.js';
-import { DATA_LOAD_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
 
 export default function Categories({
     loadStatus,

@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 import { CONFIG_PATH } from './paths.js';
-import { IDatabaseConfig, TStorageConfig, IAppConfig } from '@server/types/index.js';
 import { MONGO_MODE, STORAGE_TYPE, MULTER_MODE } from '@server/config/constants.js';
+import type { IDatabaseConfig, TStorageConfig, IAppConfig } from '@server/types/index.js';
 
 const environment = process.env.NODE_ENV || 'development';
 dotenv.config({ path: join(CONFIG_PATH, `.env.${environment}`) });

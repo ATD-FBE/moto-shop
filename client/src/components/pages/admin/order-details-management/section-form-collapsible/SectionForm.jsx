@@ -10,16 +10,14 @@ import { formatOrderItemsAdjustmentLogs } from '@/services/orderService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass, formatCurrency } from '@/helpers/textHelpers.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,
     DELIVERY_METHOD,
     DELIVERY_METHOD_OPTIONS,
-    PAYMENT_METHOD_OPTIONS,
-    CLIENT_CONSTANTS
+    PAYMENT_METHOD_OPTIONS
 } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
 
 const getSubmitStates = () => {
     const base = BASE_SUBMIT_STATES;

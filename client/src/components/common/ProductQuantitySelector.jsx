@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import useHoldAction from '@/hooks/useHoldAction.js';
 import { sendCartItemUpdateRequest } from '@/api/cartRequests.js';
@@ -6,9 +6,7 @@ import { getValidQuantity } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { setCartItem, unsetCartItem, refreshCartTotals } from '@/services/cartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { REQUEST_STATUS } = CLIENT_CONSTANTS;
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export default function ProductQuantitySelector({
     id,

@@ -13,9 +13,8 @@ import { routeConfig } from '@/config/appRouting.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 
-const { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } = CLIENT_CONSTANTS;
 const ARRAY_SEPARATOR = ', ';
 
 const getSubmitStates = (isEditMode) => {

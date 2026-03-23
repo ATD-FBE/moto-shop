@@ -1,4 +1,5 @@
-import { REQUEST_STATUS, resolveRequestStatus } from '@shared/constants.js';
+import { resolveRequestStatus } from '@/helpers/statusResolver.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 const apiResponse = async (response, extra = {}) => {
     const { errorPrefix = '', asFile = false, ...extraRest } = extra;

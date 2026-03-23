@@ -1,10 +1,10 @@
-import {
+import type {
     TPaymentMethod,
     TRefundMethod,
     TBankProvider,
     TCardOnlineProvider,
     TFinancialsEvent
-} from '../constants.js';
+} from './constants.types.js';
 
 /// Finansials ///
 export interface IFinancialsEventAction {

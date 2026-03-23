@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import CategorySelection from './category-editor/CategorySelectionPanel.jsx';
 import CategoryInfoPanel from './category-editor/CategoryInfoPanel.jsx';
@@ -9,9 +9,8 @@ import { openAlertModal } from '@/services/modalAlertService.js';
 import { sendCategoryDeleteRequest } from '@/api/categoryRequests.js';
 import { pluralize } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { UNSORTED_CATEGORY_SLUG, CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { REQUEST_STATUS, NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { NO_VALUE_LABEL } from '@/config/constants.js';
+import { UNSORTED_CATEGORY_SLUG, REQUEST_STATUS } from '@shared/constants.js';
  
 export default function CategoryEditor({
     loadStatus,

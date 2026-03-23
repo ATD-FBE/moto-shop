@@ -11,6 +11,7 @@ import {
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
@@ -18,16 +19,8 @@ import {
     REFUND_METHOD_OPTIONS,
     OFFLINE_REFUND_METHODS,
     BANK_PROVIDER_OPTIONS,
-    ORDER_STATUS,
-    CLIENT_CONSTANTS
+    ORDER_STATUS
 } from '@shared/constants.js';
-
-const {
-    FORM_STATUS,
-    BASE_SUBMIT_STATES,
-    FIELD_UI_STATUS,
-    SUCCESS_DELAY
-} = CLIENT_CONSTANTS;
 
 const getSubmitStates = (markAsFailed) => {
     const base = BASE_SUBMIT_STATES;

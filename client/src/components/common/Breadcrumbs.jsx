@@ -1,10 +1,7 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import { breadcrumbMap } from '@/config/appRouting.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { SCREEN_SIZE } = CLIENT_CONSTANTS;
+import { SCREEN_SIZE } from '@/config/constants.js';
 
 export default function Breadcrumbs({ path }) {
     const { screenSize } = useSelector(state => state.ui);

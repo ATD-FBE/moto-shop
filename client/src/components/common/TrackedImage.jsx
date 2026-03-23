@@ -1,10 +1,8 @@
-import React, { forwardRef, useState, useRef, useCallback, useEffect } from 'react';
+import { forwardRef, useState, useRef, useCallback, useEffect } from 'react';
 import { FadeLoader } from 'react-spinners';
 import cn from 'classnames';
 import useImageTracking from '@/hooks/useImageTracking.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { BLANK_IMAGE_SRC } = CLIENT_CONSTANTS;
+import { BLANK_IMAGE_SRC } from '@/config/constants.js';
 
 const TrackedImage = forwardRef((props, ref) => {
     const { className, src, onLoad, onError, ...restProps } = props;

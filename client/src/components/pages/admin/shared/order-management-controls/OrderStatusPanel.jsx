@@ -1,11 +1,10 @@
-import React, { useState, useEffect }  from 'react';
+import { useState, useEffect }  from 'react';
 import cn from 'classnames';
 import OrderStatusSteps from './order-status-panel/OrderStatusSteps.jsx';
 import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
 import { formatOrderStatusHistoryLogs } from '@/services/orderService.js';
-import { ORDER_STATUS_CONFIG, CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { NO_VALUE_LABEL } from '@/config/constants.js';
+import { ORDER_STATUS_CONFIG } from '@shared/constants.js';
 
 export default function OrderStatusPanel({
     showExtras,

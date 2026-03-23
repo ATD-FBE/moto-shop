@@ -1,15 +1,15 @@
 import { join } from 'path';
 import PdfPrinter from 'pdfmake';
 import numberToWordsRuPkg from 'number-to-words-ru';
-import User from '../database/models/User.js';
-import Order from '../database/models/Order.js';
+import User from '@server/database/models/User.js';
+import Order from '@server/database/models/Order.js';
 import { applyProductBulkUpdate } from './productService.js';
 import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '../config/paths.js';
 import { logCriticalEvent } from './criticalEventService.js';
-import { getLastFinancialsEventEntry, isEqualCurrency } from '../../shared/commonHelpers.js';
-import { fieldErrorMessages } from '../../shared/fieldRules.js';
+import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
+import { fieldErrorMessages } from '@shared/fieldRules.js';
 import {
-    ORDER_MODEL_TYPE,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -18,8 +18,8 @@ import {
     FINANCIALS_STATE,
     FINANCIALS_EVENT,
     TRANSACTION_TYPE
-} from '../../shared/constants.js';
-import { COMPANY_DETAILS } from '../../shared/company.ts';
+} from '@shared/constants.js';
+import { COMPANY_DETAILS } from '@shared/company.ts';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
 

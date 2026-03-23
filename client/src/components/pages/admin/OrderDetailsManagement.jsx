@@ -1,12 +1,9 @@
-import React from 'react';
 import OrderDetailsBase from '@/components/pages/shared/OrderDetailsBase.jsx';
 import OrderManagementControls from '@/components/pages/admin/shared/OrderManagementControls.jsx';
 import OrderManagementNotes from '@/components/pages/admin/shared/OrderManagementNotes.jsx';
 import SectionEditButton from './order-details-management/SectionEditButton.jsx';
 import SectionFormCollapsible from './order-details-management/SectionFormCollapsible.jsx';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export default function OrderDetailsManagement() {
     return (

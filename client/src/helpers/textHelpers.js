@@ -1,8 +1,5 @@
-import React from 'react';
 import { escapeRegExp } from '@shared/commonHelpers.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export const capitalizeFirstLetter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 

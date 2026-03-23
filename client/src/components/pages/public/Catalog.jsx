@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Categories from './catalog/Categories.jsx';
@@ -18,7 +18,8 @@ import { sendProductListRequest } from '@/api/productRequests.js';
 import { buildCategoryTreeAndMap } from '@/helpers/categoryHelpers.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export default function Catalog() {
     const isAuthenticated = useSelector(state => state.auth.isAuthenticated);

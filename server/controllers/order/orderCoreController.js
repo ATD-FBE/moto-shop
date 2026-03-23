@@ -1,9 +1,9 @@
-import Order from '../../database/models/Order.js';
-import Product from '../../database/models/Product.js';
-import { ORDER_VIEW_MATRIX } from '../../config/viewPolicy.js';
-import { checkTimeout } from '../../middlewares/timeoutMiddleware.js';
-import { storageService } from '../../services/storage/storageService.js';
-import * as sseOrderManagement from '../../services/sse/sseOrderManagementService.js';
+import Order from '@server/database/models/Order.js';
+import Product from '@server/database/models/Product.js';
+import { ORDER_VIEW_MATRIX } from '@server/config/viewPolicy.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { storageService } from '@server/services/storage/storageService.js';
+import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     orderDotNotationMap,
     prepareOrderData,
@@ -14,32 +14,32 @@ import {
     returnProductsToStore,
     getFieldErrors,
     updateCustomerTotalSpent
-} from '../../services/orderService.js';
-import { applyProductBulkUpdate } from '../../services/productService.js';
+} from '@server/services/orderService.js';
+import { applyProductBulkUpdate } from '@server/services/productService.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
     parseSortParam
-} from '../../utils/aggregationBuilders.js';
+} from '@server/utils/aggregationBuilders.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
     deepMergeNewNullable
-} from '../../utils/normalizeUtils.js';
-import { collectDbChanges } from '../../utils/compareUtils.js';
-import { typeCheck, validateInputTypes } from '../../utils/typeValidation.js';
-import { runInTransaction } from '../../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../../utils/errorUtils.js';
-import { parseValidationErrors } from '../../utils/errorUtils.js';
-import safeSendResponse from '../../utils/safeSendResponse.js';
-import { ordersFilterOptions } from '../../../shared/filterOptions.js';
-import { ordersSortOptions } from '../../../shared/sortOptions.js';
-import { ordersPageLimitOptions } from '../../../shared/pageLimitOptions.js';
-import { isEqualCurrency, makeOrderItemQuantityFieldName, } from '../../../shared/commonHelpers.js';
-import { calculateOrderTotals, calculateOrderFinancials } from '../../../shared/calculations.js';
-import { validationRules, fieldErrorMessages } from '../../../shared/fieldRules.js';
+} from '@server/utils/normalizeUtils.js';
+import { collectDbChanges } from '@server/utils/compareUtils.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { ordersFilterOptions } from '@shared/filterOptions.js';
+import { ordersSortOptions } from '@shared/sortOptions.js';
+import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
+import { isEqualCurrency, makeOrderItemQuantityFieldName, } from '@shared/commonHelpers.js';
+import { calculateOrderTotals, calculateOrderFinancials } from '@shared/calculations.js';
+import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
-    DEFAULT_SEARCH_TYPE,
     MIN_ORDER_AMOUNT,
     DELIVERY_METHOD,
     ORDER_STATUS,
@@ -47,7 +47,7 @@ import {
     ORDER_FINAL_STATUSES,
     ORDER_ACTION,
     REQUEST_STATUS
-} from '../../../shared/constants.js';
+} from '@shared/constants.js';
 
 /// Загрузка списка заказов для одной страницы ///
 export const handleOrderListRequest = async (req, res, next) => {

@@ -23,12 +23,11 @@ import { runInTransaction } from '@server/utils/transaction.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
+import { ORDER_MODEL_TYPE, ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
 import { calculateOrderTotals } from '@shared/calculations.js';
 import {
     DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
-    ORDER_MODEL_TYPE,
     DELIVERY_METHOD,
     ORDER_STATUS,
     REQUEST_STATUS

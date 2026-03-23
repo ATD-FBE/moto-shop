@@ -1,22 +1,22 @@
 import mongoose from 'mongoose';
-import Order from '../database/models/Order.js';
-import User from '../database/models/User.js';
-import Product from '../database/models/Product.js';
+import Order from '@server/database/models/Order.js';
+import User from '@server/database/models/User.js';
+import Product from '@server/database/models/Product.js';
 import {
     PRODUCT_STORAGE_FOLDER,
     PRODUCT_ORIGINALS_FOLDER,
     PRODUCT_THUMBNAILS_FOLDER,
     STORAGE_URL_PATH
-} from '../config/paths.js';
+} from '@server/config/paths.js';
 import { storageService } from './storage/storageService.js';
+import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import {
     PRODUCT_BRAND_NEW_THRESHOLD_MS,
     PRODUCT_RESTOCK_THRESHOLD_MS,
     PRODUCT_THUMBNAIL_PRESETS,
-    ORDER_MODEL_TYPE,
     ORDER_STATUS
-} from '../../shared/constants.js';
-import { calculateOrderTotals } from '../../shared/calculations.js';
+} from '@shared/constants.js';
+import { calculateOrderTotals } from '@shared/calculations.js';
 
 export const prepareProductData = (dbProduct, { managed = false, now = Date.now() } = {}) => {
     const available = Math.max(0, dbProduct.stock - dbProduct.reserved);

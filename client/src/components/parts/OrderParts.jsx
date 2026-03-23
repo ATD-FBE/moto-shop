@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect }  from 'react';
+import { useState, useRef, useEffect }  from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
@@ -8,6 +8,7 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { pluralize, formatCurrency } from '@/helpers/textHelpers.js';
 import triggerFileDownload from '@/services/triggerFileDownload.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import {
     REQUEST_STATUS,
@@ -18,11 +19,8 @@ import {
     ORDER_STATUS_CONFIG,
     ORDER_ACTIVE_STATUSES,
     FINANCIALS_STATE_CONFIG,
-    FINANCIALS_EVENT_CONFIG,
-    CLIENT_CONSTANTS
+    FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
-
-const { NO_VALUE_LABEL } = CLIENT_CONSTANTS;
 
 export function OrderCardOverview({
     id,

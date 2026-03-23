@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { sendNewsListRequest, sendNewsDeleteRequest } from '@/api/newsRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export default function News() {
     const { isAuthenticated, user } = useSelector(state => state.auth);

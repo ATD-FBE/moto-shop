@@ -3,8 +3,9 @@ import { DraftOrderItemSchema, FinalOrderItemSchema } from './schemas/OrderItemS
 import { DraftCustomerInfoSchema, FinalCustomerInfoSchema } from './schemas/CustomerInfoSchemas.js';
 import { DraftDeliverySchema, FinalDeliverySchema } from './schemas/DeliverySchemas.js';
 import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/FinancialsSchemas.js';
-import { validationRules } from '../../../shared/fieldRules.js';
-import { ORDER_MODEL_TYPE, ORDER_STATUS, ORDER_STATUS_CONFIG } from '../../../shared/constants.js';
+import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { validationRules } from '@shared/fieldRules.js';
+import { ORDER_STATUS, ORDER_STATUS_CONFIG } from '@shared/constants.js';
 
 const { Schema } = mongoose;
 

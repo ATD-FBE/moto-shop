@@ -1,4 +1,3 @@
-import React from 'react';
 import cn from 'classnames';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
@@ -6,9 +5,7 @@ import BlockableLink from '@/components/common/BlockableLink.jsx';
 import { formatProductTitle } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { CLIENT_CONSTANTS } from '@shared/constants.js';
-
-const { PRODUCT_IMAGE_PLACEHOLDER, NO_VALUE_LABEL } = CLIENT_CONSTANTS;
+import { PRODUCT_IMAGE_PLACEHOLDER, NO_VALUE_LABEL } from '@/config/constants.js';
 
 export default function ProductTableRowMain({
     uiBlocked,

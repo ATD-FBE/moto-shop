@@ -23,9 +23,8 @@ import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { CLIENT_CONSTANTS, MIN_ORDER_AMOUNT } from '@shared/constants.js';
-
-const { FORM_STATUS, BASE_SUBMIT_STATES, SUCCESS_DELAY } = CLIENT_CONSTANTS;
+import { FORM_STATUS, BASE_SUBMIT_STATES, SUCCESS_DELAY } from '@/config/constants.js';
+import { MIN_ORDER_AMOUNT } from '@shared/constants.js';
 
 const getSubmitStates = (isCancelPath) => {
     const base = BASE_SUBMIT_STATES;

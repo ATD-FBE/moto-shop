@@ -1,32 +1,33 @@
-import Product from '../database/models/Product.js';
-import Category from '../database/models/Category.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { storageService } from '../services/storage/storageService.js';
+import Product from '@server/database/models/Product.js';
+import Category from '@server/database/models/Category.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { storageService } from '@server/services/storage/storageService.js';
 import {
     prepareProductData,
     cleanupBulkProductFiles,
     redistributeProductProportionallyInDraftOrders,
     buildProductsComputedFields,
     buildCategoriesPipeline
-} from '../services/productService.js';
+} from '@server/services/productService.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
     buildSortPipeline,
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
-} from '../utils/aggregationBuilders.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { isArrayContentDifferent } from '../utils/compareUtils.js';
-import { runInTransaction } from '../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { ensureArray } from '../../shared/commonHelpers.js';
-import { productsFilterOptions, productEditorFilterOptions } from '../../shared/filterOptions.js';
-import { productsSortOptions, productEditorSortOptions } from '../../shared/sortOptions.js';
-import { productsPageLimitOptions, productEditorPageLimitOptions } from '../../shared/pageLimitOptions.js';
-import { DEFAULT_SEARCH_TYPE, PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '../../shared/constants.js';
+} from '@server/utils/aggregationBuilders.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { ensureArray } from '@shared/commonHelpers.js';
+import { productsFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
+import { productsSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
+import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
+import { PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
 
 /// Загрузка ID всех отфильтрованных товаров и данных товаров для одной страницы ///
 export const handleProductListRequest = async (req, res, next) => {
