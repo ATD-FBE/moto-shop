@@ -24,11 +24,17 @@ export const LOG_ERROR_FILE_PATH: string = join(LOG_ROOT, LOG_ERROR_FILE);
 export const CLIENT_FOLDER = 'client';
 export const CLIENT_ROOT: string = join(PROJECT_ROOT, CLIENT_FOLDER);
 
+export const SRC_FOLDER = 'src';
+export const SRC_PATH: string = join(CLIENT_ROOT, SRC_FOLDER);
+
 export const PUBLIC_FOLDER = 'public';
 export const PUBLIC_PATH: string = join(CLIENT_ROOT, PUBLIC_FOLDER);
 
 export const BUILD_FOLDER = 'build';
 export const BUILD_PATH: string = join(CLIENT_ROOT, BUILD_FOLDER);
+
+export const SHARED_FOLDER = 'shared';
+export const SHARED_ROOT: string = join(PROJECT_ROOT, SHARED_FOLDER);
 
 export const STORAGE_FOLDER = 'storage';
 export const STORAGE_ROOT: string = join(PROJECT_ROOT, STORAGE_FOLDER);
@@ -45,4 +51,5 @@ export const PRODUCT_THUMBNAILS_FOLDER = 'thumbnails';
 export const ORDER_STORAGE_FOLDER = 'orders';
 export const ORDER_STORAGE_PATH: string = join(STORAGE_ROOT, ORDER_STORAGE_FOLDER);
 
+export const API_URL_PATH = '/api'; // Путь для запросов
 export const STORAGE_URL_PATH = '/files'; // Путь для доступа к файлам через клиентский URL

@@ -1,14 +1,21 @@
 import webpack from 'webpack';
-import { join } from 'path';
-import { PROJECT_ROOT, CLIENT_ROOT } from './server/config/paths.js';
+import {
+    PUBLIC_PATH,
+    BUILD_FOLDER,
+    BUILD_PATH,
+    SRC_PATH,
+    SHARED_ROOT,
+    API_URL_PATH,
+    STORAGE_URL_PATH
+} from './server/config/paths.js';
 import config from './server/config/config.js';
 
 export default {
     mode: ['production', 'development'].includes(config.env) ? config.env : 'development',
     entry: './client/src/App.jsx',
     output: {
-        path: join(CLIENT_ROOT, 'build'),
-        publicPath: '/build/',
+        path: BUILD_PATH,
+        publicPath: `/${BUILD_FOLDER}/`,
         filename: 'bundle.js'
     },
     devtool: config.env === 'testing' ? 'eval-cheap-module-source-map' : undefined,
@@ -19,12 +26,12 @@ export default {
         hot: true,
         open: true,
         static: [
-            { directory: join(CLIENT_ROOT, 'public') },
-            { directory: join(CLIENT_ROOT, 'build') }
+            { directory: PUBLIC_PATH },
+            { directory: BUILD_PATH }
         ],
         proxy: [
             {
-                context: ['/api', '/files'],
+                context: [API_URL_PATH, STORAGE_URL_PATH],
                 target: `http://${config.host}:${config.serverPort}`,
                 changeOrigin: true,
                 secure: false,
@@ -50,7 +57,9 @@ export default {
                     options: {
                         presets: [
                             '@babel/preset-env',
-                            ['@babel/preset-react', { 'runtime': 'automatic' }],
+                            ['@babel/preset-react', {
+                                'runtime': 'automatic' // 
+                            }],
                             '@babel/preset-typescript'
                         ]
                     }
@@ -78,8 +87,8 @@ export default {
             '.jsx': ['.jsx', '.tsx']
         },
         alias: {
-            '@': join(CLIENT_ROOT, 'src'),
-            '@shared': join(PROJECT_ROOT, 'shared')
+            '@': SRC_PATH,
+            '@shared': SHARED_ROOT
         }
     },
     plugins: [
