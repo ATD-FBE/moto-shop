@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
+import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMiddleware.js';
 import {
     handleOrderListRequest,
     handleOrderRequest,
@@ -9,7 +9,7 @@ import {
     handleOrderItemsUpdateRequest,
     handleOrderStatusUpdateRequest,
     handleOrderInternalNoteUpdateRequest
-} from '../controllers/order/orderCoreController.js';
+} from '@server/controllers/order/orderCoreController.js';
 import {
     handleOrderInvoicePdfRequest,
     handleOrderRemainingAmountRequest,
@@ -19,8 +19,8 @@ import {
     handleOrderOnlinePaymentCreateRequest,
     handleOrderOnlineRefundsCreateRequest,
     handleWebhook
-} from '../controllers/order/orderFinancialsController.js';
-import { USER_ROLE } from '../../shared/constants.js';
+} from '@server/controllers/order/orderFinancialsController.js';
+import { USER_ROLE } from '@shared/constants.js';
 
 const router: Router = Router();
 const { ADMIN, CUSTOMER } = USER_ROLE;

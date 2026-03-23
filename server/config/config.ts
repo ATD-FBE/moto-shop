@@ -1,72 +1,11 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 import { CONFIG_PATH } from './paths.js';
-import { SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { MONGO_MODE, STORAGE_TYPE, MULTER_MODE } = SERVER_CONSTANTS;
+import { IDatabaseConfig, TStorageConfig, IAppConfig } from '@server/types/index.js';
+import { MONGO_MODE, STORAGE_TYPE, MULTER_MODE } from '@server/config/constants.js';
 
 const environment = process.env.NODE_ENV || 'development';
 dotenv.config({ path: join(CONFIG_PATH, `.env.${environment}`) });
-
-/////////////
-/// TYPES ///
-/////////////
-
-export type TStorageType = typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
-
-export type TMulterMode = typeof MULTER_MODE[keyof typeof MULTER_MODE];
-
-export type TMongoMode = typeof MONGO_MODE[keyof typeof MONGO_MODE];
-
-export type TBucketType = 'public' | 'private';
-
-//////////////////
-/// INTERFACES ///
-//////////////////
-
-interface IDatabaseConfig {
-    readonly mode: TMongoMode;
-    readonly uri: string;
-}
-
-interface IStorageConfig {
-    readonly type: TStorageType;
-    readonly multerMode: TMulterMode;
-    readonly bucket?: string;
-    readonly bucketType?: TBucketType;
-    readonly accessKey?: string;
-    readonly secretKey?: string;
-    readonly region?: string;
-    readonly endpoint?: string;
-}
-
-interface IAppConfig {
-    readonly env: string;
-    readonly protocol: string;
-    readonly host: string;
-    readonly domain: string;
-    readonly clientPort: number;
-    readonly serverPort: number;
-    readonly jwt: {
-        readonly accessSecretKey: string;
-        readonly refreshSecretKey: string;
-    };
-    readonly adminRegCode: string;
-    readonly database: {
-        readonly mode: TMongoMode;
-        readonly uri: string;
-
-    };
-    readonly storage: IStorageConfig;
-    readonly yooKassa: {
-        readonly shopId: string;
-        readonly secretKey: string;
-    };
-}
-
-/////////////////
-/// FUNCTIONS ///
-/////////////////
 
 const resolveDatabaseConfig = (): IDatabaseConfig => {
     const mode = process.env.MONGO_MODE;
@@ -87,7 +26,7 @@ const resolveDatabaseConfig = (): IDatabaseConfig => {
     }
 };
 
-const resolveStorageConfig = (): IStorageConfig => {
+const resolveStorageConfig = (): TStorageConfig => {
     const type = process.env.STORAGE_TYPE;
 
     switch (type) {
@@ -121,12 +60,12 @@ const resolveStorageConfig = (): IStorageConfig => {
             return {
                 type: STORAGE_TYPE.S3,
                 multerMode: MULTER_MODE.MEMORY,
-                bucket: STORAGE_S3_BUCKET!,
-                bucketType: STORAGE_S3_BUCKET_TYPE!,
-                accessKey: STORAGE_S3_ACCESS_KEY!,
-                secretKey: STORAGE_S3_SECRET_KEY!,
-                region: STORAGE_S3_REGION!,
-                endpoint: STORAGE_S3_ENDPOINT!
+                bucket: STORAGE_S3_BUCKET,
+                bucketType: STORAGE_S3_BUCKET_TYPE,
+                accessKey: STORAGE_S3_ACCESS_KEY,
+                secretKey: STORAGE_S3_SECRET_KEY,
+                region: STORAGE_S3_REGION,
+                endpoint: STORAGE_S3_ENDPOINT
             };
         }
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
+import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMiddleware.js';
 import {
     handleAuthCheckRequest,
     handleAuthCheckoutPrefsRequest,
@@ -10,8 +10,8 @@ import {
     handleAuthLogoutRequest,
     handleAuthUserUpdateRequest,
     handleAuthCheckoutPrefsUpdateRequest
-} from '../controllers/authController.js';
-import { USER_ROLE } from '../../shared/constants.js';
+} from '@server/controllers/authController.js';
+import { USER_ROLE } from '@shared/constants.js';
 
 const router: Router = Router();
 const { CUSTOMER } = USER_ROLE;

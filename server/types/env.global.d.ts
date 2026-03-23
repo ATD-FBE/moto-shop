@@ -1,7 +1,5 @@
-import { TStorageType, TMongoMode, TBucketType } from './config.js';
-import { TUserRole, SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { MONGO_MODE, STORAGE_TYPE } = SERVER_CONSTANTS;
+import { TStorageType, TMongoMode, TBucketType } from '@server/types/index.js';
+import { TUserRole } from '@shared/constants.js';
 
 declare global {
     namespace NodeJS {

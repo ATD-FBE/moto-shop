@@ -1,8 +1,8 @@
-import Order from '../database/models/Order.js';
-import Counter from '../database/models/Counter.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { storageService } from '../services/storage/storageService.js';
-import * as sseOrderManagement from '../services/sse/sseOrderManagementService.js';
+import Order from '@server/database/models/Order.js';
+import Counter from '@server/database/models/Counter.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { storageService } from '@server/services/storage/storageService.js';
+import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     prepareDraftOrderData,
     syncDraftOrderData,
@@ -11,30 +11,28 @@ import {
     commitProductPurchase,
     replaceListItemsByKey,
     isCartDifferentFromOrder
-} from '../services/checkoutService.js';
-import { orderDotNotationMap, prepareShippingCost } from '../services/orderService.js';
+} from '@server/services/checkoutService.js';
+import { orderDotNotationMap, prepareShippingCost } from '@server/services/orderService.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
     deepMergeNewNullable
-} from '../utils/normalizeUtils.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { calculateOrderTotals } from '../../shared/calculations.js';
+} from '@server/utils/normalizeUtils.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
+import { calculateOrderTotals } from '@shared/calculations.js';
 import {
     DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
     ORDER_MODEL_TYPE,
     DELIVERY_METHOD,
     ORDER_STATUS,
-    REQUEST_STATUS,
-    SERVER_CONSTANTS
-} from '../../shared/constants.js';
-
-const { ORDER_DRAFT_EXPIRATION } = SERVER_CONSTANTS;
+    REQUEST_STATUS
+} from '@shared/constants.js';
 
 /// Загрузка черновика заказа ///
 export const handleOrderDraftRequest = async (req, res, next) => {

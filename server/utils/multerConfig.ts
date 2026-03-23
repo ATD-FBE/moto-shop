@@ -2,57 +2,17 @@ import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import { TMulterMode } from '../config/config.js';
 import { typeCheck } from './typeValidation.js';
-import { TAllowedMimeType, SERVER_CONSTANTS } from '../../shared/constants.js';
+import { MULTER_MODE } from '@server/config/constants.js';
+import {
+    IMulterErrorContext,
+    IMulterErrorSpec,
+    IExtendedError,
+    IMulterConfigArgs,
+    IMulterField
+} from '@server/types/index.js';
 
-const { MULTER_MODE } = SERVER_CONSTANTS;
-
-const allowedConfigTypes = ['single', 'array', 'fields', 'any'] as const;
-
-//////////////////
-/// INTERFACES ///
-//////////////////
-
-interface IMulterErrorContext {
-    field: string;
-    filesLimit: number;
-    maxSizeMB: number;
-    message: string;
-}
-
-interface IMulterErrorSpec {
-    type: string;
-    message: string;
-}
-
-interface IMulterField {
-    name: string;
-    maxCount?: number;
-}
-
-interface IMulterConfigArgs {
-    type: typeof allowedConfigTypes[number];
-    fields: 
-        | string               // Для 'single' и простого 'array'
-        | IMulterField         // Для 'array' с лимитом
-        | IMulterField[];      // Для 'fields' (массив объектов)
-    storageMode?: TMulterMode;
-    storagePath?: string | null;
-    readonly allowedMimeTypes: readonly TAllowedMimeType[];
-    filesLimit?: number;
-    maxSizeMB: number;
-}
-
-interface IExtendedError extends Error {
-    isMulterError?: boolean;
-    code?: string;
-    field?: string;
-}
-
-/////////////////
-/// FUNCTIONS ///
-/////////////////
+export const allowedConfigTypes = ['single', 'array', 'fields', 'any'] as const;
 
 const generateStorageFilename = (originalname: string) => `${randomUUID()}${extname(originalname)}`;
 
@@ -85,7 +45,7 @@ const createMulterConfig = ({
     type,
     fields,
     storageMode = MULTER_MODE.DISK,
-    storagePath,
+    storagePath = null,
     allowedMimeTypes,
     filesLimit = 1,
     maxSizeMB
@@ -149,7 +109,7 @@ const createMulterConfig = ({
         throw new TypeError('filesLimit должен быть натуральным числом или undefined');
     }
 
-    if (![MULTER_MODE.DISK, MULTER_MODE.MEMORY].includes(storageMode)) {
+    if (!Object.values(MULTER_MODE).includes(storageMode)) {
         throw new TypeError('Некорректный storageMode');
     }
 

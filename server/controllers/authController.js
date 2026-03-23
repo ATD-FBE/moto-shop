@@ -1,21 +1,20 @@
 import jwt from 'jsonwebtoken';
-import User from '../database/models/User.js';
-import config from '../config/config.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { getUserData, getSessionData } from '../services/authService.js';
-import { generateToken } from '../utils/token.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import { getTokenExpiryFromCookie } from '../utils/token.js';
-import { normalizeInputDataToNull } from '../utils/normalizeUtils.js';
-import { isDbDataModified } from '../utils/compareUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { validationRules, fieldErrorMessages } from '../../shared/fieldRules.js';
-import { DELIVERY_METHOD, SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { TOKEN_COOKIE_OPTIONS, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } = SERVER_CONSTANTS;
+import User from '@server/database/models/User.js';
+import config from '@server/config/config.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { getUserData, getSessionData } from '@server/services/authService.js';
+import { generateToken } from '@server/utils/token.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { getTokenExpiryFromCookie } from '@server/utils/token.js';
+import { normalizeInputDataToNull } from '@server/utils/normalizeUtils.js';
+import { isDbDataModified } from '@server/utils/compareUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { DELIVERY_METHOD } from '@shared/constants.js';
+import { TOKEN_COOKIE_OPTIONS, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from '@server/config/constants.js';
 
 /// Регистрация ///
 export const handleAuthRegistrationRequest = async (req, res, next) => {

@@ -9,6 +9,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["client/src/*"],
+			"@server/*": ["server/*"],
 			"@shared/*": ["shared/*"]
 		},
 

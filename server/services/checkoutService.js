@@ -4,10 +4,8 @@ import {
     applyProductBulkUpdate,
     prepareProductData
 } from './productService.js';
-import { getAppliedDiscountData } from '../../shared/commonHelpers.js';
-import { SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { ORDER_RESERVE_BATCH_SIZE } = SERVER_CONSTANTS;
+import { ORDER_RESERVE_BATCH_SIZE } from '@server/config/constants.js';
+import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 
 export const reserveProducts = async (remainingOrderItemsToReserve, session) => {
     const failedItemIdsSet = new Set();

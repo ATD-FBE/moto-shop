@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
     handleCompanyDetailsPdfRequest
-} from '../controllers/companyController.js';
+} from '@server/controllers/companyController.js';
 
 const router: Router = Router();
 

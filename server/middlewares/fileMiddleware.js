@@ -1,12 +1,10 @@
 import { join } from 'path';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import config from '../config/config.js';
-import s3Client from '../config/s3Client.js';
-import { PUBLIC_PATH, BUILD_PATH, STORAGE_ROOT } from '../config/paths.js';
-import { SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { STORAGE_TYPE } = SERVER_CONSTANTS;
+import config from '@server/config/config.js';
+import s3Client from '@server/config/s3Client.js';
+import { PUBLIC_PATH, BUILD_PATH, STORAGE_ROOT } from '@server/config/paths.js';
+import { STORAGE_TYPE } from '@server/config/constants.js';
 
 export const serveBuildFiles = (express) => {
     if (config.env !== 'production') return (req, res, next) => next();

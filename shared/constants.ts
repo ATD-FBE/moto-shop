@@ -40,9 +40,6 @@ export type TRequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
 
 export type TFormStatus = typeof FORM_STATUS[keyof typeof FORM_STATUS];
 
-type TClientConstants = typeof CLIENT_CONSTANTS_DATA;
-type TServerConstants = typeof SERVER_CONSTANTS_DATA;
-
 //////////////////
 /// INTERFACES ///
 //////////////////
@@ -853,7 +850,7 @@ export const BASE_SUBMIT_STATES: Record<TFormStatus, IBaseSubmitState> = {
 
 const isServer = typeof window === 'undefined';
 
-const CLIENT_CONSTANTS_DATA = {
+export const CLIENT_CONSTANTS = {
     ENV: process.env.APP_ENV,
     PROD_ENV: process.env.APP_ENV === 'production',
     PROTOCOL: process.env.PROTOCOL,
@@ -900,41 +897,3 @@ const CLIENT_CONSTANTS_DATA = {
     FIELD_SAVE_STATUS,
     FIELD_SAVE_STATUS_MESSAGES
 } as const;
-
-const SERVER_CONSTANTS_DATA = {
-    MONGO_MODE: {
-        LOCAL: 'local',
-        ATLAS: 'atlas'
-    },
-    STORAGE_TYPE: {
-        FS: 'fs',
-        S3: 's3'
-    },
-    MULTER_MODE: {
-        DISK: 'disk',
-        MEMORY: 'memory'
-    },
-    TOKEN_COOKIE_OPTIONS: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax', // В запросах нужно указывать credentials: 'include'
-        path: '/'
-    },
-    ERROR_SIGNALS: {
-        TIMEOUT_ABORT: 'timeout_abort'
-    },
-    ACCESS_TOKEN_MAX_AGE: 1 * 60 * 60 * 1000, // 1 час
-    //ACCESS_TOKEN_MAX_AGE: 10 * 1000,
-    
-    REFRESH_TOKEN_MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 дней
-    //REFRESH_TOKEN_MAX_AGE: 30 * 1000,
-
-    ORDER_DRAFT_EXPIRATION: 15 * 60 * 1000, // 15 минут
-    //ORDER_DRAFT_EXPIRATION: 10 * 1000,
-
-    ONLINE_TRANSACTION_INIT_EXPIRATION: 5 * 60 * 1000, // 5 минут
-    ORDER_RESERVE_BATCH_SIZE: 10
-} as const;
-
-export const CLIENT_CONSTANTS = (!isServer ? CLIENT_CONSTANTS_DATA : {}) as TClientConstants;
-export const SERVER_CONSTANTS = (isServer ? SERVER_CONSTANTS_DATA : {}) as TServerConstants;

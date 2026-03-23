@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { verifyAuth, verifyUser, verifyRole } from '../middlewares/authMiddleware.js';
+import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMiddleware.js';
 import {
     handleCustomerListRequest,
     handleCustomerOrderListRequest,
     handleCustomerDiscountUpdateRequest,
     handleCustomerBanToggleRequest
-} from '../controllers/customerController.js';
-import { USER_ROLE } from '../../shared/constants.js';
+} from '@server/controllers/customerController.js';
+import { USER_ROLE } from '@shared/constants.js';
 
 const router: Router = Router();
 const { ADMIN } = USER_ROLE;

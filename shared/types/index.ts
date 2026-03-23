@@ -1,1 +1,1 @@
-export * from './orderTypes.js';
+export * from './order.types.js';

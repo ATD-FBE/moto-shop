@@ -2,15 +2,15 @@ import { Router } from 'express';
 import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser, optionalRole
-} from '../middlewares/authMiddleware.js';
+} from '@server/middlewares/authMiddleware.js';
 import {
     handleNewsListRequest,
     handleNewsRequest,
     handleNewsCreateRequest,
     handleNewsUpdateRequest,
     handleNewsDeleteRequest
-} from '../controllers/newsController.js';
-import { USER_ROLE } from '../../shared/constants.js';
+} from '@server/controllers/newsController.js';
+import { USER_ROLE } from '@shared/constants.js';
 
 const router: Router = Router();
 const { ADMIN, CUSTOMER } = USER_ROLE;

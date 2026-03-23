@@ -46,7 +46,7 @@ import { isCriticalError } from './utils/errorUtils.js';
 import { startExpiredOrderDraftCleaner } from './services/cron/expiredOrderDraftCleaner.js';
 import { startInitOnlineTransactionCleaner } from './services/cron/initOnlineTransactionCleaner.js';
 import log from './utils/logger.js';
-import { toError } from '../shared/commonHelpers.js';
+import { toError } from '@shared/commonHelpers.js';
 
 const app = express();
 const apiRouter = express.Router();

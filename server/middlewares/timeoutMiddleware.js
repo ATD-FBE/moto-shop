@@ -1,6 +1,4 @@
-import { SERVER_CONSTANTS } from '../../shared/constants.js';
-
-const { ERROR_SIGNALS } = SERVER_CONSTANTS;
+import { ERROR_SIGNALS } from '@server/config/constants.js';
 
 export const requestTimeout = (duration) => (req, res, next) => {
     res.setTimeout(duration, () => {

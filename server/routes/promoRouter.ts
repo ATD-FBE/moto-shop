@@ -1,27 +1,24 @@
 import { Router } from 'express';
-import config from '../config/config.js';
-import { PROMO_STORAGE_PATH } from '../config/paths.js';
-import createMulterConfig from '../utils/multerConfig.js';
+import config from '@server/config/config.js';
+import { PROMO_STORAGE_PATH } from '@server/config/paths.js';
+import createMulterConfig from '@server/utils/multerConfig.js';
 import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser, optionalRole
-} from '../middlewares/authMiddleware.js';
+} from '@server/middlewares/authMiddleware.js';
 import {
     handlePromoListRequest,
     handlePromoRequest,
     handlePromoCreateRequest,
     handlePromoUpdateRequest,
     handlePromoDeleteRequest
-} from '../controllers/promoController.js';
+} from '@server/controllers/promoController.js';
+import { MULTER_MODE } from '@server/config/constants.js';
 import {
     ALLOWED_IMAGE_MIME_TYPES,
     MAX_PROMO_IMAGE_SIZE_MB,
-    USER_ROLE,
-    SERVER_CONSTANTS
-} from '../../shared/constants.js';
-
-const { ADMIN, CUSTOMER } = USER_ROLE;
-const { MULTER_MODE } = SERVER_CONSTANTS;
+    USER_ROLE
+} from '@shared/constants.js';
 
 const uploadImage = createMulterConfig({
     type: 'single',
@@ -33,6 +30,7 @@ const uploadImage = createMulterConfig({
 });
 
 const router: Router = Router();
+const { ADMIN, CUSTOMER } = USER_ROLE;
 
 router.get('/', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handlePromoListRequest);
 router.get('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoRequest);

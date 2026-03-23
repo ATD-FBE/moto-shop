@@ -1,9 +1,7 @@
-import config from '../../config/config.js';
+import config from '@server/config/config.js';
 import { fsStorageProvider } from './providers/fs.provider.js';
 import { s3StorageProvider } from './providers/s3.provider.js';
-import { SERVER_CONSTANTS } from '../../../shared/constants.js';
-
-const { STORAGE_TYPE } = SERVER_CONSTANTS;
+import { STORAGE_TYPE } from '@server/config/constants.js';
 
 let provider;
 
