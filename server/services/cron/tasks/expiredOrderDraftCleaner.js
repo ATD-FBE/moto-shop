@@ -1,9 +1,9 @@
 import cron from 'node-cron';
-import Order from '../../database/models/Order.js';
-import { releaseReservedProducts } from '../checkoutService.js';
-import log from '../../utils/logger.js';
-import { runInTransaction } from '../../utils/transaction.js';
-import { ORDER_STATUS } from '../../../shared/constants.js';
+import Order from '@server/database/models/Order.js';
+import { releaseReservedProducts } from '@server/services/checkoutService.js';
+import log from '@server/utils/logger.js';
+import { runInTransaction } from '@server/utils/transaction.js';
+import { ORDER_STATUS } from '@shared/constants.js';
 
 const LOG_CTX = '[CRON EXPIRED ORDER DRAFT CLEANER]';
 

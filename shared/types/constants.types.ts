@@ -1,5 +1,6 @@
 import {
     ALLOWED_IMAGE_MIME_TYPES,
+    PRODUCT_UNITS,
     DISCOUNT_SOURCE,
     USER_ROLE,
     PRODUCT_THUMBNAIL_PRESETS,
@@ -19,6 +20,8 @@ import {
 
 export type TAllowedImageMimeType = typeof ALLOWED_IMAGE_MIME_TYPES[number];
 export type TAllowedMimeType = TAllowedImageMimeType;
+
+export type TProductUnit = typeof PRODUCT_UNITS[number];
 
 export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
 

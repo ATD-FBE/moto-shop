@@ -472,6 +472,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             ...existingImageFilenamesToDelete.map(url => ['imageFilenamesToDelete', url]),
             ...newImageFiles.map(file => ['images', file])
         ];
+        
         if (mainImageIndex !== -1) {
             fieldEntries.push(['mainImageIndex', mainImageIndex]);
         }

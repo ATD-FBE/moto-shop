@@ -5,6 +5,12 @@ import type {
     TCardOnlineProvider,
     TFinancialsEvent
 } from './constants.types.js';
+import type { IDataChange } from './shared.types.js';
+
+/// Order ///
+export interface IOrderDataChange extends IDataChange {
+    currency?: boolean;
+}
 
 /// Finansials ///
 export interface IFinancialsEventAction {

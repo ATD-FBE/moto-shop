@@ -37,17 +37,13 @@ export const connectMongoDB = async (): Promise<void> => {
     }
 };
 
-export const shutdownMongoDB = async (signal: string): Promise<void> => {
-    log.info(`Сигнал ${signal} получен. Отключение MongoDB...`);
+export const disconnectMongoDB = async (): Promise<void> => {
+    log.info(`Отключение MongoDB...`);
 
     try {
         await mongoose.disconnect();
         log.info('Соединение с MongoDB закрыто');
     } catch (err) {
-        const error = toError(err);
-        log.error('Ошибка закрытия соединения с MongoDB:', error);
-    } finally {
-        const errors = ['uncaughtException', 'unhandledRejection', 'SERVER_ERROR'];
-        process.exit(errors.includes(signal) ? 1 : 0);
+        log.error('Ошибка закрытия соединения с MongoDB:', toError(err));
     }
 };

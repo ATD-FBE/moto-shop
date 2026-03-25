@@ -1,13 +1,13 @@
-export const isObject = (val) =>
+export const isObject = (val: unknown): val is Record<string, unknown> =>
     typeof val === 'object' && val !== null && !Array.isArray(val) && !(val instanceof Date);
 
-export const normalizeInputDataToNull = (data) => {
+export const normalizeInputDataToNull = (data: unknown): unknown => {
     if (data == null) return null;
     if (typeof data === 'string') return data.trim() || null;
     if (data instanceof Date) return new Date(data);
     if (Array.isArray(data)) return data.map(normalizeInputDataToNull);
 
-    if (typeof data === 'object') {
+    if (isObject(data)) {
         return Object.fromEntries(
             Object.entries(data)
                 .filter(([key]) => Object.hasOwn(data, key))
@@ -18,26 +18,31 @@ export const normalizeInputDataToNull = (data) => {
     return data;
 };
 
-export const dotNotationToObject = (flatObj) => {
-    const result = {};
+export const dotNotationToObject = (flatObj: Record<string, unknown>): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(flatObj)) {
         const parts = key.split('.');
-        let target = result;
+        let target: any = result;
 
         for (let i = 0; i < parts.length - 1; i++) {
             const part = parts[i];
-            if (!target[part]) target[part] = {};
+
+            if (typeof target[part] !== 'object' || target[part] === null) {
+                target[part] = {};
+            }
+            
             target = target[part];
         }
 
-        target[parts.at(-1)] = value;
+        const lastKey = parts[parts.length - 1];
+        target[lastKey] = value;
     }
 
     return result;
 };
 
-export const deepMergeNewNullable = (target, source) => {
+export const deepMergeNewNullable = (target: unknown, source: unknown): any => {
     if (target == null || typeof target !== 'object') {
         if (typeof source === 'object' && source !== null) return deepMergeNewNullable({}, source);
         return source;
@@ -47,12 +52,15 @@ export const deepMergeNewNullable = (target, source) => {
     if (Array.isArray(source)) return [...source];
 
     // target и source - объекты
+    const t = target as Record<string, any>;
+    const s = source as Record<string, any>;
+
     const keys = new Set([...Object.keys(target), ...Object.keys(source)]);
-    const resultObj = {};
+    const resultObj: Record<string, unknown> = {};
 
     for (const key of keys) {
-        const tVal = target[key];
-        const sVal = source[key];
+        const tVal = t[key];
+        const sVal = s[key];
 
         if (isObject(sVal)) {
             resultObj[key] = deepMergeNewNullable(tVal || {}, sVal);

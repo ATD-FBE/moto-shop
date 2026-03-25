@@ -1,23 +1,24 @@
 import winston from 'winston';
-import { LOG_COMBINED_FILE_PATH, LOG_ERROR_FILE_PATH } from '../config/paths.js';
+import { LOG_COMBINED_FILE_PATH, LOG_ERROR_FILE_PATH } from '@server/config/paths.js';
+import type { IWinstonLogInfo, IWinstonPreparedLogInfo } from '@server/types/index.js';
 
-const prepareInfo = (info) => {
-    const { timestamp, level, message, stack, ...meta } = info;
+const prepareInfo = (info: IWinstonLogInfo): IWinstonPreparedLogInfo => {
+    const { timestamp = '', level = 'info', message = '', stack, ...meta } = info;
     const stackData = stack ? `\n${stack}` : '';
     const metaData = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 4)}` : '';
-    return { timestamp, level: level, message, stackData, metaData };
+    return { timestamp, level, message, stackData, metaData };
 };
 
 const timestampFormat = 'YYYY-MM-DD HH:mm:ss';
 
-const loggerConfig = {
+const loggerConfig: winston.LoggerOptions = {
     level: 'info',
 
     format: winston.format.combine( // Общий формат (файлы и консоль)
         winston.format.timestamp({ format: timestampFormat }),
         winston.format.splat(), // Для более двух аргументов в логгере (meta - обязательно объекты!)
         winston.format.printf(info => {
-            const { timestamp, level, message, stackData, metaData } = prepareInfo(info);
+            const { timestamp, level, message, stackData, metaData } = prepareInfo(info as IWinstonLogInfo);
             return `[${timestamp}] [${level.toUpperCase()}]: ${message}${stackData}${metaData}\n`;
         })
     ),
@@ -36,7 +37,7 @@ const loggerConfig = {
                 winston.format.timestamp({ format: timestampFormat }),
                 winston.format.splat(), // Для более двух аргументов в логгере (meta - обязательно объекты!)
                 winston.format.printf(info => {
-                    const { timestamp, level, message, stackData, metaData } = prepareInfo(info);
+                    const { timestamp, level, message, stackData, metaData } = prepareInfo(info as IWinstonLogInfo);
                     return `${level}: ${message} - { timestamp: ${timestamp} }${stackData}${metaData}`;
                 })
             )

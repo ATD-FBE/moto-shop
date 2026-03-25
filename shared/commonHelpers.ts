@@ -3,10 +3,12 @@ import type { IAppliedDiscount, IDotNotationPatch, IFinancialsEventEntry }  from
 
 export const toError = (err: unknown): Error => {
     if (err instanceof Error) return err;
-    return new Error(String(err));
+
+    const message = typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err);
+    return new Error(message);
 };
 
-const padTwoDigits = (n: number): string => String(n).padStart(2, '0');
+export const padTwoDigits = (n: number): string => String(n).padStart(2, '0');
 
 export const formatDateToLocalString = (date: Date): string =>
     `${date.getFullYear()}-${padTwoDigits(date.getMonth() + 1)}-${padTwoDigits(date.getDate())}`;
@@ -135,7 +137,8 @@ export const getLastFinancialsEventEntry = (
     return null; // Для удаления из истории на странице всех заказов
 };
 
-export const makeOrderItemQuantityFieldName = (productId: string): string => `item-${productId}-quantity`;
+export const makeOrderItemQuantityFieldName = (productId: string): string =>
+    `item-${productId}-quantity`;
 
 export const getCustomerOrderDetailsPath = (orderNumber: string, orderId: string): string =>
     `/customer/orders/${orderNumber ?? ''}~${orderId}`;

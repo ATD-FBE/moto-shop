@@ -10,6 +10,14 @@ import {
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER
 } from './constants.js';
+import type {
+    TAllowedImageMimeType,
+    TProductUnit,
+    TDeliveryMethod,
+    TPaymentMethod,
+    TRefundMethod,
+    TBankProvider
+} from '@shared/types/index.js';
 
 /// Валидации полей форм ///
 const userNameValidation = /^[\wа-яА-ЯёЁ.-][\wа-яА-ЯёЁ\s.-]{1,28}[\wа-яА-ЯёЁ.-]$/;
@@ -27,13 +35,15 @@ const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 const phoneValidation = /^(\+7|8)\d{10}$/;
 const cvcValidation = /^\d{3,4}$/;
 
-const alwaysPassValidation = () => true;
+const alwaysPassValidation = (): boolean => true;
 
-const booleanRequiredValidation = (val) => val === true;
+const booleanRequiredValidation = (val: boolean): boolean => val === true;
 
-const imageValidation = (file, allowedTypes, maxSizeMB, optional = false) => {
-    if (!file) return optional;
-
+const imageValidation = (
+    file: File,
+    allowedTypes: TAllowedImageMimeType[],
+    maxSizeMB: number
+): boolean => {
     const allowedTypesRegex = new RegExp(allowedTypes.join('|'));
 
     if (!allowedTypesRegex.test(file.type)) return false;
@@ -41,32 +51,39 @@ const imageValidation = (file, allowedTypes, maxSizeMB, optional = false) => {
     return true;
 };
 
-const recipientsValidation = (recipients) => Array.isArray(recipients) && recipients.length > 0;
+const recipientsValidation = (recipients: string[]): boolean =>
+    Array.isArray(recipients) && recipients.length > 0;
 
-const productUnitValidation = (val) => PRODUCT_UNITS.includes(val);
+const productUnitValidation = (val: TProductUnit): boolean => PRODUCT_UNITS.includes(val);
 
-const discountValidation = (val) =>
-    val !== '' &&
-    Number.isInteger(val = Number(val)) &&
-    val >= 0 &&
-    val <= 100;
+const discountValidation = (val: string | number): boolean => {
+    const num = typeof val === 'string' ? Number(val) : val;
+    return val !== '' && Number.isInteger(num) && num >= 0 && num <= 100;
+};
 
-const deliveryMethodValidation = (val) => DELIVERY_METHOD_OPTIONS.some(opt => opt.value === val);
+const deliveryMethodValidation = (val: TDeliveryMethod): boolean =>
+    DELIVERY_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const paymentMethodValidation = (val) => PAYMENT_METHOD_OPTIONS.some(opt => opt.value === val);
+const paymentMethodValidation = (val: TPaymentMethod): boolean =>
+    PAYMENT_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const refundMethodValidation = (val) => REFUND_METHOD_OPTIONS.some(opt => opt.value === val);
+const refundMethodValidation = (val: TRefundMethod): boolean =>
+    REFUND_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const providerValidation = (val) =>
+const providerValidation = (val: TBankProvider): boolean =>
     [...Object.values(BANK_PROVIDER), ...Object.values(CARD_ONLINE_PROVIDER)].includes(val);
 
-const cardNumberValidation = (val) => /^\d{16}$/.test(val.replace(/\s/g, ''));
+const cardNumberValidation = (val: string): boolean => /^\d{16}$/.test(val.replace(/\s/g, ''));
 
-const expiryDateValidation = (val, context = {}) => {
+const expiryDateValidation = (val: string, context: { split: string }): boolean => {
+    if (!val) return false;
+
     const { split } = context;
-
     const cleanedVal = val.replace(/\s/g, '');
-    const [mm, yy] = cleanedVal.split(split);
+    const parts = cleanedVal.split(split);
+    if (parts.length !== 2) return false;
+
+    const [mm, yy] = parts;
 
     if (!/^(0[1-9]|1[0-2])$/.test(mm)) return false;
     if (!/^\d{2}$/.test(yy)) return false;
@@ -208,7 +225,7 @@ export const validationRules = {
         failureReason: textValidation,
         externalReference: textValidation
     }
-};
+} as const;
 
 /// Сообщения об ошибках полей формы ///
 export const fieldErrorMessages = {
@@ -279,7 +296,7 @@ export const fieldErrorMessages = {
             default: `Изображение не должно превышать ${MAX_PROMO_IMAGE_SIZE_MB} МБ` +
                 ' и должно быть в формате ' +
                 ALLOWED_IMAGE_MIME_TYPES
-                    .map(type => type.split('/').pop().toUpperCase())
+                    .map(type => (type.split('/').pop() as string).toUpperCase())
                     .concat('JPG')
                     .sort((a, b) => a.localeCompare(b))
                     .join(', ')
@@ -332,7 +349,7 @@ export const fieldErrorMessages = {
             default: `Максимум ${PRODUCT_FILES_LIMIT} фотографий. ` +
                 `Каждый файл должен не превышать ${MAX_PRODUCT_IMAGE_SIZE_MB} МБ и быть в формате ` +
                 ALLOWED_IMAGE_MIME_TYPES
-                    .map(type => type.split('/').pop().toUpperCase())
+                    .map(type => (type.split('/').pop() as string).toUpperCase())
                     .concat('JPG')
                     .sort((a, b) => a.localeCompare(b))
                     .join(', ')
@@ -571,4 +588,4 @@ export const fieldErrorMessages = {
             default: ''
         }
     }
-};
+} as const;

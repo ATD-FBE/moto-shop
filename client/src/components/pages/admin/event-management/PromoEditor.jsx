@@ -255,8 +255,8 @@ export default function PromoEditor({ promoId }) {
     
         // Загружен новый файл — валидация и добавление
         if (imageFile instanceof File) {
-            const ruleCheck = validation(imageFile, allowedTypes, maxSizeMB, optional);
-            const isValid = optional ? (!imageFile || ruleCheck) : ruleCheck;
+            const ruleCheck = validation(imageFile, allowedTypes, maxSizeMB);
+            const isValid = ruleCheck;
             if (!isValid) return { isValid: false, fieldStateValue };
     
             fieldEntries.push([name, imageFile]);

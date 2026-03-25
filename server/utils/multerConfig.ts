@@ -7,7 +7,6 @@ import { MULTER_MODE } from '@server/config/constants.js';
 import type {
     IMulterErrorContext,
     IMulterErrorSpec,
-    IExtendedError,
     IMulterConfigArgs,
     IMulterField
 } from '@server/types/index.js';
@@ -147,7 +146,7 @@ const createMulterConfig = ({
         const mimeSet = new Set(allowedMimeTypes);
 
         if (!mimeSet.has(file.mimetype)) {
-            const error = new Error(`Недопустимый формат файла в поле ${file.fieldname}`) as IExtendedError;
+            const error = new Error(`Недопустимый формат файла в поле ${file.fieldname}`);
 
             error.isMulterError = true;
             error.code = 'INVALID_FORMAT';

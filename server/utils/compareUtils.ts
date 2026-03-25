@@ -1,25 +1,47 @@
 import { isObject } from './normalizeUtils.js';
+import type { IOrderDataChange } from '@shared/types/index.js';
 
-export const isArrayContentDifferent = (arr1, arr2, options = { orderMatters: false }) => {
+export const isArrayContentDifferent = (
+    arr1: unknown[],
+    arr2: unknown[],
+    { orderMatters = false }: { orderMatters?: boolean } = {}
+): boolean => {
     if (!Array.isArray(arr1) || !Array.isArray(arr2)) return true;
     if (arr1.length !== arr2.length) return true;
 
-    if (options.orderMatters) {
+    // Проверка элементов массивов, если порядок важен
+    if (orderMatters) {
         return arr1.some((item, idx) => item !== arr2[idx]);
     }
 
-    const set1 = new Set(arr1);
-    return arr2.some(item => !set1.has(item));
+    // Проверка элементов массивов, если порядок не важен
+    const itemCounts = new Map<unknown, number>();
+    
+    for (const item of arr1) {
+        itemCounts.set(item, (itemCounts.get(item) || 0) + 1);
+    }
+    
+    for (const item of arr2) {
+        const count = itemCounts.get(item);
+        if (!count) return true; // Элемента нет или их меньше, чем в arr1
+        itemCounts.set(item, count - 1);
+    }
+
+    return false;
 };
 
-export const isDateLike = (val) => {
+export const isDateLike = (val: unknown): val is string | Date => {
     if (val == null) return false;
     if (val instanceof Date) return true;
     if (typeof val !== 'string') return false;
     return /^\d{4}-\d{2}-\d{2}/.test(val) && !isNaN(Date.parse(val)); // Проверка, что строка — ISO-дата
 };
 
-export const isDbDataModified = (oldData, newData, preserveNull = false) => {
+export const isDbDataModified = (
+    oldData: unknown,
+    newData: unknown,
+    { preserveNull = false }: { preserveNull?: boolean } = {}
+): boolean => {
     // Если null в новом значении удаляет поле (preserveNull = false), то его будущее значение undefined
     // preserveNull интерпретирует новое значение null как валидное (соответствует БД)
     if (oldData === undefined && newData === undefined) return false; // Ничего не было и не стало
@@ -36,8 +58,8 @@ export const isDbDataModified = (oldData, newData, preserveNull = false) => {
 
         const oldTime = new Date(oldData).getTime();
         const newTime = new Date(newData).getTime();
-        if (isNaN(oldTime) || isNaN(newTime)) return true;
 
+        if (isNaN(oldTime) || isNaN(newTime)) return true;
         return oldTime !== newTime;
     }
 
@@ -45,7 +67,7 @@ export const isDbDataModified = (oldData, newData, preserveNull = false) => {
     if (Array.isArray(oldData) || Array.isArray(newData)) {
         if (!Array.isArray(oldData) || !Array.isArray(newData)) return true;
         if (oldData.length !== newData.length) return true;
-        return oldData.some((item, idx) => isDbDataModified(item, newData[idx]));
+        return oldData.some((item, idx) => isDbDataModified(item, newData[idx], { preserveNull }));
     }
 
     const oldIsObj = isObject(oldData);
@@ -56,7 +78,7 @@ export const isDbDataModified = (oldData, newData, preserveNull = false) => {
         // Старое значение undefined, а новое — объект => рекурсивная проверка свойств объекта
         // Mongoose удаляет пустые объекты => undefined === пустой объект => false (нет отличий)
         return oldData === undefined
-            ? Object.values(newData).some(val => isDbDataModified(undefined, val))
+            ? Object.values(newData).some(val => isDbDataModified(undefined, val, { preserveNull }))
             : true;
     }
     if (!newIsObj && oldIsObj) return true;
@@ -66,7 +88,7 @@ export const isDbDataModified = (oldData, newData, preserveNull = false) => {
         const keys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
     
         for (const key of keys) {
-            if (isDbDataModified(oldData[key], newData[key])) {
+            if (isDbDataModified(oldData[key], newData[key], { preserveNull })) {
                 return true;
             }
         }
@@ -78,17 +100,17 @@ export const isDbDataModified = (oldData, newData, preserveNull = false) => {
 };
 
 export const collectDbChanges = (
-    oldData,
-    newData,
-    path = '',
-    fieldsPreserveNull = [],
-    currencyFields = [],
-    changes = []
+    oldData: unknown,
+    newData: unknown,
+    path: string = '',
+    fieldsPreserveNull: string[] = [],
+    currencyFields: string[] = [],
+    changes: IOrderDataChange[] = []
 ) => {
     const oldIsObj = isObject(oldData);
     const newIsObj = isObject(newData);
 
-    // Одно значение листовое, другое — объект => рекурсивный сбор изменений по свойствам объекта
+    // Старые данные листовые, новые — объект => рекурсивный сбор изменений по свойствам нового объекта
     if (!oldIsObj && newIsObj) {
         for (const [key, val] of Object.entries(newData)) {
             collectDbChanges(
@@ -100,8 +122,11 @@ export const collectDbChanges = (
                 changes
             );
         }
+
         return changes;
     }
+
+    // Старые данные объект, новые — листовые => рекурсивный сбор изменений по свойствам старого объекта
     if (!newIsObj && oldIsObj) {
         for (const [key, val] of Object.entries(oldData)) {
             collectDbChanges(
@@ -113,6 +138,7 @@ export const collectDbChanges = (
                 changes
             );
         }
+
         return changes;
     }
 
@@ -137,7 +163,7 @@ export const collectDbChanges = (
     const preserveNull = fieldsPreserveNull.includes(path);
     const isCurrency = currencyFields.includes(path);
 
-    if (isDbDataModified(oldData, newData, preserveNull)) {
+    if (isDbDataModified(oldData, newData, { preserveNull })) {
         changes.push({
             field: path,
             oldValue: oldData,

@@ -31,9 +31,3 @@ export interface IMulterConfigArgs {
     filesLimit?: number;
     maxSizeMB: number;
 }
-
-export interface IExtendedError extends Error {
-    isMulterError?: boolean;
-    code?: string;
-    field?: string;
-}

@@ -29,6 +29,16 @@ declare global {
         }
     }
 
+    interface Error {
+        errors?: Record<string, unknown>;
+        isAppError?: boolean;
+        statusCode?: number;
+        code?: string | number;
+        details?: Record<string, unknown>;
+        isMulterError?: boolean;
+        field?: string;
+    }
+
     namespace Express {
         interface Request {
             user?: {
