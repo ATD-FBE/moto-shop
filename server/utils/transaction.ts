@@ -1,6 +1,10 @@
-import mongoose from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
+import type { TTransactionHandler } from '@server/types/index.js';
 
-export async function runInTransaction(handler, options = {}) {
+export async function runInTransaction<T>(
+    handler: TTransactionHandler<T>,
+    options: mongo.TransactionOptions = {}
+): Promise<T> {
     // Создание сессии транзакции
     const session = await mongoose.startSession();
 
@@ -15,4 +19,4 @@ export async function runInTransaction(handler, options = {}) {
         // Конец транзакции
         await session.endSession();
     }
-};
+}

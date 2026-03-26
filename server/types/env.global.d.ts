@@ -1,4 +1,4 @@
-import { TStorageType, TMongoMode, TBucketType } from '@server/types/index.js';
+import { TStorageType, TMongoMode, TBucketType, TTokenDecodedUser } from '@server/types/index.js';
 import { TUserRole } from '@shared/constants.js';
 
 declare global {
@@ -41,12 +41,13 @@ declare global {
 
     namespace Express {
         interface Request {
-            user?: {
-                id: string;
+            rawBody?: Buffer; 
+            user?: TTokenDecodedUser;
+            dbUser?: {
+                _id: string;
                 role: TUserRole;
 
             };
-            rawBody?: Buffer; 
             fileUploadError?: {
                 field: string;
                 type: string;

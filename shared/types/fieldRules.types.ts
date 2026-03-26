@@ -1,21 +1,12 @@
-import { validationRules } from '@shared/fieldRules.js';
+export type TEntityType =
+    'auth' | 'customer' | 'news' | 'promotion' | 'notification' | 'category' |
+    'product' | 'checkout' | 'order' | 'financials' | 'payment' | 'refund';
 
-/// Типизация сущностей ///
-export type TValEntityType = keyof typeof validationRules;
+export type TValidationRules = Record<TEntityType, Record<string, any>>;
 
-/// validationRules ///
-export type TValidationRulesEntity = Record<string, any>;
-
-export type TValidationRulesGlobal = Record<TValEntityType, TValidationRulesEntity>;
-
-/// fieldErrorMessages ///
-export interface TFieldErrorMessagesField {
+export type TFieldErrorMessages = Record<TEntityType, Record<string, {
     readonly default: string;
     readonly [key: string]: string;
-}
-
-export type TFieldErrorMessagesEntity = Record<string, TFieldErrorMessagesField>;
-
-export type TFieldErrorMessagesGlobal = Record<TValEntityType, TFieldErrorMessagesEntity> & {
+}>> & {
     readonly DEFAULT: string;
 };

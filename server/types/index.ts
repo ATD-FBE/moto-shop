@@ -6,3 +6,7 @@ export * from './aggregationBuilders.types.js';
 export * from './errorUtils.types.js';
 export * from './logger.types.js';
 export * from './multerConfig.types.js';
+export * from './safeSendResponse.types.js';
+export * from './token.types.js';
+export * from './transaction.types.js';
+export * from './typeValidation.types.js';

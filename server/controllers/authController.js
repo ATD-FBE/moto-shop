@@ -455,8 +455,8 @@ export const handleAuthRefreshRequest = async (req, res, next) => {
 
         const accessTokenExp = Date.now() + ACCESS_TOKEN_MAX_AGE;
 
-        const user = jwt.verify(refreshToken, config.jwt.refreshSecretKey);
-        const accessToken = generateToken(user, 'access');
+        const decodedUser = jwt.verify(refreshToken, config.jwt.refreshSecretKey);
+        const accessToken = generateToken(decodedUser, 'access');
         res.cookie('accessToken', accessToken, { ...TOKEN_COOKIE_OPTIONS, maxAge: ACCESS_TOKEN_MAX_AGE });
         
         safeSendResponse(res, 200, { message: 'Токен доступа обновлён', accessTokenExp });

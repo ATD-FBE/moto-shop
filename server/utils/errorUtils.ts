@@ -3,7 +3,7 @@ import { typeCheck } from './typeValidation.js';
 import { fieldErrorMessages } from '@shared/fieldRules.js';
 import { FILE_FIELD_MAP } from '@server/config/constants.js';
 import type { IAppErrorData, TFieldErrors, IValidationErrors } from '@server/types/index.js';
-import type { TValEntityType, TFieldErrorMessagesGlobal } from '@shared/types/index.js';
+import type { TEntityType } from '@shared/types/index.js';
 
 export const isCriticalError = (error: Error): boolean => {
     return (
@@ -30,7 +30,7 @@ export const prepareAppErrorData = (err: Error): IAppErrorData => ({
     ...(typeCheck.object(err.details) ? err.details : { details: err.details })
 });
 
-export const parseValidationErrors = (err: any, entityType: TValEntityType): IValidationErrors => {
+export const parseValidationErrors = (err: any, entityType: TEntityType): IValidationErrors => {
     const fieldErrors: TFieldErrors = {};
 
     if (!err.errors) return { unknownFieldError: null, fieldErrors: null };
@@ -47,7 +47,7 @@ export const parseValidationErrors = (err: any, entityType: TValEntityType): IVa
 
         // Если поле вложено field будет иметь вид дот-нотации ('delivery.shippingAddress.city')
         const fieldName = field.includes('.') ? (field.split('.').pop() as string) : field;
-        const messages = (fieldErrorMessages as TFieldErrorMessagesGlobal)[entityType]?.[fieldName];
+        const messages = fieldErrorMessages[entityType]?.[fieldName];
 
         if (!messages) {
             return {

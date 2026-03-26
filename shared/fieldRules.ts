@@ -16,7 +16,9 @@ import type {
     TDeliveryMethod,
     TPaymentMethod,
     TRefundMethod,
-    TBankProvider
+    TBankProvider,
+    TValidationRules,
+    TFieldErrorMessages
 } from '@shared/types/index.js';
 
 /// Валидации полей форм ///
@@ -102,7 +104,7 @@ const expiryDateValidation = (val: string, context: { split: string }): boolean 
 };
 
 /// Объект с правилами валидаций для полей каждой сущности ///
-export const validationRules = {
+export const validationRules: TValidationRules = {
     auth: {
         name: userNameValidation,
         email: emailValidation,
@@ -228,7 +230,7 @@ export const validationRules = {
 } as const;
 
 /// Сообщения об ошибках полей формы ///
-export const fieldErrorMessages = {
+export const fieldErrorMessages: TFieldErrorMessages = {
     DEFAULT: 'Некорректное значение',
 
     auth: {
