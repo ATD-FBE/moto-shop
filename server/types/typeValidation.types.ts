@@ -4,10 +4,10 @@ export type TCheckType =
 
 export type TCheckFn = (val: unknown, ...args: any[]) => boolean;
 
-export type ITypeCheckBase = Record<TCheckType, TCheckFn>;
+export type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
 
-export type ITypeCheck = Record<TCheckType, TCheckFn> & {
-    optional: Record<TCheckType, TCheckFn>;
+export type TTypeCheck = TBaseTypeChecks & {
+    optional: TBaseTypeChecks;
 };
 
 export interface IInputTypeMapConfig {

@@ -3,14 +3,14 @@ import { fieldErrorMessages } from '@shared/fieldRules.js';
 import type {
     TCheckType,
     TCheckFn,
-    ITypeCheckBase,
-    ITypeCheck,
+    TBaseTypeChecks,
+    TTypeCheck,
     IInputTypeMap,
     IValidateInputTypesResult
 } from '@server/types/index.js';
-import type { TEntityType, TFieldErrorMessages } from '@shared/types/index.js';
+import type { TEntityType } from '@shared/types/index.js';
 
-export const baseTypeChecks: ITypeCheckBase = {
+export const baseTypeChecks: TBaseTypeChecks = {
     string: (val: unknown): val is string => typeof val === 'string',
 
     number: (val: unknown): val is string | number =>
@@ -29,7 +29,7 @@ export const baseTypeChecks: ITypeCheckBase = {
 
     array: (val: unknown): val is unknown[] => Array.isArray(val),
 
-    arrayOf: (arr: unknown, elemType?: TCheckType, check?: ITypeCheck): boolean => {
+    arrayOf: (arr: unknown, elemType?: TCheckType, check?: TTypeCheck): boolean => {
         if (!Array.isArray(arr)) return false;
         if (!arr.length) return true;
         if (!elemType) return false;
@@ -60,8 +60,8 @@ const makeOptionalCheck = (checkFn: TCheckFn): TCheckFn =>
     (val: unknown, ...args: unknown[]): boolean =>
         val === undefined || checkFn(val, ...args);
 
-const makeTypeCheck = (checks: ITypeCheckBase): ITypeCheck => {
-    const optionalChecks = {} as ITypeCheckBase;
+const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
+    const optionalChecks = {} as TBaseTypeChecks;
 
     (Object.keys(checks) as TCheckType[]).forEach(key => {
         optionalChecks[key] = makeOptionalCheck(checks[key]);
