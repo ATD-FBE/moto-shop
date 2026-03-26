@@ -1,8 +1,7 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
+import type { TCounter } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const CounterSchema = new Schema({
+export const CounterSchema = new Schema({
     entity: {
         type: String,
         required: true,
@@ -14,6 +13,6 @@ const CounterSchema = new Schema({
     }
 });
   
-const Counter = mongoose.model('Counter', CounterSchema);
+const Counter = model<TCounter>('Counter', CounterSchema);
 
 export default Counter;

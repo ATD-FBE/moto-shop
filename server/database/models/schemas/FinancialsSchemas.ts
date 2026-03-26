@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { Schema, Types } from 'mongoose';
 import {
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -8,16 +8,14 @@ import {
     CARD_ONLINE_PROVIDER,
     FINANCIALS_STATE,
     FINANCIALS_EVENT
-} from '../../../../shared/constants.js';
-import { validationRules } from '../../../../shared/fieldRules.js';
-
-const { Schema } = mongoose;
+} from '@shared/constants.js';
+import { validationRules } from '@shared/fieldRules.js';
 
 const baseFinancialsFields = {
     defaultPaymentMethod: {
         type: String,
         enum: Object.values(PAYMENT_METHOD),
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     }
 };
 
@@ -68,7 +66,7 @@ const CurrentOnlineTransactionSchema = new Schema({
         }],
         required: true,
         validate: {
-            validator: arr => arr.length > 0,
+            validator: (arr: unknown[]): boolean => arr.length > 0,
             message: 'providers не может быть пустым массивом'
         }
     },
@@ -115,17 +113,17 @@ export const FinalFinancialsSchema = new Schema({
     totalPaid: { // Агрегируемая сумма поступления всех траншей оплат
         type: Number,
         default: 0,
-        validate: [val => validationRules.financials.totalPaid.test(String(val))]
+        validate: [(val: number): boolean => validationRules.financials.totalPaid.test(String(val))]
     },
     totalRefunded: { // Агрегируемая сумма поступления всех траншей возвратов
         type: Number,
         default: 0,
-        validate: [val => validationRules.financials.totalRefunded.test(String(val))]
+        validate: [(val: number): boolean => validationRules.financials.totalRefunded.test(String(val))]
     },
     eventHistory: [{
         eventId: {
             type: Schema.Types.ObjectId,
-            default: () => new mongoose.Types.ObjectId()
+            default: () => new Types.ObjectId()
         },
         event: {
             type: String,
@@ -141,7 +139,7 @@ export const FinalFinancialsSchema = new Schema({
             amount: { // Сумма транша/попытки оплаты/возврата
                 type: Number,
                 required: true,
-                validate: [val => validationRules.financials.amount.test(String(val))]
+                validate: [(val: number): boolean => validationRules.financials.amount.test(String(val))]
             },
             provider: { // Банк при переводе/провайдер платёжного шлюза при оплате/возврате картой онлайн
                 type: String,

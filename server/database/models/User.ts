@@ -1,12 +1,15 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import bcrypt from 'bcrypt';
 import { DraftCustomerInfoSchema } from './schemas/CustomerInfoSchemas.js';
 import { DraftDeliverySchema } from './schemas/DeliverySchemas.js';
 import { DraftFinancialsSchema } from './schemas/FinancialsSchemas.js';
-import { validationRules } from '../../../shared/fieldRules.js';
+import { validationRules } from '@shared/fieldRules.js';
+import { toError } from '@shared/commonHelpers.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { TUser } from '@server/types/index.js';
 
-const { Schema } = mongoose;
+const { ADMIN, CUSTOMER } = USER_ROLE;
 const SALT_ROUNDS = 12;
 
 const NotificationItemSchema = new Schema({
@@ -44,13 +47,13 @@ const CartItemSchema = new Schema({
     },
     brandSnapshot: { // Опционально
         type: String,
-        set: val => val === null ? undefined : val // Поле не сохраняется при значении null
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     }
 }, {
     _id: false
 });
 
-const UserSchema = new Schema({
+export const UserSchema = new Schema({
     name: {
         type: String,
         required: true,
@@ -72,8 +75,8 @@ const UserSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'customer'],
-        default: 'customer'
+        enum: [ADMIN, CUSTOMER],
+        default: CUSTOMER
     },
     notifications: [NotificationItemSchema],
     discount: { // В процентах
@@ -114,7 +117,7 @@ UserSchema.pre('validate', function(next) {
 UserSchema.pre('save', async function(next) {
     try {
         // Удаление ненужных полей у админа после его создания
-        if (this.isNew && this.role === 'admin') {
+        if (this.isNew && this.role === ADMIN) {
             this.set('notifications', undefined, { strict: false });
             this.set('discount', undefined, { strict: false });
             this.set('cart', undefined, { strict: false });
@@ -125,7 +128,7 @@ UserSchema.pre('save', async function(next) {
         }
 
         // Хеширование пароля при создании нового юзера или изменении пароля у существующего
-        if (this.isModified('password')) {
+        if (this.isModified('password') && typeof this.password === 'string') {
             const salt = await bcrypt.genSalt(SALT_ROUNDS);
             this.hashedPassword = await bcrypt.hash(this.password, salt);
             this.markModified('hashedPassword');
@@ -134,18 +137,19 @@ UserSchema.pre('save', async function(next) {
 
         next();
     } catch (err) {
-        next(err);
+        next(toError(err));
     }
 });
 
 // Метод для проверки пароля
-UserSchema.methods.comparePassword = function(candidatePassword) {
+UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+    if (typeof this.hashedPassword !== 'string') return false;
     return bcrypt.compare(candidatePassword, this.hashedPassword);
 };
 
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 UserSchema.plugin(uniqueValidator);
 
-const User = mongoose.model('User', UserSchema);
+const User = model<TUser>('User', UserSchema);
 
 export default User;

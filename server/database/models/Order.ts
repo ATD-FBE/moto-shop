@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import { DraftOrderItemSchema, FinalOrderItemSchema } from './schemas/OrderItemSchemas.js';
 import { DraftCustomerInfoSchema, FinalCustomerInfoSchema } from './schemas/CustomerInfoSchemas.js';
 import { DraftDeliverySchema, FinalDeliverySchema } from './schemas/DeliverySchemas.js';
@@ -6,10 +6,9 @@ import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/Financia
 import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { ORDER_STATUS, ORDER_STATUS_CONFIG } from '@shared/constants.js';
+import type { TOrder } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const BaseOrderSchema = new Schema({
+export const BaseOrderSchema = new Schema({
     _modelType: { // Поле ключа дискриминатора для подсхем DraftOrderSchema/FinalOrderSchema
         type: String,
         enum: Object.values(ORDER_MODEL_TYPE),
@@ -103,7 +102,7 @@ const BaseOrderSchema = new Schema({
     },
     customerComment: { // Опционально
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     }
 }, {
     discriminatorKey: '_modelType', // Ключ дискриминатора для подсхем DraftOrderSchema/FinalOrderSchema
@@ -111,7 +110,7 @@ const BaseOrderSchema = new Schema({
 });
 
 // Черновик — без required на полях в схемах customerInfo/delivery/financials
-const DraftOrderSchema = new Schema({
+export const DraftOrderSchema = new Schema({
     items: [DraftOrderItemSchema],
     customerInfo: DraftCustomerInfoSchema,
     delivery: DraftDeliverySchema,
@@ -123,7 +122,7 @@ const DraftOrderSchema = new Schema({
 }); // { _id: false } - Для дискриминаторов не нужно отключать _id для стабильности
   
 // Подтверждённый/рабочий заказ — с required на полях в схемах customerInfo/delivery/financials
-const FinalOrderSchema = new Schema({
+export const FinalOrderSchema = new Schema({
     orderNumber: {
         type: String,
         required: true
@@ -139,7 +138,7 @@ const FinalOrderSchema = new Schema({
     internalNote: { // Опционально
         type: String,
         match: validationRules.order.internalNote,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     auditLog: {
         type: [{
@@ -203,7 +202,7 @@ BaseOrderSchema.index(
     }
 );
 
-const Order = mongoose.model('Order', BaseOrderSchema);
+const Order = model<TOrder>('Order', BaseOrderSchema);
 
 // Подключение схем DraftOrderSchema/FinalOrderSchema через дискриминатор модели
 Order.discriminator(ORDER_MODEL_TYPE.DRAFT, DraftOrderSchema);

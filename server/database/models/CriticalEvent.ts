@@ -1,8 +1,7 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
+import type { TCriticalEvent } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const CriticalEventSchema = new Schema({
+export const CriticalEventSchema = new Schema({
     category: {
         type: String,
         required: true
@@ -31,6 +30,6 @@ const CriticalEventSchema = new Schema({
     }
 });
 
-const CriticalEvent = mongoose.model('CriticalEvent', CriticalEventSchema);
+const CriticalEvent = model<TCriticalEvent>('CriticalEvent', CriticalEventSchema);
 
 export default CriticalEvent;

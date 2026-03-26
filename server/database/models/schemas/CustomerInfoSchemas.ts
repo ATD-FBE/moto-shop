@@ -1,28 +1,26 @@
-import mongoose from 'mongoose';
-import { validationRules } from '../../../../shared/fieldRules.js';
-
-const { Schema } = mongoose;
+import { Schema } from 'mongoose';
+import { validationRules } from '@shared/fieldRules.js';
 
 const baseCustomerInfoFields = {
     firstName: {
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     lastName: {
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     middleName: { // Опционально для заказа
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     email: {
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     phone: {
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     }
 };
 

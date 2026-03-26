@@ -1,25 +1,24 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
-import { PRODUCT_UNITS } from '../../../shared/constants.js';
-import { validationRules } from '../../../shared/fieldRules.js';
+import { PRODUCT_UNITS } from '@shared/constants.js';
+import { validationRules } from '@shared/fieldRules.js';
+import type { TProduct } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const ProductSchema = new Schema({
+export const ProductSchema = new Schema({
     imageFilenames: { // Опционально
         type: [String],
         default: []
     },
     mainImageIndex: { // Зависит от imageFilenames
         type: Number,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | number): undefined | number => val === null ? undefined : val
     },
     sku: { // Опционально
         type: String,
         match: validationRules.product.sku,
         unique: true,
         sparse: true, // Индекс уникальности не будет срабатывать на документах с отсутствующим полем
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     name: {
         type: String,
@@ -29,12 +28,12 @@ const ProductSchema = new Schema({
     brand: { // Опционально
         type: String,
         match: validationRules.product.brand,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     description: { // Опционально
         type: String,
         match: validationRules.product.description,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     stock: {
         type: Number,
@@ -59,7 +58,9 @@ const ProductSchema = new Schema({
         type: Number,
         required: true,
         min: 0,
-        validate: [val => validationRules.product.price.test(String(val))] // Не сработает при updateMany
+        validate: [ // Не сработает при updateMany
+            (val: number): boolean => validationRules.product.price.test(String(val))
+        ]
     },
     discount: { // В процентах
         type: Number,
@@ -116,6 +117,6 @@ ProductSchema.index({
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 ProductSchema.plugin(uniqueValidator);
 
-const Product = mongoose.model('Product', ProductSchema);
+const Product = model<TProduct>('Product', ProductSchema);
 
 export default Product;

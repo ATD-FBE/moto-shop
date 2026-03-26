@@ -1,11 +1,10 @@
-import mongoose from 'mongoose';
+import { Schema, Types, model } from 'mongoose';
 import UpdateHistoryItemSchema from './schemas/UpdateHistoryItemSchema.js';
-import { validationRules } from '../../../shared/fieldRules.js';
-import { NOTIFICATION_STATUS } from '../../../shared/constants.js';
+import { validationRules } from '@shared/fieldRules.js';
+import { NOTIFICATION_STATUS } from '@shared/constants.js';
+import type { TNotification } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const NotificationSchema = new Schema({
+export const NotificationSchema = new Schema({
     status: {
         type: String,
         enum: Object.values(NOTIFICATION_STATUS),
@@ -19,8 +18,8 @@ const NotificationSchema = new Schema({
         }],
         required: true,
         validate: [
-            arr => validationRules.notification.recipients(arr) &&
-            arr.every(id => mongoose.Types.ObjectId.isValid(id))
+            (arr: string[]): boolean =>
+                validationRules.notification.recipients(arr) && arr.every(id => Types.ObjectId.isValid(id))
         ]
     },
     subject: {
@@ -58,6 +57,6 @@ const NotificationSchema = new Schema({
 NotificationSchema.index({ status: 1, updatedAt: -1 });
 NotificationSchema.index({ status: 1, sentAt: -1 });
 
-const Notification = mongoose.model('Notification', NotificationSchema);
+const Notification = model<TNotification>('Notification', NotificationSchema);
 
 export default Notification;

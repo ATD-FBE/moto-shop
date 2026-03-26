@@ -1,10 +1,9 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import UpdateHistoryItemSchema from './schemas/UpdateHistoryItemSchema.js';
-import { validationRules } from '../../../shared/fieldRules.js';
+import { validationRules } from '@shared/fieldRules.js';
+import type { TPromo } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const PromoSchema = new Schema({
+export const PromoSchema = new Schema({
     title: {
         type: String,
         required: true,
@@ -12,7 +11,7 @@ const PromoSchema = new Schema({
     },
     imageFilename: { // Опционально
         type: String,
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     description: {
         type: String,
@@ -36,6 +35,6 @@ const PromoSchema = new Schema({
     timestamps: true // Автоматическое добавление полей createdAt и updatedAt
 });
 
-const Promo = mongoose.model('Promo', PromoSchema);
+const Promo = model<TPromo>('Promo', PromoSchema);
 
 export default Promo;

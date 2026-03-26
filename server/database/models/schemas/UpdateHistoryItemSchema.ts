@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
+import { Schema } from 'mongoose';
 
-const { Schema } = mongoose;
-
-const UpdateHistoryItemSchema = new Schema({
+export const UpdateHistoryItemSchema = new Schema({
     updatedBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',

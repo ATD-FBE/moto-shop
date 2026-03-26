@@ -34,6 +34,37 @@ export const handleNewsListRequest = async (req, res, next) => {
     }
 };
 
+/*import { Request, Response, NextFunction } from 'express';
+import { TNews, TNewsPopulated } from '@server/types/index.js';
+
+export const handleNewsListRequest = async (
+    req: Request, 
+    res: Response, 
+    next: NextFunction
+): Promise<void> => {
+    const isAdmin = req.dbUser?.role === 'admin';
+    const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
+
+    try {
+        let dbNewsQuery = News.find().sort({ publishDate: -1 }).select(selectedDbFields);
+
+        if (isAdmin) {
+            dbNewsQuery = dbNewsQuery
+                .populate('createdBy', 'name')
+                .populate('updateHistory.updatedBy', 'name');
+        }
+
+        const dbNewsList = await dbNewsQuery.lean() as (isAdmin extends true ? TNewsPopulated[] : TNews[]);
+        checkTimeout(req);
+
+        const newsList = dbNewsList.map(news => prepareNewsData(news, { managed: isAdmin }));
+
+        safeSendResponse(res, 200, { message: 'Новости успешно загружены', newsList });
+    } catch (err) {
+        next(toError(err));
+    }
+};*/
+
 /// Загрузка отдельной новости для редактирования ///
 export const handleNewsRequest = async (req, res, next) => {
     const newsId = req.params.newsId;

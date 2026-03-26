@@ -1,11 +1,10 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
-import { validationRules } from '../../../shared/fieldRules.js';
-import { UNSORTED_CATEGORY_SLUG } from '../../../shared/constants.js';
+import { validationRules } from '@shared/fieldRules.js';
+import { UNSORTED_CATEGORY_SLUG } from '@shared/constants.js';
+import type { TCategory } from '@server/types/index.js';
 
-const { Schema } = mongoose;
-
-const CategorySchema = new Schema({
+export const CategorySchema = new Schema({
     name: {
         type: String,
         required: true,
@@ -35,17 +34,20 @@ const CategorySchema = new Schema({
 });
 
 // Запрет удаления категории "Неотсортированные товары" ("unsorted")
-CategorySchema.pre('remove', function(next) {
-    if (this.slug === UNSORTED_CATEGORY_SLUG) {
-        return next(new Error(`Категорию ${this.name} удалять нельзя.`));
+CategorySchema.pre(
+    'deleteOne',
+    { document: true, query: false },
+    function(next): void {
+        if (this.slug === UNSORTED_CATEGORY_SLUG) {
+            return next(new Error(`Категорию ${this.name} удалять нельзя`));
+        }
+        next();
     }
-
-    next();
-});
+);
 
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 CategorySchema.plugin(uniqueValidator);
 
-const Category = mongoose.model('Category', CategorySchema);
+const Category = model<TCategory>('Category', CategorySchema);
 
 export default Category;

@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
-import { validationRules } from '../../../../shared/fieldRules.js';
-import { DISCOUNT_SOURCE, PRODUCT_UNITS } from '../../../../shared/constants.js';
-
-const { Schema } = mongoose;
+import { Schema } from 'mongoose';
+import { validationRules } from '@shared/fieldRules.js';
+import { DISCOUNT_SOURCE, PRODUCT_UNITS } from '@shared/constants.js';
 
 const baseOrderItemFields = {
     productId: {
@@ -71,7 +69,7 @@ export const FinalOrderItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [val => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
     },
     appliedDiscount: { // В процентах
         type: Number,
@@ -88,13 +86,13 @@ export const FinalOrderItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [val => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
     },
     totalPrice: { // finalUnitPrice * quantity
         type: Number,
         min: 0,
         required: true,
-        validate: [val => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
     },
 }, {
     _id: false

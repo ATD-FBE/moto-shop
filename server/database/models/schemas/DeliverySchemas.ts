@@ -1,52 +1,51 @@
-import mongoose from 'mongoose';
-import { validationRules } from '../../../../shared/fieldRules.js';
-import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS } from '../../../../shared/constants.js';
-
-const { Schema } = mongoose;
+import { Schema } from 'mongoose';
+import { validationRules } from '@shared/fieldRules.js';
+import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS } from '@shared/constants.js';
+import type { TFinalDelivery } from '@server/types/index.js';
 
 const baseDeliveryFields = {
     deliveryMethod: {
         type: String,
         enum: DELIVERY_METHOD_OPTIONS.map(opt => opt.value),
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     allowCourierExtra: {
         type: Boolean,
-        default: function () {
+        default: function (this: any): undefined | boolean {
             return this.deliveryMethod === DELIVERY_METHOD.COURIER ? false : undefined;
         },
-        set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+        set: (val: null | boolean): undefined | boolean => val === null ? undefined : val
     },
     shippingAddress: {
         region: { // Опционально для заказа
             type: String,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         district: { // Опционально для заказа
             type: String,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         city: {
             type: String,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         street: {
             type: String,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         house: {
             type: String,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         apartment: { // Опционально для заказа
             type: String,
             match: validationRules.checkout.apartment,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         },
         postalCode: { // Опционально для заказа
             type: String,
             match: validationRules.checkout.postalCode,
-            set: val => val === null ? undefined : val // Удаление поля при значении null (метод save())
+            set: (val: null | string): undefined | string => val === null ? undefined : val
         }
     }
 };
@@ -103,6 +102,6 @@ export const FinalDeliverySchema = new Schema({
 });
 
 // this в функции required надёжен для обычных поддокументов, но не надёжен для поддокументов массивов
-function isDeliveryRequired() {
+function isDeliveryRequired(this: TFinalDelivery): boolean {
     return this.deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 }

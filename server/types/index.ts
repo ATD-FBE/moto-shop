@@ -10,3 +10,4 @@ export * from './safeSendResponse.types.js';
 export * from './token.types.js';
 export * from './transaction.types.js';
 export * from './typeValidation.types.js';
+export * from './db.types.js';

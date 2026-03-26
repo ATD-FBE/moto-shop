@@ -104,7 +104,7 @@ const expiryDateValidation = (val: string, context: { split: string }): boolean 
 };
 
 /// Объект с правилами валидаций для полей каждой сущности ///
-export const validationRules: TValidationRules = {
+export const validationRules = {
     auth: {
         name: userNameValidation,
         email: emailValidation,
