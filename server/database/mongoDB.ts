@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import Category from './models/Category.js';
-import config from '../config/config.js';
-import log from '../utils/logger.js';
-import { toError } from '../../shared/commonHelpers.js';
-import { UNSORTED_CATEGORY_SLUG } from '../../shared/constants.js';
+import config from '@server/config/config.js';
+import log from '@server/utils/logger.js';
+import { toError } from '@shared/commonHelpers.js';
+import { UNSORTED_CATEGORY_SLUG } from '@shared/constants.js';
 
 const createUnsortedCategory = async (): Promise<void> => {
     let unsortedCat = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG });
