@@ -3,7 +3,7 @@ import Category from '@server/database/models/Category.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import {
-    prepareProductData,
+    prepareProduct,
     cleanupBulkProductFiles,
     redistributeProductProportionallyInDraftOrders,
     buildProductsComputedFields,
@@ -22,12 +22,13 @@ import { runInTransaction } from '@server/utils/transaction.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { ensureArray } from '@shared/commonHelpers.js';
 import { productsFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productsSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
+//import type { TDbProduct } from '@server/types/index.js';
 
 /// Загрузка ID всех отфильтрованных товаров и данных товаров для одной страницы ///
 export const handleProductListRequest = async (req, res, next) => {
@@ -44,13 +45,17 @@ export const handleProductListRequest = async (req, res, next) => {
 
     // Настройка фильтра поиска
     const allowedSearchFields = ['sku', 'name', 'brand', 'tags'];
-    const searchMatch = buildSearchMatch(req.query.search, allowedSearchFields, DEFAULT_SEARCH_TYPE);
+    const searchMatch = buildSearchMatch/*<TDbProduct>*/(
+        req.query.search,
+        allowedSearchFields,
+        DEFAULT_SEARCH_TYPE
+    );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch(req.query, filterOptions);
+    const filterMatch = buildFilterMatch/*<TDbProduct>*/(req.query, filterOptions);
 
     // Настройка фильтра категорий
-    const categoriesPipeline = buildCategoriesPipeline(req.query.category);
+    const categoriesPipeline = await buildCategoriesPipeline(req.query.category);
 
     // Установка порядка всех фильтров в зависимости от типа поиска
     const allFiltersPipeline = buildOrderedFiltersPipeline({
@@ -64,7 +69,7 @@ export const handleProductListRequest = async (req, res, next) => {
     const filteredPipeline = [{ $project: { _id: 1 } }];
 
     // Пайплайн вывода результатов на странице
-    const paginatedPipeline = buildPaginatedPipeline(req.query, sortOptions, pageLimitOptions);
+    const paginatedPipeline = buildPaginatedPipeline/*<TDbProduct>*/(req.query, sortOptions, pageLimitOptions);
 
     // Сборка пайплайна для агрегатора
     const pipeline = [
@@ -83,15 +88,16 @@ export const handleProductListRequest = async (req, res, next) => {
         //console.dir(explainResult.stages[0].$cursor, { depth: null });
 
         // Агрегатный запрос
-        const aggregateResult = await Product.aggregate(pipeline);
+        const aggregateResult = await Product.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
         checkTimeout(req);
         
         const filteredProductIdList = aggregateResult[0]?.filteredProductIdList.map(c => c._id) || [];
         const dbPaginatedProductList = aggregateResult[0]?.paginatedProductList || [];
 
-        const paginatedProductList = dbPaginatedProductList.map(product => prepareProductData(product, {
+        const requestTime = Date.now();
+        const paginatedProductList = dbPaginatedProductList.map(product => prepareProduct(product, {
             managed: isAdmin,
-            now: Date.now()
+            now: requestTime
         }));
 
         safeSendResponse(res, 200, {
@@ -110,14 +116,18 @@ export const handleProductListRequest = async (req, res, next) => {
 /*export const handleProductListSearchRequest = async (req, res, next) => {
     // Настройка фильтра поиска
     const allowedSearchFields = ['sku', 'name', 'brand', 'tags'];
-    const searchMatch = buildSearchMatch(req.query.search, allowedSearchFields, DEFAULT_SEARCH_TYPE);
+    const searchMatch = buildSearchMatch<TDbProduct>(
+        req.query.search,
+        allowedSearchFields,
+        DEFAULT_SEARCH_TYPE
+    );
 
     // Настройка сортировки
     const sortField = productsSortOptions[0].dbField;
     const sortOrder = productsSortOptions[0].defaultOrder === 'asc' ? 1 : -1;
 
     // Пайплайн сортировки
-    const sortPipeline = buildSortPipeline(sortField, sortOrder, productsSortOptions);
+    const sortPipeline = buildSortPipeline<TDbProduct>(sortField, sortOrder);
 
     // Пайплайн вывода ограниченных результатов
     const limitedPipeline = [...sortPipeline];
@@ -141,13 +151,13 @@ export const handleProductListRequest = async (req, res, next) => {
         //console.dir(explainResult.stages[0].$cursor, { depth: null });
 
         // Агрегатный запрос
-        const aggregateResult = await Product.aggregate(pipeline);
+        const aggregateResult = await Product.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
         checkTimeout(req);
         
         const productCount = aggregateResult[0]?.totalCount[0]?.count || 0;
         const dbLimitedProductList = aggregateResult[0]?.limitedProductList || [];
 
-        const limitedProductList = dbLimitedProductList.map(product => prepareProductData(product, {
+        const limitedProductList = dbLimitedProductList.map(product => prepareProduct(product, {
             managed: isAdmin,
             now: Date.now()
         }));
@@ -181,7 +191,7 @@ export const handleProductRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: 'Товар успешно загружен',
-            product: prepareProductData(dbProduct, { managed: isAdmin })
+            product: prepareProduct(dbProduct, { managed: isAdmin })
         });
     } catch (err) {
         next(err);
@@ -318,7 +328,7 @@ export const handleProductCreateRequest = async (req, res, next) => {
         // Отправка успешного ответа клиенту
         safeSendResponse(res, 201, {
             message: `Товар "${newDbProduct.name}" успешно создан`,
-            newProduct: prepareProductData(newDbProduct, { managed: true })
+            newProduct: prepareProduct(newDbProduct, { managed: true })
         });
     } catch (err) {
         // Очистка файлов фотографий товара в хранилище (безопасно)
@@ -550,7 +560,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
         // Отправка успешного ответа клиенту
         safeSendResponse(res, 200, {
             message: `Товар "${prodLbl}" успешно обновлён`,
-            updatedProduct: prepareProductData(updatedDbProduct, { managed: true })
+            updatedProduct: prepareProduct(updatedDbProduct, { managed: true })
         });
 
         // Удаление выбранных файлов старых фотографий товара (безопасно)
@@ -712,7 +722,7 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
             checkTimeout(req);
 
             const now = Date.now();
-            const updatedProducts = dbUpdatedProducts.map(product => prepareProductData(product, {
+            const updatedProducts = dbUpdatedProducts.map(product => prepareProduct(product, {
                 managed: true,
                 now
             }));

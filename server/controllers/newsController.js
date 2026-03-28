@@ -35,7 +35,7 @@ export const handleNewsListRequest = async (req, res, next) => {
 };
 
 /*import { Request, Response, NextFunction } from 'express';
-import { TNews, TNewsPopulated } from '@server/types/index.js';
+import { TDbNews, TDbNewsPopulated } from '@server/types/index.js';
 
 export const handleNewsListRequest = async (
     req: Request, 
@@ -54,7 +54,7 @@ export const handleNewsListRequest = async (
                 .populate('updateHistory.updatedBy', 'name');
         }
 
-        const dbNewsList = await dbNewsQuery.lean() as (isAdmin extends true ? TNewsPopulated[] : TNews[]);
+        const dbNewsList = await dbNewsQuery.lean() as (isAdmin extends true ? TDbNewsPopulated[] : TDbNews[]);
         checkTimeout(req);
 
         const newsList = dbNewsList.map(news => prepareNewsData(news, { managed: isAdmin }));

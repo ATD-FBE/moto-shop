@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import type { TCounter } from '@server/types/index.js';
+import type { TDbCounter } from '@server/types/index.js';
 
 export const CounterSchema = new Schema({
     entity: {
@@ -13,6 +13,6 @@ export const CounterSchema = new Schema({
     }
 });
   
-const Counter = model<TCounter>('Counter', CounterSchema);
+const Counter = model<TDbCounter>('Counter', CounterSchema);
 
 export default Counter;

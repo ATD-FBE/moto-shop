@@ -1,16 +1,20 @@
-export interface IFilterQuery {
+export interface ICommonFilterQuery {
     timeZoneOffset?: string;
     [key: string]: string | undefined; // Любой строковый ключ со строковым значением, если есть
 }
 
-export type TFilterOptionsEntry = INumberFilter | IDateFilter | IBooleanFilter | IStringFilter;
+export type TFilterOption<T> = 
+    | INumberFilter<T> 
+    | IDateFilter<T> 
+    | IBooleanFilter<T> 
+    | IStringFilter<T>;
 
-interface IBaseFilter {
-    dbField: string;
+interface IBaseFilter<T> {
+    dbField: keyof T;
     label: string;
 }
 
-interface INumberFilter extends IBaseFilter {
+interface INumberFilter<T> extends IBaseFilter<T> {
     type: 'number';
     minParamName: string;
     maxParamName: string;
@@ -18,7 +22,7 @@ interface INumberFilter extends IBaseFilter {
     maxLimit: string;
 }
 
-interface IDateFilter extends IBaseFilter {
+interface IDateFilter<T> extends IBaseFilter<T> {
     type: 'date';
     minParamName: string;
     maxParamName: string;
@@ -26,13 +30,13 @@ interface IDateFilter extends IBaseFilter {
     maxLimitUTC: string;
 }
 
-interface IBooleanFilter extends IBaseFilter {
+interface IBooleanFilter<T> extends IBaseFilter<T> {
     type: 'boolean';
     paramName: string;
     defaultValue?: string;
 }
 
-interface IStringFilter extends IBaseFilter {
+interface IStringFilter<T> extends IBaseFilter<T> {
     type: 'string';
     paramName: string;
     valueOptions: IFilterValueOptionsEntry[];

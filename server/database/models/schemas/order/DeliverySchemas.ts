@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import { validationRules } from '@shared/fieldRules.js';
 import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS } from '@shared/constants.js';
-import type { TFinalDelivery } from '@server/types/index.js';
+import type { TDbOrderFinalDelivery } from '@server/types/index.js';
 
 const baseDeliveryFields = {
     deliveryMethod: {
@@ -102,6 +102,6 @@ export const FinalDeliverySchema = new Schema({
 });
 
 // this в функции required надёжен для обычных поддокументов, но не надёжен для поддокументов массивов
-function isDeliveryRequired(this: TFinalDelivery): boolean {
+function isDeliveryRequired(this: TDbOrderFinalDelivery): boolean {
     return this.deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 }

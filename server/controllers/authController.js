@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '@server/database/models/User.js';
 import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
-import { getUserData, getSessionData } from '@server/services/authService.js';
+import { prepareUser, prepareSession } from '@server/services/authService.js';
 import { generateToken } from '@server/utils/token.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { runInTransaction } from '@server/utils/transaction.js';
@@ -64,7 +64,7 @@ export const handleAuthRegistrationRequest = async (req, res, next) => {
                 })
             });
 
-            const sessionData = await getSessionData(newDbUser, guestCart);
+            const sessionData = await prepareSession(newDbUser, guestCart);
             checkTimeout(req);
     
             await newDbUser.save({ session });
@@ -179,7 +179,7 @@ export const handleAuthLoginRequest = async (req, res, next) => {
             }
 
             // Получение данных сессии
-            const sessionData = await getSessionData(dbUser, guestCart);
+            const sessionData = await prepareSession(dbUser, guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {
@@ -354,7 +354,7 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
                 }
             }
 
-            const userData = await getUserData(dbUser);
+            const userData = await prepareUser(dbUser);
             checkTimeout(req);
 
             return { userData };
@@ -414,7 +414,7 @@ export const handleAuthSessionRequest = async (req, res, next) => {
 
     try {
         const { sessionData } = await runInTransaction(async (session) => {
-            const sessionData = await getSessionData(dbUser, guestCart);
+            const sessionData = await prepareSession(dbUser, guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {

@@ -1,57 +1,18 @@
 import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import bcrypt from 'bcrypt';
-import { DraftCustomerInfoSchema } from './schemas/CustomerInfoSchemas.js';
-import { DraftDeliverySchema } from './schemas/DeliverySchemas.js';
-import { DraftFinancialsSchema } from './schemas/FinancialsSchemas.js';
+import { NotificationItemSchema } from './schemas/user/NotificationItemSchema.js';
+import { CartItemSchema } from './schemas/user/CartItemSchema.js';
+import { DraftCustomerInfoSchema } from './schemas/order/CustomerInfoSchemas.js';
+import { DraftDeliverySchema } from './schemas/order/DeliverySchemas.js';
+import { DraftFinancialsSchema } from './schemas/order/FinancialsSchemas.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
-import type { TUser } from '@server/types/index.js';
+import type { TDbUser } from '@server/types/index.js';
 
 const { ADMIN, CUSTOMER } = USER_ROLE;
 const SALT_ROUNDS = 12;
-
-const NotificationItemSchema = new Schema({
-    notificationId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Notification',
-        required: true
-    },
-    isRead: {
-        type: Boolean,
-        default: false
-    },
-    readAt: {
-        type: Date,
-        default: null
-    }
-}, {
-    _id: false
-});
-
-const CartItemSchema = new Schema({
-    productId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Product',
-        required: true
-    },
-    quantity: {
-        type: Number,
-        min: 0,
-        required: true
-    },
-    nameSnapshot: {
-        type: String,
-        required: true
-    },
-    brandSnapshot: { // Опционально
-        type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
-    }
-}, {
-    _id: false
-});
 
 export const UserSchema = new Schema({
     name: {
@@ -150,6 +111,6 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 UserSchema.plugin(uniqueValidator);
 
-const User = model<TUser>('User', UserSchema);
+const User = model<TDbUser>('User', UserSchema);
 
 export default User;

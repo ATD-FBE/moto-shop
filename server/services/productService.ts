@@ -1,7 +1,8 @@
-import mongoose from 'mongoose';
+import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
 import Order from '@server/database/models/Order.js';
 import User from '@server/database/models/User.js';
 import Product from '@server/database/models/Product.js';
+import Category from '@server/database/models/Category.js';
 import {
     PRODUCT_STORAGE_FOLDER,
     PRODUCT_ORIGINALS_FOLDER,
@@ -9,7 +10,7 @@ import {
     STORAGE_URL_PATH
 } from '@server/config/paths.js';
 import { storageService } from './storage/storageService.js';
-import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import {
     PRODUCT_BRAND_NEW_THRESHOLD_MS,
     PRODUCT_RESTOCK_THRESHOLD_MS,
@@ -17,16 +18,37 @@ import {
     ORDER_STATUS
 } from '@shared/constants.js';
 import { calculateOrderTotals } from '@shared/calculations.js';
+import type {
+    TDbProduct,
+    TDbCartItem,
+    TDbDraftOrder,
+    TDbUser,
+    TOrderAdjustmentTypes,
+    IOrderItemRef,
+    IProductFilterQuery
+} from '@server/types/index.js';
+import type {
+    IProduct,
+    IProductImage,
+    TProductImageThumbs,
+    TProductThumbnailKey,
+    TProductThumbnailSize,
+    ICartProductSnapshot
+} from '@shared/types/index.js';
 
-export const prepareProductData = (dbProduct, { managed = false, now = Date.now() } = {}) => {
+export const prepareProduct = (
+    dbProduct: TDbProduct,
+    { managed = false, now = Date.now() }: { managed?: boolean; now?: number } = {}
+): IProduct => {
+    const productId = dbProduct._id.toString();
     const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
     const isAvailable = available > 0;
     const brandNewSince = now - PRODUCT_BRAND_NEW_THRESHOLD_MS;
     const restockSince = now - PRODUCT_RESTOCK_THRESHOLD_MS;
 
     return {
-        id: dbProduct._id,
-        images: prepareProductImages(dbProduct._id, dbProduct.imageFilenames),
+        id: productId,
+        images: prepareProductImages(productId, dbProduct.imageFilenames),
         mainImageIndex: dbProduct.mainImageIndex,
         sku: dbProduct.sku,
         name: dbProduct.name,
@@ -42,13 +64,13 @@ export const prepareProductData = (dbProduct, { managed = false, now = Date.now(
         ...(managed && {
             stock: dbProduct.stock,
             reserved: dbProduct.reserved,
-            category: dbProduct.category,
+            category: dbProduct.category.toString(),
             tags: dbProduct.tags.join(', ')
         })
     };
 };
 
-const prepareProductImages = (productId, imageFilenames) => {
+const prepareProductImages = (productId: string, imageFilenames: string[]): IProductImage[] => {
     return imageFilenames.map(filename => ({
         filename,
         original: [
@@ -58,58 +80,65 @@ const prepareProductImages = (productId, imageFilenames) => {
             PRODUCT_ORIGINALS_FOLDER,
             filename
         ].join('/'),
-        thumbnails: Object.entries(PRODUCT_THUMBNAIL_PRESETS).reduce((acc, [key, size]) => {
-            acc[key] = [
-                STORAGE_URL_PATH,
-                PRODUCT_STORAGE_FOLDER,
-                productId,
-                PRODUCT_THUMBNAILS_FOLDER,
-                `${size}px`,
-                filename
-            ].join('/');
-            return acc;
-        }, {})
+        thumbnails: Object.fromEntries(
+            (Object.entries(PRODUCT_THUMBNAIL_PRESETS) as [TProductThumbnailKey, TProductThumbnailSize][])
+                .map(([key, size]) => [
+                    key, 
+                    [
+                        STORAGE_URL_PATH,
+                        PRODUCT_STORAGE_FOLDER,
+                        productId,
+                        PRODUCT_THUMBNAILS_FOLDER,
+                        `${size}px`,
+                        filename
+                    ].join('/')
+                ])
+        ) as TProductImageThumbs
     }));
 };
 
-export const prepareCartProductSnapshotData = (dbCartItem) => ({
+export const prepareCartProductSnapshot = (dbCartItem: TDbCartItem): ICartProductSnapshot => ({
     id: dbCartItem.productId.toString(),
     name: dbCartItem.nameSnapshot,
     brand: dbCartItem.brandSnapshot
 });
 
-export const cleanupBulkProductFiles = (ids, reqCtx) => {
+export const cleanupBulkProductFiles = (ids: string[], reqCtx: string): void => {
     ids.forEach(id => {
         storageService.cleanupProductFiles(id, reqCtx);
     });
 };
 
 // Пропорциональное уменьшение кол-ва товара для оформляющих заказ клиентов при его уменьшении админом
-export const redistributeProductProportionallyInDraftOrders = async (productId, newStock, session) => {
-    const productObjectId = mongoose.Types.ObjectId.createFromHexString(productId);
+export const redistributeProductProportionallyInDraftOrders = async (
+    productId: string,
+    newStock: number,
+    session: ClientSession
+): Promise<void> => {
+    const productObjectId = Types.ObjectId.createFromHexString(productId);
 
     // Получение всех черновиков заказов с данным товаром
-    const orderDrafts = await Order
+    const orderDrafts: TDbDraftOrder[] = await Order
         .find({
             currentStatus: ORDER_STATUS.DRAFT,
             items: { $elemMatch: { productId: productObjectId } }
         })
         .sort({ createdAt: 1 }) // При равных пропорциях единиц остатков приоритет у первого создавшего заказ
-        .lean()
+        .lean<TDbDraftOrder[]>()
         .session(session);
 
     // Сбор всех запросов по количеству для этого товара
-    const requests = orderDrafts.map(order => {
+    const requests = orderDrafts.flatMap(order => {
         const orderItem = order.items.find(item => item.productId.toString() === productId);
-        if (!orderItem) return null; // Аномалия
-
-        return {
+        if (!orderItem) return []; // Элемент пустого массива "исчезнет" при flatMap
+    
+        return [{
             orderId: order._id,
             customerId: order.customerId,
             quantity: orderItem.quantity,
             items: order.items.map(item => ({ ...item }))
-        };
-    }).filter(Boolean);
+        }];
+    });
 
     // Проверка общего количества заказов товара
     const totalRequested = requests.reduce((sum, req) => sum + req.quantity, 0);
@@ -172,36 +201,45 @@ export const redistributeProductProportionallyInDraftOrders = async (productId, 
 
     // Сохранение изменений в корзинах клиентов через формирование bulk-операций
     const customerIds = filteredTempResults.map(req => req.customerId);
-    const users = await User.find({
+    const users: TDbUser[] = await User.find({
         _id: { $in: customerIds },
         cart: { $elemMatch: { productId: productObjectId } }
-    }).lean().session(session);
+    }).lean<TDbUser[]>().session(session);
 
-    const userBulkOps = users.map(user => {
+    const requestMap: Record<string, (typeof filteredTempResults)[number]> = 
+        Object.fromEntries(filteredTempResults.map(req => [req.customerId.toString(), req]));
+
+    const userBulkOps = users.flatMap(user => {
         const cartItem = user.cart.find(item => item.productId.toString() === productId);
-        if (!cartItem) return null;
+        if (!cartItem) return [];
+
+        const request = requestMap[user._id.toString()];
+        if (!request) return [];
 
         // Сохранение только если количество товара в корзине больше нового распределённого количества
         // Клиент мог отнять количество товара в корзине после создания черновика заказа
-        const request = filteredTempResults.find(req => req.customerId.toString() === user._id.toString());
         const newQuantity = Math.min(cartItem.quantity, request.allocated);
-        if (newQuantity === cartItem.quantity) return null;
+        if (newQuantity === cartItem.quantity) return [];
 
-        return {
+        return [{
             updateOne: {
                 filter: { _id: user._id },
                 update: { $set: { 'cart.$[item].quantity': newQuantity } },
                 arrayFilters: [{ 'item.productId': productObjectId }] // item - название элемента массива
             }
-        };
-    }).filter(Boolean);
+        }];
+    });
 
     if (userBulkOps.length > 0) {
         await User.bulkWrite(userBulkOps, { session });
     }
 };
 
-export const applyProductBulkUpdate = async (orderItemList, adjustmentType, session) => {
+export const applyProductBulkUpdate = async (
+    orderItemList: IOrderItemRef[],
+    adjustmentType: TOrderAdjustmentTypes,
+    session: ClientSession
+): Promise<void> => {
     const bulkOps = orderItemList.map(item => ({
         updateOne: {
             filter: { _id: item.productId },
@@ -215,19 +253,22 @@ export const applyProductBulkUpdate = async (orderItemList, adjustmentType, sess
 };
 
 // Построение агрегатного pipeline для операций с обновлёнными значениями полей на каждом шаге
-export const buildProductInventoryUpdatePipeline = (adjustmentType, quantity) => {
+export const buildProductInventoryUpdatePipeline = (
+    adjustmentType: TOrderAdjustmentTypes,
+    quantity: number
+): PipelineStage[] => {
     switch (adjustmentType) {
-        case 'reserve':
+        case ORDER_ADJUSTMENT_TYPE.RESERVE:
             return [
                 { $set: { reserved: { $add: ['$reserved', quantity] } } },                    // rsv + qty
             ];
 
-        case 'release':
+        case ORDER_ADJUSTMENT_TYPE.RELEASE:
             return [
                 { $set: { reserved: { $max: [{ $subtract: ['$reserved', quantity] }, 0] } } } // rsv - qty
             ];
 
-        case 'commit':
+        case ORDER_ADJUSTMENT_TYPE.COMMIT:
             return [
                 {
                     $set: {
@@ -237,12 +278,12 @@ export const buildProductInventoryUpdatePipeline = (adjustmentType, quantity) =>
                 }
             ];
 
-        case 'adjustAfterCommit':
+        case ORDER_ADJUSTMENT_TYPE.ADJUST:
             return [
                 { $set: { stock: { $max: [{ $subtract: ['$stock', quantity] }, 0] } } }       // stk - ±qty
             ];
 
-        case 'return':
+        case ORDER_ADJUSTMENT_TYPE.RETURN:
             return [
                 { $set: { stock: { $add: ['$stock', quantity] } } }                           // stk + qty
             ];
@@ -253,18 +294,20 @@ export const buildProductInventoryUpdatePipeline = (adjustmentType, quantity) =>
 };
 
 // Создание вычисляемых полей-флагов для фильтрации
-export const buildProductsComputedFields = (query) => {
+export const buildProductsComputedFields = (query: IProductFilterQuery): PipelineStage[] => {
     const needInStockFilter = query.inStock === 'true' || query.inStock === 'false';
     const needBrandNewFilter = query.brandNew === 'true' || query.brandNew === 'false';
     const needRestockedFilter = query.restocked === 'true' || query.restocked === 'false';
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter) return [];
 
+    const fields: FilterQuery<any> = {};
     const now = Date.now();
-    const fields = {};
+
+    const availableStockExpr = { $subtract: ['$stock', '$reserved'] };
 
     if (needInStockFilter) {
-        fields.inStock = { $cond: [{ $gt: [{ $subtract: ['$stock', '$reserved'] }, 0] }, true, false] };
+        fields.inStock = { $cond: [{ $gt: [availableStockExpr, 0] }, true, false] };
     }
     
     if (needBrandNewFilter) {
@@ -273,7 +316,7 @@ export const buildProductsComputedFields = (query) => {
                 {
                     $and: [
                         { $gte: ['$createdAt', new Date(now - PRODUCT_BRAND_NEW_THRESHOLD_MS)] },
-                        { $gt: [{ $subtract: ['$stock', '$reserved'] }, 0] }
+                        { $gt: [availableStockExpr, 0] }
                     ]
                 },
                 true,
@@ -288,7 +331,7 @@ export const buildProductsComputedFields = (query) => {
                 {
                     $and: [
                         { $gte: ['$lastRestockAt', new Date(now - PRODUCT_RESTOCK_THRESHOLD_MS)] },
-                        { $gt: [{ $subtract: ['$stock', '$reserved'] }, 0] }
+                        { $gt: [availableStockExpr, 0] }
                     ]
                 },
                 true,
@@ -301,45 +344,41 @@ export const buildProductsComputedFields = (query) => {
 };
 
 // Пайплайн для категорий товаров
-export const buildCategoriesPipeline = (categoryParam) => {
-    const categoriesPipeline = [];
-    const categoryId = categoryParam?.split('~').pop() || '';
+export const buildCategoriesPipeline = async (categoryParam?: unknown): Promise<PipelineStage[]> => {
+    const category = typeof categoryParam === 'string' ? categoryParam.trim() : '';
+    const categoryId = category.split('~').pop() || '';
+    
+    if (!categoryId || !Types.ObjectId.isValid(categoryId)) {
+        return [];
+    }
 
-    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
-        const categoryObjectId = mongoose.Types.ObjectId.createFromHexString(categoryId);
+    const categoryObjectId = new Types.ObjectId(categoryId);
 
-        // 1. Создание поля с ID входящей категории
-        categoriesPipeline.push({
-            $addFields: { rootCategoryId: categoryObjectId }
-        });
-
-        // 2. Поиск потомков входящей категории (включая её саму)
-        categoriesPipeline.push({
+    const categoryData = await Category.aggregate<{ allIds: Types.ObjectId[] }>([
+        { $match: { _id: categoryObjectId } },
+        {
             $graphLookup: {
                 from: 'categories',
-                startWith: '$rootCategoryId',
+                startWith: '$_id',
                 connectFromField: '_id',
                 connectToField: 'parent',
                 as: 'descendants'
             }
-        });
-
-        // 3. Создание общего массива из входящей категории и её потомков
-        categoriesPipeline.push({
-            $addFields: {
-                allCategoryIds: {
-                    $concatArrays: [['$rootCategoryId'], '$descendants._id']
-                }
+        },
+        {
+            $project: {
+                allIds: { $concatArrays: [['$_id'], '$descendants._id'] }
             }
-        });
+        }
+    ]);
 
-        // 4. Фильтр товаров, у которых поле category входит в allCategoryIds
-        categoriesPipeline.push({
+    const allCategoryIds = categoryData[0]?.allIds || [categoryObjectId];
+
+    return [
+        {
             $match: {
-                $expr: { $in: ['$category', '$allCategoryIds'] }
+                category: { $in: allCategoryIds }
             }
-        });
-    }
-
-    return categoriesPipeline;
+        }
+    ];
 };

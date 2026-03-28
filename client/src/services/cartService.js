@@ -105,9 +105,11 @@ export const reconcileCartWithProducts = (productList) => (dispatch, getState) =
 
     dispatch(upsertProductsInStore(productList)); // До обновления сумм!
     if (shouldUpdateCart) {
-        if (isGuestCart) updatedCartItemList = updatedCartItemList.filter(item => !item.guestDeleted);
+        if (isGuestCart) {
+            updatedCartItemList = updatedCartItemList.filter(item => !item.guestDeleted);
+            saveGuestCartToLocalStorage(updatedCartItemList);
+        }
         dispatch(setCart(updatedCartItemList)); // До обновления сумм!
-        if (isGuestCart) saveGuestCartToLocalStorage(updatedCartItemList);
     }
     if (shouldRefreshTotals) dispatch(refreshCartTotals());
 };

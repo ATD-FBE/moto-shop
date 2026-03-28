@@ -1,4 +1,4 @@
-import type { TNews, TNewsPopulated, TUpdateHistoryItemPopulated } from '@server/types/index.js';
+import type { TDbNews, TDbNewsPopulated, TDbUpdateHistoryItemPopulated } from '@server/types/index.js';
 
 interface IPreparedNews {
     id: string;
@@ -10,7 +10,7 @@ interface IPreparedNews {
 }
 
 export const prepareNewsData = (
-    dbNews: TNews | TNewsPopulated, 
+    dbNews: TDbNews | TDbNewsPopulated, 
     { managed = false }: { managed?: boolean } = {}
 ): IPreparedNews => {
     const result: IPreparedNews = {
@@ -21,10 +21,10 @@ export const prepareNewsData = (
     };
 
     if (managed) {
-        const populatedNews = dbNews as TNewsPopulated;
+        const populatedNews = dbNews as TDbNewsPopulated;
         
         result.createdBy = populatedNews.createdBy?.name;
-        result.updateHistory = (populatedNews.updateHistory as TUpdateHistoryItemPopulated[])?.map(upd => ({
+        result.updateHistory = (populatedNews.updateHistory as TDbUpdateHistoryItemPopulated[])?.map(upd => ({
             updatedBy: upd.updatedBy?.name || 'Удалённый пользователь',
             updatedAt: upd.updatedAt
         }));

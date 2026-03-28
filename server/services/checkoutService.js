@@ -1,10 +1,10 @@
-import Product from '../database/models/Product.js';
+import Product from '@server/database/models/Product.js';
 import {
     buildProductInventoryUpdatePipeline,
     applyProductBulkUpdate,
-    prepareProductData
+    prepareProduct
 } from './productService.js';
-import { ORDER_RESERVE_BATCH_SIZE } from '@server/config/constants.js';
+import { ORDER_RESERVE_BATCH_SIZE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 
 export const reserveProducts = async (remainingOrderItemsToReserve, session) => {
@@ -37,11 +37,11 @@ export const reserveProducts = async (remainingOrderItemsToReserve, session) => 
 };
 
 export const releaseReservedProducts = async (orderItemList, session) => {
-    await applyProductBulkUpdate(orderItemList, 'release', session);
+    await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RELEASE, session);
 };
 
 export const commitProductPurchase = async (orderItemList, session) => {
-    await applyProductBulkUpdate(orderItemList, 'commit', session);
+    await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.COMMIT, session);
 };
 
 export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap, customerDiscount) => {
@@ -139,7 +139,7 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
                 appliedDiscountSnapshot: appliedDiscount,
                 appliedDiscountSourceSnapshot: appliedDiscountSource
             });
-            acc.purchaseProductList.push(prepareProductData(dbProduct, { now }));
+            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: correctedQuantity,
@@ -261,7 +261,7 @@ export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
                 priceSnapshot: dbProduct.price,
                 appliedDiscountSnapshot: appliedDiscount
             });
-            acc.purchaseProductList.push(prepareProductData(dbProduct, { now }));
+            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: orderItem.quantity,

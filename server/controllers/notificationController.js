@@ -13,6 +13,7 @@ import safeSendResponse from '../utils/safeSendResponse.js';
 import { notificationsSortOptions } from '../../shared/sortOptions.js';
 import { notificationsPageLimitOptions } from '../../shared/pageLimitOptions.js';
 import { NOTIFICATION_STATUS, REQUEST_STATUS } from '../../shared/constants.js';
+//import type { TDbNotification } from '@server/types/index.js';
 
 /// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
 export const handleNotificationListRequest = async (req, res, next) => {
@@ -96,7 +97,10 @@ export const handleNotificationListRequest = async (req, res, next) => {
             }
 
             case 'customer': {
-                const { sortField, sortOrder } = parseSortParam(req.query.sort, notificationsSortOptions);
+                const { sortField, sortOrder } = parseSortParam/*<TDbNotification>*/(
+                    req.query.sort,
+                    notificationsSortOptions
+                );
                 const selectedFields = '_id sentAt subject message signature';
 
                 const notifications = dbUser.notifications;

@@ -5,8 +5,8 @@ import { escapeRegExp } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
-    IFilterQuery,
-    TFilterOptionsEntry,
+    ICommonFilterQuery,
+    TFilterOption,
     ISortOptionsEntry,
     IParseSortResult,
     IPageLimitQuery,
@@ -14,31 +14,31 @@ import type {
 } from '@shared/types/index.js';
 import type { IOrderedFiltersArgs } from '@server/types/index.js';
 
-export const buildSearchMatch = (
-    search: unknown,
-    allowedSearchFields: string[],
+export const buildSearchMatch = <T>(
+    searchParam: unknown,
+    allowedSearchFields: (keyof T)[],
     searchType: TSearchTypes
-): FilterQuery<any> => {
-    const rawSearch = typeof search === 'string' ? search.trim() : '';
-    const searchMatch: FilterQuery<any> = {};
+): FilterQuery<T> => {
+    const search = typeof searchParam === 'string' ? searchParam.trim() : '';
+    const searchMatch: FilterQuery<T> = {};
 
-    if (!rawSearch) return searchMatch;
+    if (!search) return searchMatch;
 
-    if (mongoose.Types.ObjectId.isValid(rawSearch)) {
-        searchMatch._id = mongoose.Types.ObjectId.createFromHexString(rawSearch);
+    if (mongoose.Types.ObjectId.isValid(search)) {
+        searchMatch._id = mongoose.Types.ObjectId.createFromHexString(search);
         return searchMatch;
     }
 
     switch (searchType) {
         case SEARCH_TYPES.REGEX: // Поиск с регулярным выражением (перебор всех документов)
-            const safeSearch = escapeRegExp(rawSearch);
+            const safeSearch = escapeRegExp(search);
             searchMatch.$or = allowedSearchFields.map(field => ({
                 [field]: { $regex: safeSearch, $options: 'i' }
-            }));
+            } as FilterQuery<T>));
             break;
 
         case SEARCH_TYPES.TEXT: // Индексированный текстовый поиск (по хотя бы одному слову целиком)
-            searchMatch.$text = { $search: rawSearch };
+            searchMatch.$text = { $search: search };
             break;
 
         default:
@@ -48,17 +48,17 @@ export const buildSearchMatch = (
     return searchMatch;
 };
 
-export const buildFilterMatch = (
-    query: IFilterQuery,
-    filterOptions: TFilterOptionsEntry[]
-): FilterQuery<any> => {
+export const buildFilterMatch = <T>(
+    query: ICommonFilterQuery,
+    filterOptions: TFilterOption<T>[]
+): FilterQuery<T> => {
     // Смещение времени в минутах
     const timeZoneOffset = parseInt(query.timeZoneOffset ?? '0', 10) || 0;
 
     // Сборка фильтра
-    const filterMatch: FilterQuery<any> = {};
+    const filterMatch: FilterQuery<T> = {};
 
-    filterOptions.forEach((option: TFilterOptionsEntry): void => {
+    filterOptions.forEach(option => {
         const { dbField, type } = option;
 
         switch (type) {
@@ -73,11 +73,11 @@ export const buildFilterMatch = (
                 const maxLimitNum = maxLimit !== '' ? Number(maxLimit) : Infinity;
 
                 if (!isNaN(minValueNum) && minValueNum > minLimitNum) {
-                    filterMatch[dbField] = { $gte: minValueNum };
+                    (filterMatch as any)[dbField] = { $gte: minValueNum };
                 }
 
                 if (!isNaN(maxValueNum) && maxValueNum < maxLimitNum) {
-                    filterMatch[dbField] = { ...filterMatch[dbField], $lte: maxValueNum };
+                    (filterMatch as any)[dbField] = { ...filterMatch[dbField], $lte: maxValueNum };
                 }
 
                 if (
@@ -104,7 +104,7 @@ export const buildFilterMatch = (
                     minDate.setMinutes(minDate.getMinutes() + timeZoneOffset); // Смещение времени даты
 
                     if (minDate > minLimitDateUTC) {
-                        filterMatch[dbField] = { $gte: minDate };
+                        (filterMatch as any)[dbField] = { $gte: minDate };
                     }
                 }
 
@@ -113,7 +113,7 @@ export const buildFilterMatch = (
                     maxDate.setMinutes(maxDate.getMinutes() + timeZoneOffset); // Смещение времени даты
 
                     if (maxDate < maxLimitDateUTC) {
-                        filterMatch[dbField] = { ...(filterMatch[dbField] ?? {}), $lte: maxDate };
+                        (filterMatch as any)[dbField] = { ...(filterMatch[dbField] ?? {}), $lte: maxDate };
                     }
                 }
 
@@ -134,14 +134,14 @@ export const buildFilterMatch = (
                 const value = query[paramName] ?? '';
 
                 if (value === 'true') {
-                    filterMatch[dbField] = true;
+                    (filterMatch as any)[dbField] = true;
                 } else if (value === 'false') {
-                    filterMatch[dbField] = { $ne: true };
+                    (filterMatch as any)[dbField] = { $ne: true };
                 } else if (value !== '') {
                     if (defaultValue === 'true') {
-                        filterMatch[dbField] = true;
+                        (filterMatch as any)[dbField] = true;
                     } else if (defaultValue === 'false') {
-                        filterMatch[dbField] = { $ne: true };
+                        (filterMatch as any)[dbField] = { $ne: true };
                     }
                 }
 
@@ -155,11 +155,11 @@ export const buildFilterMatch = (
                 const valueOption = valueOptions.find(opt => opt.value === value);
 
                 if (valueOption?.matches) {
-                    filterMatch[dbField] = { $in: valueOption.matches };
+                    (filterMatch as any)[dbField] = { $in: valueOption.matches };
                 } else if (valueOption?.value) {
-                    filterMatch[dbField] = valueOption.value;
+                    (filterMatch as any)[dbField] = valueOption.value;
                 } else if (defaultValue) {
-                    filterMatch[dbField] = defaultValue;
+                    (filterMatch as any)[dbField] = defaultValue;
                 }
 
                 break;
@@ -173,27 +173,22 @@ export const buildFilterMatch = (
     return filterMatch;
 };
 
-export const parseSortParam = (
+export const parseSortParam = <T>(
     sortParam: unknown,
-    sortOptions: ISortOptionsEntry[]
-): IParseSortResult => {
-    if (!sortOptions.length) {
-        return { sortField: 'createdAt', sortOrder: -1 };
-    }
-    
+    sortOptions: ISortOptionsEntry<T>[]
+): IParseSortResult<T> => {
     const defaultOption = sortOptions[0];
     const defaultSortField = defaultOption.dbField;
     const defaultSortOrder = defaultOption.defaultOrder === 'asc' ? 1 : -1;
 
-    const rawSort = typeof sortParam === 'string' ? sortParam.trim() : '';
-    if (!rawSort) return { sortField: defaultSortField, sortOrder: defaultSortOrder };
+    const sort = typeof sortParam === 'string' ? sortParam.trim() : '';
+    if (!sort) return { sortField: defaultSortField, sortOrder: defaultSortOrder };
 
-    const isDescending = rawSort.startsWith('-');
+    const isDescending = sort.startsWith('-');
     const sortOrder = isDescending ? -1 : 1;
-    const sortFieldCandidate = isDescending ? rawSort.slice(1) : rawSort;
-
-    const allowedSortFields = sortOptions.map(opt => opt.dbField);
-    const isAllowed = allowedSortFields.includes(sortFieldCandidate);
+    
+    const sortFieldCandidate = (isDescending ? sort.slice(1) : sort) as keyof T;
+    const isAllowed = sortOptions.some(opt => opt.dbField === sortFieldCandidate);
 
     return {
         sortField: isAllowed ? sortFieldCandidate : defaultSortField,
@@ -201,38 +196,21 @@ export const parseSortParam = (
     };
 };
 
-export const buildSortPipeline = (
-    sortField: string,
-    sortOrder: 1 | -1,
-    sortOptions: ISortOptionsEntry[]
-): PipelineStage[] => {
-    const pipeline: PipelineStage[] = [];
+export const buildSortPipeline = <T>(
+    sortField: keyof T,
+    sortOrder: 1 | -1
+): PipelineStage[] => [
+    { $sort: { [sortField]: sortOrder } }
+];
 
-    // Определение того, нужно ли сортировать с учётом регистра
-    const isCaseInsensitiveSortField = sortOptions.some(
-        opt => opt.dbField === sortField && opt.caseInsensitive
-    );
-
-    if (isCaseInsensitiveSortField) {
-        pipeline.push({ // Создание поля для приведения к нижнему регистру
-            $addFields: { loweredSortField: { $toLower: `$${sortField}` } }
-        });
-        pipeline.push({ $sort: { loweredSortField: sortOrder } }); // Сортировка (1 — ASC, -1 — DESC)
-    } else {
-        pipeline.push({ $sort: { [sortField]: sortOrder } }); // Сортировка (1 — ASC, -1 — DESC)
-    }
-
-    return pipeline;
-};
-
-export const buildPaginatedPipeline = (
+export const buildPaginatedPipeline = <T>(
     query: IPageLimitQuery,
-    sortOptions: ISortOptionsEntry[],
+    sortOptions: ISortOptionsEntry<T>[],
     pageLimitOptions: TPageLimitOptionsEntry[]
 ): PipelineStage[] => {
     // Настройка сортировки
-    const { sortField, sortOrder }: IParseSortResult = parseSortParam(query.sort, sortOptions);
-    const pipeline: PipelineStage[] = buildSortPipeline(sortField, sortOrder, sortOptions);
+    const { sortField, sortOrder } = parseSortParam<T>(query.sort, sortOptions);
+    const pipeline = buildSortPipeline<T>(sortField, sortOrder);
 
     // Настройка пагинации
     const defaultPageLimit = pageLimitOptions[0] || 10;

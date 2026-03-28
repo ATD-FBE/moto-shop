@@ -12,28 +12,33 @@ import {
 import { validateInputTypes } from '@server/utils/typeValidation.js';
 import { runInTransaction } from '@server/utils/transaction.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import { ORDER_STATUS } from '@shared/constants.js';
+//import type { TDbUser } from '@server/types/index.js';
 
 /// Загрузка ID всех отфильтрованных клиентов и их данных для одной страницы ///
 export const handleCustomerListRequest = async (req, res, next) => {
     // Настройка фильтра поиска
     const allowedSearchFields = ['name', 'email'];
-    const searchMatch = buildSearchMatch(req.query.search, allowedSearchFields, DEFAULT_SEARCH_TYPE);
+    const searchMatch = buildSearchMatch/*<TDbUser>*/(
+        req.query.search,
+        allowedSearchFields,
+        DEFAULT_SEARCH_TYPE
+    );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch(req.query, customersFilterOptions);
+    const filterMatch = buildFilterMatch/*<TDbUser>*/(req.query, customersFilterOptions);
     filterMatch.role = 'customer';
 
     // Пайплайн вывода ID всех отфильтрованных результатов
     const filteredPipeline = [{ $project: { _id: 1, name: 1 } }];
 
     // Пайплайн вывода результатов на странице
-    const paginatedPipeline = buildPaginatedPipeline(
+    const paginatedPipeline = buildPaginatedPipeline/*<TDbUser>*/(
         req.query,
         customersSortOptions,
         customersPageLimitOptions
@@ -72,7 +77,7 @@ export const handleCustomerListRequest = async (req, res, next) => {
         //console.dir(explainResult.stages[0].$cursor, { depth: null });
 
         // Агрегатный запрос
-        const aggregateResult = await User.aggregate(pipeline);
+        const aggregateResult = await User.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
         checkTimeout(req);
         
         const filteredCustomerNamesMap = Object.fromEntries(

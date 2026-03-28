@@ -28,7 +28,8 @@ export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURC
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 export type TActiveUserRole = Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
 
-export type TProductThumbnailPresets = typeof PRODUCT_THUMBNAIL_PRESETS[keyof typeof PRODUCT_THUMBNAIL_PRESETS];
+export type TProductThumbnailKey = keyof typeof PRODUCT_THUMBNAIL_PRESETS;
+export type TProductThumbnailSize = typeof PRODUCT_THUMBNAIL_PRESETS[TProductThumbnailKey];
 
 export type TIntent = typeof INTENT[keyof typeof INTENT];
 

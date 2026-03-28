@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import type { TCriticalEvent } from '@server/types/index.js';
+import type { TDbCriticalEvent } from '@server/types/index.js';
 
 export const CriticalEventSchema = new Schema({
     category: {
@@ -30,6 +30,6 @@ export const CriticalEventSchema = new Schema({
     }
 });
 
-const CriticalEvent = model<TCriticalEvent>('CriticalEvent', CriticalEventSchema);
+const CriticalEvent = model<TDbCriticalEvent>('CriticalEvent', CriticalEventSchema);
 
 export default CriticalEvent;

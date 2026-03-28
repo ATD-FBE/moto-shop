@@ -2,7 +2,7 @@ import { Schema } from 'mongoose';
 import { validationRules } from '@shared/fieldRules.js';
 import { DISCOUNT_SOURCE, PRODUCT_UNITS } from '@shared/constants.js';
 
-const baseOrderItemFields = {
+const baseItemFields = {
     productId: {
         type: Schema.Types.ObjectId,
         ref: 'Product',
@@ -15,8 +15,8 @@ const baseOrderItemFields = {
     }
 };
 
-export const DraftOrderItemSchema = new Schema({
-    ...baseOrderItemFields,
+export const DraftItemSchema = new Schema({
+    ...baseItemFields,
     quantitySnapshot: {
         type: Number,
         min: 0,
@@ -42,8 +42,8 @@ export const DraftOrderItemSchema = new Schema({
     _id: false
 });
 
-export const FinalOrderItemSchema = new Schema({
-    ...baseOrderItemFields,
+export const FinalItemSchema = new Schema({
+    ...baseItemFields,
     imageFilename: { // Опционально
         type: String
     },

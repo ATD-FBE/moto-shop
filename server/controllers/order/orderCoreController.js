@@ -32,7 +32,7 @@ import { runInTransaction } from '@server/utils/transaction.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
+import { DEFAULT_SEARCH_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -48,6 +48,7 @@ import {
     ORDER_ACTION,
     REQUEST_STATUS
 } from '@shared/constants.js';
+//import type { TDbOrder } from '@server/types/index.js';
 
 /// Загрузка списка заказов для одной страницы ///
 export const handleOrderListRequest = async (req, res, next) => {
@@ -55,10 +56,14 @@ export const handleOrderListRequest = async (req, res, next) => {
     
     // Настройка фильтра поиска
     const allowedSearchFields = ['orderNumber'];
-    const searchMatch = buildSearchMatch(req.query.search, allowedSearchFields, DEFAULT_SEARCH_TYPE);
+    const searchMatch = buildSearchMatch<TDbOrder>(
+        req.query.search,
+        allowedSearchFields,
+        DEFAULT_SEARCH_TYPE
+    );
                 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch(req.query, ordersFilterOptions);
+    const filterMatch = buildFilterMatch<TDbOrder>(req.query, ordersFilterOptions);
 
     // Общая фильтрация по поиску и параметрам
     const baseFilter = { ...searchMatch, ...filterMatch };
@@ -166,7 +171,10 @@ export const handleOrderListRequest = async (req, res, next) => {
             }
 
             case 'customer': {
-                const { sortField, sortOrder } = parseSortParam(req.query.sort, ordersSortOptions);
+                const { sortField, sortOrder } = parseSortParam/*<TDbOrder>*/(
+                    req.query.sort,
+                    ordersSortOptions
+                );
 
                 baseFilter.customerId = dbUser._id;
 
@@ -759,7 +767,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 }
 
                 // Изменение количества товаров на складе
-                await applyProductBulkUpdate(orderItemsDeltaQty, 'adjustAfterCommit', session);
+                await applyProductBulkUpdate(orderItemsDeltaQty, ORDER_ADJUSTMENT_TYPE.ADJUST, session);
                 checkTimeout(req);
 
                 // Сбор данных для логов изменения сумм

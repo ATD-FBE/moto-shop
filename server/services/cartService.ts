@@ -1,10 +1,13 @@
-import Product from '../database/models/Product.js';
-import { prepareProductData, prepareCartProductSnapshotData } from './productService.js';
+import { Types } from 'mongoose';
+import Product from '@server/database/models/Product.js';
+import { prepareProduct, prepareCartProductSnapshot } from './productService.js';
+import type { TDbProduct, TDbCartItem, IGuestCart, ICart, IFixedDbCart } from '@server/types/index.js';
+import type { IGuestCartItem } from '@shared/types/index.js';
 
-export const prepareGuestCart = async (cartItemList) => {
+export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<IGuestCart> => {
     const productIds = cartItemList.map(item => item.id);
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     // Сбор актуальной корзины
@@ -12,12 +15,12 @@ export const prepareGuestCart = async (cartItemList) => {
     const now = Date.now();
 
     return cartItemList.reduce(
-        (acc, cartItem) => {
+        (acc: IGuestCart, cartItem: IGuestCartItem): IGuestCart => {
             const productId = cartItem.id;
             const dbProduct = dbProductMap.get(productId);
             if (!dbProduct) return acc;
 
-            acc.purchaseProductList.push(prepareProductData(dbProduct, { now }));
+            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
             if (!dbProduct.isActive) return acc;
 
             const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
@@ -33,26 +36,29 @@ export const prepareGuestCart = async (cartItemList) => {
     );
 };
 
-export const prepareCart = async (cartItemList, { checkoutMode = false } = {}) => {
-    const productIds = cartItemList.map(item => item.productId.toString());
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+export const prepareCart = async (
+    dbCartItemList: TDbCartItem[],
+    { checkoutMode = false }: { checkoutMode?: boolean } = {}
+): Promise<ICart> => {
+    const productIds = dbCartItemList.map(item => item.productId);
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     // Сбор актуальной корзины
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return cartItemList.reduce(
-        (acc, cartItem) => {
-            const productId = cartItem.productId.toString();
+    return dbCartItemList.reduce(
+        (acc: ICart, dbCartItem: TDbCartItem): ICart => {
+            const productId = dbCartItem.productId.toString();
             const dbProduct = dbProductMap.get(productId);
 
             if (!dbProduct) {
-                acc.purchaseProductList.push(prepareCartProductSnapshotData(cartItem));
+                acc.purchaseProductList.push(prepareCartProductSnapshot(dbCartItem));
                 acc.cartItemList.push({
                     id: productId,
-                    quantity: cartItem.quantity,
+                    quantity: dbCartItem.quantity,
                     quantityReduced: true,
                     outOfStock: true,
                     inactive: true,
@@ -63,11 +69,11 @@ export const prepareCart = async (cartItemList, { checkoutMode = false } = {}) =
 
             const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
 
-            acc.purchaseProductList.push(prepareProductData(dbProduct, { now }));
+            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
-                quantity: cartItem.quantity,
-                quantityReduced: checkoutMode ? false : available < cartItem.quantity,
+                quantity: dbCartItem.quantity,
+                quantityReduced: checkoutMode ? false : available < dbCartItem.quantity,
                 outOfStock: checkoutMode ? false : available === 0,
                 inactive: checkoutMode ? false : !dbProduct.isActive,
                 deleted: false
@@ -78,15 +84,15 @@ export const prepareCart = async (cartItemList, { checkoutMode = false } = {}) =
     );
 };
 
-export const populateGuestCart = async (guestCart) => {
+export const prepareDbGuestCart = async (guestCart: IGuestCartItem[]): Promise<TDbCartItem[]> => {
     const productIds = guestCart.map(item => item.id);
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
 
-    return guestCart.map(cartItem => {
+    return guestCart.map((cartItem: IGuestCartItem): TDbCartItem | null => {
         const dbProduct = dbProductMap.get(cartItem.id);
         if (!dbProduct) return null;
 
@@ -96,16 +102,19 @@ export const populateGuestCart = async (guestCart) => {
         if (available <= 0) return null;
 
         return {
-            productId: cartItem.id,
+            productId: Types.ObjectId.createFromHexString(cartItem.id),
             quantity: cartItem.quantity,
             nameSnapshot: dbProduct.name,
-            brandSnapshot: dbProduct.brand ?? null
+            brandSnapshot: dbProduct.brand
         };
-    }).filter(Boolean);
+    }).filter((item): item is TDbCartItem => Boolean(item));
 };
 
-export const mergeCarts = (dbCart, populatedGuestCart) => {
-    const mergedMap = new Map();
+export const mergeCarts = (
+    dbCart: TDbCartItem[],
+    dbGuestCart: TDbCartItem[]
+): TDbCartItem[] => {
+    const mergedMap = new Map<string, TDbCartItem>();
 
     // Товары из серверной корзины в первую очередь
     for (const item of dbCart) {
@@ -114,16 +123,19 @@ export const mergeCarts = (dbCart, populatedGuestCart) => {
     }
 
     // Товары из гостевой корзины — перезапись серверных товаров в карте
-    for (const item of populatedGuestCart) {
-        const key = item.productId;
+    for (const item of dbGuestCart) {
+        const key = item.productId.toString();
         mergedMap.set(key, item);
     }
 
     return Array.from(mergedMap.values());
 };
 
-export const areCartsDifferent = (aCart, bCart) => {
-    const cartToMap = (cart) => Object.fromEntries(cart.map(prod => [prod.productId, prod]));
+export const areCartsDifferent = (aCart: TDbCartItem[], bCart: TDbCartItem[]): boolean => {
+    const cartToMap = (cart: TDbCartItem[]): Record<string, TDbCartItem> =>
+        Object.fromEntries(
+            cart.map(prod => [prod.productId.toString(), prod])
+        );
 
     const aCartMap = cartToMap(aCart);
     const bCartMap = cartToMap(bCart);
@@ -142,10 +154,10 @@ export const areCartsDifferent = (aCart, bCart) => {
     return false;
 };
 
-export const prepareFixedDbCart = async (dbCart) => {
+export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedDbCart> => {
     const productIds = dbCart.map(item => item.productId);
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     // Сбор актуальной и исправленной корзины
@@ -153,8 +165,8 @@ export const prepareFixedDbCart = async (dbCart) => {
     const now = Date.now();
 
     return dbCart.reduce(
-        (acc, cartItem) => {
-            const productId = cartItem.productId.toString();
+        (acc: IFixedDbCart, dbCartItem: TDbCartItem): IFixedDbCart => {
+            const productId = dbCartItem.productId.toString();
             const dbProduct = dbProductMap.get(productId);
             if (!dbProduct) return acc;
 
@@ -163,15 +175,18 @@ export const prepareFixedDbCart = async (dbCart) => {
             const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
             if (available === 0) return acc;
 
-            cartItem.quantity = Math.min(cartItem.quantity, available);
-            cartItem.nameSnapshot = dbProduct.name;
-            cartItem.brandSnapshot = dbProduct.brand;
+            const fixedDbCartItem: TDbCartItem = {
+                productId: dbCartItem.productId,
+                quantity: Math.min(dbCartItem.quantity, available),
+                nameSnapshot: dbProduct.name,
+                brandSnapshot: dbProduct.brand
+            };
 
-            acc.fixedDbCart.push(cartItem);
-            acc.purchaseProductList.push(prepareProductData(dbProduct, { now }));
+            acc.fixedDbCart.push(fixedDbCartItem);
+            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
-                quantity: cartItem.quantity,
+                quantity: fixedDbCartItem.quantity,
                 quantityReduced: false,
                 outOfStock: false,
                 inactive: false,

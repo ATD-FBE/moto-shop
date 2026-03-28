@@ -12,6 +12,11 @@ export interface IOrderDataChange extends IDataChange {
     currency?: boolean;
 }
 
+/// Items ///
+export interface IOrderItem {
+    
+}
+
 /// Finansials ///
 export interface IFinancialsEventAction {
     method: TPaymentMethod | TRefundMethod;

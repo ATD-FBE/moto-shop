@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import { validationRules } from '@shared/fieldRules.js';
 import { UNSORTED_CATEGORY_SLUG } from '@shared/constants.js';
-import type { TCategory } from '@server/types/index.js';
+import type { TDbCategory } from '@server/types/index.js';
 
 export const CategorySchema = new Schema({
     name: {
@@ -48,6 +48,6 @@ CategorySchema.pre(
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 CategorySchema.plugin(uniqueValidator);
 
-const Category = model<TCategory>('Category', CategorySchema);
+const Category = model<TDbCategory>('Category', CategorySchema);
 
 export default Category;

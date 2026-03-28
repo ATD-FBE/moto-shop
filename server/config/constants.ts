@@ -41,6 +41,19 @@ export const FILE_FIELD_MAP = {
     product: ['images']
 } as const;
 
+export const ORDER_ADJUSTMENT_TYPE = {
+    RESERVE: 'reserve',
+    RELEASE: 'release',
+    COMMIT: 'commit',
+    ADJUST: 'adjust',
+    RETURN: 'return'
+} as const;
+
+export const AGGREGATE_COLLATION_OPTIONS = { 
+    locale: 'en', // Универсальная локаль для мультиязычности
+    strength: 2   // Strength 2 означает игнорирование регистра при сравнении
+} as const;
+
 export const ACCESS_TOKEN_MAX_AGE = 1 * 60 * 60 * 1000; // 1 час
 //export const ACCESS_TOKEN_MAX_AGE = 10 * 1000;
 

@@ -1,4 +1,10 @@
-import { TStorageType, TMongoMode, TBucketType, TTokenDecodedUser } from '@server/types/index.js';
+import {
+    TStorageType,
+    TMongoMode,
+    TBucketType,
+    TTokenDecodedUser,
+    TDbUser
+} from '@server/types/index.js';
 import { TUserRole } from '@shared/constants.js';
 
 declare global {
@@ -43,11 +49,7 @@ declare global {
         interface Request {
             rawBody?: Buffer; 
             user?: TTokenDecodedUser;
-            dbUser?: {
-                _id: string;
-                role: TUserRole;
-
-            };
+            dbUser?: TDbUser;
             fileUploadError?: {
                 field: string;
                 type: string;

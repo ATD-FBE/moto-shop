@@ -1,5 +1,5 @@
 import type {
-    TProductThumbnailPresets,
+    TProductThumbnailSize,
     TPaymentMethod,
     TRefundMethod,
     TTransactionType,
@@ -45,7 +45,7 @@ export const PRODUCT_THUMBNAIL_PRESETS = {
     medium: 220
 } as const;
 
-export const PRODUCT_THUMBNAIL_SIZES: readonly TProductThumbnailPresets[] =
+export const PRODUCT_THUMBNAIL_SIZES: readonly TProductThumbnailSize[] =
     Object.values(PRODUCT_THUMBNAIL_PRESETS);
 
 export const INTENT = {

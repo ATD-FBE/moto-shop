@@ -6,7 +6,7 @@ import Order from '@server/database/models/Order.js';
 import { applyProductBulkUpdate } from './productService.js';
 import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '../config/paths.js';
 import { logCriticalEvent } from './criticalEventService.js';
-import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
 import { fieldErrorMessages } from '@shared/fieldRules.js';
 import {
@@ -473,7 +473,7 @@ export const getOrderTransitionData = (deliveryMethod, currentOrderStatus, stepD
 };
 
 export const returnProductsToStore = async (orderItemList, session) => {
-    await applyProductBulkUpdate(orderItemList, 'return', session);
+    await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RETURN, session);
 };
 
 export const getFieldErrors = (invalidFields, entityType) => {

@@ -30,7 +30,7 @@ export const productsFilterOptions = [
         label: 'В наличии',
         type: 'boolean',
         paramName: 'inStock',
-        defaultValue: true
+        defaultValue: 'true'
     },
     {
         dbField: 'isBrandNew',
@@ -51,7 +51,7 @@ export const productsFilterOptions = [
         label: 'В продаже',
         type: 'boolean',
         paramName: 'active',
-        defaultValue: true
+        defaultValue: 'true'
     }
 ];
 

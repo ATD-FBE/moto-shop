@@ -2,7 +2,7 @@ import { Schema, Types, model } from 'mongoose';
 import UpdateHistoryItemSchema from './schemas/UpdateHistoryItemSchema.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { NOTIFICATION_STATUS } from '@shared/constants.js';
-import type { TNotification } from '@server/types/index.js';
+import type { TDbNotification } from '@server/types/index.js';
 
 export const NotificationSchema = new Schema({
     status: {
@@ -57,6 +57,6 @@ export const NotificationSchema = new Schema({
 NotificationSchema.index({ status: 1, updatedAt: -1 });
 NotificationSchema.index({ status: 1, sentAt: -1 });
 
-const Notification = model<TNotification>('Notification', NotificationSchema);
+const Notification = model<TDbNotification>('Notification', NotificationSchema);
 
 export default Notification;

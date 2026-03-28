@@ -1,11 +1,10 @@
-export interface ISortOptionsEntry {
-    dbField: string;
+export interface ISortOptionsEntry<T> {
+    dbField: keyof T;
     label: string;
     defaultOrder: 'asc' | 'desc';
-    caseInsensitive?: boolean;
 }
 
-export interface IParseSortResult {
-    sortField: string;
+export interface IParseSortResult<T> {
+    sortField: keyof T;
     sortOrder: 1 | -1;
 }

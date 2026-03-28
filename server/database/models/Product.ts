@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import { PRODUCT_UNITS } from '@shared/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
-import type { TProduct } from '@server/types/index.js';
+import type { TDbProduct } from '@server/types/index.js';
 
 export const ProductSchema = new Schema({
     imageFilenames: { // Опционально
@@ -117,6 +117,6 @@ ProductSchema.index({
 // Плагин, собирающий все ошибки уникальности полей до выбрасывания исключения
 ProductSchema.plugin(uniqueValidator);
 
-const Product = model<TProduct>('Product', ProductSchema);
+const Product = model<TDbProduct>('Product', ProductSchema);
 
 export default Product;

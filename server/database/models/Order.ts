@@ -1,12 +1,15 @@
 import { Schema, model } from 'mongoose';
-import { DraftOrderItemSchema, FinalOrderItemSchema } from './schemas/OrderItemSchemas.js';
-import { DraftCustomerInfoSchema, FinalCustomerInfoSchema } from './schemas/CustomerInfoSchemas.js';
-import { DraftDeliverySchema, FinalDeliverySchema } from './schemas/DeliverySchemas.js';
-import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/FinancialsSchemas.js';
+import { StatusHistoryEntrySchema } from './schemas/order/StatusHistoryEntrySchema.js';
+import { TotalsSchema } from './schemas/order/TotalsSchema.js';
+import { AuditLogSchema } from './schemas/order/AuditLogSchema.js';
+import { DraftItemSchema, FinalItemSchema } from './schemas/order/ItemSchemas.js';
+import { DraftCustomerInfoSchema, FinalCustomerInfoSchema } from './schemas/order/CustomerInfoSchemas.js';
+import { DraftDeliverySchema, FinalDeliverySchema } from './schemas/order/DeliverySchemas.js';
+import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/order/FinancialsSchemas.js';
 import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { ORDER_STATUS, ORDER_STATUS_CONFIG } from '@shared/constants.js';
-import type { TOrder } from '@server/types/index.js';
+import type { TDbOrder } from '@server/types/index.js';
 
 export const BaseOrderSchema = new Schema({
     _modelType: { // Поле ключа дискриминатора для подсхем DraftOrderSchema/FinalOrderSchema
@@ -34,72 +37,8 @@ export const BaseOrderSchema = new Schema({
         type: Date,
         default: Date.now
     },
-    statusHistory: [{
-        _id: false,
-        status: {
-            type: String,
-            required: true,
-            enum: Object.keys(ORDER_STATUS_CONFIG)
-        },
-        isRollback: {
-            type: Boolean
-        },
-        changes: {
-            type: [{
-                _id: false,
-                field: {
-                    type: String,
-                    required: true
-                },
-                oldValue: Schema.Types.Mixed,
-                newValue: Schema.Types.Mixed,
-                currency: Boolean
-            }],
-            default: undefined // Пустой массив не создаётся
-        },
-        cancellationReason: {
-            type: String,
-            match: validationRules.order.cancellationReason
-        },
-        changedBy: {
-            _id: false,
-            id: {
-                type: Schema.Types.ObjectId,
-                ref: 'User',
-                required: true
-            },
-            name: {
-                type: String,
-                required: true
-            },
-            role: {
-                type: String,
-                required: true
-            }
-        },
-        changedAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    totals: {
-        _id: false,
-        subtotalAmount: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        totalSavings: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        totalAmount: {
-            type: Number,
-            required: true,
-            min: 0
-        }
-    },
+    statusHistory: [StatusHistoryEntrySchema],
+    totals: TotalsSchema,
     customerComment: { // Опционально
         type: String,
         set: (val: null | string): undefined | string => val === null ? undefined : val
@@ -111,7 +50,7 @@ export const BaseOrderSchema = new Schema({
 
 // Черновик — без required на полях в схемах customerInfo/delivery/financials
 export const DraftOrderSchema = new Schema({
-    items: [DraftOrderItemSchema],
+    items: [DraftItemSchema],
     customerInfo: DraftCustomerInfoSchema,
     delivery: DraftDeliverySchema,
     financials: DraftFinancialsSchema,
@@ -127,7 +66,7 @@ export const FinalOrderSchema = new Schema({
         type: String,
         required: true
     },
-    items: [FinalOrderItemSchema],
+    items: [FinalItemSchema],
     customerInfo: FinalCustomerInfoSchema,
     delivery: FinalDeliverySchema,
     financials: FinalFinancialsSchema,
@@ -141,43 +80,7 @@ export const FinalOrderSchema = new Schema({
         set: (val: null | string): undefined | string => val === null ? undefined : val
     },
     auditLog: {
-        type: [{
-            _id: false,
-            changes: [{
-                _id: false,
-                field: {
-                    type: String,
-                    required: true
-                },
-                oldValue: Schema.Types.Mixed,
-                newValue: Schema.Types.Mixed,
-                currency: Boolean
-            }],
-            reason: {
-                type: String,
-                required: true
-            },
-            changedBy: {
-                _id: false,
-                id: {
-                    type: Schema.Types.ObjectId,
-                    ref: 'User',
-                    required: true
-                },
-                name: {
-                    type: String,
-                    required: true
-                },
-                role: {
-                    type: String,
-                    required: true
-                }
-            },
-            changedAt: {
-                type: Date,
-                default: Date.now
-            }
-        }],
+        type: [AuditLogSchema],
         default: undefined // Пустой массив не создаётся
     }
 }); // { _id: false } - Для дискриминаторов не нужно отключать _id для стабильности
@@ -202,7 +105,7 @@ BaseOrderSchema.index(
     }
 );
 
-const Order = model<TOrder>('Order', BaseOrderSchema);
+const Order = model<TDbOrder>('Order', BaseOrderSchema);
 
 // Подключение схем DraftOrderSchema/FinalOrderSchema через дискриминатор модели
 Order.discriminator(ORDER_MODEL_TYPE.DRAFT, DraftOrderSchema);

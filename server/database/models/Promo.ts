@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 import UpdateHistoryItemSchema from './schemas/UpdateHistoryItemSchema.js';
 import { validationRules } from '@shared/fieldRules.js';
-import type { TPromo } from '@server/types/index.js';
+import type { TDbPromo } from '@server/types/index.js';
 
 export const PromoSchema = new Schema({
     title: {
@@ -35,6 +35,6 @@ export const PromoSchema = new Schema({
     timestamps: true // Автоматическое добавление полей createdAt и updatedAt
 });
 
-const Promo = model<TPromo>('Promo', PromoSchema);
+const Promo = model<TDbPromo>('Promo', PromoSchema);
 
 export default Promo;
