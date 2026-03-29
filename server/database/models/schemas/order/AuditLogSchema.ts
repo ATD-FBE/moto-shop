@@ -16,20 +16,23 @@ export const AuditLogSchema = new Schema({
         required: true
     },
     changedBy: {
-        id: {
-            type: Schema.Types.ObjectId,
-            ref: 'User',
-            required: true
+        type: {
+            id: {
+                type: Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            name: {
+                type: String,
+                required: true
+            },
+            role: {
+                type: String,
+                enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
+                required: true
+            }
         },
-        name: {
-            type: String,
-            required: true
-        },
-        role: {
-            type: String,
-            enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
-            required: true
-        }
+        required: true
     },
     changedAt: {
         type: Date,

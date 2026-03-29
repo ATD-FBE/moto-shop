@@ -48,7 +48,7 @@ export type TDbOrderFinalFinancials = TDbFinalOrder['financials'];
 export type TDbOrderFinancialsEventEntry = TDbOrderFinalFinancials['eventHistory'][number];
 export type TDbOrderFinancialsEventVoided = TDbOrderFinancialsEventEntry['voided'];
 export type TDbOrderCurrentOnlineTransaction = TDbOrderFinalFinancials['currentOnlineTransaction'];
-export type TDbOrderAuditLog = NonNullable<TDbFinalOrder['auditLog']>[number];
+export type TDbOrderAuditLogEntry = NonNullable<TDbFinalOrder['auditLog']>[number];
 
 /// Типизация схем моделей как документов (с методами и другими встроенными данными) ///
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;

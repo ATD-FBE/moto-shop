@@ -27,7 +27,7 @@ import type {
     TDbOrderStatusHistoryEntry,
     TDbOrderFinancialsEventEntry,
     TDbOrderCurrentOnlineTransaction,
-    TDbOrderAuditLog
+    TDbOrderAuditLogEntry
 } from '@server/types/index.js';
 import type {
     TActiveUserRole,
@@ -40,7 +40,8 @@ import type {
     TOrderStatus,
     IFinancialsEventEntry,
     IFinancialsEventEntrySummary,
-    ICurrentOnlineTransaction
+    ICurrentOnlineTransaction,
+    IAuditLogEntry
 } from '@shared/types/index.js';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
@@ -134,15 +135,17 @@ export const prepareOrder = (
     delivery: {
         deliveryMethod: dbOrder.delivery.deliveryMethod,
         allowCourierExtra: dbOrder.delivery.allowCourierExtra ?? undefined,
-        ...(details && { shippingAddress: dbOrder.delivery.shippingAddress ? {
-            region: dbOrder.delivery.shippingAddress.region ?? undefined,
-            district: dbOrder.delivery.shippingAddress.district ?? undefined,
-            city: dbOrder.delivery.shippingAddress.city,
-            street: dbOrder.delivery.shippingAddress.street,
-            house: dbOrder.delivery.shippingAddress.house,
-            apartment: dbOrder.delivery.shippingAddress.apartment ?? undefined,
-            postalCode: dbOrder.delivery.shippingAddress.postalCode ?? undefined
-        } : undefined }),
+        ...(details && dbOrder.delivery.shippingAddress && {
+            shippingAddress: {
+                region: dbOrder.delivery.shippingAddress.region ?? undefined,
+                district: dbOrder.delivery.shippingAddress.district ?? undefined,
+                city: dbOrder.delivery.shippingAddress.city,
+                street: dbOrder.delivery.shippingAddress.street,
+                house: dbOrder.delivery.shippingAddress.house,
+                apartment: dbOrder.delivery.shippingAddress.apartment ?? undefined,
+                postalCode: dbOrder.delivery.shippingAddress.postalCode ?? undefined
+            }
+        }),
         ...((managed || details) && { shippingCost: dbOrder.delivery.shippingCost })
     },
     financials: {
@@ -161,7 +164,7 @@ export const prepareOrder = (
     ...(managed && {
         customerComment: dbOrder.customerComment ?? undefined,
         internalNote: dbOrder.internalNote ?? undefined,
-        ...(!inList && { auditLog: prepareHistoryLogs(dbOrder.auditLog) })
+        ...(!inList && dbOrder.auditLog && { auditLog: prepareAuditlog(dbOrder.auditLog) })
     })
 });
 
@@ -334,6 +337,24 @@ const prepareCurrentOnlineTransaction = (
         }),
         ...(canSeeConfirmation && { confirmationUrl: currentOnlineTx.confirmationUrl ?? undefined }),
     };
+};
+
+const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] => {
+    return auditLog.map(log => ({
+        changes: log.changes.map(change => ({
+            field: change.field,
+            oldValue: change.oldValue ?? undefined,
+            newValue: change.newValue ?? undefined,
+            currency: change.currency ?? undefined
+        })),
+        reason: log.reason,
+        changedBy: {
+            id: log.changedBy.id.toString(),
+            name: log.changedBy.name,
+            role: log.changedBy.role
+        },
+        changedAt: log.changedAt.toISOString()
+    }));
 };
 
 export const prepareShippingCost = (

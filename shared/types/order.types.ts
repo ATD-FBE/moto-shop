@@ -33,7 +33,7 @@ export interface IOrder {
     financials: IFinancials;
     customerComment?: string;
     internalNote?: string;
-    auditLog?: IAuditLog[];
+    auditLog?: IAuditLogEntry[];
 }
 
 export interface IOrderTotals {
@@ -160,7 +160,7 @@ export interface ICurrentOnlineTransaction {
     confirmationUrl?: string;
 }
 
-export interface IAuditLog {
+export interface IAuditLogEntry {
     changes: IOrderDataChange[];
     reason: string;
     changedBy: {
