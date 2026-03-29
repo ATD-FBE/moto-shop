@@ -13,5 +13,6 @@ export * from './typeValidation.types.js';
 export * from './database.types.js';
 export * from './authService.types.js';
 export * from './cartService.types.js';
+export * from './checkoutService.types.js';
 export * from './productService.types.js';
 export * from './order.types.js';

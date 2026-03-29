@@ -9,7 +9,7 @@ import {
     PAYMENT_METHOD,
     REFUND_METHOD,
     TRANSACTION_TYPE,
-    ONLINE_TRANSACTION_STATUS,
+    TRANSACTION_STATUS,
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER,
     ORDER_STATUS,
@@ -42,7 +42,7 @@ export type TRefundMethod = typeof REFUND_METHOD[keyof typeof REFUND_METHOD];
 
 export type TTransactionType = typeof TRANSACTION_TYPE[keyof typeof TRANSACTION_TYPE];
 
-export type TOnlineTransactionStatus = typeof ONLINE_TRANSACTION_STATUS[keyof typeof ONLINE_TRANSACTION_STATUS];
+export type TTransactionStatus = typeof TRANSACTION_STATUS[keyof typeof TRANSACTION_STATUS];
 
 export type TBankProvider = typeof BANK_PROVIDER[keyof typeof BANK_PROVIDER];
 
@@ -60,7 +60,7 @@ export interface ITransactionTypeConfig {
     label: string;
 }
 
-export interface IOnlineTransactionStatusConfig {
+export interface ITransactionStatusConfig {
     label: string;
 }
 

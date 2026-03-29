@@ -1,8 +1,8 @@
 import { Schema } from 'mongoose';
+import { USER_ROLE } from '@shared/constants.js';
 
 export const AuditLogSchema = new Schema({
     changes: [{
-        _id: false,
         field: {
             type: String,
             required: true
@@ -16,7 +16,6 @@ export const AuditLogSchema = new Schema({
         required: true
     },
     changedBy: {
-        _id: false,
         id: {
             type: Schema.Types.ObjectId,
             ref: 'User',
@@ -28,6 +27,7 @@ export const AuditLogSchema = new Schema({
         },
         role: {
             type: String,
+            enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
             required: true
         }
     },

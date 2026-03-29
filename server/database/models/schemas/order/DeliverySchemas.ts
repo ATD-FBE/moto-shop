@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import { validationRules } from '@shared/fieldRules.js';
 import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS } from '@shared/constants.js';
-import type { TDbOrderFinalDelivery } from '@server/types/index.js';
+import type { TDeliveryMethod } from '@shared/types/index.js';
 
 const baseDeliveryFields = {
     deliveryMethod: {
@@ -11,10 +11,10 @@ const baseDeliveryFields = {
     },
     allowCourierExtra: {
         type: Boolean,
-        default: function (this: any): undefined | boolean {
+        default: function (this: { deliveryMethod?: TDeliveryMethod }): boolean | undefined {
             return this.deliveryMethod === DELIVERY_METHOD.COURIER ? false : undefined;
         },
-        set: (val: null | boolean): undefined | boolean => val === null ? undefined : val
+        set: (val: null | boolean): boolean | undefined => val === null ? undefined : val
     },
     shippingAddress: {
         region: { // Опционально для заказа
@@ -61,36 +61,41 @@ export const FinalDeliverySchema = new Schema({
     },
     allowCourierExtra: baseDeliveryFields.allowCourierExtra,
     shippingAddress: {
-        region: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.region,
-            match: validationRules.checkout.region
+        type: {
+            region: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.region,
+                match: validationRules.checkout.region
+            },
+            district: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.district,
+                match: validationRules.checkout.district
+            },
+            city: {
+                ...baseDeliveryFields.shippingAddress.city,
+                required: true,
+                match: validationRules.checkout.city
+            },
+            street: {
+                ...baseDeliveryFields.shippingAddress.street,
+                required: true,
+                match: validationRules.checkout.street
+            },
+            house: {
+                ...baseDeliveryFields.shippingAddress.house,
+                required: true,
+                match: validationRules.checkout.house
+            },
+            apartment: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.apartment,
+                match: validationRules.checkout.apartment
+            },
+            postalCode: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.postalCode,
+                match: validationRules.checkout.postalCode
+            }
         },
-        district: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.district,
-            match: validationRules.checkout.district
-        },
-        city: {
-            ...baseDeliveryFields.shippingAddress.city,
-            required: isDeliveryRequired,
-            match: validationRules.checkout.city
-        },
-        street: {
-            ...baseDeliveryFields.shippingAddress.street,
-            required: isDeliveryRequired,
-            match: validationRules.checkout.street
-        },
-        house: {
-            ...baseDeliveryFields.shippingAddress.house,
-            required: isDeliveryRequired,
-            match: validationRules.checkout.house
-        },
-        apartment: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.apartment,
-            match: validationRules.checkout.apartment
-        },
-        postalCode: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.postalCode,
-            match: validationRules.checkout.postalCode
+        required: function (this: { deliveryMethod: TDeliveryMethod }): boolean {
+            return this.deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
         }
     },
     shippingCost: {
@@ -100,8 +105,3 @@ export const FinalDeliverySchema = new Schema({
 }, {
     _id: false
 });
-
-// this в функции required надёжен для обычных поддокументов, но не надёжен для поддокументов массивов
-function isDeliveryRequired(this: TDbOrderFinalDelivery): boolean {
-    return this.deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
-}

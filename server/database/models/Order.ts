@@ -38,7 +38,10 @@ export const BaseOrderSchema = new Schema({
         default: Date.now
     },
     statusHistory: [StatusHistoryEntrySchema],
-    totals: TotalsSchema,
+    totals: {
+        type: TotalsSchema,
+        required: true
+    },
     customerComment: { // Опционально
         type: String,
         set: (val: null | string): undefined | string => val === null ? undefined : val
@@ -67,9 +70,18 @@ export const FinalOrderSchema = new Schema({
         required: true
     },
     items: [FinalItemSchema],
-    customerInfo: FinalCustomerInfoSchema,
-    delivery: FinalDeliverySchema,
-    financials: FinalFinancialsSchema,
+    customerInfo: {
+        type: FinalCustomerInfoSchema,
+        required: true
+    },
+    delivery: {
+        type: FinalDeliverySchema,
+        required: true
+    },
+    financials: {
+        type: FinalFinancialsSchema,
+        required: true
+    },
     confirmedAt: { // Только для сортировки
         type: Date,
         default: Date.now

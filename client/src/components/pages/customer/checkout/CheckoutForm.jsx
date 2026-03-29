@@ -944,9 +944,9 @@ function OrderItems({
             </div>
 
             {orderItemList.map(orderItem => {
-                const { id, quantity, priceSnapshot, appliedDiscountSnapshot } = orderItem;
+                const { productId, quantity, priceSnapshot, appliedDiscountSnapshot } = orderItem;
 
-                const product = productMap[id];
+                const product = productMap[productId];
                 const {
                     images = [],
                     mainImageIndex = 0,
@@ -956,9 +956,9 @@ function OrderItems({
                     unit = 'ед.'
                 } = product ?? {};
 
-                const title = formatProductTitle(name, brand) || `Товар (${id})`;
+                const title = formatProductTitle(name, brand) || `Товар (${productId})`;
                 const slug = generateSlug(title);
-                const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
+                const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId });
 
                 const hasImages = images.length > 0;
                 const thumbImageSrc = hasImages
@@ -978,9 +978,9 @@ function OrderItems({
 
                 return (
                     <article
-                        key={id}
+                        key={productId}
                         role="listitem"
-                        data-id={id}
+                        data-id={productId}
                         className={cn('order-item', { 'has-discount': hasDiscount })}
                     >
                         <div className="product-thumb">

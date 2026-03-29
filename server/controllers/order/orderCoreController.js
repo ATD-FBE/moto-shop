@@ -6,8 +6,8 @@ import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     orderDotNotationMap,
-    prepareOrderData,
-    getLastActiveStatus,
+    prepareOrder,
+    getLastActiveOrderStatus,
     prepareShippingCost,
     getFinancialsState,
     getOrderTransitionData,
@@ -41,6 +41,7 @@ import { calculateOrderTotals, calculateOrderFinancials } from '@shared/calculat
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,
+    USER_ROLE,
     DELIVERY_METHOD,
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
@@ -56,14 +57,14 @@ export const handleOrderListRequest = async (req, res, next) => {
     
     // Настройка фильтра поиска
     const allowedSearchFields = ['orderNumber'];
-    const searchMatch = buildSearchMatch<TDbOrder>(
+    const searchMatch = buildSearchMatch/*<TDbOrder>*/(
         req.query.search,
         allowedSearchFields,
         DEFAULT_SEARCH_TYPE
     );
                 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch<TDbOrder>(req.query, ordersFilterOptions);
+    const filterMatch = buildFilterMatch/*<TDbOrder>*/(req.query, ordersFilterOptions);
 
     // Общая фильтрация по поиску и параметрам
     const baseFilter = { ...searchMatch, ...filterMatch };
@@ -78,7 +79,7 @@ export const handleOrderListRequest = async (req, res, next) => {
         let dbPaginatedOrderList;
 
         switch (dbUser.role) {
-            case 'admin': {
+            case USER_ROLE.ADMIN: {
                 isManaged = true;
 
                 if (!baseFilter.currentStatus) {
@@ -170,7 +171,7 @@ export const handleOrderListRequest = async (req, res, next) => {
                 break;
             }
 
-            case 'customer': {
+            case USER_ROLE.CUSTOMER: {
                 const { sortField, sortOrder } = parseSortParam/*<TDbOrder>*/(
                     req.query.sort,
                     ordersSortOptions
@@ -200,7 +201,7 @@ export const handleOrderListRequest = async (req, res, next) => {
         checkTimeout(req);
 
         const filteredOrderIdList = dbFilteredOrders.map(ord => ord._id);
-        const paginatedOrderList = dbPaginatedOrderList.map(dbOrder => prepareOrderData(dbOrder, {
+        const paginatedOrderList = dbPaginatedOrderList.map(dbOrder => prepareOrder(dbOrder, {
             inList: true,
             managed: isManaged,
             details: true,
@@ -241,7 +242,7 @@ export const handleOrderRequest = async (req, res, next) => {
         }
 
         const viewConfig = ORDER_VIEW_MATRIX[viewerRole][viewMode];
-        const order = prepareOrderData(dbOrder, { ...viewConfig, viewerRole });
+        const order = prepareOrder(dbOrder, { ...viewConfig, viewerRole });
 
         safeSendResponse(res, 200, { message: `Заказ ${orderLbl} успешно загружен`, order });
     } catch (err) {
@@ -1117,7 +1118,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
             const newOrderStatusEntry = updatedDbOrder.statusHistory.at(-1).toObject();
 
             if (updatedDbOrder.currentStatus === ORDER_STATUS.CANCELLED) {
-                newOrderStatusEntry.lastActiveStatus = getLastActiveStatus(updatedDbOrder.statusHistory);
+                newOrderStatusEntry.lastActiveStatus = getLastActiveOrderStatus(updatedDbOrder.statusHistory);
             }
 
             const updatedOrderData = {

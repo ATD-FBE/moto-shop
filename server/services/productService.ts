@@ -33,7 +33,7 @@ import type {
     TProductImageThumbs,
     TProductThumbnailKey,
     TProductThumbnailSize,
-    ICartProductSnapshot
+    IProductSnapshot
 } from '@shared/types/index.js';
 
 export const prepareProduct = (
@@ -49,11 +49,11 @@ export const prepareProduct = (
     return {
         id: productId,
         images: prepareProductImages(productId, dbProduct.imageFilenames),
-        mainImageIndex: dbProduct.mainImageIndex,
-        sku: dbProduct.sku,
+        mainImageIndex: dbProduct.mainImageIndex ?? undefined,
+        sku: dbProduct.sku ?? undefined,
         name: dbProduct.name,
-        brand: dbProduct.brand,
-        description: dbProduct.description,
+        brand: dbProduct.brand ?? undefined,
+        description: dbProduct.description ?? undefined,
         available,
         isBrandNew: dbProduct.createdAt.getTime() >= brandNewSince && isAvailable,
         isRestocked: dbProduct.lastRestockAt.getTime() >= restockSince && isAvailable,
@@ -97,7 +97,7 @@ const prepareProductImages = (productId: string, imageFilenames: string[]): IPro
     }));
 };
 
-export const prepareCartProductSnapshot = (dbCartItem: TDbCartItem): ICartProductSnapshot => ({
+export const prepareCartProductSnapshot = (dbCartItem: TDbCartItem): IProductSnapshot => ({
     id: dbCartItem.productId.toString(),
     name: dbCartItem.nameSnapshot,
     brand: dbCartItem.brandSnapshot

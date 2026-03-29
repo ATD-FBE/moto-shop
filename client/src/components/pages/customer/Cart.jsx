@@ -166,7 +166,7 @@ export default function Cart() {
         setCheckoutInProgress(true);
 
         // Создание снэпшотов критически важных данных черновика заказа для первой проверки изменений
-        const cartProductSnapshots = cartItemList.map(item => {
+        const cartItemSnapshots = cartItemList.map(item => {
             const product = productMap[item.id];
             const productDiscount = product?.discount ?? 0;
             const {
@@ -175,14 +175,14 @@ export default function Cart() {
             } = getAppliedDiscountData(productDiscount, customerDiscount);
 
             return {
-                id: item.id,
+                productId: item.id,
                 priceSnapshot: product?.price ?? 0,
                 appliedDiscountSnapshot: appliedDiscount,
                 appliedDiscountSourceSnapshot: appliedDiscountSource
             };
         });
 
-        const responseData = await dispatch(sendOrderDraftCreateRequest(cartProductSnapshots));
+        const responseData = await dispatch(sendOrderDraftCreateRequest(cartItemSnapshots));
         if (isUnmountedRef.current) return;
 
         const {

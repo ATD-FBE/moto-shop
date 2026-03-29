@@ -1,7 +1,7 @@
 import type { TDbCartItem } from '@server/types/index.js';
 import type {
     IProduct,
-    TCartProduct,
+    IProductSnapshot,
     IGuestCartItem,
     ICartItem
 } from '@shared/types/index.js';
@@ -12,7 +12,7 @@ export interface IGuestCart {
 }
 
 export interface ICart {
-    purchaseProductList: TCartProduct[];
+    purchaseProductList: (IProduct | IProductSnapshot)[];
     cartItemList: ICartItem[];
 }
 

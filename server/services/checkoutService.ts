@@ -1,3 +1,4 @@
+import { type ClientSession } from 'mongoose';
 import Product from '@server/database/models/Product.js';
 import {
     buildProductInventoryUpdatePipeline,
@@ -6,13 +7,25 @@ import {
 } from './productService.js';
 import { ORDER_RESERVE_BATCH_SIZE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
+import type {
+    TDbOrderDraftItem,
+    TDbCartItem,
+    TDbProduct,
+    IOrderItemRef,
+    ISyncCartResult,
+    ISyncDraftOrderResult
+} from '@server/types/index.js';
+import type { ICartItemSnapshot, IOrderAdjustments } from '@shared/types/index.js';
 
-export const reserveProducts = async (remainingOrderItemsToReserve, session) => {
-    const failedItemIdsSet = new Set();
+export const reserveProducts = async (
+    remainingDbOrderItemsToReserve: TDbOrderDraftItem[],
+    session: ClientSession
+): Promise<Set<string>> => {
+    const failedItemIdsSet: Set<string> = new Set();
 
     // Резервирование количества товаров порциями
-    for (let i = 0; i < remainingOrderItemsToReserve.length; i += ORDER_RESERVE_BATCH_SIZE) {
-        const batch = remainingOrderItemsToReserve.slice(i, i + ORDER_RESERVE_BATCH_SIZE);
+    for (let i = 0; i < remainingDbOrderItemsToReserve.length; i += ORDER_RESERVE_BATCH_SIZE) {
+        const batch = remainingDbOrderItemsToReserve.slice(i, i + ORDER_RESERVE_BATCH_SIZE);
 
         await Promise.all(batch.map(async (item) => {
             const updateResult = await Product.updateOne(
@@ -22,7 +35,7 @@ export const reserveProducts = async (remainingOrderItemsToReserve, session) => 
                         $gte: [{ $subtract: ['$stock', '$reserved'] }, item.quantity]
                     }
                 },
-                buildProductInventoryUpdatePipeline('reserve', item.quantity),
+                buildProductInventoryUpdatePipeline(ORDER_ADJUSTMENT_TYPE.RESERVE, item.quantity),
                 { session }
             );
 
@@ -36,18 +49,28 @@ export const reserveProducts = async (remainingOrderItemsToReserve, session) => 
     return failedItemIdsSet;
 };
 
-export const releaseReservedProducts = async (orderItemList, session) => {
+export const releaseReservedProducts = async (
+    orderItemList: IOrderItemRef[],
+    session: ClientSession
+): Promise<void> => {
     await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RELEASE, session);
 };
 
-export const commitProductPurchase = async (orderItemList, session) => {
+export const commitProductPurchase = async (
+    orderItemList: IOrderItemRef[],
+    session: ClientSession
+): Promise<void> => {
     await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.COMMIT, session);
 };
 
-export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap, customerDiscount) => {
+export const syncCart = async (
+    cartItemList: TDbCartItem[],
+    cartItemSnapshotMap: Map<string, ICartItemSnapshot>,
+    customerDiscount: number
+): Promise<ISyncCartResult> => {
     const productIds = cartItemList.map(item => item.productId);
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     // Сбор актуальных данных, исправление корзины и заказа, сбор изменений для логов 
@@ -55,24 +78,24 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
     const now = Date.now();
 
     return cartItemList.reduce(
-        (acc, cartItem) => {
+        (acc: ISyncCartResult, cartItem: TDbCartItem): ISyncCartResult => {
             const productObjectId = cartItem.productId;
             const productId = productObjectId.toString();
+            const productSnapshot = cartItemSnapshotMap.get(productId);
             const dbProduct = dbProductMap.get(productId);
-            const productSnapshot = cartProductSnapshotMap.get(productId);
-            const adjustments = {};
+            const adjustments: IOrderAdjustments['adjustments'] = {};
 
             // Отсеивание удалённого из магазина товара
             if (!dbProduct) {
                 adjustments.deleted = true;
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
                 return acc;
             }
 
             // Отсеивание неактивного товара
             if (!dbProduct.isActive) {
                 adjustments.inactive = true;
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
                 return acc;
             }
 
@@ -81,7 +104,7 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
 
             if (available === 0) {
                 adjustments.outOfStock = true;
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
                 return acc;
             }
 
@@ -96,7 +119,7 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
             }
 
             // Изменение цены товара
-            if (dbProduct.price !== productSnapshot.priceSnapshot) {
+            if (productSnapshot && dbProduct.price !== productSnapshot.priceSnapshot) {
                 adjustments.price = {
                     old: productSnapshot.priceSnapshot,
                     corrected: dbProduct.price
@@ -110,8 +133,11 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
             } = getAppliedDiscountData(dbProduct.discount, customerDiscount);
 
             if (
-                appliedDiscount !== productSnapshot.appliedDiscountSnapshot ||
-                appliedDiscountSource !== productSnapshot.appliedDiscountSourceSnapshot
+                productSnapshot &&
+                (
+                    appliedDiscount !== productSnapshot.appliedDiscountSnapshot ||
+                    appliedDiscountSource !== productSnapshot.appliedDiscountSourceSnapshot
+                )
             ) {
                 adjustments.discount = {
                     old: productSnapshot.appliedDiscountSnapshot,
@@ -121,7 +147,7 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
             }
 
             if (Object.keys(adjustments).length > 0) {
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
@@ -161,10 +187,13 @@ export const prepareDraftOrderData = async (cartItemList, cartProductSnapshotMap
     );
 };
 
-export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
+export const syncDraftOrder = async (
+    dbOrderItemList: TDbOrderDraftItem[],
+    customerDiscount: number
+): Promise<ISyncDraftOrderResult> => {
     const productIds = dbOrderItemList.map(item => item.productId);
-    const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean()
+    const dbProducts: TDbProduct[] = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
     // Сбор актуальных данных, исправление корзины и заказа, сбор изменений для логов 
@@ -172,34 +201,30 @@ export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
     const now = Date.now();
 
     return dbOrderItemList.reduce(
-        (acc, orderItem) => {
+        (acc: ISyncDraftOrderResult, orderItem: TDbOrderDraftItem): ISyncDraftOrderResult => {
             const productObjectId = orderItem.productId;
             const productId = productObjectId.toString();
             const dbProduct = dbProductMap.get(productId);
-            const adjustments = {};
+            const adjustments: IOrderAdjustments['adjustments'] = {};
 
             // Отсеивание удалённого из магазина товара
             if (!dbProduct) {
                 adjustments.deleted = true;
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
                 return acc;
             }
 
             // Отсеивание неактивного товара
             if (!dbProduct.isActive) {
                 adjustments.inactive = true;
-                acc.orderAdjustments.push({
-                    productId: productObjectId,
-                    adjustments,
-                    releaseQuantity: orderItem.quantity
-                });
+                acc.orderAdjustments.push({ productId, adjustments, releaseQuantity: orderItem.quantity });
                 return acc;
             }
 
             // Отсеивание закончившегося на складе товара
             if (orderItem.quantity <= 0) {
                 adjustments.outOfStock = true;
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
                 return acc;
             }
 
@@ -237,7 +262,7 @@ export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
             }
 
             if (Object.keys(adjustments).length > 0) {
-                acc.orderAdjustments.push({ productId: productObjectId, adjustments });
+                acc.orderAdjustments.push({ productId, adjustments });
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
@@ -256,7 +281,7 @@ export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
                 appliedDiscountSourceSnapshot: appliedDiscountSource
             });
             acc.orderItemList.push({
-                id: productId,
+                productId,
                 quantity: orderItem.quantity,
                 priceSnapshot: dbProduct.price,
                 appliedDiscountSnapshot: appliedDiscount
@@ -284,29 +309,35 @@ export const syncDraftOrderData = async (dbOrderItemList, customerDiscount) => {
     );
 };
 
-export const replaceListItemsByKey = (originalList, updatedList, key = 'id') => {
-    const updatedMap = new Map(updatedList.map(item => [item[key].toString(), item]));
+export const replaceListItemsByKey = <T extends Record<string, any>>(
+    originalList: T[],
+    updatedList: T[],
+    key: string = 'id'
+): T[] => {
+    const updatedMap = new Map<string, T>(updatedList.map(item => [item[key].toString(), item]));
 
     // Порядок элементов в списке при их замене сохраняется
     return originalList.map(item => {
         const itemKey = item[key].toString();
-        return updatedMap.has(itemKey) ? updatedMap.get(itemKey) : item;
+        return updatedMap.get(itemKey) ?? item;
     });
 };
 
-export const isCartDifferentFromOrder = (cartItemList, orderItemList) => {
-    const arrToMapById = (items) => Object.fromEntries(items.map(item => [String(item.productId), item]));
+export const isCartDifferentFromOrder = (
+    dbCartItemList: TDbCartItem[],
+    dbOrderItemList: TDbOrderDraftItem[]
+): boolean => {
+    if (dbCartItemList.length !== dbOrderItemList.length) return true;
 
-    const cartItemsMap = arrToMapById(cartItemList);
-    const orderItemsMap = arrToMapById(orderItemList);
+    const orderItemsMap = new Map<string, TDbOrderDraftItem>(
+        dbOrderItemList.map(item => [item.productId.toString(), item])
+    );
 
-    const allIds = new Set([...Object.keys(cartItemsMap), ...Object.keys(orderItemsMap)]);
+    for (const cartItem of dbCartItemList) {
+        const productId = cartItem.productId.toString();
+        const orderItem = orderItemsMap.get(productId);
 
-    for (const id of allIds) {
-        const cartItem = cartItemsMap[id];
-        const orderItem = orderItemsMap[id];
-
-        if (!cartItem || !orderItem || cartItem.quantity !== orderItem.quantity) {
+        if (!orderItem || cartItem.quantity !== orderItem.quantity) {
             return true;
         }
     }

@@ -3,8 +3,8 @@ import type {
     TPaymentMethod,
     TRefundMethod,
     TTransactionType,
-    TOnlineTransactionStatus,
-    IOnlineTransactionStatusConfig,
+    TTransactionStatus,
+    ITransactionStatusConfig,
     TOrderStatus,
     TFinancialsState,
     ITransactionTypeConfig,
@@ -121,17 +121,14 @@ export const TRANSACTION_TYPE_CONFIG: Record<TTransactionType, ITransactionTypeC
     [TRANSACTION_TYPE.REFUND]: { label: 'Возврат средств' }
 } as const;
 
-export const ONLINE_TRANSACTION_STATUS = {
+export const TRANSACTION_STATUS = {
     INIT: 'init',
     PROCESSING: 'processing'
 } as const;
 
-export const ONLINE_TRANSACTION_STATUS_CONFIG: Record<
-    TOnlineTransactionStatus,
-    IOnlineTransactionStatusConfig
-> = {
-    [ONLINE_TRANSACTION_STATUS.INIT]: { label: 'Подготовка' },
-    [ONLINE_TRANSACTION_STATUS.PROCESSING]: { label: 'В обработке' }
+export const TRANSACTION_STATUS_CONFIG: Record<TTransactionStatus, ITransactionStatusConfig> = {
+    [TRANSACTION_STATUS.INIT]: { label: 'Подготовка' },
+    [TRANSACTION_STATUS.PROCESSING]: { label: 'В обработке' }
 } as const;
 
 export const BANK_PROVIDER = {

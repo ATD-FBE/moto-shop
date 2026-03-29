@@ -5,15 +5,14 @@ import { ORDER_STATUS, USER_ROLE } from '@shared/constants.js';
 export const StatusHistoryEntrySchema = new Schema({
     status: {
         type: String,
-        required: true,
-        enum: Object.values(ORDER_STATUS)
+        enum: Object.values(ORDER_STATUS),
+        required: true
     },
     isRollback: {
         type: Boolean
     },
     changes: {
         type: [{
-            _id: false,
             field: {
                 type: String,
                 required: true
@@ -29,21 +28,23 @@ export const StatusHistoryEntrySchema = new Schema({
         match: validationRules.order.cancellationReason
     },
     changedBy: {
-        _id: false,
-        id: {
-            type: Schema.Types.ObjectId,
-            ref: 'User',
-            required: true
+        type: {
+            id: {
+                type: Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            name: {
+                type: String,
+                required: true
+            },
+            role: {
+                type: String,
+                enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
+                required: true
+            }
         },
-        name: {
-            type: String,
-            required: true
-        },
-        role: {
-            type: String,
-            enum: Object.values(USER_ROLE),
-            required: true
-        }
+        required: true
     },
     changedAt: {
         type: Date,

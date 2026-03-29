@@ -1,3 +1,5 @@
+import type { TDiscountSource } from './constants.types.js';
+
 export interface IGuestCartItem {
     id: string;
     quantity: number;
@@ -10,4 +12,11 @@ export interface ICartItem {
     outOfStock: boolean;
     inactive: boolean;
     deleted: boolean;
+}
+
+export interface ICartItemSnapshot {
+    productId: string;
+    priceSnapshot: number;
+    appliedDiscountSnapshot: number;
+    appliedDiscountSourceSnapshot: TDiscountSource;
 }

@@ -52,15 +52,14 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
         ? await Order.findOne({ customerId: dbUser._id, currentStatus: ORDER_STATUS.DRAFT }, { _id: 1 })
         : null;
     const orderDraftId = orderDraft ? orderDraft._id.toString() : null;
-    const currentDbCart = dbUser.cart ?? [];
 
     /// Объединение товаров гостевой и серверной корзин, если нет начатого заказа ///
     let cartWasMerged: boolean = false;
 
     if (guestCart.length > 0 && !orderDraftId) {
         const dbGuestCart = await prepareDbGuestCart(guestCart);
-        const mergedCart = mergeCarts(currentDbCart, dbGuestCart);
-        const cartsAreDifferent = areCartsDifferent(currentDbCart, mergedCart);
+        const mergedCart = mergeCarts(dbUser.cart ?? [], dbGuestCart);
+        const cartsAreDifferent = areCartsDifferent(dbUser.cart ?? [], mergedCart);
         
         if (cartsAreDifferent) {
             dbUser.set('cart', mergedCart);
@@ -69,7 +68,7 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
     }
 
     // Данные корзины
-    const { purchaseProductList, cartItemList } = await prepareCart(currentDbCart, {
+    const { purchaseProductList, cartItemList } = await prepareCart(dbUser.cart ?? [], {
         checkoutMode: Boolean(orderDraft)
     });
 

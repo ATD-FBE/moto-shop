@@ -10,6 +10,7 @@ import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constant
 import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
 import { fieldErrorMessages } from '@shared/fieldRules.js';
 import {
+    USER_ROLE,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -19,7 +20,28 @@ import {
     FINANCIALS_EVENT,
     TRANSACTION_TYPE
 } from '@shared/constants.js';
-import { COMPANY_DETAILS } from '@shared/company.ts';
+import { COMPANY_DETAILS } from '@shared/company.js';
+import type {
+    TDbFinalOrder,
+    TDbOrderFinalItem,
+    TDbOrderStatusHistoryEntry,
+    TDbOrderFinancialsEventEntry,
+    TDbOrderCurrentOnlineTransaction,
+    TDbOrderAuditLog
+} from '@server/types/index.js';
+import type {
+    TActiveUserRole,
+    IOrder,
+    IOrderItem,
+    TDeliveryMethod,
+    IDelivery,
+    IOrderStatusEntry,
+    IOrderStatusEntrySummary,
+    TOrderStatus,
+    IFinancialsEventEntry,
+    IFinancialsEventEntrySummary,
+    ICurrentOnlineTransaction
+} from '@shared/types/index.js';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
 
@@ -59,20 +81,27 @@ export const orderDotNotationMap = {
     // Notes
     customerComment: 'customerComment',
     internalNote: 'internalNote'
-};
+} as const;
 
-export const prepareOrderData = (dbOrder, {
-    inList = true,
-    managed = false,
-    details = true,
-    viewerRole
-} = {}) => ({
-    id: dbOrder._id,
+export const prepareOrder = (
+    dbOrder: TDbFinalOrder,
+    {
+        inList = true,
+        managed = false,
+        details = true,
+        viewerRole = USER_ROLE.CUSTOMER
+    }: {
+        inList?: boolean;
+        managed?: boolean;
+        details?: boolean;
+        viewerRole?: TActiveUserRole
+    } = {}
+): IOrder => ({
+    id: dbOrder._id.toString(),
     orderNumber: dbOrder.orderNumber,
-    confirmedAt: dbOrder.confirmedAt,
-    ...(inList && !managed && { lastActivityAt: dbOrder.lastActivityAt }),
-    statusHistory: prepareHistoryLogs(dbOrder.statusHistory, {
-        type: 'order',
+    confirmedAt: dbOrder.confirmedAt.toISOString(),
+    ...(inList && !managed && { lastActivityAt: dbOrder.lastActivityAt.toISOString() }),
+    statusHistory: prepareOrderStatusHistory(dbOrder.statusHistory, {
         latestSummary: inList || !managed
     }),
     totals: {
@@ -90,9 +119,13 @@ export const prepareOrderData = (dbOrder, {
         : { totalItems: dbOrder.items.length }),
     ...(details && {
         customerInfo: {
-            ...dbOrder.customerInfo,
+            firstName: dbOrder.customerInfo.firstName,
+            lastName: dbOrder.customerInfo.lastName,
+            middleName: dbOrder.customerInfo.middleName ?? undefined,
+            email: dbOrder.customerInfo.email,
+            phone: dbOrder.customerInfo.phone,
             ...(!inList && {
-                ...(managed && { customerId: dbOrder.customerId._id }),
+                ...(managed && { customerId: dbOrder.customerId._id.toString() }),
                 login: dbOrder.customerId.name,
                 registrationEmail: dbOrder.customerId.email
             })
@@ -100,8 +133,16 @@ export const prepareOrderData = (dbOrder, {
     }),
     delivery: {
         deliveryMethod: dbOrder.delivery.deliveryMethod,
-        allowCourierExtra: dbOrder.delivery.allowCourierExtra,
-        ...(details && { shippingAddress: dbOrder.delivery.shippingAddress }),
+        allowCourierExtra: dbOrder.delivery.allowCourierExtra ?? undefined,
+        ...(details && { shippingAddress: dbOrder.delivery.shippingAddress ? {
+            region: dbOrder.delivery.shippingAddress.region ?? undefined,
+            district: dbOrder.delivery.shippingAddress.district ?? undefined,
+            city: dbOrder.delivery.shippingAddress.city,
+            street: dbOrder.delivery.shippingAddress.street,
+            house: dbOrder.delivery.shippingAddress.house,
+            apartment: dbOrder.delivery.shippingAddress.apartment ?? undefined,
+            postalCode: dbOrder.delivery.shippingAddress.postalCode ?? undefined
+        } : undefined }),
         ...((managed || details) && { shippingCost: dbOrder.delivery.shippingCost })
     },
     financials: {
@@ -109,8 +150,7 @@ export const prepareOrderData = (dbOrder, {
         state: dbOrder.financials.state,
         totalPaid: dbOrder.financials.totalPaid,
         totalRefunded: dbOrder.financials.totalRefunded,
-        eventHistory: prepareHistoryLogs(dbOrder.financials.eventHistory, {
-            type: 'financials',
+        eventHistory: prepareFinancialsHistory(dbOrder.financials.eventHistory, {
             latestSummary: !managed
         }),
         currentOnlineTransaction: prepareCurrentOnlineTransaction(
@@ -119,35 +159,21 @@ export const prepareOrderData = (dbOrder, {
         )
     },
     ...(managed && {
-        customerComment: dbOrder.customerComment,
-        internalNote: dbOrder.internalNote,
+        customerComment: dbOrder.customerComment ?? undefined,
+        internalNote: dbOrder.internalNote ?? undefined,
         ...(!inList && { auditLog: prepareHistoryLogs(dbOrder.auditLog) })
     })
 });
 
-const prepareCurrentOnlineTransaction = (currentOnlineTx, { inList, viewerRole }) => {
-    if (!currentOnlineTx) return undefined;
-
-    const transactionType = currentOnlineTx.type;
-    const canSeeConfirmation =
-        (viewerRole === 'customer' && transactionType === TRANSACTION_TYPE.PAYMENT && !inList) ||
-        (viewerRole === 'admin' && transactionType === TRANSACTION_TYPE.REFUND && !inList);
-
-    return {
-        type: transactionType,
-        ...(!inList && { providers: currentOnlineTx.providers }),
-        ...(!inList && { status: currentOnlineTx.status }),
-        ...(!inList && { amount: currentOnlineTx.amount }),
-        ...(canSeeConfirmation && { confirmationUrl: currentOnlineTx.confirmationUrl }),
-    };
-};
-
-const prepareOrderItem = (item, { orderId, inList }) => ({
-    productId: item.productId,
+const prepareOrderItem = (
+    item: TDbOrderFinalItem,
+    { orderId, inList }: { orderId: string, inList: boolean }
+): IOrderItem => ({
+    productId: item.productId.toString(),
     image: prepareOrderItemImage(orderId, item.imageFilename),
-    sku: item.sku,
+    sku: item.sku ?? undefined,
     name: item.name,
-    brand: item.brand,
+    brand: item.brand ?? undefined,
     quantity: item.quantity,
     unit: item.unit,
     appliedDiscount: item.appliedDiscount,
@@ -159,58 +185,161 @@ const prepareOrderItem = (item, { orderId, inList }) => ({
     })
 });
 
-const prepareOrderItemImage = (orderId, filename) => {
-    if (!filename) return undefined; // Опциональная картинка
+const prepareOrderItemImage = (
+    orderId: string,
+    filename: TDbOrderFinalItem['imageFilename']
+): string | undefined => {
+    if (!filename?.trim()) return undefined; // Опциональная картинка
     return [STORAGE_URL_PATH, ORDER_STORAGE_FOLDER, orderId, filename].join('/');
 };
 
-const prepareHistoryLogs = (history = [], { type, latestSummary = false } = {}) => {
-    switch (type) {
-        case 'order': {
-            const currentEntry = history.at(-1);
+const prepareOrderStatusHistory = (
+    history: TDbOrderStatusHistoryEntry[] = [],
+    { latestSummary = false }: { latestSummary?: boolean } = {}
+): (IOrderStatusEntry | IOrderStatusEntrySummary)[] => {
+    const currentEntry = history.at(-1);
 
-            if (currentEntry?.status !== ORDER_STATUS.CANCELLED) {
-                return latestSummary
-                    ? currentEntry ? [summarizeOrderStatusEntry(currentEntry)] : []
-                    : history;
-            }
-
-            const lastActiveStatus = getLastActiveStatus(history);
-
-            return latestSummary
-                ? currentEntry ? [summarizeOrderStatusEntry(currentEntry, lastActiveStatus)] : []
-                : history.map(e => e.status === ORDER_STATUS.CANCELLED ? { ...e, lastActiveStatus } : e);
+    // Заказ НЕ отменен
+    if (currentEntry?.status !== ORDER_STATUS.CANCELLED) {
+        if (latestSummary) {
+            return currentEntry ? [summarizeOrderStatusEntry(currentEntry)] : [];
         }
-
-        case 'financials': {
-            if (latestSummary) {
-                const currentEntry = getLastFinancialsEventEntry(history);
-                return currentEntry ? [summarizeFinancialsEventEntry(currentEntry)] : [];
-            }
-            return history;
-        }
-
-        default:
-            return latestSummary ? history.slice(-1) : history;
+        return history.map(e => mapFullOrderStatusEntry(e));
     }
+
+    // Заказ ОТМЕНЕН
+    const lastActiveStatus = getLastActiveOrderStatus(history);
+
+    if (latestSummary) {
+        return currentEntry ? [summarizeOrderStatusEntry(currentEntry, lastActiveStatus)] : [];
+    }
+
+    return history.map(e => {
+        if (e.status === ORDER_STATUS.CANCELLED) {
+            return mapFullOrderStatusEntry(e, lastActiveStatus);
+        }
+        return mapFullOrderStatusEntry(e);
+    });
 };
 
-export const getLastActiveStatus = (statusHistory) =>
-    statusHistory.filter(entry => ORDER_STATUS_CONFIG[entry.status]?.active).at(-1)?.status;
+export const getLastActiveOrderStatus = (
+    statusHistory: TDbOrderStatusHistoryEntry[]
+): TOrderStatus => {
+    const lastActive = statusHistory
+        .filter(e => ORDER_STATUS_CONFIG[e.status]?.active)
+        .at(-1)?.status;
 
-const summarizeOrderStatusEntry = (entry, lastActiveStatus) => ({
-    status: entry.status,
-    changedAt: entry.changedAt,
+    return lastActive ?? ORDER_STATUS.CONFIRMED;
+};
+
+const mapFullOrderStatusEntry = (
+    e: TDbOrderStatusHistoryEntry,
+    lastActiveStatus?: TOrderStatus
+): IOrderStatusEntry => ({
+    status: e.status,
+    isRollback: e.isRollback ?? undefined,
+    changes: e.changes?.map(change => ({
+        field: change.field,
+        oldValue: change.oldValue ?? undefined,
+        newValue: change.newValue ?? undefined,
+        currency: change.currency ?? undefined
+    })) ?? undefined,
+    cancellationReason: e.cancellationReason ?? undefined,
+    changedBy: {
+        id: e.changedBy.id.toString(), 
+        name: e.changedBy.name,
+        role: e.changedBy.role
+    },
+    changedAt: e.changedAt.toISOString(), 
     lastActiveStatus
 });
 
-const summarizeFinancialsEventEntry = (entry) => ({
-    event: entry.event,
-    action: { amount: entry.action.amount },
-    changedAt: entry.changedAt
+const summarizeOrderStatusEntry = (
+    e: TDbOrderStatusHistoryEntry,
+    lastActiveStatus?: TOrderStatus
+): IOrderStatusEntrySummary => ({
+    status: e.status,
+    changedAt: e.changedAt.toString(),
+    lastActiveStatus
 });
 
-export const prepareShippingCost = (deliveryMethod, allowCourierExtra) =>
+const prepareFinancialsHistory = (
+    history: TDbOrderFinancialsEventEntry[] = [],
+    { latestSummary = false }: { latestSummary?: boolean } = {}
+): (IFinancialsEventEntry | IFinancialsEventEntrySummary)[] => {
+    if (latestSummary) {
+        const currentEntry = getLastFinancialsEventEntry(history);
+        return currentEntry ? [summarizeFinancialsEventEntry(currentEntry)] : [];
+    }
+
+    return history.map(mapFullFinancialsEventEntry);
+};
+
+const mapFullFinancialsEventEntry = (e: TDbOrderFinancialsEventEntry): IFinancialsEventEntry => ({
+    eventId: e.eventId.toString(),
+    event: e.event,
+    action: {
+        method: e.action.method,
+        amount: e.action.amount,
+        provider: e.action.provider ?? undefined,
+        transactionId: e.action.transactionId ?? undefined,
+        originalPaymentId: e.action.originalPaymentId ?? undefined,
+        failureReason: e.action.failureReason ?? undefined,
+        externalReference: e.action.externalReference ?? undefined
+    },
+    changedBy: {
+        id: e.changedBy.id?.toString() ?? undefined,
+        name: e.changedBy.name,
+        role: e.changedBy.role
+    },
+    changedAt: e.changedAt.toISOString(),
+    voided: e.voided ? {
+        flag: e.voided.flag,
+        note: e.voided.note ?? undefined,
+        changedBy: {
+            id: e.voided.changedBy.id.toString(),
+            name: e.voided.changedBy.name,
+            role: e.voided.changedBy.role
+        },
+        changedAt: e.voided.changedAt.toISOString()
+    } : undefined
+});
+
+const summarizeFinancialsEventEntry = (
+    e: TDbOrderFinancialsEventEntry
+): IFinancialsEventEntrySummary => ({
+    event: e.event,
+    action: { amount: e.action.amount },
+    changedAt: e.changedAt.toString()
+});
+
+const prepareCurrentOnlineTransaction = (
+    currentOnlineTx: TDbOrderCurrentOnlineTransaction,
+    { inList, viewerRole }: { inList: boolean, viewerRole: TActiveUserRole }
+): ICurrentOnlineTransaction | undefined => {
+    if (!currentOnlineTx) return undefined;
+
+    const transactionType = currentOnlineTx.type;
+    const canSeeConfirmation = !inList && (
+        (viewerRole === USER_ROLE.CUSTOMER && transactionType === TRANSACTION_TYPE.PAYMENT) ||
+        (viewerRole === USER_ROLE.ADMIN && transactionType === TRANSACTION_TYPE.REFUND)
+    );
+
+    return {
+        type: transactionType,
+        ...(!inList && { 
+            providers: currentOnlineTx.providers,
+            status: currentOnlineTx.status,
+            amount: currentOnlineTx.amount
+        }),
+        ...(canSeeConfirmation && { confirmationUrl: currentOnlineTx.confirmationUrl ?? undefined }),
+    };
+};
+
+export const prepareShippingCost = (
+    deliveryMethod: TDeliveryMethod,
+    allowCourierExtra: boolean
+): IDelivery['shippingCost'] =>
     deliveryMethod === DELIVERY_METHOD.COURIER && !allowCourierExtra
         ? 0
         : deliveryMethod === DELIVERY_METHOD.SELF_PICKUP
@@ -447,11 +576,11 @@ export const getFinancialsState = (orderStatus, netPaid, totalAmount, eventHisto
 
 // Проверка существования успешной оплаты в истории финансовых событий заказа
 const checkFinancialsPaymentRecord = (eventHistory) =>
-    eventHistory.some(entry => !entry.voided?.flag && entry.event === FINANCIALS_EVENT.PAYMENT_SUCCESS);
+    eventHistory.some(e => !e.voided?.flag && e.event === FINANCIALS_EVENT.PAYMENT_SUCCESS);
 
 // Проверка существования ID транзакции в истории финансовых событий заказа
 export const checkFinancialsTransactionRecord = (history, transactionId) =>
-    history.some(entry => !entry.voided?.flag && entry.action.transactionId === transactionId);
+    history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
 
 export const getOrderTransitionData = (deliveryMethod, currentOrderStatus, stepDelta = 1) => {
     const orderStatusSteps = Object.entries(ORDER_STATUS_CONFIG)

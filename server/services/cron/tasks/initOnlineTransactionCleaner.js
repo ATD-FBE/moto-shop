@@ -22,7 +22,7 @@ import {
     PAYMENT_METHOD,
     REFUND_METHOD,
     TRANSACTION_TYPE,
-    ONLINE_TRANSACTION_STATUS,
+    TRANSACTION_STATUS,
     ORDER_STATUS
 } from '@shared/constants.js';
 
@@ -43,7 +43,7 @@ export const startInitOnlineTransactionCleaner = () => {
                 const stuckDbOrders = await Order.find({
                     currentStatus: { $ne: ORDER_STATUS.DRAFT },
                     'financials.currentOnlineTransaction.status': { 
-                        $in: [ONLINE_TRANSACTION_STATUS.INIT, ONLINE_TRANSACTION_STATUS.PROCESSING] 
+                        $in: [TRANSACTION_STATUS.INIT, TRANSACTION_STATUS.PROCESSING] 
                     },
                     'financials.currentOnlineTransaction.startedAt': { $lte: expirationTime }
                 });
@@ -183,7 +183,7 @@ const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transa
         const allTransactionIds = transactionGroup.map(tx => tx.transactionId);
         const confirmTransaction = transactionGroup.find(tx => tx.confirmationUrl);
 
-        currentOnlineTx.status = ONLINE_TRANSACTION_STATUS.PROCESSING;
+        currentOnlineTx.status = TRANSACTION_STATUS.PROCESSING;
         currentOnlineTx.transactionIds = allTransactionIds;
         if (confirmTransaction) currentOnlineTx.confirmationUrl = confirmTransaction.confirmationUrl;
 

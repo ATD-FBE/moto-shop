@@ -11,7 +11,6 @@ import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type { TDbUser } from '@server/types/index.js';
 
-const { ADMIN, CUSTOMER } = USER_ROLE;
 const SALT_ROUNDS = 12;
 
 export const UserSchema = new Schema({
@@ -36,8 +35,8 @@ export const UserSchema = new Schema({
     },
     role: {
         type: String,
-        enum: [ADMIN, CUSTOMER],
-        default: CUSTOMER
+        enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
+        default: USER_ROLE.CUSTOMER
     },
     notifications: [NotificationItemSchema],
     discount: { // В процентах
@@ -78,7 +77,7 @@ UserSchema.pre('validate', function(next) {
 UserSchema.pre('save', async function(next) {
     try {
         // Удаление ненужных полей у админа после его создания
-        if (this.isNew && this.role === ADMIN) {
+        if (this.isNew && this.role === USER_ROLE.ADMIN) {
             this.set('notifications', undefined, { strict: false });
             this.set('discount', undefined, { strict: false });
             this.set('cart', undefined, { strict: false });

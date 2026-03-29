@@ -37,7 +37,7 @@ import {
     OFFLINE_REFUND_METHODS,
     ONLINE_REFUND_METHODS,
     TRANSACTION_TYPE,
-    ONLINE_TRANSACTION_STATUS,
+    TRANSACTION_STATUS,
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER,
     ORDER_STATUS,
@@ -742,14 +742,14 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 
         if (currentTransaction) {
             switch (currentTransaction.status) {
-                case ONLINE_TRANSACTION_STATUS.INIT:
+                case TRANSACTION_STATUS.INIT:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} уже инициирована, ` +
                             `тип: ${currentTransaction.type}`
                     });
 
-                case ONLINE_TRANSACTION_STATUS.PROCESSING:
+                case TRANSACTION_STATUS.PROCESSING:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} создана и обрабатывается, ` +
@@ -792,7 +792,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
                     'financials.currentOnlineTransaction': {
                         type: TRANSACTION_TYPE.PAYMENT,
                         providers: [provider],
-                        status: ONLINE_TRANSACTION_STATUS.INIT,
+                        status: TRANSACTION_STATUS.INIT,
                         amount: amountNum,
                         startedAt: new Date()
                     }
@@ -840,7 +840,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 
             // Откат создания данных онлайн-транзакции в заказе
             const clearedTransactionCount =
-                await clearOrderOnlineTransaction(orderId, ONLINE_TRANSACTION_STATUS.INIT);
+                await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
 
             // Формирование и отправка SSE-сообщения с удалённой онлайн-транзакцией (до проверки таймаута)
             if (clearedTransactionCount > 0) {
@@ -867,11 +867,11 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
-                'financials.currentOnlineTransaction.status': ONLINE_TRANSACTION_STATUS.INIT
+                'financials.currentOnlineTransaction.status': TRANSACTION_STATUS.INIT
             },
             {
                 $set: {
-                    'financials.currentOnlineTransaction.status': ONLINE_TRANSACTION_STATUS.PROCESSING,
+                    'financials.currentOnlineTransaction.status': TRANSACTION_STATUS.PROCESSING,
                     'financials.currentOnlineTransaction.transactionIds': [paymentResult.paymentId],
                     ...(paymentResult.confirmationUrl && {
                         'financials.currentOnlineTransaction.confirmationUrl': paymentResult.confirmationUrl
@@ -937,14 +937,14 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
 
         if (currentTransaction) {
             switch (currentTransaction.status) {
-                case ONLINE_TRANSACTION_STATUS.INIT:
+                case TRANSACTION_STATUS.INIT:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} уже инициирована, ` +
                             `тип: ${currentTransaction.type}`
                     });
 
-                case ONLINE_TRANSACTION_STATUS.PROCESSING:
+                case TRANSACTION_STATUS.PROCESSING:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} создана и обрабатывается, ` +
@@ -1008,7 +1008,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
                     'financials.currentOnlineTransaction': {
                         type: TRANSACTION_TYPE.REFUND,
                         providers: refundProviders,
-                        status: ONLINE_TRANSACTION_STATUS.INIT,
+                        status: TRANSACTION_STATUS.INIT,
                         amount: totalRefundAmount,
                         startedAt: new Date()
                     }
@@ -1076,7 +1076,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         if (!allRefundIds.length) {
             // Откат создания данных онлайн-транзакции в заказе
             const clearedTransactionCount =
-                await clearOrderOnlineTransaction(orderId, ONLINE_TRANSACTION_STATUS.INIT);
+                await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
 
             // Формирование и отправка SSE-сообщения с удалённой онлайн-транзакцией (до проверки таймаута)
             if (clearedTransactionCount > 0) {
@@ -1103,11 +1103,11 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
-                'financials.currentOnlineTransaction.status': ONLINE_TRANSACTION_STATUS.INIT
+                'financials.currentOnlineTransaction.status': TRANSACTION_STATUS.INIT
             },
             {
                 $set: {
-                    'financials.currentOnlineTransaction.status': ONLINE_TRANSACTION_STATUS.PROCESSING,
+                    'financials.currentOnlineTransaction.status': TRANSACTION_STATUS.PROCESSING,
                     'financials.currentOnlineTransaction.transactionIds': allRefundIds
                 }
             },
@@ -1250,7 +1250,7 @@ export const handleWebhook = async (req, res, next) => {
             const currentOnlineTx = dbOrder.financials.currentOnlineTransaction;
 
             if (currentOnlineTx) {
-                const isIdExpected = currentOnlineTx.transactionIds?.includes(transactionId);
+                const isIdExpected = currentOnlineTx.transactionIds.includes(transactionId);
 
                 if (isIdExpected) {
                     // Удаление ID из массива

@@ -13,11 +13,11 @@ export interface IProductImage {
 export interface IProduct {
     id: string;
     images: IProductImage[];
-    mainImageIndex?: number | null;
-    sku?: string | null;
+    mainImageIndex?: number;
+    sku?: string;
     name: string;
-    brand?: string | null;
-    description?: string | null;
+    brand?: string;
+    description?: string;
     available: number;
     isBrandNew: boolean;
     isRestocked: boolean;
@@ -31,10 +31,8 @@ export interface IProduct {
     tags?: string;
 }
 
-export interface ICartProductSnapshot {
+export interface IProductSnapshot {
     id: string;
     name: string;
     brand?: string | null;
 }
-
-export type TCartProduct = IProduct | ICartProductSnapshot;

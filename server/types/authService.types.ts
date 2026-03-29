@@ -1,4 +1,4 @@
-import type { TActiveUserRole, TCartProduct, ICartItem } from '@shared/types/index.js';
+import type { TActiveUserRole, IProduct, IProductSnapshot, ICartItem } from '@shared/types/index.js';
 
 export interface IUser {
     name: string;
@@ -11,7 +11,7 @@ export interface IUser {
 
 export interface ISession {
     user: IUser;
-    purchaseProductList?: TCartProduct[];
+    purchaseProductList?: (IProduct | IProductSnapshot)[];
     cartItemList?: ICartItem[];
     cartWasMerged?: boolean;
     orderDraftId?: string | null;

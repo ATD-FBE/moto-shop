@@ -132,21 +132,17 @@ export const mergeCarts = (
 };
 
 export const areCartsDifferent = (aCart: TDbCartItem[], bCart: TDbCartItem[]): boolean => {
-    const cartToMap = (cart: TDbCartItem[]): Record<string, TDbCartItem> =>
-        Object.fromEntries(
-            cart.map(prod => [prod.productId.toString(), prod])
-        );
+    if (aCart.length !== bCart.length) return true;
 
-    const aCartMap = cartToMap(aCart);
-    const bCartMap = cartToMap(bCart);
-  
-    const allIds = new Set([...Object.keys(aCartMap), ...Object.keys(bCartMap)]);
-  
-    for (const id of allIds) {
-        const aCartItem = aCartMap[id];
-        const bCartItem = bCartMap[id];
+    const bCartMap = new Map<string, TDbCartItem>(
+        bCart.map(item => [item.productId.toString(), item])
+    );
 
-        if (!aCartItem || !bCartItem || aCartItem.quantity !== bCartItem.quantity) {
+    for (const aCartItem of aCart) {
+        const productId = aCartItem.productId.toString();
+        const bCartItem = bCartMap.get(productId);
+
+        if (!bCartItem || aCartItem.quantity !== bCartItem.quantity) {
             return true;
         }
     }

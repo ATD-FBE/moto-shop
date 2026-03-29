@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import User from '@server/database/models/User.js';
 import Order from '@server/database/models/Order.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
-import { prepareOrderData } from '@server/services/orderService.js';
+import { prepareOrder } from '@server/services/orderService.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
@@ -148,7 +148,7 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
             .lean();
         checkTimeout(req);
 
-        const customerOrderList = dbCustomerOrderList.map(dbOrder => prepareOrderData(dbOrder, {
+        const customerOrderList = dbCustomerOrderList.map(dbOrder => prepareOrder(dbOrder, {
             inList: true,
             managed: false,
             details: false,

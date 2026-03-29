@@ -4,8 +4,8 @@ import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
-    prepareDraftOrderData,
-    syncDraftOrderData,
+    syncCart,
+    syncDraftOrder,
     reserveProducts,
     releaseReservedProducts,
     commitProductPurchase,
@@ -101,7 +101,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                 orderAdjustments,
                 purchaseProductList,
                 cartItemList
-            } = await syncDraftOrderData(dbOrderDraft.items, customerDiscount);
+            } = await syncDraftOrder(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
             const orderTotals = calculateOrderTotals(fixedDbOrderItems);
@@ -200,24 +200,24 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
     const customerDiscount = dbUser.discount;
 
     // Предварительная проверка данных
-    const { cartProductSnapshots } = req.body ?? {};
+    const { cartItemSnapshots } = req.body ?? {};
 
-    if (!typeCheck.array(cartProductSnapshots) || !cartProductSnapshots.length) {
+    if (!typeCheck.array(cartItemSnapshots) || !cartItemSnapshots.length) {
         return safeSendResponse(res, 400, {
-            message: 'Неверный формат данных: cartProductSnapshots'
+            message: 'Неверный формат данных: cartItemSnapshots'
         });
     }
 
-    for (const productSnapshot of cartProductSnapshots) {
+    for (const itemSnapshot of cartItemSnapshots) {
         const {
-            id,
+            productId,
             priceSnapshot,
             appliedDiscountSnapshot,
             appliedDiscountSourceSnapshot
-        } = productSnapshot ?? {};
+        } = itemSnapshot ?? {};
 
         if (
-            !typeCheck.objectId(id) ||
+            !typeCheck.objectId(productId) ||
             !typeCheck.number(priceSnapshot) ||
             priceSnapshot < 0 ||
             !typeCheck.number(appliedDiscountSnapshot) ||
@@ -227,7 +227,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             !Object.values(DISCOUNT_SOURCE).includes(appliedDiscountSourceSnapshot)
         ) {
             return safeSendResponse(res, 400, {
-                message: 'Неверный формат данных: cartProductSnapshots'
+                message: 'Неверный формат данных: cartItemSnapshots'
             });
         }
     }
@@ -255,8 +255,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
     // Актуализация данных, резервирование товаров и создание документа черновика заказа
     try {
-        const cartProductSnapshotMap = new Map(
-            cartProductSnapshots.map(({ id, ...rest }) => [id, { productId: id, ...rest }])
+        const cartItemSnapshotMap = new Map(
+            cartItemSnapshots.map(itemSnap => [itemSnap.productId, itemSnap])
         );
 
         const { statusCode, responseData } = await runInTransaction(async (session) => {
@@ -267,7 +267,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 orderAdjustments,
                 purchaseProductList,
                 cartItemList
-            } = await prepareDraftOrderData(dbUser.cart, cartProductSnapshotMap, customerDiscount);
+            } = await syncCart(dbUser.cart, cartItemSnapshotMap, customerDiscount);
             checkTimeout(req);
 
             // Проверка итоговой суммы
@@ -298,10 +298,10 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             }
 
             // Резервирование товаров АТОМАРНО, с избежанием гонки при сохранении данных
-            let remainingOrderItemsToReserve = fixedDbOrderItems.slice(); // Копия заказа
+            let remainingDbOrderItemsToReserve = fixedDbOrderItems.slice(); // Копия заказа
 
-            while (remainingOrderItemsToReserve.length) {
-                const failedItemIdsSet = await reserveProducts(remainingOrderItemsToReserve, session);
+            while (remainingDbOrderItemsToReserve.length) {
+                const failedItemIdsSet = await reserveProducts(remainingDbOrderItemsToReserve, session);
                 checkTimeout(req);
 
                 // Выход из цикла, если все товары зарезервированы
@@ -311,7 +311,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 checkTimeout(req);
 
                 // Не все товары зарезервированы => Повтор сбора данных, проверки суммы и резервирования
-                const failedOrderItems = remainingOrderItemsToReserve
+                const failedOrderItems = remainingDbOrderItemsToReserve
                     .filter(i => failedItemIdsSet.has(i.productId.toString()));
 
                 // Повтор подготовки данных заказа, только для провальных при резервировании товаров
@@ -321,7 +321,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                     orderAdjustments: failedOrderAdjustments,
                     purchaseProductList: failedPurchaseProductList,
                     cartItemList: failedCartItemList
-                } = await prepareDraftOrderData(failedOrderItems, cartProductSnapshotMap, customerDiscount);
+                } = await syncCart(failedOrderItems, cartItemSnapshotMap, customerDiscount);
                 checkTimeout(req);
 
                 // Замена в массивах проблемных товаров
@@ -329,7 +329,9 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 fixedDbOrderItems = replaceListItemsByKey(
                     fixedDbOrderItems, failedFixedDbOrderItems, 'productId'
                 );
-                orderAdjustments = replaceListItemsByKey(orderAdjustments, failedOrderAdjustments, 'id');
+                orderAdjustments = replaceListItemsByKey(
+                    orderAdjustments, failedOrderAdjustments, 'productId'
+                );
                 purchaseProductList = replaceListItemsByKey(
                     purchaseProductList, failedPurchaseProductList, 'id'
                 );
@@ -363,7 +365,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 }
 
                 // Замена массива остатков для их повторного резервирования
-                remainingOrderItemsToReserve = failedFixedDbOrderItems;
+                remainingDbOrderItemsToReserve = failedFixedDbOrderItems;
             }
 
             // Сохранение корзины пользователя, если были изменения
@@ -633,7 +635,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 orderAdjustments,
                 purchaseProductList,
                 cartItemList
-            } = await syncDraftOrderData(dbOrderDraft.items, customerDiscount);
+            } = await syncDraftOrder(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
             const orderTotals = calculateOrderTotals(fixedDbOrderItems);

@@ -125,15 +125,15 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
     });
 };
 
-export const getLastFinancialsEventEntry = (
-    history: IFinancialsEventEntry[]
-): IFinancialsEventEntry | null => {
+export const getLastFinancialsEventEntry = <T extends { voided?: { flag: boolean } | null }>(
+    history: T[]
+): T | null => {
     for (let i = history.length - 1; i >= 0; i--) {
         if (!history[i].voided?.flag) {
             return history[i];
         }
     }
-    
+
     return null; // Для удаления из истории на странице всех заказов
 };
 

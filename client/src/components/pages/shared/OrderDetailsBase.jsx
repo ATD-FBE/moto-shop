@@ -27,7 +27,7 @@ import {
     PAYMENT_METHOD,
     PAYMENT_METHOD_OPTIONS,
     TRANSACTION_TYPE_CONFIG,
-    ONLINE_TRANSACTION_STATUS_CONFIG,
+    TRANSACTION_STATUS_CONFIG,
     ORDER_STATUS,
     ORDER_STATUS_CONFIG,
     ORDER_ACTIVE_STATUSES,
@@ -304,7 +304,7 @@ function OrderDetailsMain({
 
     const onlineOperationType = TRANSACTION_TYPE_CONFIG[currentOnlineTransaction?.type];
     const onlineProviders = currentOnlineTransaction?.providers;
-    const onlineOperationStatus = ONLINE_TRANSACTION_STATUS_CONFIG[currentOnlineTransaction?.status];
+    const onlineOperationStatus = TRANSACTION_STATUS_CONFIG[currentOnlineTransaction?.status];
     const onlineConfirmationUrl = currentOnlineTransaction?.confirmationUrl;
 
     const formattedTotalPaid = formatCurrency(totalPaid);
