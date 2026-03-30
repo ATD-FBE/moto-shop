@@ -75,6 +75,15 @@ export type TDbNewsPopulated = TPopulated<TDbNews, 'createdBy', { _id: Types.Obj
 export type TDbPromoPopulated = TPopulated<TDbPromo, 'createdBy', { _id: Types.ObjectId, name: string }> & {
     updateHistory: TDbUpdateHistoryItemPopulated[];
 };
-export type TDbNotificationPopulated = TPopulated<TDbNotification, 'createdBy', { _id: Types.ObjectId, name: string }> & {
+export type TDbNotificationPopulated = TPopulated<
+    TDbNotification,
+    'createdBy',
+    { _id: Types.ObjectId, name: string }
+> & {
     updateHistory: TDbUpdateHistoryItemPopulated[];
 };
+export type TDbFinalOrderPopulated = TPopulated<
+    TDbFinalOrder,
+    'customerId',
+    { _id: Types.ObjectId, name: string, email: string }
+>;

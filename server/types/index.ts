@@ -15,4 +15,5 @@ export * from './authService.types.js';
 export * from './cartService.types.js';
 export * from './checkoutService.types.js';
 export * from './productService.types.js';
+export * from './orderService.types.js';
 export * from './order.types.js';

@@ -81,6 +81,10 @@ export interface IOrderStatusConfig {
     } | null;
 }
 
+export type IOrderStatusStepConfig = IOrderStatusConfig & {
+    step: NonNullable<IOrderStatusConfig['step']>
+};
+
 export interface IFinancialsStateConfig {
     label: string;
     intent: TIntent;

@@ -1,5 +1,6 @@
 import { join } from 'path';
 import PdfPrinter from 'pdfmake';
+import { Types, type ClientSession } from 'mongoose';
 import numberToWordsRuPkg from 'number-to-words-ru';
 import User from '@server/database/models/User.js';
 import Order from '@server/database/models/Order.js';
@@ -23,25 +24,45 @@ import {
 import { COMPANY_DETAILS } from '@shared/company.js';
 import type {
     TDbFinalOrder,
+    TDbFinalOrderPopulated,
     TDbOrderFinalItem,
     TDbOrderStatusHistoryEntry,
     TDbOrderFinancialsEventEntry,
     TDbOrderCurrentOnlineTransaction,
-    TDbOrderAuditLogEntry
+    TDbOrderAuditLogEntry,
+    IInvoiceDefinition,
+    TFonts,
+    IOrderItemRef,
+    IOrderInvoiceResult,
+    IOrderTransitionResult,
+    IApplyOrderFinancialsResult
 } from '@server/types/index.js';
 import type {
+    TUserRole,
     TActiveUserRole,
     IOrder,
     IOrderItem,
     TDeliveryMethod,
+    TOrderStatus,
+    TFinancialsState,
+    TFinancialsEvent,
     IDelivery,
     IOrderStatusEntry,
     IOrderStatusEntrySummary,
-    TOrderStatus,
     IFinancialsEventEntry,
     IFinancialsEventEntrySummary,
     ICurrentOnlineTransaction,
-    IAuditLogEntry
+    IAuditLogEntry,
+    IOrderStatusConfig,
+    IOrderStatusStepConfig,
+    TEntityType,
+    TTransactionType,
+    ICalculateOrderFinancialsResult,
+    TPaymentMethod,
+    TRefundMethod,
+    TBankProvider,
+    TCardOnlineProvider,
+    TTransactionStatus
 } from '@shared/types/index.js';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
@@ -85,7 +106,7 @@ export const orderDotNotationMap = {
 } as const;
 
 export const prepareOrder = (
-    dbOrder: TDbFinalOrder,
+    dbOrder: TDbFinalOrder | TDbFinalOrderPopulated,
     {
         inList = true,
         managed = false,
@@ -127,8 +148,8 @@ export const prepareOrder = (
             phone: dbOrder.customerInfo.phone,
             ...(!inList && {
                 ...(managed && { customerId: dbOrder.customerId._id.toString() }),
-                login: dbOrder.customerId.name,
-                registrationEmail: dbOrder.customerId.email
+                login: ('name' in dbOrder.customerId) ? dbOrder.customerId.name : 'Not populated',
+                registrationEmail: ('email' in dbOrder.customerId) ? dbOrder.customerId.email : 'Not populated'
             })
         }
     }),
@@ -367,7 +388,7 @@ export const prepareShippingCost = (
             ? undefined
             : null;
 
-export const generateOrderInvoicePdf = (dbOrder) => {
+export const generateOrderInvoicePdf = (dbOrder: TDbFinalOrder): IOrderInvoiceResult => {
     // Подготовка данных
     const dbOrderItemList = dbOrder.items || [];
     const totalOrderItems = dbOrderItemList.length;
@@ -408,7 +429,7 @@ export const generateOrderInvoicePdf = (dbOrder) => {
     });
 
     // Заполнение документа
-    const docDefinition = {
+    const docDefinition: IInvoiceDefinition = {
         pageSize: 'A4',
         pageMargins: [40, 60, 40, 60],
         defaultStyle: { font: 'Roboto', fontSize: 10 },
@@ -446,7 +467,7 @@ export const generateOrderInvoicePdf = (dbOrder) => {
             {
                 table: {
                     widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'],
-                    heights: (rowIndex) => rowIndex === 0 ? 24 : undefined,
+                    heights: (rowIndex: number): number | undefined => rowIndex === 0 ? 24 : undefined,
                     body: [
                         [
                             { text: '№', style: 'tableHeader', alignment: 'right' },
@@ -530,14 +551,14 @@ export const generateOrderInvoicePdf = (dbOrder) => {
         ],
 
         // Вывод номера страницы
-        footer: (currentPage, pageCount) => {
+        footer: (currentPage: number, pageCount: number): any => {
             if (pageCount === 1) return null;
             return { text: `Страница ${currentPage} из ${pageCount}`, alignment: 'center', fontSize: 8 };
         }
     };
 
     // Подключение шрифтов к экземпляру PdfPrinter
-    const fonts = {
+    const fonts: TFonts = {
         Roboto: {
             normal: join(SERVER_ROOT, 'pdf', 'fonts', 'Roboto-Regular.ttf'),
             bold: join(SERVER_ROOT, 'pdf', 'fonts', 'Roboto-Bold.ttf'),
@@ -550,23 +571,28 @@ export const generateOrderInvoicePdf = (dbOrder) => {
     const printer = new PdfPrinter(fonts);
 
     // Создание pdf документа с данными
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition as any);
     const filename = `invoice_${dbOrder.orderNumber}.pdf`;
 
     return { pdfDoc, filename };
 };
 
-const fmtDate = (date) => {
+const fmtDate = (date: Date | string): string => {
     const dateObj = new Date(date);
     return isNaN(dateObj.getTime()) ? '—' : dateObj.toLocaleDateString('ru-RU');
 };
 
-const fmtCurrency = (amount) => {
+const fmtCurrency = (amount: unknown): string => {
     if (typeof amount !== 'number' || isNaN(amount)) return '—';
     return amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export const getFinancialsState = (orderStatus, netPaid, totalAmount, eventHistory) => {
+export const getFinancialsState = (
+    orderStatus: TOrderStatus,
+    netPaid: number,
+    totalAmount: number,
+    eventHistory: TDbOrderFinancialsEventEntry[]
+): TFinancialsState => {
     // Отменённый заказ
     if (orderStatus === ORDER_STATUS.CANCELLED) {
         if (isEqualCurrency(netPaid, 0)) {
@@ -596,22 +622,28 @@ export const getFinancialsState = (orderStatus, netPaid, totalAmount, eventHisto
 };
 
 // Проверка существования успешной оплаты в истории финансовых событий заказа
-const checkFinancialsPaymentRecord = (eventHistory) =>
+const checkFinancialsPaymentRecord = (eventHistory: TDbOrderFinancialsEventEntry[]): boolean =>
     eventHistory.some(e => !e.voided?.flag && e.event === FINANCIALS_EVENT.PAYMENT_SUCCESS);
 
 // Проверка существования ID транзакции в истории финансовых событий заказа
-export const checkFinancialsTransactionRecord = (history, transactionId) =>
-    history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
+export const checkFinancialsTransactionRecord = (
+    history: IFinancialsEventEntry[],
+    transactionId: string
+): boolean => history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
 
-export const getOrderTransitionData = (deliveryMethod, currentOrderStatus, stepDelta = 1) => {
-    const orderStatusSteps = Object.entries(ORDER_STATUS_CONFIG)
-        .filter(([_, cfg]) =>
-            cfg.step &&
-            (
-                cfg.step.deliveryMethods.includes('all') ||
+export const getOrderTransitionData = (
+    deliveryMethod: TDeliveryMethod,
+    currentOrderStatus: TOrderStatus,
+    stepDelta: 1 | -1 = 1
+): IOrderTransitionResult => {
+    const orderStatusSteps = (Object.entries(ORDER_STATUS_CONFIG) as [TOrderStatus, IOrderStatusConfig][])
+        .filter((entry): entry is [TOrderStatus, IOrderStatusStepConfig] => {
+            const [_, cfg] = entry;
+            return !!cfg.step && (
+                cfg.step.deliveryMethods.includes('all') || 
                 cfg.step.deliveryMethods.includes(deliveryMethod)
-            )
-        )
+            );
+        })
         .sort((a, b) => a[1].step.order - b[1].step.order)
         .map(([status, cfg]) => ({ status, ...cfg.step }));
     const currentStepIdx = orderStatusSteps.findIndex(step => step.status === currentOrderStatus);
@@ -622,11 +654,14 @@ export const getOrderTransitionData = (deliveryMethod, currentOrderStatus, stepD
     };
 };
 
-export const returnProductsToStore = async (orderItemList, session) => {
+export const returnProductsToStore = async (
+    orderItemList: IOrderItemRef[],
+    session: ClientSession
+): Promise<void> => {
     await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RETURN, session);
 };
 
-export const getFieldErrors = (invalidFields, entityType) => {
+export const getFieldErrors = (invalidFields: string[], entityType: TEntityType): Record<string, string> => {
     return Object.fromEntries(
         invalidFields.map(field => [
             field,
@@ -637,29 +672,41 @@ export const getFieldErrors = (invalidFields, entityType) => {
     );
 };
 
-export const applyOrderFinancials = (dbOrder, {
-    transactionType,
-    financials,
-    amount,
-    method,
-    provider, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-    transactionId, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-    originalPaymentId, // Для онлайн возврата на карту
-    markAsFailed,
-    failureReason, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-    externalReference, // Для оффлайн возврата на карту
-    createdAt, // Для онлайн-оплаты/возврата
-    actor
-}) => {
+export const applyOrderFinancials = (
+    dbOrder: TDbFinalOrder,
+    {
+        transactionType,
+        financials,
+        amount,
+        method,
+        provider, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        transactionId, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        originalPaymentId, // Для онлайн возврата на карту
+        markAsFailed,
+        failureReason, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        externalReference, // Для оффлайн возврата на карту
+        actor,
+        createdAt // Для онлайн-оплаты/возврата
+    }: {
+        transactionType: TTransactionType,
+        financials: ICalculateOrderFinancialsResult,
+        amount: number,
+        method: TPaymentMethod | TRefundMethod,
+        provider: TBankProvider | TCardOnlineProvider,
+        transactionId?: string,
+        originalPaymentId?: string,
+        markAsFailed: boolean,
+        failureReason?: string,
+        externalReference?: string,
+        actor: { _id?: Types.ObjectId, name: string, role: TUserRole },
+        createdAt?: Date
+    }
+): IApplyOrderFinancialsResult => {
     const isPayment = transactionType === TRANSACTION_TYPE.PAYMENT;
     const isRefund = transactionType === TRANSACTION_TYPE.REFUND;
 
-    if (!isPayment && !isRefund) {
-        throw new Error(`Некорректный тип транзакции: ${transactionType}`);
-    }
-
     let { totalPaid: newTotalPaid, totalRefunded: newTotalRefunded } = financials;
-    let financialsEvent;
+    let financialsEvent: TFinancialsEvent;
 
     if (isPayment) {
         if (!markAsFailed) {
@@ -675,12 +722,18 @@ export const applyOrderFinancials = (dbOrder, {
         } else {
             financialsEvent = FINANCIALS_EVENT.REFUND_FAILED;
         }
+    } else {
+        throw new Error(`Некорректный тип транзакции: ${transactionType}`);
     }
 
     const newNetPaid = newTotalPaid - newTotalRefunded;
-    const isBankTransfer = [PAYMENT_METHOD.BANK_TRANSFER, REFUND_METHOD.BANK_TRANSFER].includes(method);
-    const isCardOnline = [PAYMENT_METHOD.CARD_ONLINE, REFUND_METHOD.CARD_ONLINE].includes(method);
-    const isCardOffline = [REFUND_METHOD.CARD_OFFLINE].includes(method);
+    const isBankTransfer =
+        (method as unknown) === PAYMENT_METHOD.BANK_TRANSFER || 
+        (method as unknown) === REFUND_METHOD.BANK_TRANSFER;
+    const isCardOnline =
+        (method as unknown) === PAYMENT_METHOD.CARD_ONLINE || 
+        (method as unknown) === REFUND_METHOD.CARD_ONLINE;
+    const isCardOffline = (method as unknown) === REFUND_METHOD.CARD_OFFLINE;
     const now = new Date();
 
     dbOrder.lastActivityAt = now;
@@ -712,7 +765,12 @@ export const applyOrderFinancials = (dbOrder, {
     return { newNetPaid };
 };
 
-export const updateCustomerTotalSpent = async (customerId, amountDelta, session = null, logContext = '') => {
+export const updateCustomerTotalSpent = async (
+    customerId: Types.ObjectId,
+    amountDelta: number,
+    session: ClientSession,
+    logContext: string = ''
+): Promise<void> => {
     const amountDeltaSafe = +Number(amountDelta).toFixed(2);
     if (amountDeltaSafe === 0) return;
 
@@ -738,7 +796,10 @@ export const updateCustomerTotalSpent = async (customerId, amountDelta, session 
     }
 };
 
-export const clearOrderOnlineTransaction = async (orderId, stuckStatus) => {
+export const clearOrderOnlineTransaction = async (
+    orderId: string | Types.ObjectId,
+    stuckStatus: TTransactionStatus
+): Promise<number> => {
     const updateResult = await Order.updateOne(
         {
             _id: orderId,

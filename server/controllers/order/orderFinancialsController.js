@@ -30,6 +30,7 @@ import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { isEqualCurrency, getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
 import { calculateOrderFinancials, getOrderCardRefundStats } from '@shared/calculations.js';
 import {
+    USER_ROLE,
     PAYMENT_METHOD,
     OFFLINE_PAYMENT_METHODS,
     ONLINE_PAYMENT_METHODS,
@@ -1242,8 +1243,8 @@ export const handleWebhook = async (req, res, next) => {
                 originalPaymentId,
                 markAsFailed,
                 failureReason,
-                createdAt,
-                actor: { name: 'SYSTEM', role: 'system' }
+                actor: { name: 'SYSTEM', role: USER_ROLE.SYSTEM },
+                createdAt
             });
 
             // Обработка данных об онлайн-оплате в заказе

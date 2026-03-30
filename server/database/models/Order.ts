@@ -8,7 +8,7 @@ import { DraftDeliverySchema, FinalDeliverySchema } from './schemas/order/Delive
 import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/order/FinancialsSchemas.js';
 import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
-import { ORDER_STATUS, ORDER_STATUS_CONFIG } from '@shared/constants.js';
+import { ORDER_STATUS } from '@shared/constants.js';
 import type { TDbOrder } from '@server/types/index.js';
 
 export const BaseOrderSchema = new Schema({
@@ -30,7 +30,7 @@ export const BaseOrderSchema = new Schema({
     },
     currentStatus: { // Дубликат для поиска в базе и проверок
         type: String,
-        enum: Object.keys(ORDER_STATUS_CONFIG),
+        enum: Object.values(ORDER_STATUS),
         default: ORDER_STATUS.DRAFT
     },
     lastActivityAt: { // Дубликат для сортировки по дате изменения статуса заказа или финансового события
