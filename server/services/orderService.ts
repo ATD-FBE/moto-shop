@@ -551,7 +551,7 @@ export const generateOrderInvoicePdf = (dbOrder: TDbFinalOrder): IOrderInvoiceRe
         ],
 
         // Вывод номера страницы
-        footer: (currentPage: number, pageCount: number): any => {
+        footer: (currentPage, pageCount) => {
             if (pageCount === 1) return null;
             return { text: `Страница ${currentPage} из ${pageCount}`, alignment: 'center', fontSize: 8 };
         }
