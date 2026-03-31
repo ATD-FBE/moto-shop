@@ -1,5 +1,31 @@
 import { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
 import { UpdateHistoryItemSchema } from '@server/db/models/schemas/UpdateHistoryItemSchema.js';
+import { NotificationItemSchema } from '@server/db/models/schemas/user/NotificationItemSchema.js';
+import { CartItemSchema } from '@server/db/models/schemas/user/CartItemSchema.js';
+import { StatusHistoryEntrySchema } from '@server/db/models/schemas/order/StatusHistoryEntrySchema.js';
+import { TotalsSchema } from '@server/db/models/schemas/order/TotalsSchema.js';
+import {
+    DraftItemSchema,
+    FinalItemSchema
+} from '@server/db/models/schemas/order/ItemSchemas.js';
+import {
+    DraftCustomerInfoSchema,
+    FinalCustomerInfoSchema
+} from '@server/db/models/schemas/order/CustomerInfoSchemas.js';
+import {
+    DraftDeliverySchema,
+    FinalDeliverySchema
+} from '@server/db/models/schemas/order/DeliverySchemas.js';
+import {
+    DraftFinancialsSchema,
+    FinalFinancialsSchema
+} from '@server/db/models/schemas/order/FinancialsSchemas.js';
+import { AuditLogSchema } from '@server/db/models/schemas/order/AuditLogSchema.js';
+import { EventEntrySchema } from '@server/db/models/schemas/order/financials/EventEntrySchema.js';
+import { EventVoidedSchema } from '@server/db/models/schemas/order/financials/EventVoidedSchema.js';
+import {
+    CurrentOnlineTransactionSchema
+} from '@server/db/models/schemas/order/financials/CurrentOnlineTransactionSchema.js';
 import { CategorySchema } from '@server/db/models/Category.js';
 import { CounterSchema } from '@server/db/models/Counter.js';
 import { CriticalEventSchema } from '@server/db/models/CriticalEvent.js';
@@ -32,7 +58,7 @@ export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSche
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
 // Типизация подсхем моделей
-export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
+/*export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
 export type TDbUserNotificationItem = TDbUser['notifications'][number];
 export type TDbCartItem = TDbUser['cart'][number];
 export type TDbOrderStatusHistoryEntry = TDbBaseOrder['statusHistory'][number];
@@ -48,7 +74,25 @@ export type TDbOrderFinalFinancials = TDbOrderFinal['financials'];
 export type TDbOrderFinancialsEventEntry = TDbOrderFinalFinancials['eventHistory'][number];
 export type TDbOrderFinancialsEventVoided = TDbOrderFinancialsEventEntry['voided'];
 export type TDbOrderCurrentOnlineTransaction = TDbOrderFinalFinancials['currentOnlineTransaction'];
-export type TDbOrderAuditLogEntry = NonNullable<TDbOrderFinal['auditLog']>[number];
+export type TDbOrderAuditLogEntry = NonNullable<TDbOrderFinal['auditLog']>[number];*/
+
+export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
+export type TDbUserNotificationItem = InferSchemaType<typeof NotificationItemSchema>;
+export type TDbCartItem = InferSchemaType<typeof CartItemSchema>;
+export type TDbOrderStatusHistoryEntry = InferSchemaType<typeof StatusHistoryEntrySchema>;
+export type TDbOrderTotals = InferSchemaType<typeof TotalsSchema>;
+export type TDbOrderDraftItem = InferSchemaType<typeof DraftItemSchema>;
+export type TDbOrderFinalItem = InferSchemaType<typeof FinalItemSchema>;
+export type TDbOrderDraftCustomerInfo = InferSchemaType<typeof DraftCustomerInfoSchema>;
+export type TDbOrderFinalCustomerInfo = InferSchemaType<typeof FinalCustomerInfoSchema>;
+export type TDbOrderDraftDelivery = InferSchemaType<typeof DraftDeliverySchema>;
+export type TDbOrderFinalDelivery = InferSchemaType<typeof FinalDeliverySchema>;
+export type TDbOrderDraftFinancials = InferSchemaType<typeof DraftFinancialsSchema>;
+export type TDbOrderFinalFinancials = InferSchemaType<typeof FinalFinancialsSchema>;
+export type TDbOrderFinancialsEventEntry = InferSchemaType<typeof EventEntrySchema>;
+export type TDbOrderFinancialsEventVoided = InferSchemaType<typeof EventVoidedSchema>;
+export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnlineTransactionSchema>;
+export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
 
 // Типизация схем моделей как документов (с методами и другими встроенными данными)
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;

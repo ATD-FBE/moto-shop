@@ -6,7 +6,7 @@ import type { IGuestCartItem } from '@shared/types/index.js';
 
 export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<IGuestCart> => {
     const productIds = cartItemList.map(item => item.id);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
@@ -41,7 +41,7 @@ export const prepareCart = async (
     { checkoutMode = false }: { checkoutMode?: boolean } = {}
 ): Promise<ICart> => {
     const productIds = dbCartItemList.map(item => item.productId);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
@@ -86,7 +86,7 @@ export const prepareCart = async (
 
 export const prepareDbGuestCart = async (guestCart: IGuestCartItem[]): Promise<TDbCartItem[]> => {
     const productIds = guestCart.map(item => item.id);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
@@ -152,7 +152,7 @@ export const areCartsDifferent = (aCart: TDbCartItem[], bCart: TDbCartItem[]): b
 
 export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedDbCart> => {
     const productIds = dbCart.map(item => item.productId);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 

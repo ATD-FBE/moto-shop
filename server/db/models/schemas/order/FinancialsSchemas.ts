@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { EventHistoryEntrySchema } from './financials/EventHistoryEntrySchema.js';
+import { EventEntrySchema } from './financials/EventEntrySchema.js';
 import { CurrentOnlineTransactionSchema } from './financials/CurrentOnlineTransactionSchema.js';
 import { PAYMENT_METHOD, FINANCIALS_STATE } from '@shared/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
@@ -36,7 +36,7 @@ export const FinalFinancialsSchema = new Schema({
         default: 0,
         validate: [(val: number): boolean => validationRules.financials.totalRefunded.test(String(val))]
     },
-    eventHistory: [EventHistoryEntrySchema],
+    eventHistory: [EventEntrySchema],
     currentOnlineTransaction: {
         type: CurrentOnlineTransactionSchema,
         default: undefined

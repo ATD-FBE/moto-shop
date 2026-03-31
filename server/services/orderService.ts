@@ -338,7 +338,7 @@ const summarizeFinancialsEventEntry = (
 });
 
 const prepareCurrentOnlineTransaction = (
-    currentOnlineTx: TDbOrderCurrentOnlineTransaction,
+    currentOnlineTx: TDbOrderCurrentOnlineTransaction | null | undefined,
     { inList, viewerRole }: { inList: boolean, viewerRole: TActiveUserRole }
 ): ICurrentOnlineTransaction | undefined => {
     if (!currentOnlineTx) return undefined;
@@ -360,23 +360,22 @@ const prepareCurrentOnlineTransaction = (
     };
 };
 
-const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] => {
-    return auditLog.map(log => ({
-        changes: log.changes.map(change => ({
+const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] =>
+    auditLog.map(e => ({
+        changes: e.changes.map(change => ({
             field: change.field,
             oldValue: change.oldValue ?? undefined,
             newValue: change.newValue ?? undefined,
             currency: change.currency ?? undefined
         })),
-        reason: log.reason,
+        reason: e.reason,
         changedBy: {
-            id: log.changedBy.id.toString(),
-            name: log.changedBy.name,
-            role: log.changedBy.role
+            id: e.changedBy.id.toString(),
+            name: e.changedBy.name,
+            role: e.changedBy.role
         },
-        changedAt: log.changedAt.toISOString()
+        changedAt: e.changedAt.toISOString()
     }));
-};
 
 export const prepareShippingCost = (
     deliveryMethod: TDeliveryMethod,

@@ -10,7 +10,7 @@ import {
 } from '@shared/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
 
-export const EventHistoryEntrySchema = new Schema({
+export const EventEntrySchema = new Schema({
     eventId: {
         type: Schema.Types.ObjectId,
         default: () => new Types.ObjectId()

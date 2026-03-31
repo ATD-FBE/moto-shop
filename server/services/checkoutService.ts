@@ -69,7 +69,7 @@ export const syncCart = async (
     customerDiscount: number
 ): Promise<ISyncCartResult> => {
     const productIds = cartItemList.map(item => item.productId);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
@@ -192,7 +192,7 @@ export const syncOrderDraft = async (
     customerDiscount: number
 ): Promise<ISyncOrderDraftResult> => {
     const productIds = dbOrderItemList.map(item => item.productId);
-    const dbProducts: TDbProduct[] = productIds.length > 0
+    const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
