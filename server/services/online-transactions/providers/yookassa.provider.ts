@@ -1,10 +1,21 @@
 import { randomUUID } from 'crypto';
-import { YooCheckout } from '@a2seven/yoo-checkout';
+import { YooCheckout, ICreatePayment, ICreateRefund } from '@a2seven/yoo-checkout';
 import ipRangeCheck from 'ip-range-check';
-import config from '../../../config/config.js';
-import { typeCheck } from '../../../utils/typeValidation.js';
-import log from '../../../utils/logger.js';
-import { TRANSACTION_TYPE, CARD_ONLINE_PROVIDER } from '../../../../shared/constants.js';
+import config from '@server/config/config.js';
+import { typeCheck } from '@server/utils/typeValidation.js';
+import log from '@server/utils/logger.js';
+import { toError } from '@shared/commonHelpers.js';
+import { TRANSACTION_TYPE, CARD_ONLINE_PROVIDER } from '@shared/constants.js';
+import type { Request, Response, NextFunction } from 'express';
+import type {
+    TDbOrderFinancialsEventEntry,
+    ICreateOnlinePaymentParams,
+    ICreateOnlinePaymentResult,
+    ICreateOnlineRefundsParams,
+    ICreateOnlineRefundsResult,
+    ICreateOnlineRefundsResultError,
+} from '@server/types/index.js';
+import type { IRefundablePayment } from '@shared/types/index.js';
 
 const yooKassaCheckout = new YooCheckout({
     shopId: config.yooKassa.shopId,
@@ -21,7 +32,7 @@ const YOOKASSA_WEBHOOK_IPS = [
     '2a02:5180::/32'
 ];
 
-const checkYooKassaIp = (req) => {
+const checkYooKassaIp = (req: Request): boolean => {
     const incomingIp =
         req.headers['x-forwarded-for'] ||
         req.socket?.remoteAddress ||
@@ -38,28 +49,32 @@ const checkYooKassaIp = (req) => {
     return ipRangeCheck(cleanIp, YOOKASSA_WEBHOOK_IPS);
 };
 
-export const verifyYooKassaWebhookAuthenticity = (req) => {
+export const verifyYooKassaWebhookAuthenticity = (req: Request): boolean => {
     const isIpValid = checkYooKassaIp(req);
     if (!isIpValid) log.warn(`${req.reqCtx} - YooKassa webhook: IP вне белого списка`);
     return isIpValid; 
 };
 
-export const createYooKassaPayment = async ({
-    paymentToken,
-    amount,
-    currency,
-    returnUrl,
-    description,
-    orderId,
-    orderNumber,
-    customerId,
-    provider
-}) => {
-    const payload = {
+export const createYooKassaPayment = async (
+    params: ICreateOnlinePaymentParams
+): Promise<ICreateOnlinePaymentResult> => {
+    const {
+        paymentToken,
+        amount,
+        currency,
+        returnUrl,
+        description,
+        orderId,
+        orderNumber,
+        customerId,
+        provider
+    } = params;
+
+    const payload: ICreatePayment = {
         payment_token: paymentToken,
         amount: {
             value: amount.toFixed(2),
-            currency
+            currency: currency.toUpperCase() // Обязательно заглавные буквы валюты
         },
         confirmation: {
             type: 'redirect',
@@ -67,10 +82,10 @@ export const createYooKassaPayment = async ({
         },
         description,
         metadata: {
-            orderId: orderId,
-            orderNumber: orderNumber,
-            customerId: customerId,
-            provider: provider,
+            orderId,
+            orderNumber,
+            customerId,
+            provider,
             amount
         },
         capture: true
@@ -90,44 +105,39 @@ export const createYooKassaPayment = async ({
         return {
             paymentId: null,
             confirmationUrl: null,
-            error: err
+            error: toError(err)
         };
     }
 };
 
-export const createYooKassaRefunds = async (refundTasks, params) => {
-    const { currency, description, orderId, orderNumber, customerId } = params;
+export const createYooKassaRefunds = async (
+    refundTasks: IRefundablePayment[],
+    params: ICreateOnlineRefundsParams
+): Promise<ICreateOnlineRefundsResult> => {
+    const { currency, description } = params;
 
     const refundPromises = refundTasks.map(async (task) => {
-        const originalPaymentId = task.action.transactionId;
-        const amount = task.action.amount;
+        const originalPaymentId = task.transactionId;
+        const amount = task.amount;
 
-        const payload = {
+        const payload: ICreateRefund = {
             payment_id: originalPaymentId,
             amount: {
                 value: amount.toFixed(2),
-                currency
+                currency: currency.toUpperCase() // Обязательно заглавные буквы валюты
             },
-            description,
-            metadata: {
-                orderId,
-                orderNumber,
-                customerId,
-                provider: task.action.provider,
-                amount
-            }
+            description
         };
 
         const refund = await yooKassaCheckout.createRefund(payload);
-
         return refund.id;
     });
 
     const refundSettled = await Promise.allSettled(refundPromises);
 
     // Сбор ID успешно созданных транзакций возвратов и ошибок
-    const refundIds = [];
-    const errors = [];
+    const refundIds: string[] = [];
+    const errors: ICreateOnlineRefundsResultError[] = [];
 
     refundSettled.forEach((r, idx) => {
         if (r.status === 'fulfilled') {
@@ -135,7 +145,7 @@ export const createYooKassaRefunds = async (refundTasks, params) => {
         } else {
             errors.push({
                 task: refundTasks[idx],
-                reason: r.reason
+                error: toError(r.reason)
             });
         }
     });

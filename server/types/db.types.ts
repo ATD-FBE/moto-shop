@@ -58,24 +58,6 @@ export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSche
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
 // Типизация подсхем моделей
-/*export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
-export type TDbUserNotificationItem = TDbUser['notifications'][number];
-export type TDbCartItem = TDbUser['cart'][number];
-export type TDbOrderStatusHistoryEntry = TDbBaseOrder['statusHistory'][number];
-export type TDbOrderTotals = TDbBaseOrder['totals'];
-export type TDbOrderDraftItem = TDbOrderDraft['items'][number];
-export type TDbOrderFinalItem = TDbOrderFinal['items'][number];
-export type TDbOrderDraftCustomerInfo = TDbOrderDraft['customerInfo'];
-export type TDbOrderFinalCustomerInfo = TDbOrderFinal['customerInfo'];
-export type TDbOrderDraftDelivery = TDbOrderDraft['delivery'];
-export type TDbOrderFinalDelivery = TDbOrderFinal['delivery'];
-export type TDbOrderDraftFinancials = TDbOrderDraft['financials'];
-export type TDbOrderFinalFinancials = TDbOrderFinal['financials'];
-export type TDbOrderFinancialsEventEntry = TDbOrderFinalFinancials['eventHistory'][number];
-export type TDbOrderFinancialsEventVoided = TDbOrderFinancialsEventEntry['voided'];
-export type TDbOrderCurrentOnlineTransaction = TDbOrderFinalFinancials['currentOnlineTransaction'];
-export type TDbOrderAuditLogEntry = NonNullable<TDbOrderFinal['auditLog']>[number];*/
-
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
 export type TDbUserNotificationItem = InferSchemaType<typeof NotificationItemSchema>;
 export type TDbCartItem = InferSchemaType<typeof CartItemSchema>;

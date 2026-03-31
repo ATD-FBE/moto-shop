@@ -34,6 +34,10 @@ export const USER_ROLE = {
     CUSTOMER: 'customer'
 } as const;
 
+export const CURRENCY = {
+    RUB: 'rub'
+} as const;
+
 export const DISCOUNT_SOURCE = {
     NONE: 'none',
     CUSTOMER: 'customer',
@@ -43,6 +47,11 @@ export const DISCOUNT_SOURCE = {
 export const PRODUCT_THUMBNAIL_PRESETS = {
     small: 80,
     medium: 220
+} as const;
+
+export const NOTIFICATION_STATUS = {
+    DRAFT: 'draft',
+    SENT: 'sent'
 } as const;
 
 export const PRODUCT_THUMBNAIL_SIZES: readonly TProductThumbnailSize[] =
@@ -405,11 +414,6 @@ export const ORDER_ACTION = {
     NEXT: 'next',
     ROLLBACK: 'rollback',
     CANCEL: 'cancel'
-} as const;
-
-export const NOTIFICATION_STATUS = {
-    DRAFT: 'draft',
-    SENT: 'sent'
 } as const;
 
 export const REQUEST_STATUS = {

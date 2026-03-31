@@ -47,7 +47,8 @@ declare global {
 
     namespace Express {
         interface Request {
-            rawBody?: Buffer; 
+            rawBody?: Buffer;
+            reqCtx?: string;
             user?: TTokenDecodedUser;
             dbUser?: TDbUser;
             fileUploadError?: {

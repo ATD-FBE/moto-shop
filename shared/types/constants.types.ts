@@ -1,10 +1,11 @@
 import {
     ALLOWED_IMAGE_MIME_TYPES,
     PRODUCT_UNITS,
-    DISCOUNT_SOURCE,
     USER_ROLE,
-    NOTIFICATION_STATUS,
+    CURRENCY,
+    DISCOUNT_SOURCE,
     PRODUCT_THUMBNAIL_PRESETS,
+    NOTIFICATION_STATUS,
     INTENT,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
@@ -24,10 +25,12 @@ export type TAllowedMimeType = TAllowedImageMimeType;
 
 export type TProductUnit = typeof PRODUCT_UNITS[number];
 
-export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
-
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 export type TActiveUserRole = Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
+
+export type TCurrency = typeof CURRENCY[keyof typeof CURRENCY];
+
+export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
 
 export type TNotification = typeof NOTIFICATION_STATUS[keyof typeof NOTIFICATION_STATUS];
 

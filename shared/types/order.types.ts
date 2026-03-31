@@ -200,3 +200,9 @@ export interface IOrderAdjustments {
     };
     releaseQuantity?: number;
 }
+
+export interface IRefundablePayment {
+    provider: TCardOnlineProvider;
+    transactionId: string;
+    amount: number;
+}

@@ -34,8 +34,8 @@ export const handleNewsListRequest = async (req, res, next) => {
     }
 };
 
-/*import { Request, Response, NextFunction } from 'express';
-import { TDbNews } from '@server/types/index.js';
+/*import type { Request, Response, NextFunction } from 'express';
+import type { TDbNews } from '@server/types/index.js';
 
 export const handleNewsListRequest = async (
     req: Request, 

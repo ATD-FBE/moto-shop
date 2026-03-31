@@ -66,16 +66,16 @@ export const calculateOrderFinancials = (history) => {
 };
 
 // Сбор данных для онлайн-возвратов на карты (записи событий и общая сумма оплат картами, провайдеры)
-export const getOrderCardRefundStats = (history) => {
+export const getOrderCardRefundStats = (history, { amountOnly = false } = {}) => {
     const alreadyRefundedTransactionIdSet = new Set(
         history
             .map(e => e.event === FINANCIALS_EVENT.REFUND_SUCCESS && e.action.originalPaymentId)
             .filter(Boolean)
     );
 
+    let availableCardRefundAmount = 0;
     const refundablePayments = [];
     const refundableProvidersSet = new Set();
-    let availableCardRefundAmount = 0;
 
     for (const entry of history) {
         if (entry.voided?.flag) continue;
@@ -83,14 +83,25 @@ export const getOrderCardRefundStats = (history) => {
         if (entry.action.method !== PAYMENT_METHOD.CARD_ONLINE) continue;
         if (alreadyRefundedTransactionIdSet.has(entry.action.transactionId)) continue;
 
-        refundablePayments.push(entry);
-        refundableProvidersSet.add(entry.action.provider);
         availableCardRefundAmount += entry.action.amount;
+
+        if (!amountOnly) {
+            refundablePayments.push({
+                provider: entry.action.provider,
+                transactionId: entry.action.transactionId,
+                amount: entry.action.amount
+            });
+            refundableProvidersSet.add(entry.action.provider);
+        }
+    }
+
+    if (amountOnly) {
+        return { availableCardRefundAmount };
     }
 
     return {
+        availableCardRefundAmount,
         refundablePayments,
-        refundableProviders: [...refundableProvidersSet],
-        availableCardRefundAmount
+        refundableProviders: [...refundableProvidersSet]
     };
 };

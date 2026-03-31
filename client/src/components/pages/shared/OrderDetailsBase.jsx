@@ -122,23 +122,23 @@ export default function OrderDetailsBase({
             // Добавление/замена новых записей в массивы историй
             if (newOrderStatusEntry) {
                 updatedOrder.statusHistory = [
-                    ...(updatedOrder.statusHistory || []),
+                    ...updatedOrder.statusHistory,
                     newOrderStatusEntry
                 ];
             }
             if (newFinancialsEventEntry) {
                 updatedOrder.financials = {
-                    ...(updatedOrder.financials || {}),
+                    ...updatedOrder.financials,
                     eventHistory: [
-                        ...(updatedOrder.financials?.eventHistory || []),
+                        ...updatedOrder.financials.eventHistory,
                         newFinancialsEventEntry
                     ]
                 };
             }
             if (voidedFinancialsEventEntry) {
                 updatedOrder.financials = {
-                    ...(updatedOrder.financials || {}),
-                    eventHistory: (updatedOrder.financials?.eventHistory || []).map(entry => {
+                    ...updatedOrder.financials,
+                    eventHistory: updatedOrder.financials.eventHistory.map(entry => {
                         if (entry.eventId === voidedFinancialsEventEntry.eventId) {
                             return voidedFinancialsEventEntry;
                         }

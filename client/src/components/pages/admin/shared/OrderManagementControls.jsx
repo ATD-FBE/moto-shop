@@ -1,4 +1,3 @@
-import React from 'react';
 import OrderStatusPanel from './order-management-controls/OrderStatusPanel.jsx';
 import FinancialsStatusPanel from './order-management-controls/FinancialsStatusPanel.jsx';
 import InternalNotePanel from './order-management-controls/InternalNotePanel.jsx';

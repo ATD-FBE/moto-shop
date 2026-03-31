@@ -25,11 +25,13 @@ import {
     TRANSACTION_STATUS,
     ORDER_STATUS
 } from '@shared/constants.js';
+import type { TDbOrderFinal } from '@server/types/index.js';
+import type { TCardOnlineProvider } from '@shared/types/index.js';
 
 const expirationMinutes = Math.floor(ONLINE_TRANSACTION_INIT_EXPIRATION / 60 / 1000);
 const LOG_CTX = '[CRON ONLINE TRANSACTION CLEANER]';
 
-export const startInitOnlineTransactionCleaner = () => {
+export const startInitOnlineTransactionCleaner = (): void => {
     log.info(`${LOG_CTX} Очистка зависших онлайн-транзакций в заказах запущена`);
 
     cron.schedule(
@@ -46,7 +48,7 @@ export const startInitOnlineTransactionCleaner = () => {
                         $in: [TRANSACTION_STATUS.INIT, TRANSACTION_STATUS.PROCESSING] 
                     },
                     'financials.currentOnlineTransaction.startedAt': { $lte: expirationTime }
-                });
+                }).lean<TDbOrderFinal[]>();
 
                 if (stuckDbOrders.length === 0) return;
 
@@ -67,7 +69,7 @@ export const startInitOnlineTransactionCleaner = () => {
                 }
             
                 // Создание карты транзакций по ID заказа, где значение - массив всех транзакций для заказа
-                const orderTransactionsMap = createOrderTransactionsMap(allNormalizedTransactions);
+                const orderTransactionsById = groupTransactionsByOrderId(allNormalizedTransactions);
                 
                 // Обработка каждого заказа из списка зависших
                 for (const dbOrder of stuckDbOrders) {
@@ -75,7 +77,7 @@ export const startInitOnlineTransactionCleaner = () => {
                     const stuckOnlineTxStatus = dbOrder.financials.currentOnlineTransaction.status;
                     
                     try {
-                        const foundTransactions = orderTransactionsMap.get(orderId);
+                        const foundTransactions = orderTransactionsById.get(orderId);
 
                         // Транзакции не найдены => удаление данных онлайн транзакции и SSE-сообщ. админам
                         if (!foundTransactions || !foundTransactions.length) {
@@ -114,35 +116,31 @@ export const startInitOnlineTransactionCleaner = () => {
     );
 };
 
-const groupStuckOrdersByProvider = (stuckOrders) => {
-    const map = new Map(); // provider => [order, ...]
+const groupStuckOrdersByProvider = (
+    stuckDbOrders: TDbOrderFinal[]
+): Map<TCardOnlineProvider, TDbOrderFinal[]> => {
+    const map = new Map<TCardOnlineProvider, TDbOrderFinal[]>(); // provider => [order, ...]
 
-    stuckOrders.forEach(order => {
-        const providers = order.financials?.currentOnlineTransaction?.providers;
+    stuckDbOrders.forEach(dbOrder => {
+        const providers = dbOrder.financials.currentOnlineTransaction?.providers;
         if (!providers) return;
 
         for (const provider of providers) {
-            if (!map.has(provider)) {
-                map.set(provider, []);
-            }
-            map.get(provider).push(order);
+            map.set(provider, [...(map.get(provider) ?? []), dbOrder]);
         }
     });
 
     return map;
 };
 
-const createOrderTransactionsMap = (transactions) => {
+const groupTransactionsByOrderId = (transactions) => {
     const map = new Map(); // orderId => [{...}, {...}, {...}]
                 
     transactions
         .filter(tx => typeCheck.objectId(tx.orderId))
         .forEach(tx => {
             const orderId = tx.orderId;
-            if (!map.has(orderId)) {
-                map.set(orderId, []);
-            }
-            map.get(orderId).push(tx);
+            map.set(orderId, [...(map.get(orderId) ?? []), tx]);
         });
 
     return map;

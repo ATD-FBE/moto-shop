@@ -22,8 +22,8 @@ const PROVIDER_MAP = [...BANK_PROVIDER_OPTIONS, ...CARD_ONLINE_PROVIDER_OPTIONS]
         return map;
     }, {});
 
-export const formatOrderStatusHistoryLogs = (orderStatusHistory) => {
-    return orderStatusHistory.reduce((acc, entry) => {
+export const formatOrderStatusHistoryLogs = (orderStatusHistory = []) =>
+    orderStatusHistory.reduce((acc, entry) => {
         const { status, isRollback, changes, cancellationReason, changedBy, changedAt } = entry;
         let line = '';
 
@@ -59,10 +59,9 @@ export const formatOrderStatusHistoryLogs = (orderStatusHistory) => {
 
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
-};
 
-export const formatFinancialsEventHistoryLogs = (eventHistory) => {
-    return eventHistory.reduce((acc, entry) => {
+export const formatFinancialsEventHistoryLogs = (eventHistory = []) =>
+    eventHistory.reduce((acc, entry) => {
         const { eventId, event, action, changedBy, changedAt, voided } = entry;
         let line = '';
 
@@ -116,10 +115,9 @@ export const formatFinancialsEventHistoryLogs = (eventHistory) => {
 
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
-};
 
-export const formatAuditLogs = (auditLog) => {
-    return auditLog.reduce((acc, entry) => {
+export const formatAuditLogs = (auditLog = []) =>
+    auditLog.reduce((acc, entry) => {
         const { changes, reason, changedBy, changedAt } = entry;
 
         // Добавление даты
@@ -145,7 +143,6 @@ export const formatAuditLogs = (auditLog) => {
 
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
-};
 
 export const formatOrderItemsAdjustmentLogs = (orderItemsAdjustments = []) => {
     const logs = [];

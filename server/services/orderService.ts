@@ -13,6 +13,7 @@ import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelp
 import { fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     USER_ROLE,
+    CURRENCY,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -416,7 +417,7 @@ export const generateOrderInvoicePdf = (dbOrder: TDbOrderFinal): IOrderInvoiceRe
     const totalAmountText = `Всего позиций: ${totalOrderItems}, на сумму: ${formattedTotalAmount} RUB`;
 
     const totalAmountInWords = convertNumberToWordsRu(totalAmount, {
-        currency: 'rub',
+        currency: CURRENCY.RUB,
         convertNumberToWords: {
             integer: true,
             fractional: true,

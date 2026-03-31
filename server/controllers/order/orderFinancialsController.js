@@ -31,6 +31,7 @@ import { isEqualCurrency, getLastFinancialsEventEntry } from '@shared/commonHelp
 import { calculateOrderFinancials, getOrderCardRefundStats } from '@shared/calculations.js';
 import {
     USER_ROLE,
+    CURRENCY,
     PAYMENT_METHOD,
     OFFLINE_PAYMENT_METHODS,
     ONLINE_PAYMENT_METHODS,
@@ -739,26 +740,26 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
             return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не активен` });
         }
 
-        const currentTransaction = dbOrder.financials.currentOnlineTransaction;
+        const currentOnlineTx = dbOrder.financials.currentOnlineTransaction;
 
-        if (currentTransaction) {
-            switch (currentTransaction.status) {
+        if (currentOnlineTx) {
+            switch (currentOnlineTx.status) {
                 case TRANSACTION_STATUS.INIT:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} уже инициирована, ` +
-                            `тип: ${currentTransaction.type}`
+                            `тип: ${currentOnlineTx.type}`
                     });
 
                 case TRANSACTION_STATUS.PROCESSING:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} создана и обрабатывается, ` +
-                            `тип: ${currentTransaction.type}`
+                            `тип: ${currentOnlineTx.type}`
                     });
 
                 default:
-                    throw new Error(`Неизвестный статус онлайн-транзакции: ${currentTransaction.status}`);
+                    throw new Error(`Неизвестный статус онлайн-транзакции: ${currentOnlineTx.status}`);
             }
         }
 
@@ -825,7 +826,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         const paymentResult = await createOnlinePayment(provider, {
             paymentToken,
             amount: amountNum,
-            currency: 'RUB',
+            currency: CURRENCY.RUB,
             returnUrl: getCustomerOrderDetailsUrl(orderNumber, orderId),
             description: `Оплата заказа ${orderLbl} для магазина "Мото-Магазин"`,
             orderId,
@@ -934,26 +935,26 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
             return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не оформлен` });
         }
 
-        const currentTransaction = dbOrder.financials.currentOnlineTransaction;
+        const currentOnlineTx = dbOrder.financials.currentOnlineTransaction;
 
-        if (currentTransaction) {
-            switch (currentTransaction.status) {
+        if (currentOnlineTx) {
+            switch (currentOnlineTx.status) {
                 case TRANSACTION_STATUS.INIT:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} уже инициирована, ` +
-                            `тип: ${currentTransaction.type}`
+                            `тип: ${currentOnlineTx.type}`
                     });
 
                 case TRANSACTION_STATUS.PROCESSING:
                     return safeSendResponse(res, 409, {
                         message:
                             `Онлайн-транзакция для заказа ${orderLbl} создана и обрабатывается, ` +
-                            `тип: ${currentTransaction.type}`
+                            `тип: ${currentOnlineTx.type}`
                     });
 
                 default:
-                    throw new Error(`Неизвестный статус онлайн-транзакции: ${currentTransaction.status}`);
+                    throw new Error(`Неизвестный статус онлайн-транзакции: ${currentOnlineTx.status}`);
             }
         }
 
@@ -978,9 +979,9 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
 
         // Сбор заданий и провайдеров по оплатам, которые нужно вернуть, и подсчёт общей суммы возврата
         const {
+            availableCardRefundAmount: totalRefundAmount,
             refundablePayments: refundTasks,
             refundableProviders: refundProviders,
-            availableCardRefundAmount: totalRefundAmount
         } = getOrderCardRefundStats(financialsEventHistory);
 
         if (!refundTasks.length) {
@@ -1041,20 +1042,14 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         const refundTasksByProvider = new Map(); // provider => [task, ...]
 
         refundTasks.forEach(task => {
-            const provider = task.action.provider;
-            if (!refundTasksByProvider.has(provider)) {
-                refundTasksByProvider.set(provider, []);
-            }
-            refundTasksByProvider.get(provider).push(task);
+            const provider = task.provider;
+            refundTasksByProvider.set(provider, [...(refundTasksByProvider.get(provider) ?? []), task]);
         });
 
         // Создание онлайн-возвратов по каждому провайдеру
         const refundParams = {
-            currency: 'RUB',
-            description: `Возврат средств по заказу ${orderLbl} для магазина "Мото-Магазин"`,
-            orderId,
-            orderNumber: updatedDbOrder.orderNumber,
-            customerId: updatedDbOrder.customerId.toString()
+            currency: CURRENCY.RUB,
+            description: `Возврат средств по заказу ${orderLbl} для магазина "Мото-Магазин"`
         };
         const allRefundIds = [];
         
@@ -1063,11 +1058,11 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
 
             allRefundIds.push(...refundResult.refundIds);
     
-            refundResult.errors.forEach(({ task, reason }) => {
+            refundResult.errors.forEach(({ task, error }) => {
                 log.error(
                     `Ошибка создания транзакции возврата для заказа ${orderLbl} ` +
-                    `по оплате ${task.action.transactionId}:`,
-                    reason instanceof Error ? reason : { errorDetails: reason }
+                    `по оплате ${task.transactionId}:`,
+                    error
                 );
             });
             checkTimeout(req);
@@ -1168,17 +1163,11 @@ export const handleWebhook = async (req, res, next) => {
 
     // Проверка критических данных вебхука
     const {
-        orderId, transactionId, amount, transactionType,
-        originalPaymentId, markAsFailed, failureReason, createdAt
+        transactionId, amount, transactionType, originalPaymentId, markAsFailed, failureReason, createdAt
     } = normalizedWebhook;
     const logContext = `${reqCtx} [WEBHOOK ${provider.toUpperCase()}]`;
 
-    if (
-        !typeCheck.objectId(orderId) ||
-        !typeCheck.string(transactionId) ||
-        !transactionId ||
-        isNaN(amount)
-    ) {
+    if (!typeCheck.string(transactionId) || !transactionId || isNaN(amount)) {
         logCriticalEvent({
             logContext,
             category: 'financials',
@@ -1186,6 +1175,31 @@ export const handleWebhook = async (req, res, next) => {
             data: normalizedWebhook
         });
         return safeSendResponse(res, 200, { message: 'Битые или отсутствующие данные' });
+    }
+
+    let orderId = normalizedWebhook.orderId;
+
+    if (!typeCheck.objectId(orderId)) {
+        let orderLookupFilter = {};
+
+        if (transactionType === TRANSACTION_TYPE.PAYMENT) {
+            orderLookupFilter = { 'financials.currentOnlineTransaction.transactionIds': transactionId };
+        } else if (transactionType === TRANSACTION_TYPE.REFUND) {
+            orderLookupFilter = { 'financials.eventHistory.action.transactionId': originalPaymentId };
+        }
+
+        const foundDbOrder = await Order.findOne(orderLookupFilter).select('_id').lean();
+        orderId = foundDbOrder?._id.toString();
+
+        if (!typeCheck.objectId(orderId)) {
+            logCriticalEvent({
+                logContext,
+                category: 'financials',
+                reason: 'Отсутствует ID заказа в вебхуке от платёжной системы',
+                data: normalizedWebhook
+            });
+            return safeSendResponse(res, 200, { message: 'Отсутствует ID заказа' });
+        }
     }
 
     try {
@@ -1291,7 +1305,10 @@ export const handleWebhook = async (req, res, next) => {
                 { path: orderDotNotationMap.totalPaid, value: updatedDbOrder.financials.totalPaid },
                 { path: orderDotNotationMap.totalRefunded, value: updatedDbOrder.financials.totalRefunded },
                 { path: orderDotNotationMap.eventHistory, value: updatedDbOrder.financials.eventHistory },
-                { path: orderDotNotationMap.currentOnlineTransaction, value: updatedDbOrder.financials.currentOnlineTransaction }
+                {
+                    path: orderDotNotationMap.currentOnlineTransaction,
+                    value: updatedDbOrder.financials.currentOnlineTransaction
+                }
             ];
             const updatedOrderData = { orderPatches };
 

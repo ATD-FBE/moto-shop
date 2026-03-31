@@ -6,10 +6,19 @@ import {
     fetchYooKassaExternalTransactions,
     normalizeYooKassaExternalTransaction
 } from './providers/yookassa.provider.js';
-import log from '../../utils/logger.js';
-import { CARD_ONLINE_PROVIDER } from '../../../shared/constants.js';
+import log from '@server/utils/logger.js';
+import { CARD_ONLINE_PROVIDER } from '@shared/constants.js';
+import type { Request, Response, NextFunction } from 'express';
+import type {
+    ICardOnlineProviderMap,
+    ICreateOnlinePaymentParams,
+    ICreateOnlinePaymentResult,
+    ICreateOnlineRefundsParams,
+    ICreateOnlineRefundsResult,
+} from '@server/types/index.js';
+import type { TCardOnlineProvider, IRefundablePayment } from '@shared/types/index.js';
 
-export const detectWebhookProvider = (req) => {
+export const detectWebhookProvider = (req: Request): TCardOnlineProvider | null => {
     const headers = req.headers;
     const userAgent = headers['user-agent'] || '';
 
@@ -22,7 +31,7 @@ export const detectWebhookProvider = (req) => {
     return null;
 };
 
-const providerMap = {
+const providerMap: Record<TCardOnlineProvider, ICardOnlineProviderMap> = {
     [CARD_ONLINE_PROVIDER.YOOKASSA]: {
         createPayment: createYooKassaPayment,
         createRefund: createYooKassaRefunds,
@@ -31,25 +40,33 @@ const providerMap = {
         fetchExternal: fetchYooKassaExternalTransactions,
         normalizeExternal: normalizeYooKassaExternalTransaction
     }
-};
+} as const;
 
-const getProvider = (provider) => providerMap[provider] ?? null;
+const getProvider = (provider: TCardOnlineProvider): ICardOnlineProviderMap | null =>
+    providerMap[provider] ?? null;
 
-export const createOnlinePayment = async (provider, params) => {
+export const createOnlinePayment = async (
+    provider: TCardOnlineProvider,
+    params: ICreateOnlinePaymentParams
+): Promise<ICreateOnlinePaymentResult> => {
     const p = getProvider(provider);
 
     if (!p?.createPayment) {
         return {
             paymentId: null,
             confirmationUrl: null,
-            error: new Error(`Провайдер ${provider} не поддерживает онлайн-оплату`)
+            error: new Error(`Провайдер ${provider} не поддерживает онлайн-оплаты`)
         };
     }
 
     return await p.createPayment(params);
 };
 
-export const createOnlineRefunds = async (provider, refundTasks, params) => {
+export const createOnlineRefunds = async (
+    provider: TCardOnlineProvider,
+    refundTasks: IRefundablePayment[],
+    params: ICreateOnlineRefundsParams
+): Promise<ICreateOnlineRefundsResult> => {
     const p = getProvider(provider);
 
     if (!p?.createRefund) {
@@ -57,7 +74,7 @@ export const createOnlineRefunds = async (provider, refundTasks, params) => {
             refundIds: [],
             errors: refundTasks.map(task => ({
                 task,
-                reason: new Error(`Провайдер ${provider} не поддерживает онлайн-возвраты`)
+                error: new Error(`Провайдер ${provider} не поддерживает онлайн-возвраты`)
             }))
         };
     }

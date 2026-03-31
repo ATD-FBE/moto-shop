@@ -39,7 +39,9 @@ export default function FinancialsStatusPanel({
     const formattedNetPaid = formatCurrency(netPaid);
     const formattedTotalAmount = formatCurrency(totalAmount);
 
-    const { availableCardRefundAmount } = getOrderCardRefundStats(financialsEventHistory);
+    const { availableCardRefundAmount } = getOrderCardRefundStats(financialsEventHistory, {
+        amountOnly: true
+    });
 
     useEffect(() => {
         if (!showExtras) return;

@@ -1,10 +1,21 @@
 import { DISCOUNT_SOURCE, CURRENCY_EPS } from './constants.js';
-import type { IAppliedDiscount, IDotNotationPatch, IFinancialsEventEntry }  from './types/index.js';
+import type { IAppliedDiscount, IDotNotationPatch }  from './types/index.js';
 
 export const toError = (err: unknown): Error => {
     if (err instanceof Error) return err;
 
-    const message = typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err);
+    let message: string;
+    
+    if (err && typeof err === 'object') {
+        try {
+            message = (err as any).message || JSON.stringify(err);
+        } catch {
+            message = "[Circular or Unformattable Object]";
+        }
+    } else {
+        message = String(err);
+    }
+
     return new Error(message);
 };
 
