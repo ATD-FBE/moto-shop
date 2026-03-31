@@ -19,7 +19,7 @@ import {
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
@@ -46,7 +46,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
     try {
         const orderLbl = `(ID: ${orderId})`;
 
-        const { statusCode, responseData } = await runInTransaction(async (session) => {
+        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             const dbOrderDraft = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -234,7 +234,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
     // Поиск существующих черновиков, возврат зарезервированных товаров и удаление заказов
     try {
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             const existingOrderDrafts = await Order
                 .find({ customerId, currentStatus: ORDER_STATUS.DRAFT })
                 .session(session);
@@ -259,7 +259,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             cartItemSnapshots.map(itemSnap => [itemSnap.productId, itemSnap])
         );
 
-        const { statusCode, responseData } = await runInTransaction(async (session) => {
+        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             // Автоисправление товаров в заказе, корзине и получение актуальных данных
             let {
                 fixedDbCart,
@@ -483,7 +483,7 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
     try {
         const orderLbl = `(ID: ${orderId})`;
 
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             // Поиск черновика, полностью удовлетворяющего условиям
             const dbOrderDraft = await Order.findOne({
                 _id: orderId,
@@ -580,7 +580,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
     try {
         const orderLbl = `(ID: ${orderId})`;
         
-        const { statusCode, responseData } = await runInTransaction(async (session) => {
+        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             const dbOrderDraft = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -872,7 +872,7 @@ export const handleOrderDraftDeleteRequest = async (req, res, next) => {
     try {
         const orderLbl = `(ID: ${orderId})`;
 
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             const dbOrderDraft = await Order.findById(orderId).session(session);
             checkTimeout(req);
 

@@ -28,7 +28,8 @@ export const PromoSchema = new Schema({
     },
     createdBy: {
         type: Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: true
     },
     updateHistory: [UpdateHistoryItemSchema]
 }, {

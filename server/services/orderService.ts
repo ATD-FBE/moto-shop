@@ -5,9 +5,10 @@ import numberToWordsRuPkg from 'number-to-words-ru';
 import User from '@server/database/models/User.js';
 import Order from '@server/database/models/Order.js';
 import { applyProductBulkUpdate } from './productService.js';
-import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '../config/paths.js';
 import { logCriticalEvent } from './criticalEventService.js';
+import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '@server/config/paths.js';
 import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
+import { getPopulatedDbField } from '@server/utils/dbUtils.js';
 import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
 import { fieldErrorMessages } from '@shared/fieldRules.js';
 import {
@@ -24,7 +25,6 @@ import {
 import { COMPANY_DETAILS } from '@shared/company.js';
 import type {
     TDbFinalOrder,
-    TDbFinalOrderPopulated,
     TDbOrderFinalItem,
     TDbOrderStatusHistoryEntry,
     TDbOrderFinancialsEventEntry,
@@ -106,7 +106,7 @@ export const orderDotNotationMap = {
 } as const;
 
 export const prepareOrder = (
-    dbOrder: TDbFinalOrder | TDbFinalOrderPopulated,
+    dbOrder: TDbFinalOrder,
     {
         inList = true,
         managed = false,
@@ -148,8 +148,8 @@ export const prepareOrder = (
             phone: dbOrder.customerInfo.phone,
             ...(!inList && {
                 ...(managed && { customerId: dbOrder.customerId._id.toString() }),
-                login: ('name' in dbOrder.customerId) ? dbOrder.customerId.name : 'Not populated',
-                registrationEmail: ('email' in dbOrder.customerId) ? dbOrder.customerId.email : 'Not populated'
+                login: getPopulatedDbField(dbOrder.customerId, 'login'),
+                registrationEmail: getPopulatedDbField(dbOrder.customerId, 'email')
             })
         }
     }),

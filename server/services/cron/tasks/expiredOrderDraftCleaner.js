@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import Order from '@server/database/models/Order.js';
 import { releaseReservedProducts } from '@server/services/checkoutService.js';
 import log from '@server/utils/logger.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { ORDER_STATUS } from '@shared/constants.js';
 
 const LOG_CTX = '[CRON EXPIRED ORDER DRAFT CLEANER]';
@@ -14,7 +14,7 @@ export const startExpiredOrderDraftCleaner = () => {
         '*/3 * * * *', // Проверка каждые 3 минут
         async () => {
             try {
-                await runInTransaction(async (session) => {
+                await runInDbTransaction(async (session) => {
                     const expiredOrderDrafts = await Order.find({
                         currentStatus: ORDER_STATUS.DRAFT,
                         expiresAt: { $lte: new Date() }

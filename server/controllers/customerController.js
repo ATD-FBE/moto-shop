@@ -10,7 +10,7 @@ import {
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationBuilders.js';
 import { validateInputTypes } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
@@ -199,7 +199,7 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { customerLbl } = await runInTransaction(async (session) => {
+        const { customerLbl } = await runInDbTransaction(async (session) => {
             const dbCustomer = await User.findByIdAndUpdate(
                 customerId,
                 { discount: discountNum },
@@ -247,7 +247,7 @@ export const handleCustomerBanToggleRequest = async (req, res, next) => {
     }
 
     try {
-        const { customerLbl } = await runInTransaction(async (session) => {
+        const { customerLbl } = await runInDbTransaction(async (session) => {
             const dbCustomer = await User.findByIdAndUpdate(
                 customerId,
                 { isBanned: newBanStatus },

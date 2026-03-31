@@ -3,6 +3,7 @@ import {
     PRODUCT_UNITS,
     DISCOUNT_SOURCE,
     USER_ROLE,
+    NOTIFICATION_STATUS,
     PRODUCT_THUMBNAIL_PRESETS,
     INTENT,
     DELIVERY_METHOD,
@@ -27,6 +28,8 @@ export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURC
 
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 export type TActiveUserRole = Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
+
+export type TNotification = typeof NOTIFICATION_STATUS[keyof typeof NOTIFICATION_STATUS];
 
 export type TProductThumbnailKey = keyof typeof PRODUCT_THUMBNAIL_PRESETS;
 export type TProductThumbnailSize = typeof PRODUCT_THUMBNAIL_PRESETS[TProductThumbnailKey];

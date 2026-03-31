@@ -1,9 +1,9 @@
 import Promo from '../database/models/Promo.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { preparePromoData } from '../services/promoService.js';
+import { preparePromo } from '../services/promoService.js';
 import { storageService } from '../services/storage/storageService.js';
 import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
+import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
@@ -50,7 +50,7 @@ export const handlePromoListRequest = async (req, res, next) => {
         const dbPromoList = await dbPromoQuery.lean(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
-        const promoList = dbPromoList.map(promo => preparePromoData(promo, { managed: isAdmin }));
+        const promoList = dbPromoList.map(promo => preparePromo(promo, { managed: isAdmin }));
 
         safeSendResponse(res, 200, { message: 'Акции успешно загружены', promoList });
     } catch (err) {
@@ -78,7 +78,7 @@ export const handlePromoRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: `Акция "${dbPromo.title}" успешно загружена`,
-            promo: preparePromoData(dbPromo)
+            promo: preparePromo(dbPromo)
         });
     } catch (err) {
         next(err);
@@ -115,7 +115,7 @@ export const handlePromoCreateRequest = async (req, res, next) => {
 
     // Создание документа в базе MongoDB
     try {
-        const { promoLbl } = await runInTransaction(async (session) => {
+        const { promoLbl } = await runInDbTransaction(async (session) => {
             // Подготовка данных
             const prepDbFields = {
                 title: title.trim(),
@@ -222,7 +222,7 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
 
     // Апдейт документа в базе MongoDB
     try {
-        const { promoLbl, postUpdateFileCleanup } = await runInTransaction(async (session) => {
+        const { promoLbl, postUpdateFileCleanup } = await runInDbTransaction(async (session) => {
             // Проверка на существование изменяемой акции
             const dbPromo = await Promo.findById(promoId).session(session);
             checkTimeout(req);
@@ -360,7 +360,7 @@ export const handlePromoDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const { promoLbl } = await runInTransaction(async (session) => {
+        const { promoLbl } = await runInDbTransaction(async (session) => {
             const dbPromo = await Promo.findByIdAndDelete(promoId).session(session);
             checkTimeout(req);
 

@@ -18,7 +18,7 @@ import {
 } from '@server/utils/aggregationBuilders.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
@@ -256,7 +256,7 @@ export const handleProductCreateRequest = async (req, res, next) => {
     let newProductId;
 
     try {
-        const { newDbProduct } = await runInTransaction(async (session) => {
+        const { newDbProduct } = await runInDbTransaction(async (session) => {
             // Проверка на существование категории товара
             const dbCategory = await Category.findById(category).session(session);
             checkTimeout(req);
@@ -408,7 +408,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
     let rollbackCleanupFiles = false;
 
     try {
-        const transactionResult = await runInTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Проверка на существование изменяемого товара
             const dbProduct = await Product.findById(productId).session(session);
             checkTimeout(req);
@@ -650,7 +650,7 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { statusCode, responseData } = await runInTransaction(async (session) => {
+        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             // Обработка категории
             if (category !== undefined) {
                 // Проверка на существование категории товара
@@ -777,7 +777,7 @@ export const handleProductDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const dbProduct = await runInTransaction(async (session) => {
+        const dbProduct = await runInDbTransaction(async (session) => {
             // Поиск и удаление документа в базе MongoDB
             const dbProduct = await Product.findByIdAndDelete(productId).session(session);
             checkTimeout(req);
@@ -825,7 +825,7 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const { statusCode, responseData } = await runInTransaction(async (session) => {
+        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             // Поиск и сбор ID удаляемых товаров
             const existingProductDocs = await Product
                 .find({ _id: { $in: uniqueProductIds } }, '_id')

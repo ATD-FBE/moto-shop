@@ -3,7 +3,7 @@ import Category from '../database/models/Category.js';
 import Product from '../database/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
+import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
@@ -53,7 +53,7 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
     }
 
     try {
-        const { newCategory, movedProductCount } = await runInTransaction(async (session) => {
+        const { newCategory, movedProductCount } = await runInDbTransaction(async (session) => {
             // Проверка родительской категории
             if (parent !== null) {
                 const dbParentCategory = await Category.findById(parent).session(session);
@@ -188,7 +188,7 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { dbCategory, movedProductCount } = await runInTransaction(async (session) => {
+        const { dbCategory, movedProductCount } = await runInDbTransaction(async (session) => {
             // Проверка существования изменяемой категории
             const dbCategory = await Category.findById(categoryId).session(session);
             checkTimeout(req);
@@ -375,7 +375,7 @@ export const handleCategoryDeleteRequest = async (req, res, next) => {
     // (удаляются все дочерние подкатегории, задеваются номера соседних с удаляемой категорий,
     // все товары удаляемой и дочерних подкатегорий переносятся в корневую категорию c URL "unsorted")
     try {
-        const transactionResult = await runInTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Поиск удаляемой категории и всех её потомков
             const categoryObjectId = mongoose.Types.ObjectId.createFromHexString(categoryId);
 

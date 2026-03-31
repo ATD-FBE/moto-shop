@@ -1,24 +1,24 @@
-import Notification from '../database/models/Notification.js';
-import User from '../database/models/User.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { prepareNotificationData } from '../services/notificationService.js';
-import * as sseNotifications from '../services/sse/sseNotificationsService.js';
-import { parseSortParam } from '../utils/aggregationBuilders.js';
-import { isArrayContentDifferent } from '../utils/compareUtils.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { notificationsSortOptions } from '../../shared/sortOptions.js';
-import { notificationsPageLimitOptions } from '../../shared/pageLimitOptions.js';
-import { NOTIFICATION_STATUS, REQUEST_STATUS } from '../../shared/constants.js';
+import Notification from '@server/database/models/Notification.js';
+import User from '@server/database/models/User.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { prepareNotification } from '@server/services/notificationService.js';
+import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';
+import { parseSortParam } from '@server/utils/aggregationBuilders.js';
+import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { notificationsSortOptions } from '@shared/sortOptions.js';
+import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
+import { USER_ROLE, NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
 //import type { TDbNotification } from '@server/types/index.js';
 
 /// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
 export const handleNotificationListRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
-    const isAdmin = dbUser.role === 'admin';
+    const isAdmin = dbUser.role === USER_ROLE.ADMIN;
 
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.max(parseInt(req.query.limit, 10) || notificationsPageLimitOptions[0], 1);
@@ -28,7 +28,7 @@ export const handleNotificationListRequest = async (req, res, next) => {
         let notificationsCount, dbPaginatedNotificationList;
 
         switch (dbUser.role) {
-            case 'admin': {
+            case USER_ROLE.ADMIN: {
                 const draftsFilter = { status: NOTIFICATION_STATUS.DRAFT };
                 const nonDraftsFilter = { status: { $ne: NOTIFICATION_STATUS.DRAFT } };
                 const [draftsCount, nonDraftsCount] = await Promise.all([
@@ -96,7 +96,7 @@ export const handleNotificationListRequest = async (req, res, next) => {
                 break;
             }
 
-            case 'customer': {
+            case USER_ROLE.CUSTOMER: {
                 const { sortField, sortOrder } = parseSortParam/*<TDbNotification>*/(
                     req.query.sort,
                     notificationsSortOptions
@@ -127,8 +127,8 @@ export const handleNotificationListRequest = async (req, res, next) => {
 
                     return {
                         ...notifItem,
-                        isRead: metadata.isRead ?? false,
-                        readAt: metadata.readAt ?? null
+                        isRead: metadata.isRead,
+                        readAt: metadata.readAt
                     };
                 });
 
@@ -143,7 +143,7 @@ export const handleNotificationListRequest = async (req, res, next) => {
         }
 
         const paginatedNotificationList = dbPaginatedNotificationList.map(notif =>
-            prepareNotificationData(notif, { managed: isAdmin })
+            prepareNotification(notif, { managed: isAdmin })
         );
 
         safeSendResponse(res, 200, {
@@ -178,7 +178,7 @@ export const handleNotificationRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: `Уведомление "${dbNotification.subject}" успешно загружено`,
-            notification: prepareNotificationData(dbNotification, { managed: true, edit: true })
+            notification: prepareNotification(dbNotification, { managed: true, edit: true })
         });
     } catch (err) {
         next(err);
@@ -210,7 +210,7 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
 
     // Создание документа в базе MongoDB
     try {
-        const { notifLbl } = await runInTransaction(async (session) => {
+        const { notifLbl } = await runInDbTransaction(async (session) => {
             const [newNotification] = await Notification.create(
                 [
                     {
@@ -273,7 +273,7 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
 
     // Апдейт документа в базе MongoDB
     try {
-        const { notifLbl } = await runInTransaction(async (session) => {
+        const { notifLbl } = await runInDbTransaction(async (session) => {
             // Проверка существования и доступности изменяемого уведомления
             const dbNotification = await Notification.findById(notificationId).session(session);
             checkTimeout(req);
@@ -346,7 +346,7 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
     }
 
     try {
-        const transactionResult = await runInTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             const dbNotification = await Notification.findById(notificationId).session(session);
             checkTimeout(req);
 
@@ -439,7 +439,7 @@ export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
     }
 
     try {
-        const { notifLbl } = await runInTransaction(async (session) => {
+        const { notifLbl } = await runInDbTransaction(async (session) => {
             const dbNotification = await Notification.findById(notificationId).lean().session(session);
             checkTimeout(req);
 
@@ -486,7 +486,7 @@ export const handleNotificationDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const { notifLbl } = await runInTransaction(async (session) => {
+        const { notifLbl } = await runInDbTransaction(async (session) => {
             const dbNotification = await Notification.findById(notificationId).session(session);
             checkTimeout(req);
 

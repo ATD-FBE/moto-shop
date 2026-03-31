@@ -14,7 +14,7 @@ import {
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
 import { typeCheck } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import log from '@server/utils/logger.js';
 import { ONLINE_TRANSACTION_INIT_EXPIRATION } from '@server/config/constants.js';
 import { calculateOrderFinancials } from '@shared/calculations.js';
@@ -149,7 +149,7 @@ const createOrderTransactionsMap = (transactions) => {
 };
 
 const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transactionGroup) => {
-    const { shouldClearTransaction, updatedOrderData } = await runInTransaction(async (session) => {
+    const { shouldClearTransaction, updatedOrderData } = await runInDbTransaction(async (session) => {
         // Обновление данных заказа
         const dbOrder = await Order.findById(orderId).session(session);
 

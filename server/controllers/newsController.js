@@ -1,11 +1,11 @@
-import News from '../database/models/News.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { prepareNewsData } from '../services/newsService.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
+import News from '@server/database/models/News.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { prepareNews } from '@server/services/newsService.js';
+import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
 
 /// Загрузка всех новостей ///
 export const handleNewsListRequest = async (req, res, next) => {
@@ -26,7 +26,7 @@ export const handleNewsListRequest = async (req, res, next) => {
         const dbNewsList = await dbNewsQuery.lean(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
-        const newsList = dbNewsList.map(news => prepareNewsData(news, { managed: isAdmin }));
+        const newsList = dbNewsList.map(news => prepareNews(news, { managed: isAdmin }));
 
         safeSendResponse(res, 200, { message: 'Новости успешно загружены', newsList });
     } catch (err) {
@@ -35,7 +35,7 @@ export const handleNewsListRequest = async (req, res, next) => {
 };
 
 /*import { Request, Response, NextFunction } from 'express';
-import { TDbNews, TDbNewsPopulated } from '@server/types/index.js';
+import { TDbNews } from '@server/types/index.js';
 
 export const handleNewsListRequest = async (
     req: Request, 
@@ -46,7 +46,7 @@ export const handleNewsListRequest = async (
     const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
 
     try {
-        let dbNewsQuery = News.find().sort({ publishDate: -1 }).select(selectedDbFields);
+        let dbNewsQuery: TDbNews = News.find().sort({ publishDate: -1 }).select(selectedDbFields);
 
         if (isAdmin) {
             dbNewsQuery = dbNewsQuery
@@ -54,10 +54,10 @@ export const handleNewsListRequest = async (
                 .populate('updateHistory.updatedBy', 'name');
         }
 
-        const dbNewsList = await dbNewsQuery.lean() as (isAdmin extends true ? TDbNewsPopulated[] : TDbNews[]);
+        const dbNewsList: TDbNews = await dbNewsQuery.lean<TDbNews>();
         checkTimeout(req);
 
-        const newsList = dbNewsList.map(news => prepareNewsData(news, { managed: isAdmin }));
+        const newsList = dbNewsList.map(news => prepareNews(news, { managed: isAdmin }));
 
         safeSendResponse(res, 200, { message: 'Новости успешно загружены', newsList });
     } catch (err) {
@@ -83,7 +83,7 @@ export const handleNewsRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: `Новость "${dbNews.title}" успешно загружена`,
-            news: prepareNewsData(dbNews)
+            news: prepareNews(dbNews)
         });
     } catch (err) {
         next(err);
@@ -113,7 +113,7 @@ export const handleNewsCreateRequest = async (req, res, next) => {
 
     // Создание документа в базе MongoDB
     try {
-        const { newsLbl } = await runInTransaction(async (session) => {
+        const { newsLbl } = await runInDbTransaction(async (session) => {
             const [newNews] = await News.create(
                 [
                     {
@@ -170,7 +170,7 @@ export const handleNewsUpdateRequest = async (req, res, next) => {
 
     // Апдейт документа в базе MongoDB
     try {
-        const { newsLbl } = await runInTransaction(async (session) => {
+        const { newsLbl } = await runInDbTransaction(async (session) => {
             // Проверка на существование изменяемой новости
             const dbNews = await News.findById(newsId).session(session);
             checkTimeout(req);
@@ -229,7 +229,7 @@ export const handleNewsDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const { newsLbl } = await runInTransaction(async (session) => {
+        const { newsLbl } = await runInDbTransaction(async (session) => {
             const dbNews = await News.findByIdAndDelete(newsId).session(session);
             checkTimeout(req);
 

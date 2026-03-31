@@ -20,7 +20,7 @@ export default function NotificationCardCustomer({
     const { id, subject, message, signature, sentAt, isRead, readAt } = notification;
 
     const isUnread = !isRead;
-    const sentDateStr = new Date(sentAt)?.toLocaleString();
+    const sentDateStr = sentAt ? new Date(sentAt)?.toLocaleString() : '';
     const readDateStr = readAt ? new Date(readAt)?.toLocaleString() : '';
 
     const markNotificationAsRead = async (eventType, notificationId) => {

@@ -39,7 +39,8 @@ export const NotificationSchema = new Schema({
     },
     createdBy: {
         type: Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: true
     },
     updateHistory: [UpdateHistoryItemSchema],
     sentBy: {
@@ -47,7 +48,8 @@ export const NotificationSchema = new Schema({
         ref: 'User'
     },
     sentAt: {
-        type: Date
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true // Автоматическое добавление полей createdAt и updatedAt

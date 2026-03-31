@@ -1,12 +1,23 @@
-import mongoose from 'mongoose';
+import { Types, startSession } from 'mongoose';
 import type { TTransactionHandler, TTransactionOptions } from '@server/types/index.js';
 
-export const runInTransaction = async <T>(
+export const getPopulatedDbField = (
+    field: Types.ObjectId | Record<string, any> | null | undefined,
+    key: string,
+    fallback: string = 'Not populated'
+): string => {
+    if (field && !(field instanceof Types.ObjectId) && key in field) {
+        return String(field[key]);
+    }
+    return fallback;
+};
+
+export const runInDbTransaction = async <T>(
     handler: TTransactionHandler<T>,
     options: TTransactionOptions = {}
 ): Promise<T> => {
     // Создание сессии транзакции
-    const session = await mongoose.startSession();
+    const session = await startSession();
 
     try {
         // Начало транзакции

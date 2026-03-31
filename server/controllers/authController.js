@@ -3,12 +3,11 @@ import User from '@server/database/models/User.js';
 import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareUser, prepareSession } from '@server/services/authService.js';
-import { generateToken } from '@server/utils/token.js';
+import { generateToken, getTokenExpiryFromCookie } from '@server/utils/tokenUtils.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
-import { getTokenExpiryFromCookie } from '@server/utils/token.js';
 import { normalizeInputDataToNull } from '@server/utils/normalizeUtils.js';
 import { isDbDataModified } from '@server/utils/compareUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
@@ -52,7 +51,7 @@ export const handleAuthRegistrationRequest = async (req, res, next) => {
     const role = isAdmin ? 'admin' : 'customer';
 
     try {
-        const { newDbUser, sessionData } = await runInTransaction(async (session) => {
+        const { newDbUser, sessionData } = await runInDbTransaction(async (session) => {
             const newDbUser = new User({
                 name: name.trim(),
                 email: email.trim(),
@@ -159,7 +158,7 @@ export const handleAuthLoginRequest = async (req, res, next) => {
 
     // Проверка данных пользователя в базе MongoDB
     try {
-        const { dbUser, sessionData } = await runInTransaction(async (session) => {
+        const { dbUser, sessionData } = await runInDbTransaction(async (session) => {
             // Поиск пользователя
             const dbUser = await User.findOne({ name: prepDbFields.name }).session(session);
             checkTimeout(req);
@@ -264,7 +263,7 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
 
     // Апдейт документа в базе MongoDB
     try {
-        const { userData } = await runInTransaction(async (session) => {
+        const { userData } = await runInDbTransaction(async (session) => {
             // Валидация пароля
             if (newPassword !== undefined) {
                 if (validationRules.auth.newPassword.test(newPassword)) {
@@ -413,7 +412,7 @@ export const handleAuthSessionRequest = async (req, res, next) => {
     }
 
     try {
-        const { sessionData } = await runInTransaction(async (session) => {
+        const { sessionData } = await runInDbTransaction(async (session) => {
             const sessionData = await prepareSession(dbUser, guestCart);
             checkTimeout(req);
 
@@ -552,7 +551,7 @@ export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
     
     try {
         // Установка и сохранение настроек в базе MongoDB с удалением null-полей и пустых объектов
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             dbUser.checkoutPrefs = newCheckoutPrefs;
             await dbUser.save({ session });
             checkTimeout(req);

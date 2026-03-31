@@ -40,7 +40,7 @@ export default function NotificationCardManagement({
 
     const createdDateStr = formatLocalDate(createdAt);
     const updatedDateStr = formatLocalDate(updatedAt);
-    const sentDateStr = formatLocalDate(sentAt);
+    const sentDateStr = sentAt ? formatLocalDate(sentAt) : '';
 
     const isNotificationUiBlocked =
         status !== NOTIFICATION_STATUS.DRAFT ||

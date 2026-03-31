@@ -10,7 +10,7 @@ import { PromoSchema } from '@server/database/models/Promo.js';
 import { UserSchema } from '@server/database/models/User.js';
 import { BaseOrderSchema, DraftOrderSchema, FinalOrderSchema } from '@server/database/models/Order.js';
 
-/// Типизация схем моделей ///
+// Типизация схем моделей
 type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
     _id: Types.ObjectId;
     createdAt?: Date;
@@ -31,7 +31,7 @@ export type TDbDraftOrder = TDbBaseOrder & InferSchemaType<typeof DraftOrderSche
 export type TDbFinalOrder = TDbBaseOrder & InferSchemaType<typeof FinalOrderSchema>;
 export type TDbOrder = TDbDraftOrder | TDbFinalOrder;
 
-/// Типизация подсхем моделей ///
+// Типизация подсхем моделей
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
 export type TDbUserNotificationItem = TDbUser['notifications'][number];
 export type TDbCartItem = TDbUser['cart'][number];
@@ -50,7 +50,7 @@ export type TDbOrderFinancialsEventVoided = TDbOrderFinancialsEventEntry['voided
 export type TDbOrderCurrentOnlineTransaction = TDbOrderFinalFinancials['currentOnlineTransaction'];
 export type TDbOrderAuditLogEntry = NonNullable<TDbFinalOrder['auditLog']>[number];
 
-/// Типизация схем моделей как документов (с методами и другими встроенными данными) ///
+// Типизация схем моделей как документов (с методами и другими встроенными данными)
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;
 export type TDbCounterDoc = HydratedDocument<TDbCounter>;
 export type TDbUserDoc = HydratedDocument<TDbUser>;
@@ -63,12 +63,16 @@ export type TDbDraftOrderDoc = HydratedDocument<TDbDraftOrder>;
 export type TDbFinalOrderDoc = HydratedDocument<TDbFinalOrder>;
 export type TDbOrderDoc = HydratedDocument<TDbOrder>;
 
-/// Изменение типа полей при заполнении (вызове populated) ///
+// Изменённые типы полей моделей при заполнении (вызове populated)
 type TPopulated<T, Keys extends keyof T, TReplacement> = Omit<T, Keys> & {
     [K in Keys]: TReplacement;
 };
 
-export type TDbUpdateHistoryItemPopulated = TPopulated<TDbUpdateHistoryItem, 'updatedBy', { name: string }>;
+export type TDbUpdateHistoryItemPopulated = TPopulated<
+    TDbUpdateHistoryItem,
+    'updatedBy',
+    { _id: Types.ObjectId, name: string }
+>;
 export type TDbNewsPopulated = TPopulated<TDbNews, 'createdBy', { _id: Types.ObjectId, name: string }> & {
     updateHistory: TDbUpdateHistoryItemPopulated[];
 };
@@ -76,9 +80,9 @@ export type TDbPromoPopulated = TPopulated<TDbPromo, 'createdBy', { _id: Types.O
     updateHistory: TDbUpdateHistoryItemPopulated[];
 };
 export type TDbNotificationPopulated = TPopulated<
-    TDbNotification,
-    'createdBy',
-    { _id: Types.ObjectId, name: string }
+    TPopulated<TDbNotification, 'createdBy' | 'sentBy', { _id: Types.ObjectId, name: string }>,
+    'recipients',
+    { _id: Types.ObjectId, name: string }[]
 > & {
     updateHistory: TDbUpdateHistoryItemPopulated[];
 };
@@ -87,3 +91,9 @@ export type TDbFinalOrderPopulated = TPopulated<
     'customerId',
     { _id: Types.ObjectId, name: string, email: string }
 >;
+
+// Расширения типов моделей
+export type TDbNotificationExtended = TDbNotification & {
+    isRead?: boolean;
+    readAt?: Date | null;
+};

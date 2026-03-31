@@ -21,7 +21,7 @@ import {
 } from '@server/services/online-transactions/onlineTransactionsService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import log from '@server/utils/logger.js';
@@ -159,7 +159,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
 
     // Работа с базой данных
     try {
-        const { orderLbl, eventLbl, updatedOrderData } = await runInTransaction(async (session) => {
+        const { orderLbl, eventLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -384,7 +384,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInTransaction(async (session) => {
+        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -564,7 +564,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInTransaction(async (session) => {
+        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -1189,7 +1189,7 @@ export const handleWebhook = async (req, res, next) => {
     }
 
     try {
-        const { updatedOrderData } = await runInTransaction(async (session) => {
+        const { updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);

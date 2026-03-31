@@ -28,7 +28,7 @@ import {
 } from '@server/utils/normalizeUtils.js';
 import { collectDbChanges } from '@server/utils/compareUtils.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
-import { runInTransaction } from '@server/utils/transaction.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
@@ -304,7 +304,7 @@ export const handleOrderRepeatRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl } = await runInTransaction(async (session) => {
+        const { orderLbl } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId)
                 .select('customerId currentStatus items')
                 .lean()
@@ -375,7 +375,7 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
 
     // Работа с базой данных
     try {
-        const { updatedOrderData, orderLbl } = await runInTransaction(async (session) => {
+        const { updatedOrderData, orderLbl } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -492,7 +492,7 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInTransaction(async (session) => {
+        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -645,7 +645,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     try {
         const imageFilenamesToDelete = [];
 
-        const { orderLbl, updatedOrderData, itemsAdjustments } = await runInTransaction(async (session) => {
+        const { orderLbl, updatedOrderData, itemsAdjustments } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -907,7 +907,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
     try {
         // Транзакция MongoDB
-        const { orderLbl, updatedOrderData } = await runInTransaction(async (session) => {
+        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск и проверка наличия документа заказа
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);

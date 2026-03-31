@@ -2,7 +2,7 @@ import Product from '../database/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { prepareGuestCart, prepareCart, prepareFixedDbCart } from '../services/cartService.js';
 import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
-import { runInTransaction } from '../utils/transaction.js';
+import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
 
@@ -78,7 +78,7 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { prodLbl } = await runInTransaction(async (session) => {
+        const { prodLbl } = await runInDbTransaction(async (session) => {
             let prodLbl = `(ID: ${productId})`;
 
             if (quantityNum === 0) {
@@ -157,7 +157,7 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
     }
 
     try {
-        const { prodLbl } = await runInTransaction(async (session) => {
+        const { prodLbl } = await runInDbTransaction(async (session) => {
             const dbProduct = await Product.findById(productId).lean().session(session);
             checkTimeout(req);
 
@@ -197,7 +197,7 @@ export const handleCartWarningsFixRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
 
     try {
-        const { purchaseProductList, cartItemList } = await runInTransaction(async (session) => {
+        const { purchaseProductList, cartItemList } = await runInDbTransaction(async (session) => {
             const { fixedDbCart, purchaseProductList, cartItemList } = await prepareFixedDbCart(dbUser.cart);
             checkTimeout(req);
 
@@ -229,7 +229,7 @@ export const handleCartItemRemoveRequest = async (req, res, next) => {
     }
 
     try {
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             dbUser.cart = dbUser.cart.filter(item => !item.productId.equals(productId));
             await dbUser.save({ session });
             checkTimeout(req);
@@ -246,7 +246,7 @@ export const handleCartClearRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
 
     try {
-        await runInTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             dbUser.cart = [];
             await dbUser.save({ session });
             checkTimeout(req);
