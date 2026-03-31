@@ -1,14 +1,14 @@
 import { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
-import { UpdateHistoryItemSchema } from '@server/database/models/schemas/UpdateHistoryItemSchema.js';
-import { CategorySchema } from '@server/database/models/Category.js';
-import { CounterSchema } from '@server/database/models/Counter.js';
-import { CriticalEventSchema } from '@server/database/models/CriticalEvent.js';
-import { NewsSchema } from '@server/database/models/News.js';
-import { NotificationSchema } from '@server/database/models/Notification.js';
-import { ProductSchema } from '@server/database/models/Product.js';
-import { PromoSchema } from '@server/database/models/Promo.js';
-import { UserSchema } from '@server/database/models/User.js';
-import { BaseOrderSchema, DraftOrderSchema, FinalOrderSchema } from '@server/database/models/Order.js';
+import { UpdateHistoryItemSchema } from '@server/db/models/schemas/UpdateHistoryItemSchema.js';
+import { CategorySchema } from '@server/db/models/Category.js';
+import { CounterSchema } from '@server/db/models/Counter.js';
+import { CriticalEventSchema } from '@server/db/models/CriticalEvent.js';
+import { NewsSchema } from '@server/db/models/News.js';
+import { NotificationSchema } from '@server/db/models/Notification.js';
+import { ProductSchema } from '@server/db/models/Product.js';
+import { PromoSchema } from '@server/db/models/Promo.js';
+import { UserSchema } from '@server/db/models/User.js';
+import { BaseOrderSchema, DraftOrderSchema, FinalOrderSchema } from '@server/db/models/Order.js';
 
 // Типизация схем моделей
 type TBaseDocument<T extends Schema> = InferSchemaType<T> & {

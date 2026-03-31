@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import Product from '@server/database/models/Product.js';
+import Product from '@server/db/models/Product.js';
 import { prepareProduct, prepareCartProductSnapshot } from './productService.js';
 import type { TDbProduct, TDbCartItem, IGuestCart, ICart, IFixedDbCart } from '@server/types/index.js';
 import type { IGuestCartItem } from '@shared/types/index.js';

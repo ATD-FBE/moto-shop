@@ -1,4 +1,4 @@
-import Promo from '../database/models/Promo.js';
+import Promo from '../db/models/Promo.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { preparePromo } from '../services/promoService.js';
 import { storageService } from '../services/storage/storageService.js';

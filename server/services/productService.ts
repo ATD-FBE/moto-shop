@@ -1,8 +1,8 @@
 import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
-import Order from '@server/database/models/Order.js';
-import User from '@server/database/models/User.js';
-import Product from '@server/database/models/Product.js';
-import Category from '@server/database/models/Category.js';
+import Order from '@server/db/models/Order.js';
+import User from '@server/db/models/User.js';
+import Product from '@server/db/models/Product.js';
+import Category from '@server/db/models/Category.js';
 import {
     PRODUCT_STORAGE_FOLDER,
     PRODUCT_ORIGINALS_FOLDER,

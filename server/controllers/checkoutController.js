@@ -1,5 +1,5 @@
-import Order from '@server/database/models/Order.js';
-import Counter from '@server/database/models/Counter.js';
+import Order from '@server/db/models/Order.js';
+import Counter from '@server/db/models/Counter.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';

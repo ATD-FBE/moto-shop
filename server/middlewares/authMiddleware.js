@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../database/models/User.js';
+import User from '../db/models/User.js';
 import config from '../config/config.js';
 import { checkTimeout } from './timeoutMiddleware.js';
 import safeSendResponse from '../utils/safeSendResponse.js';

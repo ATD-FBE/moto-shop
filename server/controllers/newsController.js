@@ -1,4 +1,4 @@
-import News from '@server/database/models/News.js';
+import News from '@server/db/models/News.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';

@@ -1,5 +1,5 @@
-import Product from '@server/database/models/Product.js';
-import Category from '@server/database/models/Category.js';
+import Product from '@server/db/models/Product.js';
+import Category from '@server/db/models/Category.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import {

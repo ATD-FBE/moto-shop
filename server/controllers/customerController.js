@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import User from '@server/database/models/User.js';
-import Order from '@server/database/models/Order.js';
+import User from '@server/db/models/User.js';
+import Order from '@server/db/models/Order.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareOrder } from '@server/services/orderService.js';
 import {

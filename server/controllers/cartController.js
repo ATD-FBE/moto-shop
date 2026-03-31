@@ -1,4 +1,4 @@
-import Product from '../database/models/Product.js';
+import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { prepareGuestCart, prepareCart, prepareFixedDbCart } from '../services/cartService.js';
 import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';

@@ -1,4 +1,4 @@
-import Order from '@server/database/models/Order.js';
+import Order from '@server/db/models/Order.js';
 import {
     prepareDbGuestCart,
     mergeCarts,

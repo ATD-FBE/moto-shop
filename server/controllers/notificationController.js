@@ -1,5 +1,5 @@
-import Notification from '@server/database/models/Notification.js';
-import User from '@server/database/models/User.js';
+import Notification from '@server/db/models/Notification.js';
+import User from '@server/db/models/User.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNotification } from '@server/services/notificationService.js';
 import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';

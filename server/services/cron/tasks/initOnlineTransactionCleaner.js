@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import Order from '@server/database/models/Order.js';
+import Order from '@server/db/models/Order.js';
 import {
     orderDotNotationMap,
     checkFinancialsTransactionRecord,

@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import Order from '@server/database/models/Order.js';
+import Order from '@server/db/models/Order.js';
 import { releaseReservedProducts } from '@server/services/checkoutService.js';
 import log from '@server/utils/logger.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';

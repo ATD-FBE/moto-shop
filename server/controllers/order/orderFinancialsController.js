@@ -1,4 +1,4 @@
-import Order from '@server/database/models/Order.js';
+import Order from '@server/db/models/Order.js';
 import { getCustomerOrderDetailsUrl } from '@server/config/urls.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import Category from '../database/models/Category.js';
-import Product from '../database/models/Product.js';
+import Category from '../db/models/Category.js';
+import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';

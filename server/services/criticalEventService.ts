@@ -1,4 +1,4 @@
-import CriticalEvent from '@server/database/models/CriticalEvent.js';
+import CriticalEvent from '@server/db/models/CriticalEvent.js';
 import log from '@server/utils/logger.js';
 import type { TDbCriticalEvent } from '@server/types/index.js';
 

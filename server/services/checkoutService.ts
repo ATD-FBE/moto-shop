@@ -1,5 +1,5 @@
 import { type ClientSession } from 'mongoose';
-import Product from '@server/database/models/Product.js';
+import Product from '@server/db/models/Product.js';
 import {
     buildProductInventoryUpdatePipeline,
     applyProductBulkUpdate,

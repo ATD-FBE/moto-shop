@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '@server/database/models/User.js';
+import User from '@server/db/models/User.js';
 import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareUser, prepareSession } from '@server/services/authService.js';

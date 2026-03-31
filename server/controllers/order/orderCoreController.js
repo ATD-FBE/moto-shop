@@ -1,5 +1,5 @@
-import Order from '@server/database/models/Order.js';
-import Product from '@server/database/models/Product.js';
+import Order from '@server/db/models/Order.js';
+import Product from '@server/db/models/Product.js';
 import { ORDER_VIEW_MATRIX } from '@server/config/viewPolicy.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';

@@ -10,7 +10,7 @@ export * from './safeSendResponse.types.js';
 export * from './token.types.js';
 export * from './transaction.types.js';
 export * from './typeValidation.types.js';
-export * from './database.types.js';
+export * from './db.types.js';
 export * from './authService.types.js';
 export * from './cartService.types.js';
 export * from './checkoutService.types.js';
