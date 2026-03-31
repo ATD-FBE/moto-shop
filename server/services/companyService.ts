@@ -1,10 +1,11 @@
 import PdfPrinter from 'pdfmake';
 import { join } from 'path';
 import { SERVER_ROOT } from '../config/paths.js';
-import { COMPANY_DETAILS } from '../../shared/company.ts';
+import { COMPANY_DETAILS } from '@shared/company.js';
+import type { IInvoiceDefinition, IOrderInvoiceResult, TFonts } from '@server/types/index.js';
 
-export const generateCompanyDetailsPdf = () => {
-    const docDefinition = {
+export const generateCompanyDetailsPdf = (): IOrderInvoiceResult => {
+    const docDefinition: IInvoiceDefinition = {
         pageSize: 'A4',
         pageMargins: [50, 70, 50, 70],
         defaultStyle: { font: 'Roboto', fontSize: 10 },
@@ -82,7 +83,7 @@ export const generateCompanyDetailsPdf = () => {
         ]
     };
 
-    const fonts = {
+    const fonts: TFonts = {
         Roboto: {
             normal: join(SERVER_ROOT, 'pdf', 'fonts', 'Roboto-Regular.ttf'),
             bold: join(SERVER_ROOT, 'pdf', 'fonts', 'Roboto-Bold.ttf'),
@@ -94,7 +95,7 @@ export const generateCompanyDetailsPdf = () => {
     };
 
     const printer = new PdfPrinter(fonts);
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition as any);
     const filename = 'company_details.pdf';
 
     return { pdfDoc, filename };
