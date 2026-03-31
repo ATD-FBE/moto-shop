@@ -63,35 +63,6 @@ export type TDbDraftOrderDoc = HydratedDocument<TDbDraftOrder>;
 export type TDbFinalOrderDoc = HydratedDocument<TDbFinalOrder>;
 export type TDbOrderDoc = HydratedDocument<TDbOrder>;
 
-// Изменённые типы полей моделей при заполнении (вызове populated)
-type TPopulated<T, Keys extends keyof T, TReplacement> = Omit<T, Keys> & {
-    [K in Keys]: TReplacement;
-};
-
-export type TDbUpdateHistoryItemPopulated = TPopulated<
-    TDbUpdateHistoryItem,
-    'updatedBy',
-    { _id: Types.ObjectId, name: string }
->;
-export type TDbNewsPopulated = TPopulated<TDbNews, 'createdBy', { _id: Types.ObjectId, name: string }> & {
-    updateHistory: TDbUpdateHistoryItemPopulated[];
-};
-export type TDbPromoPopulated = TPopulated<TDbPromo, 'createdBy', { _id: Types.ObjectId, name: string }> & {
-    updateHistory: TDbUpdateHistoryItemPopulated[];
-};
-export type TDbNotificationPopulated = TPopulated<
-    TPopulated<TDbNotification, 'createdBy' | 'sentBy', { _id: Types.ObjectId, name: string }>,
-    'recipients',
-    { _id: Types.ObjectId, name: string }[]
-> & {
-    updateHistory: TDbUpdateHistoryItemPopulated[];
-};
-export type TDbFinalOrderPopulated = TPopulated<
-    TDbFinalOrder,
-    'customerId',
-    { _id: Types.ObjectId, name: string, email: string }
->;
-
 // Расширения типов моделей
 export type TDbNotificationExtended = TDbNotification & {
     isRead?: boolean;
