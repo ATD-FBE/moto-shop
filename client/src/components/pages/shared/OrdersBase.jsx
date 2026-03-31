@@ -431,7 +431,7 @@ function OrderCard({
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
-    const isFinalOrder = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
+    const isOrderFinal = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
     const isCompletedOrder = currentOrderStatusEntry.status === ORDER_STATUS.COMPLETED;
     const isCancelledOrder = currentOrderStatusEntry.status === ORDER_STATUS.CANCELLED;
 
@@ -508,7 +508,7 @@ function OrderCard({
                         refreshOrderState
                     })}
 
-                    {isFinalOrder && renderOrderRepeatButton?.({
+                    {isOrderFinal && renderOrderRepeatButton?.({
                         orderId: id,
                         uiBlocked,
                         onLoading: setOrderRepeatLoading

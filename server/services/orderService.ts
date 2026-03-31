@@ -24,7 +24,7 @@ import {
 } from '@shared/constants.js';
 import { COMPANY_DETAILS } from '@shared/company.js';
 import type {
-    TDbFinalOrder,
+    TDbOrderFinal,
     TDbOrderFinalItem,
     TDbOrderStatusHistoryEntry,
     TDbOrderFinancialsEventEntry,
@@ -106,7 +106,7 @@ export const orderDotNotationMap = {
 } as const;
 
 export const prepareOrder = (
-    dbOrder: TDbFinalOrder,
+    dbOrder: TDbOrderFinal,
     {
         inList = true,
         managed = false,
@@ -388,7 +388,7 @@ export const prepareShippingCost = (
             ? undefined
             : null;
 
-export const generateOrderInvoicePdf = (dbOrder: TDbFinalOrder): IOrderInvoiceResult => {
+export const generateOrderInvoicePdf = (dbOrder: TDbOrderFinal): IOrderInvoiceResult => {
     // Подготовка данных
     const dbOrderItemList = dbOrder.items || [];
     const totalOrderItems = dbOrderItemList.length;
@@ -673,7 +673,7 @@ export const getFieldErrors = (invalidFields: string[], entityType: TEntityType)
 };
 
 export const applyOrderFinancials = (
-    dbOrder: TDbFinalOrder,
+    dbOrder: TDbOrderFinal,
     {
         transactionType,
         financials,

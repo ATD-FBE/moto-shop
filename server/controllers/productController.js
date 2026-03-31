@@ -5,7 +5,7 @@ import { storageService } from '@server/services/storage/storageService.js';
 import {
     prepareProduct,
     cleanupBulkProductFiles,
-    redistributeProductProportionallyInDraftOrders,
+    redistributeProductProportionallyInOrderDrafts,
     buildProductsComputedFields,
     buildCategoriesPipeline
 } from '@server/services/productService.js';
@@ -540,7 +540,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 
             // Пропорциональное распределение зарезервированных товаров среди клиентов, оформляющих заказ
             if (hasReservedOverflow) {
-                await redistributeProductProportionallyInDraftOrders(productId, newStock, session);
+                await redistributeProductProportionallyInOrderDrafts(productId, newStock, session);
                 checkTimeout(req);
             }
 

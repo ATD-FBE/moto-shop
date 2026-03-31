@@ -4,18 +4,19 @@ import { releaseReservedProducts } from '@server/services/checkoutService.js';
 import log from '@server/utils/logger.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { ORDER_STATUS } from '@shared/constants.js';
+import type { TDbOrderDraftDoc } from '@server/types/index.js';
 
 const LOG_CTX = '[CRON EXPIRED ORDER DRAFT CLEANER]';
 
-export const startExpiredOrderDraftCleaner = () => {
+export const startExpiredOrderDraftCleaner = (): void => {
     log.info(`${LOG_CTX} Очистка просроченных черновиков заказов запущена`);
 
     cron.schedule(
         '*/3 * * * *', // Проверка каждые 3 минут
-        async () => {
+        async (): Promise<void> => {
             try {
                 await runInDbTransaction(async (session) => {
-                    const expiredOrderDrafts = await Order.find({
+                    const expiredOrderDrafts: TDbOrderDraftDoc[] = await Order.find({
                         currentStatus: ORDER_STATUS.DRAFT,
                         expiresAt: { $lte: new Date() }
                     }).session(session);

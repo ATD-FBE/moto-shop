@@ -13,7 +13,7 @@ import type {
     TDbProduct,
     IOrderItemRef,
     ISyncCartResult,
-    ISyncDraftOrderResult
+    ISyncOrderDraftResult
 } from '@server/types/index.js';
 import type { ICartItemSnapshot, IOrderAdjustments } from '@shared/types/index.js';
 
@@ -187,10 +187,10 @@ export const syncCart = async (
     );
 };
 
-export const syncDraftOrder = async (
+export const syncOrderDraft = async (
     dbOrderItemList: TDbOrderDraftItem[],
     customerDiscount: number
-): Promise<ISyncDraftOrderResult> => {
+): Promise<ISyncOrderDraftResult> => {
     const productIds = dbOrderItemList.map(item => item.productId);
     const dbProducts: TDbProduct[] = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
@@ -201,7 +201,7 @@ export const syncDraftOrder = async (
     const now = Date.now();
 
     return dbOrderItemList.reduce(
-        (acc: ISyncDraftOrderResult, orderItem: TDbOrderDraftItem): ISyncDraftOrderResult => {
+        (acc: ISyncOrderDraftResult, orderItem: TDbOrderDraftItem): ISyncOrderDraftResult => {
             const productObjectId = orderItem.productId;
             const productId = productObjectId.toString();
             const dbProduct = dbProductMap.get(productId);

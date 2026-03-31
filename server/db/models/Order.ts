@@ -12,7 +12,7 @@ import { ORDER_STATUS } from '@shared/constants.js';
 import type { TDbOrder } from '@server/types/index.js';
 
 export const BaseOrderSchema = new Schema({
-    _modelType: { // Поле ключа дискриминатора для подсхем DraftOrderSchema/FinalOrderSchema
+    _modelType: { // Поле ключа дискриминатора для подсхем OrderDraftSchema/OrderFinalSchema
         type: String,
         enum: Object.values(ORDER_MODEL_TYPE),
         default: ORDER_MODEL_TYPE.DRAFT
@@ -47,12 +47,12 @@ export const BaseOrderSchema = new Schema({
         set: (val: null | string): undefined | string => val === null ? undefined : val
     }
 }, {
-    discriminatorKey: '_modelType', // Ключ дискриминатора для подсхем DraftOrderSchema/FinalOrderSchema
+    discriminatorKey: '_modelType', // Ключ дискриминатора для подсхем OrderDraftSchema/OrderFinalSchema
     optimisticConcurrency: true // Документ сохраняется, если не изменилась версия (метод save())
 });
 
 // Черновик — без required на полях в схемах customerInfo/delivery/financials
-export const DraftOrderSchema = new Schema({
+export const OrderDraftSchema = new Schema({
     items: [DraftItemSchema],
     customerInfo: DraftCustomerInfoSchema,
     delivery: DraftDeliverySchema,
@@ -64,7 +64,7 @@ export const DraftOrderSchema = new Schema({
 }); // { _id: false } - Для дискриминаторов не нужно отключать _id для стабильности
   
 // Подтверждённый/рабочий заказ — с required на полях в схемах customerInfo/delivery/financials
-export const FinalOrderSchema = new Schema({
+export const OrderFinalSchema = new Schema({
     orderNumber: {
         type: String,
         required: true
@@ -119,9 +119,9 @@ BaseOrderSchema.index(
 
 const Order = model<TDbOrder>('Order', BaseOrderSchema);
 
-// Подключение схем DraftOrderSchema/FinalOrderSchema через дискриминатор модели
-Order.discriminator(ORDER_MODEL_TYPE.DRAFT, DraftOrderSchema);
-Order.discriminator(ORDER_MODEL_TYPE.FINAL, FinalOrderSchema);
+// Подключение схем OrderDraftSchema/OrderFinalSchema через дискриминатор модели
+Order.discriminator(ORDER_MODEL_TYPE.DRAFT, OrderDraftSchema);
+Order.discriminator(ORDER_MODEL_TYPE.FINAL, OrderFinalSchema);
 
 export default Order;
 

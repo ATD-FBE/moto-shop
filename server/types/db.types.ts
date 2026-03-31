@@ -8,7 +8,7 @@ import { NotificationSchema } from '@server/db/models/Notification.js';
 import { ProductSchema } from '@server/db/models/Product.js';
 import { PromoSchema } from '@server/db/models/Promo.js';
 import { UserSchema } from '@server/db/models/User.js';
-import { BaseOrderSchema, DraftOrderSchema, FinalOrderSchema } from '@server/db/models/Order.js';
+import { BaseOrderSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
 
 // Типизация схем моделей
 type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
@@ -27,9 +27,9 @@ export type TDbCategory = TBaseDocument<typeof CategorySchema>;
 export type TDbProduct = TBaseDocument<typeof ProductSchema>;
 
 export type TDbBaseOrder = TBaseDocument<typeof BaseOrderSchema>;
-export type TDbDraftOrder = TDbBaseOrder & InferSchemaType<typeof DraftOrderSchema>;
-export type TDbFinalOrder = TDbBaseOrder & InferSchemaType<typeof FinalOrderSchema>;
-export type TDbOrder = TDbDraftOrder | TDbFinalOrder;
+export type TDbOrderDraft = TDbBaseOrder & InferSchemaType<typeof OrderDraftSchema>;
+export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSchema>;
+export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
 // Типизация подсхем моделей
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
@@ -37,18 +37,18 @@ export type TDbUserNotificationItem = TDbUser['notifications'][number];
 export type TDbCartItem = TDbUser['cart'][number];
 export type TDbOrderStatusHistoryEntry = TDbBaseOrder['statusHistory'][number];
 export type TDbOrderTotals = TDbBaseOrder['totals'];
-export type TDbOrderDraftItem = TDbDraftOrder['items'][number];
-export type TDbOrderFinalItem = TDbFinalOrder['items'][number];
-export type TDbOrderDraftCustomerInfo = TDbDraftOrder['customerInfo'];
-export type TDbOrderFinalCustomerInfo = TDbFinalOrder['customerInfo'];
-export type TDbOrderDraftDelivery = TDbDraftOrder['delivery'];
-export type TDbOrderFinalDelivery = TDbFinalOrder['delivery'];
-export type TDbOrderDraftFinancials = TDbDraftOrder['financials'];
-export type TDbOrderFinalFinancials = TDbFinalOrder['financials'];
+export type TDbOrderDraftItem = TDbOrderDraft['items'][number];
+export type TDbOrderFinalItem = TDbOrderFinal['items'][number];
+export type TDbOrderDraftCustomerInfo = TDbOrderDraft['customerInfo'];
+export type TDbOrderFinalCustomerInfo = TDbOrderFinal['customerInfo'];
+export type TDbOrderDraftDelivery = TDbOrderDraft['delivery'];
+export type TDbOrderFinalDelivery = TDbOrderFinal['delivery'];
+export type TDbOrderDraftFinancials = TDbOrderDraft['financials'];
+export type TDbOrderFinalFinancials = TDbOrderFinal['financials'];
 export type TDbOrderFinancialsEventEntry = TDbOrderFinalFinancials['eventHistory'][number];
 export type TDbOrderFinancialsEventVoided = TDbOrderFinancialsEventEntry['voided'];
 export type TDbOrderCurrentOnlineTransaction = TDbOrderFinalFinancials['currentOnlineTransaction'];
-export type TDbOrderAuditLogEntry = NonNullable<TDbFinalOrder['auditLog']>[number];
+export type TDbOrderAuditLogEntry = NonNullable<TDbOrderFinal['auditLog']>[number];
 
 // Типизация схем моделей как документов (с методами и другими встроенными данными)
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;
@@ -59,8 +59,8 @@ export type TDbPromoDoc = HydratedDocument<TDbPromo>;
 export type TDbNotificationDoc = HydratedDocument<TDbNotification>;
 export type TDbCategoryDoc = HydratedDocument<TDbCategory>;
 export type TDbProductDoc = HydratedDocument<TDbProduct>;
-export type TDbDraftOrderDoc = HydratedDocument<TDbDraftOrder>;
-export type TDbFinalOrderDoc = HydratedDocument<TDbFinalOrder>;
+export type TDbOrderDraftDoc = HydratedDocument<TDbOrderDraft>;
+export type TDbOrderFinalDoc = HydratedDocument<TDbOrderFinal>;
 export type TDbOrderDoc = HydratedDocument<TDbOrder>;
 
 // Расширения типов моделей

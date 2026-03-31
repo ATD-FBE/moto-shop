@@ -9,7 +9,7 @@ export interface ISyncCartResult {
     cartItemList: ICartItem[];
 }
 
-export interface ISyncDraftOrderResult {
+export interface ISyncOrderDraftResult {
     fixedDbCart: TDbCartItem[];
     fixedDbOrderItems: TDbOrderDraftItem[];
     orderItemList: IOrderDraftItem[];

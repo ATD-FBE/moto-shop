@@ -5,7 +5,7 @@ import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     syncCart,
-    syncDraftOrder,
+    syncOrderDraft,
     reserveProducts,
     releaseReservedProducts,
     commitProductPurchase,
@@ -101,7 +101,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                 orderAdjustments,
                 purchaseProductList,
                 cartItemList
-            } = await syncDraftOrder(dbOrderDraft.items, customerDiscount);
+            } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
             const orderTotals = calculateOrderTotals(fixedDbOrderItems);
@@ -635,7 +635,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 orderAdjustments,
                 purchaseProductList,
                 cartItemList
-            } = await syncDraftOrder(dbOrderDraft.items, customerDiscount);
+            } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
             const orderTotals = calculateOrderTotals(fixedDbOrderItems);

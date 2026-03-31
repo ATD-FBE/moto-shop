@@ -6,7 +6,7 @@ import {
     prepareCart
 } from '@server/services/cartService.js';
 import { USER_ROLE, ORDER_STATUS, ORDER_ACTIVE_STATUSES } from '@shared/constants.js';
-import type { TDbUser, TDbUserDoc, IUser, TDbDraftOrder, ISession } from '@server/types/index.js';
+import type { TDbUser, TDbUserDoc, IUser, TDbOrderDraft, ISession } from '@server/types/index.js';
 import type { IGuestCartItem } from '@shared/types/index.js';
 
 export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
@@ -48,7 +48,7 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
 
     // При регистрации поля _id и cart в dbUser ещё отсутствуют
     // Активный черновик заказа
-    const orderDraft: TDbDraftOrder | null = dbUser._id
+    const orderDraft: TDbOrderDraft | null = dbUser._id
         ? await Order.findOne({ customerId: dbUser._id, currentStatus: ORDER_STATUS.DRAFT }, { _id: 1 })
         : null;
     const orderDraftId = orderDraft ? orderDraft._id.toString() : null;

@@ -21,7 +21,7 @@ import { calculateOrderTotals } from '@shared/calculations.js';
 import type {
     TDbProduct,
     TDbCartItem,
-    TDbDraftOrder,
+    TDbOrderDraft,
     TDbUser,
     TOrderAdjustmentTypes,
     IOrderItemRef,
@@ -110,7 +110,7 @@ export const cleanupBulkProductFiles = (ids: string[], reqCtx: string): void => 
 };
 
 // Пропорциональное уменьшение кол-ва товара для оформляющих заказ клиентов при его уменьшении админом
-export const redistributeProductProportionallyInDraftOrders = async (
+export const redistributeProductProportionallyInOrderDrafts = async (
     productId: string,
     newStock: number,
     session: ClientSession
@@ -118,13 +118,13 @@ export const redistributeProductProportionallyInDraftOrders = async (
     const productObjectId = Types.ObjectId.createFromHexString(productId);
 
     // Получение всех черновиков заказов с данным товаром
-    const orderDrafts: TDbDraftOrder[] = await Order
+    const orderDrafts: TDbOrderDraft[] = await Order
         .find({
             currentStatus: ORDER_STATUS.DRAFT,
             items: { $elemMatch: { productId: productObjectId } }
         })
         .sort({ createdAt: 1 }) // При равных пропорциях единиц остатков приоритет у первого создавшего заказ
-        .lean<TDbDraftOrder[]>()
+        .lean<TDbOrderDraft[]>()
         .session(session);
 
     // Сбор всех запросов по количеству для этого товара

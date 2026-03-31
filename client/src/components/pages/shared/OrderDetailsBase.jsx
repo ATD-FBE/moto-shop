@@ -275,7 +275,7 @@ function OrderDetailsMain({
     const lastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
-    const isFinalOrder = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
+    const isOrderFinal = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
     const isConfirmedOrder = currentOrderStatusEntry.status === ORDER_STATUS.CONFIRMED;
     const isCompletedOrder = currentOrderStatusEntry.status === ORDER_STATUS.COMPLETED;
     const isCancelledOrder = currentOrderStatusEntry.status === ORDER_STATUS.CANCELLED;
@@ -419,7 +419,7 @@ function OrderDetailsMain({
                                 })}
                             </p>
                         )}
-                        {isFinalOrder && renderOrderRepeatButton && (
+                        {isOrderFinal && renderOrderRepeatButton && (
                             <p>
                                 {renderOrderRepeatButton({ orderId: id })}
                             </p>
