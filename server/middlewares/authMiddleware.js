@@ -57,7 +57,7 @@ export const verifyUser = async (req, res, next) => {
 
 export const verifyRole = (...requiredRoles) => (req, res, next) => {
     if (!requireDbUser(req, next)) return;
-    
+
     if (!requiredRoles.includes(req.dbUser.role)) {
         return safeSendResponse(res, 403, {
             message: 'Запрещено: недостаточно прав',
