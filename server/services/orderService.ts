@@ -627,7 +627,7 @@ const checkFinancialsPaymentRecord = (eventHistory: TDbOrderFinancialsEventEntry
 
 // Проверка существования ID транзакции в истории финансовых событий заказа
 export const checkFinancialsTransactionRecord = (
-    history: IFinancialsEventEntry[],
+    history: TDbOrderFinancialsEventEntry[],
     transactionId: string
 ): boolean => history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
 

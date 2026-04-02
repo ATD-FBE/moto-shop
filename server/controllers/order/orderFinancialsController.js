@@ -1177,6 +1177,7 @@ export const handleWebhook = async (req, res, next) => {
         return safeSendResponse(res, 200, { message: 'Битые или отсутствующие данные' });
     }
 
+    // Проверка ID заказа и попытка его найти через ID транзакции оплаты
     let orderId = normalizedWebhook.orderId;
 
     if (!typeCheck.objectId(orderId)) {
@@ -1202,6 +1203,7 @@ export const handleWebhook = async (req, res, next) => {
         }
     }
 
+    // Синхронизация БД с данными вебхука в транзакции
     try {
         const { updatedOrderData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния

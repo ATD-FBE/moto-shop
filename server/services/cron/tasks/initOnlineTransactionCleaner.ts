@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import Order from '@server/db/models/Order.js';
+import { ONLINE_TRANSACTION_INIT_EXPIRATION } from '@server/config/constants.js';
 import {
     orderDotNotationMap,
     checkFinancialsTransactionRecord,
@@ -16,8 +17,8 @@ import { logCriticalEvent } from '@server/services/criticalEventService.js';
 import { typeCheck } from '@server/utils/typeValidation.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import log from '@server/utils/logger.js';
-import { ONLINE_TRANSACTION_INIT_EXPIRATION } from '@server/config/constants.js';
 import { calculateOrderFinancials } from '@shared/calculations.js';
+import { toError } from '@shared/commonHelpers.js';
 import {
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -25,8 +26,19 @@ import {
     TRANSACTION_STATUS,
     ORDER_STATUS
 } from '@shared/constants.js';
-import type { TDbOrderFinal } from '@server/types/index.js';
-import type { TCardOnlineProvider } from '@shared/types/index.js';
+import type {
+    TDbOrderFinal,
+    TDbOrderWithTx,
+    TDbOrderFinalDoc,
+    INormalizedExternalTx,
+    TAnyExternalTx
+} from '@server/types/index.js';
+import type {
+    TCardOnlineProvider,
+    TTransactionStatus,
+    IUpdatedOrderData,
+    IDotNotationPatch
+} from '@shared/types/index.js';
 
 const expirationMinutes = Math.floor(ONLINE_TRANSACTION_INIT_EXPIRATION / 60 / 1000);
 const LOG_CTX = '[CRON ONLINE TRANSACTION CLEANER]';
@@ -48,7 +60,7 @@ export const startInitOnlineTransactionCleaner = (): void => {
                         $in: [TRANSACTION_STATUS.INIT, TRANSACTION_STATUS.PROCESSING] 
                     },
                     'financials.currentOnlineTransaction.startedAt': { $lte: expirationTime }
-                }).lean<TDbOrderFinal[]>();
+                }).lean<TDbOrderWithTx[]>();
 
                 if (stuckDbOrders.length === 0) return;
 
@@ -56,7 +68,7 @@ export const startInitOnlineTransactionCleaner = (): void => {
                 const stuckDbOrdersByProvider = groupStuckOrdersByProvider(stuckDbOrders);
 
                 // Поиск и нормализация данных найденных транзакций по каждому провайдеру
-                const allNormalizedTransactions = [];
+                const allNormalizedTransactions: INormalizedExternalTx<TAnyExternalTx>[] = [];
 
                 for (const [provider, providerOrders] of stuckDbOrdersByProvider.entries()) {
                     const fetchedTransactions = await fetchExternalTransactions(provider, providerOrders);
@@ -101,7 +113,7 @@ export const startInitOnlineTransactionCleaner = (): void => {
                         // Транзакции найдены => обработка всех транзакций пачкой
                         await processStuckTransactionGroup(orderId, stuckOnlineTxStatus, foundTransactions);
                     } catch (orderErr) {
-                        log.error(`${LOG_CTX} Ошибка обработки заказа (ID: ${orderId}):`, orderErr);
+                        log.error(`${LOG_CTX} Ошибка обработки заказа (ID: ${orderId}):`, toError(orderErr));
                     }
                 };
                 
@@ -110,19 +122,19 @@ export const startInitOnlineTransactionCleaner = (): void => {
                     `транзакций найдено: ${allNormalizedTransactions.length}`
                 );
             } catch (cronErr) {
-                log.error(`${LOG_CTX} Ошибка cron:`, cronErr);
+                log.error(`${LOG_CTX} Ошибка cron:`, toError(cronErr));
             }
         }
     );
 };
 
 const groupStuckOrdersByProvider = (
-    stuckDbOrders: TDbOrderFinal[]
-): Map<TCardOnlineProvider, TDbOrderFinal[]> => {
-    const map = new Map<TCardOnlineProvider, TDbOrderFinal[]>(); // provider => [order, ...]
+    stuckDbOrders: TDbOrderWithTx[]
+): Map<TCardOnlineProvider, TDbOrderWithTx[]> => {
+    const map = new Map<TCardOnlineProvider, TDbOrderWithTx[]>(); // provider => [order, ...]
 
     stuckDbOrders.forEach(dbOrder => {
-        const providers = dbOrder.financials.currentOnlineTransaction?.providers;
+        const providers = dbOrder.financials.currentOnlineTransaction.providers;
         if (!providers) return;
 
         for (const provider of providers) {
@@ -133,23 +145,30 @@ const groupStuckOrdersByProvider = (
     return map;
 };
 
-const groupTransactionsByOrderId = (transactions) => {
-    const map = new Map(); // orderId => [{...}, {...}, {...}]
+const groupTransactionsByOrderId = (
+    transactions: INormalizedExternalTx<TAnyExternalTx>[]
+): Map<string, INormalizedExternalTx<TAnyExternalTx>[]> => {
+    const map = new Map<string, INormalizedExternalTx<TAnyExternalTx>[]>(); // orderId => [{}, ...]
                 
-    transactions
-        .filter(tx => typeCheck.objectId(tx.orderId))
-        .forEach(tx => {
-            const orderId = tx.orderId;
-            map.set(orderId, [...(map.get(orderId) ?? []), tx]);
-        });
+    transactions.forEach(tx => {
+        if (!tx.orderId || !typeCheck.objectId(tx.orderId)) return;
+        map.set(tx.orderId, [...(map.get(tx.orderId) ?? []), tx]);
+    });
 
     return map;
 };
 
-const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transactionGroup) => {
-    const { shouldClearTransaction, updatedOrderData } = await runInDbTransaction(async (session) => {
+const processStuckTransactionGroup = async (
+    orderId: string,
+    stuckOnlineTxStatus: TTransactionStatus,
+    transactionGroup: INormalizedExternalTx<TAnyExternalTx>[]
+): Promise<void> => {
+    const { shouldClearTransaction, updatedOrderData } = await runInDbTransaction<{
+        shouldClearTransaction: boolean;
+        updatedOrderData: IUpdatedOrderData | null;
+    }>(async (session) => {
         // Обновление данных заказа
-        const dbOrder = await Order.findById(orderId).session(session);
+        const dbOrder = await Order.findById<TDbOrderFinalDoc>(orderId).session(session);
 
         // Проверка, не обработан ли заказ к этому времени
         const currentOnlineTx = dbOrder?.financials.currentOnlineTransaction;
@@ -202,7 +221,7 @@ const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transa
             // Проверка критических данных вебхука
             if (!typeCheck.string(transactionId) || !transactionId || isNaN(amount)) {
                 logCriticalEvent({
-                    logContext,
+                    logContext: LOG_CTX,
                     category: 'financials',
                     reason: 'Отсутствуют ключевые данные в транзакции платёжной системы',
                     data: finishedTx
@@ -254,11 +273,11 @@ const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transa
 
         // Удаление данных онлайн транзакции, если массив ID транзакций в ожидании опустел
         if (!currentOnlineTx.transactionIds.length) {
-            dbOrder.financials.currentOnlineTransaction = undefined;
+            (dbOrder as TDbOrderFinal).financials.currentOnlineTransaction = undefined;
         }
 
         // Сохранение обновлённого заказа
-        const updatedDbOrder = await dbOrder.save({ session });
+        const updatedDbOrder: TDbOrderFinal = await dbOrder.save({ session });
         
         // Обновление общей суммы оплат покупателя, если заказ уже завершён
         if (dbOrder.currentStatus === ORDER_STATUS.COMPLETED) {
@@ -267,7 +286,7 @@ const processStuckTransactionGroup = async (orderId, stuckOnlineTxStatus, transa
         }
 
         // Формирование данных для SSE-сообщения
-        const orderPatches = [
+        const orderPatches: IDotNotationPatch[] = [
             { path: orderDotNotationMap.financialsState, value: updatedDbOrder.financials.state },
             { path: orderDotNotationMap.totalPaid, value: updatedDbOrder.financials.totalPaid },
             { path: orderDotNotationMap.totalRefunded, value: updatedDbOrder.financials.totalRefunded },

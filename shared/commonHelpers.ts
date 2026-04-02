@@ -84,6 +84,8 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
     obj: T, 
     patches: IDotNotationPatch[]
 ): void => {
+    const arraysToCleanup: Set<any[]> = new Set();
+
     patches.forEach(({ path, value }) => {
         const parts: (string | number)[] = [];
 
@@ -108,14 +110,15 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
             const key = parts[i];
 
             if (isLast) {
-                if (Array.isArray(current) && typeof key === 'number') { // Обработка массива
-                    if (value === undefined) {
-                        current.splice(key, 1); // Удаление элемента массива по значению undefined
+                if (value === undefined) {
+                    if (Array.isArray(current) && typeof key === 'number') {
+                        current[key] = undefined; // Удаление элемента массива
+                        arraysToCleanup.add(current);
                     } else {
-                        current[key] = value; // Последнему элементу в пути присваивается значение
+                        delete current[key]; // Удаление ключа объекта
                     }
-                } else { // Обработка объекта
-                    current[key] = value; // Последнему элементу в пути присваивается значение
+                } else {
+                    current[key] = value;
                 }
             } else {
                 const nextKey = parts[i + 1];
@@ -133,6 +136,13 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
                 current = current[key]; // Следующий элемент вложения в объект или массив
             }
         }
+    });
+
+    // Очистка массивов от удалённых (undefined) элементов
+    arraysToCleanup.forEach(arr => {
+        const filteredArray = arr.filter((item: any): boolean => item !== undefined);
+        arr.length = 0; // Очистка оригинального массива
+        arr.push(...filteredArray); // Заполнение массива отфильторванными элементами
     });
 };
 

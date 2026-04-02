@@ -36,6 +36,25 @@ import { PromoSchema } from '@server/db/models/Promo.js';
 import { UserSchema } from '@server/db/models/User.js';
 import { BaseOrderSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
 
+// Типизация подсхем моделей
+export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
+export type TDbUserNotificationItem = InferSchemaType<typeof NotificationItemSchema>;
+export type TDbCartItem = InferSchemaType<typeof CartItemSchema>;
+export type TDbOrderStatusHistoryEntry = InferSchemaType<typeof StatusHistoryEntrySchema>;
+export type TDbOrderTotals = InferSchemaType<typeof TotalsSchema>;
+export type TDbOrderDraftItem = InferSchemaType<typeof DraftItemSchema>;
+export type TDbOrderFinalItem = InferSchemaType<typeof FinalItemSchema>;
+export type TDbOrderDraftCustomerInfo = InferSchemaType<typeof DraftCustomerInfoSchema>;
+export type TDbOrderFinalCustomerInfo = InferSchemaType<typeof FinalCustomerInfoSchema>;
+export type TDbOrderDraftDelivery = InferSchemaType<typeof DraftDeliverySchema>;
+export type TDbOrderFinalDelivery = InferSchemaType<typeof FinalDeliverySchema>;
+export type TDbOrderDraftFinancials = InferSchemaType<typeof DraftFinancialsSchema>;
+export type TDbOrderFinalFinancials = InferSchemaType<typeof FinalFinancialsSchema>;
+export type TDbOrderFinancialsEventEntry = InferSchemaType<typeof EventEntrySchema>;
+export type TDbOrderFinancialsEventVoided = InferSchemaType<typeof EventVoidedSchema>;
+export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnlineTransactionSchema>;
+export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
+
 // Типизация схем моделей
 type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
     _id: Types.ObjectId;
@@ -57,24 +76,16 @@ export type TDbOrderDraft = TDbBaseOrder & InferSchemaType<typeof OrderDraftSche
 export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSchema>;
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
-// Типизация подсхем моделей
-export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
-export type TDbUserNotificationItem = InferSchemaType<typeof NotificationItemSchema>;
-export type TDbCartItem = InferSchemaType<typeof CartItemSchema>;
-export type TDbOrderStatusHistoryEntry = InferSchemaType<typeof StatusHistoryEntrySchema>;
-export type TDbOrderTotals = InferSchemaType<typeof TotalsSchema>;
-export type TDbOrderDraftItem = InferSchemaType<typeof DraftItemSchema>;
-export type TDbOrderFinalItem = InferSchemaType<typeof FinalItemSchema>;
-export type TDbOrderDraftCustomerInfo = InferSchemaType<typeof DraftCustomerInfoSchema>;
-export type TDbOrderFinalCustomerInfo = InferSchemaType<typeof FinalCustomerInfoSchema>;
-export type TDbOrderDraftDelivery = InferSchemaType<typeof DraftDeliverySchema>;
-export type TDbOrderFinalDelivery = InferSchemaType<typeof FinalDeliverySchema>;
-export type TDbOrderDraftFinancials = InferSchemaType<typeof DraftFinancialsSchema>;
-export type TDbOrderFinalFinancials = InferSchemaType<typeof FinalFinancialsSchema>;
-export type TDbOrderFinancialsEventEntry = InferSchemaType<typeof EventEntrySchema>;
-export type TDbOrderFinancialsEventVoided = InferSchemaType<typeof EventVoidedSchema>;
-export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnlineTransactionSchema>;
-export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
+// Расширения типов моделей
+export type TDbNotificationExtended = TDbNotification & {
+    isRead?: boolean;
+    readAt?: Date | null;
+};
+export type TDbOrderWithTx = TDbOrderFinal & {
+    financials: TDbOrderFinal['financials'] & {
+        currentOnlineTransaction: NonNullable<TDbOrderFinal['financials']['currentOnlineTransaction']>;
+    };
+};
 
 // Типизация схем моделей как документов (с методами и другими встроенными данными)
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;
@@ -83,14 +94,10 @@ export type TDbUserDoc = HydratedDocument<TDbUser>;
 export type TDbNewsDoc = HydratedDocument<TDbNews>;
 export type TDbPromoDoc = HydratedDocument<TDbPromo>;
 export type TDbNotificationDoc = HydratedDocument<TDbNotification>;
+export type TDbNotificationExtendedDoc = HydratedDocument<TDbNotificationExtended>;
 export type TDbCategoryDoc = HydratedDocument<TDbCategory>;
 export type TDbProductDoc = HydratedDocument<TDbProduct>;
 export type TDbOrderDraftDoc = HydratedDocument<TDbOrderDraft>;
 export type TDbOrderFinalDoc = HydratedDocument<TDbOrderFinal>;
 export type TDbOrderDoc = HydratedDocument<TDbOrder>;
-
-// Расширения типов моделей
-export type TDbNotificationExtended = TDbNotification & {
-    isRead?: boolean;
-    readAt?: Date | null;
-};
+export type TDbOrderWithTxDoc = HydratedDocument<TDbOrderWithTx>;

@@ -138,7 +138,7 @@ export default function OrdersBase({
             !orderPatches.length &&
             !newOrderStatusEntry &&
             !newFinancialsEventEntry &&
-            !lastFinancialsEventEntry
+            lastFinancialsEventEntry !== undefined
         ) return;
 
         setPaginatedOrderList(prev => prev.map(order => {

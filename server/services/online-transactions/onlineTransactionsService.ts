@@ -1,3 +1,4 @@
+import { type Request } from 'express';
 import {
     createYooKassaPayment,
     createYooKassaRefunds,
@@ -8,13 +9,16 @@ import {
 } from './providers/yookassa.provider.js';
 import log from '@server/utils/logger.js';
 import { CARD_ONLINE_PROVIDER } from '@shared/constants.js';
-import type { Request, Response, NextFunction } from 'express';
 import type {
+    TDbOrderWithTx,
     ICardOnlineProviderMap,
     ICreateOnlinePaymentParams,
     ICreateOnlinePaymentResult,
     ICreateOnlineRefundsParams,
     ICreateOnlineRefundsResult,
+    INormalizedWebhook,
+    TAnyExternalTx,
+    INormalizedExternalTx
 } from '@server/types/index.js';
 import type { TCardOnlineProvider, IRefundablePayment } from '@shared/types/index.js';
 
@@ -37,10 +41,10 @@ const providerMap: Record<TCardOnlineProvider, ICardOnlineProviderMap> = {
         createRefund: createYooKassaRefunds,
         verifyWebhook: verifyYooKassaWebhookAuthenticity,
         normalizeWebhook: normalizeYooKassaWebhook,
-        fetchExternal: fetchYooKassaExternalTransactions,
-        normalizeExternal: normalizeYooKassaExternalTransaction
+        fetchExternalTxs: fetchYooKassaExternalTransactions,
+        normalizeExternalTx: normalizeYooKassaExternalTransaction
     }
-} as const;
+};
 
 const getProvider = (provider: TCardOnlineProvider): ICardOnlineProviderMap | null =>
     providerMap[provider] ?? null;
@@ -82,30 +86,42 @@ export const createOnlineRefunds = async (
     return await p.createRefund(refundTasks, params);
 };
 
-export const verifyWebhookAuthenticity = (provider, req) => {
+export const verifyWebhookAuthenticity = (
+    provider: TCardOnlineProvider,
+    req: Request
+): boolean => {
     const p = getProvider(provider);
     if (!p?.verifyWebhook) return false;
 
     return p.verifyWebhook(req);
 };
 
-export const normalizeWebhook = (provider, payload) => {
+export const normalizeWebhook = (
+    provider: TCardOnlineProvider,
+    payload: unknown
+): INormalizedWebhook | null => {
     const p = getProvider(provider);
     if (!p?.normalizeWebhook) return null;
 
     return p.normalizeWebhook(payload);
 };
 
-export const fetchExternalTransactions = async (provider, stuckDbOrders) => {
+export const fetchExternalTransactions = async (
+    provider: TCardOnlineProvider,
+    stuckDbOrders: TDbOrderWithTx[]
+): Promise<TAnyExternalTx[]> => {
     const p = getProvider(provider);
-    if (!p?.fetchExternal) return [];
+    if (!p?.fetchExternalTxs) return [];
 
-    return await p.fetchExternal(stuckDbOrders);
+    return await p.fetchExternalTxs(stuckDbOrders);
 };
 
-export const normalizeExternalTransaction = (provider, tx) => {
+export const normalizeExternalTransaction = (
+    provider: TCardOnlineProvider,
+    tx: TAnyExternalTx
+): INormalizedExternalTx<TAnyExternalTx> | null => {
     const p = getProvider(provider);
-    if (!p?.normalizeExternal) return null;
+    if (!p?.normalizeExternalTx) return null;
 
-    return p.normalizeExternal(tx);
+    return p.normalizeExternalTx(tx);
 };

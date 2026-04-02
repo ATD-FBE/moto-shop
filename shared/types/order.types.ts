@@ -1,4 +1,5 @@
 import type { IDataChange } from './shared.types.js';
+import type { IDotNotationPatch } from './commonHelpers.types.js';
 import type {
     TUserRole,
     TActiveUserRole,
@@ -205,4 +206,13 @@ export interface IRefundablePayment {
     provider: TCardOnlineProvider;
     transactionId: string;
     amount: number;
+}
+
+export interface IUpdatedOrderData {
+    orderPatches?: IDotNotationPatch[];
+    newOrderStatusEntry?: IOrderStatusEntry;
+    newFinancialsEventEntry?: IFinancialsEventEntry;
+    voidedFinancialsEventEntry?: IFinancialsEventEntry;
+    lastFinancialsEventEntry?: IFinancialsEventEntry | null;
+    newAuditLogEntry?: IAuditLogEntry;
 }
