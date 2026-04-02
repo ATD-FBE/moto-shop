@@ -102,7 +102,7 @@ export const productEditorFilterOptions = [
         paramName: 'active',
         defaultValue: ''
     }
-];
+] as const;
 
 export const ordersFilterOptions = [
     {
@@ -130,7 +130,7 @@ export const ordersFilterOptions = [
         ],
         defaultValue: ''
     }
-];
+] as const;
 
 export const customersFilterOptions = [
     {
@@ -169,4 +169,4 @@ export const customersFilterOptions = [
         paramName: 'ban',
         defaultValue: ''
     }
-];
+] as const;

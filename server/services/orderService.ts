@@ -26,6 +26,7 @@ import {
 import { COMPANY_DETAILS } from '@shared/company.js';
 import type {
     TDbOrderFinal,
+    TDbOrderDraftItem,
     TDbOrderFinalItem,
     TDbOrderStatusHistoryEntry,
     TDbOrderFinancialsEventEntry,
@@ -33,13 +34,13 @@ import type {
     TDbOrderAuditLogEntry,
     IInvoiceDefinition,
     TFonts,
+    ICalculateOrderFinancialsResult,
     IOrderItemRef,
     IOrderInvoiceResult,
-    IOrderTransitionResult,
+    IApplyOrderFinancialsParams,
     IApplyOrderFinancialsResult
 } from '@server/types/index.js';
 import type {
-    TUserRole,
     TActiveUserRole,
     IOrder,
     IOrderItem,
@@ -57,12 +58,6 @@ import type {
     IOrderStatusConfig,
     IOrderStatusStepConfig,
     TEntityType,
-    TTransactionType,
-    ICalculateOrderFinancialsResult,
-    TPaymentMethod,
-    TRefundMethod,
-    TBankProvider,
-    TCardOnlineProvider,
     TTransactionStatus
 } from '@shared/types/index.js';
 
@@ -388,6 +383,282 @@ export const prepareShippingCost = (
             ? undefined
             : null;
 
+export const calculateOrderTotals = (
+    dbOrderItemList: (TDbOrderDraftItem | TDbOrderFinalItem)[],
+    { confirmed = false }: { confirmed?: boolean } = {}
+): {
+    subtotalAmount: number;
+    totalSavings: number;
+    totalAmount: number;
+} => {
+    let subtotalAmount = 0;
+    let totalAmount = 0;
+
+    dbOrderItemList.forEach(dbItem => {
+        const quantity = dbItem.quantity;
+        let price: number;
+        let discount: number;
+
+        if (confirmed) {
+            const finalDbItem = dbItem as TDbOrderFinalItem;
+            price = finalDbItem.originalUnitPrice;
+            discount = finalDbItem.appliedDiscount;
+        } else {
+            const draftDbItem = dbItem as TDbOrderDraftItem;
+            price = draftDbItem.priceSnapshot;
+            discount = draftDbItem.appliedDiscountSnapshot;
+        }
+
+        const itemSubtotal = price * quantity;
+        const discountFactor = 1 - discount / 100;
+        const itemTotal = itemSubtotal * discountFactor;
+
+        subtotalAmount += itemSubtotal;
+        totalAmount += itemTotal;
+    });
+
+    const totalSavings = subtotalAmount - totalAmount;
+
+    return {
+        subtotalAmount: Number(subtotalAmount.toFixed(2)),
+        totalSavings: Number(totalSavings.toFixed(2)),
+        totalAmount: Number(totalAmount.toFixed(2))
+    };
+};
+
+export const calculateOrderFinancials = (
+    history: TDbOrderFinancialsEventEntry[]
+): ICalculateOrderFinancialsResult => {
+    return history.reduce(
+        (acc, entry) => {
+            if (entry.voided?.flag) return acc;
+
+            if (entry.event === FINANCIALS_EVENT.PAYMENT_SUCCESS) {
+                acc.totalPaid += entry.action.amount;
+            } else if (entry.event === FINANCIALS_EVENT.REFUND_SUCCESS) {
+                acc.totalRefunded += entry.action.amount;
+            }
+            return acc;
+        },
+        { totalPaid: 0, totalRefunded: 0 }
+    );
+};
+
+export const getFinancialsState = (
+    orderStatus: TOrderStatus,
+    netPaid: number,
+    totalAmount: number,
+    eventHistory: TDbOrderFinancialsEventEntry[]
+): TFinancialsState => {
+    // Отменённый заказ
+    if (orderStatus === ORDER_STATUS.CANCELLED) {
+        if (isEqualCurrency(netPaid, 0)) {
+            const wasPayment = checkFinancialsPaymentRecord(eventHistory);
+            return wasPayment ? FINANCIALS_STATE.REFUNDED : FINANCIALS_STATE.VOIDED;
+        }
+        if (netPaid < 0) {
+            return FINANCIALS_STATE.OVER_REFUNDED;
+        }
+        return FINANCIALS_STATE.REFUND_PENDING; // netPaid > 0
+    }
+
+    // Активный/завершённый заказ
+    if (isEqualCurrency(netPaid, 0)) {
+        return FINANCIALS_STATE.PAID_PENDING;
+    }
+    if (netPaid < 0) {
+        return FINANCIALS_STATE.PAID_NEGATIVE;
+    }
+    if (isEqualCurrency(netPaid, totalAmount)) {
+        return FINANCIALS_STATE.PAID;
+    }
+    if (netPaid < totalAmount) {
+        return FINANCIALS_STATE.PAID_PARTIAL;
+    }
+    return FINANCIALS_STATE.OVERPAID; // netPaid > totalAmount
+};
+
+// Проверка существования успешной оплаты в истории финансовых событий заказа
+const checkFinancialsPaymentRecord = (eventHistory: TDbOrderFinancialsEventEntry[]): boolean =>
+    eventHistory.some(e => !e.voided?.flag && e.event === FINANCIALS_EVENT.PAYMENT_SUCCESS);
+
+// Проверка существования ID транзакции в истории финансовых событий заказа
+export const checkFinancialsTransactionRecord = (
+    history: TDbOrderFinancialsEventEntry[],
+    transactionId: string
+): boolean => history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
+
+export const getOrderTransitionData = (
+    deliveryMethod: TDeliveryMethod,
+    currentOrderStatus: TOrderStatus,
+    stepDelta: 1 | -1 = 1
+): {
+    newOrderStatus: TOrderStatus;
+    rollbackAllowed: boolean;
+} => {
+    const orderStatusSteps = (Object.entries(ORDER_STATUS_CONFIG) as [TOrderStatus, IOrderStatusConfig][])
+        .filter((entry): entry is [TOrderStatus, IOrderStatusStepConfig] => {
+            const [_, cfg] = entry;
+            return !!cfg.step && (
+                cfg.step.deliveryMethods.includes('all') || 
+                cfg.step.deliveryMethods.includes(deliveryMethod)
+            );
+        })
+        .sort((a, b) => a[1].step.order - b[1].step.order)
+        .map(([status, cfg]) => ({ status, ...cfg.step }));
+    const currentStepIdx = orderStatusSteps.findIndex(step => step.status === currentOrderStatus);
+
+    return {
+        newOrderStatus: orderStatusSteps[currentStepIdx + stepDelta]?.status ?? currentOrderStatus,
+        rollbackAllowed: orderStatusSteps[currentStepIdx]?.rollbackAllowed ?? false
+    };
+};
+
+export const returnProductsToStore = async (
+    orderItemList: IOrderItemRef[],
+    session: ClientSession
+): Promise<void> => {
+    await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RETURN, session);
+};
+
+export const getFieldErrors = (invalidFields: string[], entityType: TEntityType): Record<string, string> => {
+    return Object.fromEntries(
+        invalidFields.map(field => [
+            field,
+            fieldErrorMessages[entityType]?.[field]?.mismatch ||
+                fieldErrorMessages[entityType]?.[field]?.default ||
+                fieldErrorMessages.DEFAULT
+        ])
+    );
+};
+
+export const applyOrderFinancials = (
+    dbOrder: TDbOrderFinal,
+    {
+        transactionType,
+        financials,
+        amount,
+        method,
+        provider, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        transactionId, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        originalPaymentId, // Для онлайн возврата на карту
+        markAsFailed,
+        failureReason, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
+        externalReference, // Для оффлайн возврата на карту
+        actor,
+        createdAt // Для онлайн-оплаты/возврата
+    }: IApplyOrderFinancialsParams
+): IApplyOrderFinancialsResult => {
+    const isPayment = transactionType === TRANSACTION_TYPE.PAYMENT;
+    const isRefund = transactionType === TRANSACTION_TYPE.REFUND;
+
+    let { totalPaid: newTotalPaid, totalRefunded: newTotalRefunded } = financials;
+    let financialsEvent: TFinancialsEvent;
+
+    if (isPayment) {
+        if (!markAsFailed) {
+            newTotalPaid += amount;
+            financialsEvent = FINANCIALS_EVENT.PAYMENT_SUCCESS;
+        } else {
+            financialsEvent = FINANCIALS_EVENT.PAYMENT_FAILED;
+        }
+    } else if (isRefund) {
+        if (!markAsFailed) {
+            newTotalRefunded += amount;
+            financialsEvent = FINANCIALS_EVENT.REFUND_SUCCESS;
+        } else {
+            financialsEvent = FINANCIALS_EVENT.REFUND_FAILED;
+        }
+    } else {
+        throw new Error(`Некорректный тип транзакции: ${transactionType}`);
+    }
+
+    const newNetPaid = newTotalPaid - newTotalRefunded;
+    const isBankTransfer =
+        (method as unknown) === PAYMENT_METHOD.BANK_TRANSFER || 
+        (method as unknown) === REFUND_METHOD.BANK_TRANSFER;
+    const isCardOnline =
+        (method as unknown) === PAYMENT_METHOD.CARD_ONLINE || 
+        (method as unknown) === REFUND_METHOD.CARD_ONLINE;
+    const isCardOffline = (method as unknown) === REFUND_METHOD.CARD_OFFLINE;
+    const now = new Date();
+
+    dbOrder.lastActivityAt = now;
+    dbOrder.financials.totalPaid = +(newTotalPaid.toFixed(2));
+    dbOrder.financials.totalRefunded = +(newTotalRefunded.toFixed(2));
+    dbOrder.financials.state = getFinancialsState(
+        dbOrder.currentStatus,
+        newNetPaid,
+        dbOrder.totals.totalAmount,
+        dbOrder.financials.eventHistory // Старая история, ДО добавления новой записи
+    );
+    dbOrder.financials.eventHistory.push({
+        event: financialsEvent,
+        action: {
+            method,
+            amount,
+            ...((isBankTransfer || isCardOnline) && {
+                provider,
+                transactionId,
+                ...(markAsFailed && { failureReason })
+            }),
+            ...(isCardOnline && isRefund && { originalPaymentId }),
+            ...(isCardOffline && isRefund && { externalReference })
+        },
+        changedBy: { id: actor._id, name: actor.name, role: actor.role },
+        changedAt: createdAt || now
+    });
+
+    return { newNetPaid };
+};
+
+export const updateCustomerTotalSpent = async (
+    customerId: Types.ObjectId,
+    amountDelta: number,
+    session: ClientSession,
+    logContext: string = ''
+): Promise<void> => {
+    const amountDeltaSafe = +Number(amountDelta).toFixed(2);
+    if (amountDeltaSafe === 0) return;
+
+    // Атомарное обновление общей суммы оплат с округлением
+    const updateResult = await User.updateOne(
+        { _id: customerId },
+        [{ $set: { totalSpent: { $round: [{ $add: ['$totalSpent', amountDeltaSafe] }, 2] } } }],
+        { session }
+    );
+
+    // Логирование события, когда покупатель не найден в базе
+    if (updateResult.matchedCount === 0) {
+        logCriticalEvent({
+            logContext,
+            category: 'financials',
+            reason: 'Целостность данных нарушена: пользователь не найден для обновления баланса',
+            data: {
+                customerId,
+                amountDelta: amountDeltaSafe,
+                action: 'updateCustomerTotalSpent'
+            }
+        });
+    }
+};
+
+export const clearOrderOnlineTransaction = async (
+    orderId: string | Types.ObjectId,
+    stuckStatus: TTransactionStatus
+): Promise<number> => {
+    const updateResult = await Order.updateOne(
+        {
+            _id: orderId,
+            _modelType: ORDER_MODEL_TYPE.FINAL,
+            'financials.currentOnlineTransaction.status': stuckStatus
+        },
+        { $unset: { 'financials.currentOnlineTransaction': '' } }
+    );
+
+    return updateResult.modifiedCount;
+};
+
 export const generateOrderInvoicePdf = (dbOrder: TDbOrderFinal): IOrderInvoiceResult => {
     // Подготовка данных
     const dbOrderItemList = dbOrder.items || [];
@@ -585,229 +856,4 @@ const fmtDate = (date: Date | string): string => {
 const fmtCurrency = (amount: unknown): string => {
     if (typeof amount !== 'number' || isNaN(amount)) return '—';
     return amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-export const getFinancialsState = (
-    orderStatus: TOrderStatus,
-    netPaid: number,
-    totalAmount: number,
-    eventHistory: TDbOrderFinancialsEventEntry[]
-): TFinancialsState => {
-    // Отменённый заказ
-    if (orderStatus === ORDER_STATUS.CANCELLED) {
-        if (isEqualCurrency(netPaid, 0)) {
-            const wasPayment = checkFinancialsPaymentRecord(eventHistory);
-            return wasPayment ? FINANCIALS_STATE.REFUNDED : FINANCIALS_STATE.VOIDED;
-        }
-        if (netPaid < 0) {
-            return FINANCIALS_STATE.OVER_REFUNDED;
-        }
-        return FINANCIALS_STATE.REFUND_PENDING; // netPaid > 0
-    }
-
-    // Активный/завершённый заказ
-    if (isEqualCurrency(netPaid, 0)) {
-        return FINANCIALS_STATE.PAID_PENDING;
-    }
-    if (netPaid < 0) {
-        return FINANCIALS_STATE.PAID_NEGATIVE;
-    }
-    if (isEqualCurrency(netPaid, totalAmount)) {
-        return FINANCIALS_STATE.PAID;
-    }
-    if (netPaid < totalAmount) {
-        return FINANCIALS_STATE.PAID_PARTIAL;
-    }
-    return FINANCIALS_STATE.OVERPAID; // netPaid > totalAmount
-};
-
-// Проверка существования успешной оплаты в истории финансовых событий заказа
-const checkFinancialsPaymentRecord = (eventHistory: TDbOrderFinancialsEventEntry[]): boolean =>
-    eventHistory.some(e => !e.voided?.flag && e.event === FINANCIALS_EVENT.PAYMENT_SUCCESS);
-
-// Проверка существования ID транзакции в истории финансовых событий заказа
-export const checkFinancialsTransactionRecord = (
-    history: TDbOrderFinancialsEventEntry[],
-    transactionId: string
-): boolean => history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
-
-export const getOrderTransitionData = (
-    deliveryMethod: TDeliveryMethod,
-    currentOrderStatus: TOrderStatus,
-    stepDelta: 1 | -1 = 1
-): IOrderTransitionResult => {
-    const orderStatusSteps = (Object.entries(ORDER_STATUS_CONFIG) as [TOrderStatus, IOrderStatusConfig][])
-        .filter((entry): entry is [TOrderStatus, IOrderStatusStepConfig] => {
-            const [_, cfg] = entry;
-            return !!cfg.step && (
-                cfg.step.deliveryMethods.includes('all') || 
-                cfg.step.deliveryMethods.includes(deliveryMethod)
-            );
-        })
-        .sort((a, b) => a[1].step.order - b[1].step.order)
-        .map(([status, cfg]) => ({ status, ...cfg.step }));
-    const currentStepIdx = orderStatusSteps.findIndex(step => step.status === currentOrderStatus);
-
-    return {
-        newOrderStatus: orderStatusSteps[currentStepIdx + stepDelta]?.status ?? currentOrderStatus,
-        rollbackAllowed: orderStatusSteps[currentStepIdx]?.rollbackAllowed ?? false
-    };
-};
-
-export const returnProductsToStore = async (
-    orderItemList: IOrderItemRef[],
-    session: ClientSession
-): Promise<void> => {
-    await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RETURN, session);
-};
-
-export const getFieldErrors = (invalidFields: string[], entityType: TEntityType): Record<string, string> => {
-    return Object.fromEntries(
-        invalidFields.map(field => [
-            field,
-            fieldErrorMessages[entityType]?.[field]?.mismatch ||
-                fieldErrorMessages[entityType]?.[field]?.default ||
-                fieldErrorMessages.DEFAULT
-        ])
-    );
-};
-
-export const applyOrderFinancials = (
-    dbOrder: TDbOrderFinal,
-    {
-        transactionType,
-        financials,
-        amount,
-        method,
-        provider, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-        transactionId, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-        originalPaymentId, // Для онлайн возврата на карту
-        markAsFailed,
-        failureReason, // Для онлайн-оплаты/возврата и банковского перевода оффлайн
-        externalReference, // Для оффлайн возврата на карту
-        actor,
-        createdAt // Для онлайн-оплаты/возврата
-    }: {
-        transactionType: TTransactionType,
-        financials: ICalculateOrderFinancialsResult,
-        amount: number,
-        method: TPaymentMethod | TRefundMethod,
-        provider: TBankProvider | TCardOnlineProvider,
-        transactionId?: string,
-        originalPaymentId?: string,
-        markAsFailed: boolean,
-        failureReason?: string,
-        externalReference?: string,
-        actor: { _id?: Types.ObjectId, name: string, role: TUserRole },
-        createdAt?: Date
-    }
-): IApplyOrderFinancialsResult => {
-    const isPayment = transactionType === TRANSACTION_TYPE.PAYMENT;
-    const isRefund = transactionType === TRANSACTION_TYPE.REFUND;
-
-    let { totalPaid: newTotalPaid, totalRefunded: newTotalRefunded } = financials;
-    let financialsEvent: TFinancialsEvent;
-
-    if (isPayment) {
-        if (!markAsFailed) {
-            newTotalPaid += amount;
-            financialsEvent = FINANCIALS_EVENT.PAYMENT_SUCCESS;
-        } else {
-            financialsEvent = FINANCIALS_EVENT.PAYMENT_FAILED;
-        }
-    } else if (isRefund) {
-        if (!markAsFailed) {
-            newTotalRefunded += amount;
-            financialsEvent = FINANCIALS_EVENT.REFUND_SUCCESS;
-        } else {
-            financialsEvent = FINANCIALS_EVENT.REFUND_FAILED;
-        }
-    } else {
-        throw new Error(`Некорректный тип транзакции: ${transactionType}`);
-    }
-
-    const newNetPaid = newTotalPaid - newTotalRefunded;
-    const isBankTransfer =
-        (method as unknown) === PAYMENT_METHOD.BANK_TRANSFER || 
-        (method as unknown) === REFUND_METHOD.BANK_TRANSFER;
-    const isCardOnline =
-        (method as unknown) === PAYMENT_METHOD.CARD_ONLINE || 
-        (method as unknown) === REFUND_METHOD.CARD_ONLINE;
-    const isCardOffline = (method as unknown) === REFUND_METHOD.CARD_OFFLINE;
-    const now = new Date();
-
-    dbOrder.lastActivityAt = now;
-    dbOrder.financials.totalPaid = +(newTotalPaid.toFixed(2));
-    dbOrder.financials.totalRefunded = +(newTotalRefunded.toFixed(2));
-    dbOrder.financials.state = getFinancialsState(
-        dbOrder.currentStatus,
-        newNetPaid,
-        dbOrder.totals.totalAmount,
-        dbOrder.financials.eventHistory // Старая история, ДО добавления новой записи
-    );
-    dbOrder.financials.eventHistory.push({
-        event: financialsEvent,
-        action: {
-            method,
-            amount,
-            ...((isBankTransfer || isCardOnline) && {
-                provider,
-                transactionId,
-                ...(markAsFailed && { failureReason })
-            }),
-            ...(isCardOnline && isRefund && { originalPaymentId }),
-            ...(isCardOffline && isRefund && { externalReference })
-        },
-        changedBy: { id: actor._id, name: actor.name, role: actor.role },
-        changedAt: createdAt || now
-    });
-
-    return { newNetPaid };
-};
-
-export const updateCustomerTotalSpent = async (
-    customerId: Types.ObjectId,
-    amountDelta: number,
-    session: ClientSession,
-    logContext: string = ''
-): Promise<void> => {
-    const amountDeltaSafe = +Number(amountDelta).toFixed(2);
-    if (amountDeltaSafe === 0) return;
-
-    // Атомарное обновление общей суммы оплат с округлением
-    const updateResult = await User.updateOne(
-        { _id: customerId },
-        [{ $set: { totalSpent: { $round: [{ $add: ['$totalSpent', amountDeltaSafe] }, 2] } } }],
-        { session }
-    );
-
-    // Логирование события, когда покупатель не найден в базе
-    if (updateResult.matchedCount === 0) {
-        logCriticalEvent({
-            logContext,
-            category: 'financials',
-            reason: 'Целостность данных нарушена: пользователь не найден для обновления баланса',
-            data: {
-                customerId,
-                amountDelta: amountDeltaSafe,
-                action: 'updateCustomerTotalSpent'
-            }
-        });
-    }
-};
-
-export const clearOrderOnlineTransaction = async (
-    orderId: string | Types.ObjectId,
-    stuckStatus: TTransactionStatus
-): Promise<number> => {
-    const updateResult = await Order.updateOne(
-        {
-            _id: orderId,
-            _modelType: ORDER_MODEL_TYPE.FINAL,
-            'financials.currentOnlineTransaction.status': stuckStatus
-        },
-        { $unset: { 'financials.currentOnlineTransaction': '' } }
-    );
-
-    return updateResult.modifiedCount;
 };

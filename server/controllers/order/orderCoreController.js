@@ -5,6 +5,8 @@ import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
+    calculateOrderTotals,
+    calculateOrderFinancials,
     orderDotNotationMap,
     prepareOrder,
     getLastActiveOrderStatus,
@@ -37,7 +39,6 @@ import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { isEqualCurrency, makeOrderItemQuantityFieldName, } from '@shared/commonHelpers.js';
-import { calculateOrderTotals, calculateOrderFinancials } from '@shared/calculations.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,

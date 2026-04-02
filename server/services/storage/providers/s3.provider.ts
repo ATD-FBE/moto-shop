@@ -6,26 +6,35 @@ import {
     DeleteObjectsCommand
 } from "@aws-sdk/client-s3";
 import sharp from 'sharp';
-import s3Client from '../../../config/s3Client.js';
-import config from '../../../config/config.js';
+import config from '@server/config/config.js';
+import s3Client from '@server/config/s3Client.js';
 import {
     PROMO_STORAGE_FOLDER,
     PRODUCT_STORAGE_FOLDER,
     PRODUCT_ORIGINALS_FOLDER,
     PRODUCT_THUMBNAILS_FOLDER,
     ORDER_STORAGE_FOLDER
-} from '../../../config/paths.js';
-import log from '../../../utils/logger.js';
-import { PRODUCT_THUMBNAIL_PRESETS, PRODUCT_THUMBNAIL_SIZES } from '../../../../shared/constants.js';
+} from '@server/config/paths.js';
+import { STORAGE_TYPE } from '@server/config/constants.js';
+import log from '@server/utils/logger.js';
+import { toError } from '@shared/commonHelpers.js';
+import { PRODUCT_THUMBNAIL_PRESETS, PRODUCT_THUMBNAIL_SIZES } from '@shared/constants.js';
+import type { TStorageProvider, TDbOrderFinalItem } from '@server/types/index.js';
 
 sharp.cache(false); // Отменить кэширование оригинальных файлов картинок, чтобы они удалялись при ошибке
 
-export const s3StorageProvider = {
+if (config.storage.type !== STORAGE_TYPE.S3) {
+    throw new Error('S3 Provider инициализирован, но в конфиге выбран другой тип хранилища');
+}
+
+const s3Bucket = config.storage.bucket;
+
+export const s3StorageProvider: TStorageProvider = {
     initStorage: async () => {
-        log.info(`Используется провайдер S3 файлового хранилища, бакет: ${config.storage.bucket}`);
+        log.info(`Используется провайдер S3 файлового хранилища, бакет: ${s3Bucket}`);
     },
 
-    deleteTempFiles: async () => Promise.resolve(), // Используется memory storage
+    deleteTempFiles: async (_tempFiles, _reqCtx) => Promise.resolve(), // Используется memory storage
     
     /// Promo ///
     savePromoImage: async (promoId, tempFile) => {
@@ -137,7 +146,9 @@ export const s3StorageProvider = {
         }
 
         // Фильтрация только тех товаров, у которых есть фото
-        const validOrderItems = orderItems.filter(item => item.imageFilename);
+        const validOrderItems = orderItems.filter(
+            (item): item is TDbOrderFinalItem & { imageFilename: string } => !!item.imageFilename
+        );
         if (!validOrderItems.length) return;
 
         // Копирование превьюшек товаров в хранилище для заказа
@@ -163,11 +174,12 @@ export const s3StorageProvider = {
             try {
                 await copyObjectInS3(srcKey, destKey);
             } catch (err) {
-                if (err.name === 'NoSuchKey' || err.name === 'NotFound' || err.code === 'ENOENT') {
+                const error = toError(err);
+                if (error.name === 'NoSuchKey' || error.name === 'NotFound' || error.code === 'ENOENT') {
                     log.error(`[Order (ID: ${orderId})] Превью товара ${productId} не найдено в источнике`);
                     return; 
                 }
-                throw err; 
+                throw error; 
             }
         });
 
@@ -199,11 +211,11 @@ export const s3StorageProvider = {
 };
 
 // Вспомогательные функции для работы с S3
-const uploadBufferToS3 = async (buffer, key, mimetype) => {
+const uploadBufferToS3 = async (buffer: Buffer, key: string, mimetype: string): Promise<void> => {
     const upload = new Upload({
         client: s3Client,
         params: {
-            Bucket: config.storage.bucket,
+            Bucket: s3Bucket,
             Key: key,
             Body: buffer,
             ContentType: mimetype,
@@ -214,12 +226,12 @@ const uploadBufferToS3 = async (buffer, key, mimetype) => {
     await upload.done();
 };
 
-const copyObjectInS3 = async (srcKey, destKey) => {
+const copyObjectInS3 = async (srcKey: string, destKey: string): Promise<void> => {
     // ВАЖНО: CopySource для S3 API должен начинаться с имени бакета и слэшем перед ним
-    const fullSrcKey = `/${config.storage.bucket}/${srcKey}`;
+    const fullSrcKey = `/${s3Bucket}/${srcKey}`;
 
     const command = new CopyObjectCommand({
-        Bucket: config.storage.bucket,
+        Bucket: s3Bucket,
         CopySource: encodeURI(fullSrcKey), // Кодировка спецсимволов
         Key: destKey, // Куда класть (без имени бакета и кодировки)
         MetadataDirective: 'COPY' // Для обновления/сохранения кэш-заголовков
@@ -228,33 +240,10 @@ const copyObjectInS3 = async (srcKey, destKey) => {
     await s3Client.send(command);
 };
 
-const listObjectsByPrefix = async (prefix, reqCtx = 'SYSTEM') => {
-    const allKeys = [];
-    let token = null;
-
-    try {
-        // Запрос списка объектов 1000+ штук только с последовательными запросами через токены
-        do {
-            const listCommand = new ListObjectsV2Command({
-                Bucket: config.storage.bucket,
-                Prefix: prefix,
-                ContinuationToken: token || undefined // Если токена нет, S3 начнет с начала
-            });
-
-            const response = await s3Client.send(listCommand);
-            response.Contents?.forEach(item => allKeys.push(item.Key));
-
-            token = response.IsTruncated ? response.NextContinuationToken : null;
-        } while (token); // Токен приходит после каждой 1000 объектов (файлов)
-
-        return allKeys;
-    } catch (err) {
-        log.error(`${reqCtx} - Ошибка получения полного списка объектов S3 по префиксу [${prefix}]:`, err);
-        return [];
-    }
-};
-
-const deleteObjectsFromS3 = async (keys = [], reqCtx = 'SYSTEM') => {
+const deleteObjectsFromS3 = async (
+    keys: string | string[] = [],
+    reqCtx: string = 'SYSTEM'
+): Promise<void> => {
     const keysArray = Array.isArray(keys) ? keys : [keys];
     if (!keysArray.length) return;
 
@@ -262,7 +251,7 @@ const deleteObjectsFromS3 = async (keys = [], reqCtx = 'SYSTEM') => {
         // Удаление одного файла, если есть
         if (keysArray.length === 1) {
             const deleteCommand = new DeleteObjectCommand({
-                Bucket: config.storage.bucket,
+                Bucket: s3Bucket,
                 Key: keysArray[0]
             })
 
@@ -278,7 +267,7 @@ const deleteObjectsFromS3 = async (keys = [], reqCtx = 'SYSTEM') => {
             const chunk = keysArray.slice(i, i + chunkSize);
             
             const deleteCommand = new DeleteObjectsCommand({
-                Bucket: config.storage.bucket,
+                Bucket: s3Bucket,
                 Delete: {
                     Objects: chunk.map(key => ({ Key: key })),
                     Quiet: true // Без отчёта по каждому файлу, экономия трафика
@@ -290,11 +279,39 @@ const deleteObjectsFromS3 = async (keys = [], reqCtx = 'SYSTEM') => {
 
         await Promise.all(deletePromises);
     } catch (err) {
-        log.error(`${reqCtx} - Ошибка при удалении объектов S3:`, err);
+        log.error(`${reqCtx} - Ошибка при удалении объектов S3:`, toError(err));
     }
 };
 
-const cleanupByPrefixFromS3 = async (prefix, reqCtx) => {
+const listObjectsByPrefix = async (prefix: string, reqCtx: string = 'SYSTEM'): Promise<string[]> => {
+    const allKeys: string[] = [];
+    let token: string | undefined;
+
+    try {
+        // Запрос списка объектов 1000+ штук только с последовательными запросами через токены
+        do {
+            const listCommand = new ListObjectsV2Command({
+                Bucket: s3Bucket,
+                Prefix: prefix,
+                ContinuationToken: token // Если токена нет, S3 начнет с начала
+            });
+
+            const response = await s3Client.send(listCommand);
+            response.Contents?.forEach(item => {
+                if (item.Key) allKeys.push(item.Key);
+            });
+
+            token = response.IsTruncated ? response.NextContinuationToken : undefined;
+        } while (token); // Токен приходит после каждой 1000 объектов (файлов)
+
+        return allKeys;
+    } catch (err) {
+        log.error(`${reqCtx} - Ошибка получения списка объектов S3 по префиксу [${prefix}]:`, toError(err));
+        return [];
+    }
+};
+
+const cleanupByPrefixFromS3 = async (prefix: string, reqCtx: string): Promise<void> => {
     const keys = await listObjectsByPrefix(prefix, reqCtx); // Безопасно
     await deleteObjectsFromS3(keys, reqCtx); // Безопасно
 };

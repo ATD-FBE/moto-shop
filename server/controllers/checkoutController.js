@@ -12,7 +12,11 @@ import {
     replaceListItemsByKey,
     isCartDifferentFromOrder
 } from '@server/services/checkoutService.js';
-import { orderDotNotationMap, prepareShippingCost } from '@server/services/orderService.js';
+import {
+    calculateOrderTotals,
+    orderDotNotationMap,
+    prepareShippingCost
+} from '@server/services/orderService.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
@@ -24,7 +28,6 @@ import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { ORDER_MODEL_TYPE, ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
-import { calculateOrderTotals } from '@shared/calculations.js';
 import {
     DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
@@ -772,8 +775,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                     sku,
                     name,
                     brand,
-                    unit,
                     quantity,
+                    unit,
                     originalUnitPrice: priceSnapshot,
                     appliedDiscount: appliedDiscountSnapshot,
                     appliedDiscountSource: appliedDiscountSourceSnapshot,

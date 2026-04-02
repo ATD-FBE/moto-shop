@@ -1,7 +1,5 @@
 import { MONGO_MODE, STORAGE_TYPE, MULTER_MODE } from '@server/config/constants.js';
 
-export type TStorageConfig = IFSStorageConfig | IS3StorageConfig;
-
 export type TStorageType = typeof STORAGE_TYPE[keyof typeof STORAGE_TYPE];
 
 export type TMulterMode = typeof MULTER_MODE[keyof typeof MULTER_MODE];
@@ -39,11 +37,11 @@ export interface IAppConfig {
     };
 }
 
+export type TStorageConfig = IFSStorageConfig | IS3StorageConfig;
 interface IFSStorageConfig {
     readonly type: typeof STORAGE_TYPE.FS;
     readonly multerMode: typeof MULTER_MODE.DISK;
 }
-
 interface IS3StorageConfig {
     readonly type: typeof STORAGE_TYPE.S3;
     readonly multerMode: typeof MULTER_MODE.MEMORY;

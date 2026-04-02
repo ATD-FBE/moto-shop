@@ -9,18 +9,13 @@ import type {
 
 export interface ICardOnlineProviderMap {
     createPayment: (params: ICreateOnlinePaymentParams) => Promise<ICreateOnlinePaymentResult>;
-
     createRefund: (
         refundTasks: IRefundablePayment[],
         params: ICreateOnlineRefundsParams
     ) => Promise<ICreateOnlineRefundsResult>;
-
     verifyWebhook: (req: Request) => boolean;
-
     normalizeWebhook: <T = unknown>(payload: T) => INormalizedWebhook<T> | null;
-
     fetchExternalTxs: (stuckDbOrders: TDbOrderWithTx[]) => Promise<TAnyExternalTx[]>;
-
     normalizeExternalTx: <T = TAnyExternalTx>(tx: TAnyExternalTx) => INormalizedExternalTx<T> | null;
 }
 

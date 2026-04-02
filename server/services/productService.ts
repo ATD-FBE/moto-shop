@@ -10,6 +10,7 @@ import {
     STORAGE_URL_PATH
 } from '@server/config/paths.js';
 import { storageService } from './storage/storageService.js';
+import { calculateOrderTotals } from './orderService.js';
 import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import {
     PRODUCT_BRAND_NEW_THRESHOLD_MS,
@@ -17,7 +18,6 @@ import {
     PRODUCT_THUMBNAIL_PRESETS,
     ORDER_STATUS
 } from '@shared/constants.js';
-import { calculateOrderTotals } from '@shared/calculations.js';
 import type {
     TDbProduct,
     TDbCartItem,

@@ -4,4 +4,3 @@ export type TShutdownSignal =
     | 'UNCAUGHT_EXCEPTION' 
     | 'UNHANDLED_REJECTION' 
     | 'SERVER_ERROR';
-    

@@ -2,7 +2,7 @@ import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
 import config from './config.js';
 import { STORAGE_TYPE } from '@server/config/constants.js';
 
-let s3Client: S3Client | null = null; // Инициализация только для S3
+let s3Client: S3Client; // Инициализация только для S3
 
 if (config.storage.type === STORAGE_TYPE.S3) {
     const s3Config: S3ClientConfig = {
@@ -16,6 +16,8 @@ if (config.storage.type === STORAGE_TYPE.S3) {
     };
 
     s3Client = new S3Client(s3Config);
+} else {
+    s3Client = null as any;
 }
 
 export default s3Client;

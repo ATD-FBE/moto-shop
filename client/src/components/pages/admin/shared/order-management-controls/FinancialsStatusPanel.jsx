@@ -8,8 +8,7 @@ import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { formatFinancialsEventHistoryLogs } from '@/services/orderService.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
-import { getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
-import { getOrderCardRefundStats } from '@shared/calculations.js';
+import { getOrderCardRefundStats, getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
 import {
     ORDER_STATUS,
     FINANCIALS_STATE_CONFIG,

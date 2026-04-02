@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
-import User from '../db/models/User.js';
-import config from '../config/config.js';
+import User from '@server/db/models/User.js';
+import config from '@server/config/config.js';
 import { checkTimeout } from './timeoutMiddleware.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { REQUEST_STATUS } from '../../shared/constants.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 
 export const disableCache = (req, res, next) => {
     res.set('Cache-Control', 'no-store');
@@ -55,6 +56,8 @@ export const verifyUser = async (req, res, next) => {
 };
 
 export const verifyRole = (...requiredRoles) => (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+    
     if (!requiredRoles.includes(req.dbUser.role)) {
         return safeSendResponse(res, 403, {
             message: 'Запрещено: недостаточно прав',
@@ -65,8 +68,9 @@ export const verifyRole = (...requiredRoles) => (req, res, next) => {
     next();
 };
 
-
+//////////////////////////////////////////////////////////////
 /// Опциональные версии мидлвэаров проверки прав и доступа ///
+//////////////////////////////////////////////////////////////
 
 export const optionalAuth = async (req, res, next) => {
     try {

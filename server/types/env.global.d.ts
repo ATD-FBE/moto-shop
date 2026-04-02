@@ -47,10 +47,12 @@ declare global {
 
     namespace Express {
         interface Request {
+            reqCtx: string;
             rawBody?: Buffer;
-            reqCtx?: string;
             user?: TTokenDecodedUser;
             dbUser?: TDbUser;
+            file?: Express.Multer.File;
+            files?: Express.Multer.File[];
             fileUploadError?: {
                 field: string;
                 type: string;

@@ -2,10 +2,12 @@ import config from '@server/config/config.js';
 import { fsStorageProvider } from './providers/fs.provider.js';
 import { s3StorageProvider } from './providers/s3.provider.js';
 import { STORAGE_TYPE } from '@server/config/constants.js';
+import type { TStorageProvider } from '@server/types/index.js';
 
-let provider;
+const storageType = config.storage.type;
+let provider: TStorageProvider;
 
-switch (config.storage.type) {
+switch (storageType) {
     case STORAGE_TYPE.FS:
         provider = fsStorageProvider;
         break;
@@ -13,20 +15,22 @@ switch (config.storage.type) {
         provider = s3StorageProvider;
         break;
     default:
-        throw new Error(`Неизвестный тип файлового хранилища: ${config.storage.type}`);
+        throw new Error(`Неизвестный тип файлового хранилища: ${storageType}`);
 }
 
-export const storageService = {
-    supports: provider.supports,
+export const storageService: TStorageProvider = {
     initStorage: provider.initStorage,
-    savePromoImage: provider.savePromoImage,
     deleteTempFiles: provider.deleteTempFiles,
+
+    savePromoImage: provider.savePromoImage,
     deletePromoImage: provider.deletePromoImage,
     cleanupPromoFiles: provider.cleanupPromoFiles,
+
     saveProductImages: provider.saveProductImages,
     deleteProductImages: provider.deleteProductImages,
     cleanupProductFiles: provider.cleanupProductFiles,
+
     saveOrderItemsImages: provider.saveOrderItemsImages,
     deleteOrderItemsImages: provider.deleteOrderItemsImages,
     cleanupOrderFiles: provider.cleanupOrderFiles
-};
+} as const;

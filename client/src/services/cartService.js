@@ -2,7 +2,6 @@ import { updateCustomerDiscount } from '@/redux/slices/authSlice.js';
 import { setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/redux/slices/cartSlice.js';
 import { upsertProductsInStore } from '@/redux/slices/productsSlice.js';
 import { saveGuestCartToLocalStorage } from '@/services/guestCartService.js';
-import { calculateCartTotals } from '@shared/calculations.js';
 
 export const setCartItem = (cartItem, isGuestCart = false) => (dispatch, getState) => {
     dispatch(upsertCartItem(cartItem));
@@ -131,3 +130,21 @@ const buildCartProductData = (cartItemList, productMap) =>
                 quantity: cartItem.quantity
             };
         });
+
+const calculateCartTotals = (cartProductData, customerDiscount) => {
+    const { rawTotal, discountedTotal } =  cartProductData.reduce((acc, cartItem) => {
+        const { price, quantity, discount: productDiscount } = cartItem;
+        acc.rawTotal += price * quantity;
+
+        const effectiveDiscount = Math.max(productDiscount, customerDiscount);
+        const discountFactor = 1 - effectiveDiscount / 100;
+        acc.discountedTotal += price * quantity * discountFactor;
+
+        return acc;
+    }, { rawTotal: 0, discountedTotal: 0 });
+
+    return {
+        rawTotal: Number(rawTotal.toFixed(2)),
+        discountedTotal: Number(discountedTotal.toFixed(2))
+    };
+};

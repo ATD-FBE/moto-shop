@@ -8,13 +8,15 @@ import {
     PRODUCT_ORIGINALS_FOLDER,
     PRODUCT_THUMBNAILS_FOLDER,
     ORDER_STORAGE_PATH
-} from '../../../config/paths.js';
-import log from '../../../utils/logger.js';
-import { PRODUCT_THUMBNAIL_PRESETS, PRODUCT_THUMBNAIL_SIZES } from '../../../../shared/constants.js';
+} from '@server/config/paths.js';
+import log from '@server/utils/logger.js';
+import { toError } from '@shared/commonHelpers.js';
+import { PRODUCT_THUMBNAIL_PRESETS, PRODUCT_THUMBNAIL_SIZES } from '@shared/constants.js';
+import type { TStorageProvider, TDbOrderFinalItem } from '@server/types/index.js';
 
 sharp.cache(false); // Отменить кэширование оригинальных файлов картинок, чтобы они удалялись при ошибке
 
-export const fsStorageProvider = {
+export const fsStorageProvider: TStorageProvider = {
     initStorage: async () => {
         await ensureDir(STORAGE_ROOT);
         await Promise.all([
@@ -145,7 +147,9 @@ export const fsStorageProvider = {
         }
 
         // Фильтрация только тех товаров, у которых есть фото
-        const validOrderItems = orderItems.filter(item => item.imageFilename);
+        const validOrderItems = orderItems.filter(
+            (item): item is TDbOrderFinalItem & { imageFilename: string } => !!item.imageFilename
+        );
         if (!validOrderItems.length) return;
 
         // Предварительное создание папки заказа в хранилище
@@ -170,11 +174,13 @@ export const fsStorageProvider = {
             try {
                 await copyFile(srcPath, destPath);
             } catch (err) {
-                if (err.code === 'ENOENT') {
+                const error = toError(err);
+
+                if (error.code === 'ENOENT') {
                     log.error(`[Order (ID: ${orderId})] Превью товара ${productId} не найдено в источнике`);
                     return;
                 }
-                throw err;
+                throw error;
             }
         });
 
@@ -203,31 +209,33 @@ export const fsStorageProvider = {
         const orderDir = join(ORDER_STORAGE_PATH, orderId);
         await cleanupDir(orderDir, reqCtx);
     }
-};
+} as const;
 
 // Вспомогательные функции для работы с FS
-const ensureDir = async (dirPath) => {
+const ensureDir = async (dirPath: string): Promise<void> => {
     await fsp.mkdir(dirPath, { recursive: true }); // recursive: true - создание промежуточных директорий
 };
 
-const moveFile = async (srcPath, destPath) => {
+const moveFile = async (srcPath: string, destPath: string): Promise<void> => {
     try {
         await fsp.rename(srcPath, destPath);
     } catch (err) {
-        if (err.code === 'EXDEV') { // Ошибка может возникнуть при переносе на разных дисках или разделах
+        const error = toError(err);
+
+        if (error.code === 'EXDEV') { // Ошибка может возникнуть при переносе на разных дисках или разделах
             await fsp.copyFile(srcPath, destPath);
             await fsp.unlink(srcPath);
         } else {
-            throw err;
+            throw error;
         }
     }
 };
 
-const copyFile = async (srcPath, destPath) => {
+const copyFile = async (srcPath: string, destPath: string): Promise<void> => {
     await fsp.copyFile(srcPath, destPath);
 };
 
-const cleanupFiles = async (paths = [], reqCtx = 'SYSTEM') => {
+const cleanupFiles = async (paths: string | string[] = [], reqCtx: string = 'SYSTEM'): Promise<void> => {
     const pathsArray = Array.isArray(paths) ? paths : [paths];
     if (!pathsArray.length) return;
     
@@ -236,13 +244,13 @@ const cleanupFiles = async (paths = [], reqCtx = 'SYSTEM') => {
             try {
                 await fsp.rm(filePath, { force: true }); // force: true - нет ошибки при отсутствии файла
             } catch (err) {
-                log.error(`${reqCtx} - Не удалось удалить файл "${filePath}":`, err);
+                log.error(`${reqCtx} - Не удалось удалить файл "${filePath}":`, toError(err));
             }
         })
     );
 };
 
-const cleanupDir = async (dirPath, reqCtx = 'SYSTEM') => {
+const cleanupDir = async (dirPath: string, reqCtx: string = 'SYSTEM'): Promise<void> => {
     if (!dirPath) return;
     
     try {
@@ -251,6 +259,6 @@ const cleanupDir = async (dirPath, reqCtx = 'SYSTEM') => {
             force: true      // force: true - нет ошибки при отсутствии папки
         });
     } catch (err) {
-        log.error(`${reqCtx} - Не удалось удалить папку ${dirPath}:`, err);
+        log.error(`${reqCtx} - Не удалось удалить папку ${dirPath}:`, toError(err));
     }
 };

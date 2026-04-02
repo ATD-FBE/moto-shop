@@ -1,5 +1,17 @@
-import { DISCOUNT_SOURCE, CURRENCY_EPS } from './constants.js';
-import type { IAppliedDiscount, IDotNotationPatch }  from './types/index.js';
+import {
+    DISCOUNT_SOURCE,
+    CURRENCY_EPS,
+    FINANCIALS_EVENT,
+    PAYMENT_METHOD,
+    CARD_ONLINE_PROVIDER
+} from './constants.js';
+import type {
+    IAppliedDiscount,
+    IDotNotationPatch,
+    IFinancialsEventEntry,
+    IRefundablePayment,
+    TCardOnlineProvider
+}  from './types/index.js';
 
 export const toError = (err: unknown): Error => {
     if (err instanceof Error) return err;
@@ -144,6 +156,52 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
         arr.length = 0; // Очистка оригинального массива
         arr.push(...filteredArray); // Заполнение массива отфильторванными элементами
     });
+};
+
+// Сбор данных для онлайн-возвратов на карты (записи событий и общая сумма оплат картами, провайдеры)
+export const getOrderCardRefundStats = (
+    history: IFinancialsEventEntry[],
+    { amountOnly = false }: { amountOnly?: boolean } = {}
+): {
+    availableCardRefundAmount: number;
+    refundablePayments: IRefundablePayment[];
+    refundableProviders: TCardOnlineProvider[];
+} => {
+    const alreadyRefundedTransactionIdSet = new Set(
+        history
+            .map(e => e.event === FINANCIALS_EVENT.REFUND_SUCCESS && e.action.originalPaymentId)
+            .filter((id): id is string => Boolean(id))
+    );
+
+    let availableCardRefundAmount = 0;
+    const refundablePayments: IRefundablePayment[] = [];
+    const refundableProvidersSet: Set<TCardOnlineProvider> = new Set();
+
+    for (const entry of history) {
+        if (entry.voided?.flag) continue;
+        if (entry.event !== FINANCIALS_EVENT.PAYMENT_SUCCESS) continue;
+
+        const { method, transactionId, provider, amount } = entry.action;
+        if (method !== PAYMENT_METHOD.CARD_ONLINE) continue;
+        if (!transactionId) continue;
+        if (alreadyRefundedTransactionIdSet.has(transactionId)) continue;
+
+        const cardOnlineProvider = provider as TCardOnlineProvider;
+        if (!(Object.values(CARD_ONLINE_PROVIDER)).includes(cardOnlineProvider)) continue;
+
+        availableCardRefundAmount += entry.action.amount;
+
+        if (!amountOnly) {
+            refundablePayments.push({ provider: cardOnlineProvider, transactionId, amount });
+            refundableProvidersSet.add(cardOnlineProvider);
+        }
+    }
+
+    return {
+        availableCardRefundAmount,
+        refundablePayments: amountOnly ? [] : refundablePayments,
+        refundableProviders: amountOnly ? [] : [...refundableProvidersSet]
+    };
 };
 
 export const getLastFinancialsEventEntry = <T extends { voided?: { flag: boolean } | null }>(

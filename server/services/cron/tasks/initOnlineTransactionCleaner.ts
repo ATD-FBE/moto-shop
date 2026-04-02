@@ -3,6 +3,7 @@ import Order from '@server/db/models/Order.js';
 import { ONLINE_TRANSACTION_INIT_EXPIRATION } from '@server/config/constants.js';
 import {
     orderDotNotationMap,
+    calculateOrderFinancials,
     checkFinancialsTransactionRecord,
     applyOrderFinancials,
     updateCustomerTotalSpent,
@@ -17,7 +18,6 @@ import { logCriticalEvent } from '@server/services/criticalEventService.js';
 import { typeCheck } from '@server/utils/typeValidation.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import log from '@server/utils/logger.js';
-import { calculateOrderFinancials } from '@shared/calculations.js';
 import { toError } from '@shared/commonHelpers.js';
 import {
     PAYMENT_METHOD,

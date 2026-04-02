@@ -4,6 +4,7 @@ import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
     orderDotNotationMap,
+    calculateOrderFinancials,
     generateOrderInvoicePdf,
     checkFinancialsTransactionRecord,
     getFinancialsState,
@@ -27,8 +28,11 @@ import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import log from '@server/utils/logger.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
-import { isEqualCurrency, getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
-import { calculateOrderFinancials, getOrderCardRefundStats } from '@shared/calculations.js';
+import {
+    isEqualCurrency,
+    getOrderCardRefundStats,
+    getLastFinancialsEventEntry
+} from '@shared/commonHelpers.js';
 import {
     USER_ROLE,
     CURRENCY,

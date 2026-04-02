@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import { requestContext } from '@server/middlewares/requestContextMiddleware.js';
 import { errorTracker, globalErrorHandler } from '@server/middlewares/errorMiddleware.js';
@@ -38,7 +38,11 @@ app.set('trust proxy', true); // Для определения IP адреса �
 app.use(requestContext);
 app.use(errorTracker);
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({
+    verify: (req: Request, res: Response, buf: Buffer) => {
+        req.rawBody = buf;
+    }
+}));
 
 apiRouter.use('/logs', reqTimeout(15000), logRouter);
 apiRouter.use('/company', reqTimeout(15000), companyRouter);
