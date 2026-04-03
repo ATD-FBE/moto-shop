@@ -1,4 +1,4 @@
-import { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
+import { InferSchemaType, HydratedDocument, Model, Schema, Types } from 'mongoose';
 import { UpdateHistoryItemSchema } from '@server/db/models/schemas/UpdateHistoryItemSchema.js';
 import { NotificationItemSchema } from '@server/db/models/schemas/user/NotificationItemSchema.js';
 import { CartItemSchema } from '@server/db/models/schemas/user/CartItemSchema.js';
@@ -55,6 +55,11 @@ export type TDbOrderFinancialsEventVoided = InferSchemaType<typeof EventVoidedSc
 export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnlineTransactionSchema>;
 export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
 
+// Типизация методов моделей
+export interface TDbUserMethods {
+    comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
 // Типизация схем моделей
 type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
     _id: Types.ObjectId;
@@ -64,7 +69,7 @@ type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
 
 export type TDbCriticalEvent = TBaseDocument<typeof CriticalEventSchema>;
 export type TDbCounter = TBaseDocument<typeof CounterSchema>;
-export type TDbUser = TBaseDocument<typeof UserSchema>;
+export type TDbUser = TBaseDocument<typeof UserSchema> & TDbUserMethods;
 export type TDbNews = TBaseDocument<typeof NewsSchema>;
 export type TDbPromo = TBaseDocument<typeof PromoSchema>;
 export type TDbNotification = TBaseDocument<typeof NotificationSchema>;

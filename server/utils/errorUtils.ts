@@ -17,7 +17,7 @@ export const createAppError = (
     statusCode: number,
     message: string,
     details?: Record<string, unknown>
-) => {
+): Error => {
     const error = new Error(message);
     error.isAppError = true;
     error.statusCode = statusCode;

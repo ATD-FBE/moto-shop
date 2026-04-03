@@ -1,6 +1,6 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { RequestHandler } from 'express';
 
-export const requestContext = (req: Request, res: Response, next: NextFunction): void => {
+export const requestContext: RequestHandler = (req, _res, next) => {
     const { method, originalUrl, ip = 'No IP' } = req;
     req.reqCtx = `${method} ${originalUrl} [${ip}]`;
     next();

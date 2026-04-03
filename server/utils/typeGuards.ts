@@ -10,3 +10,7 @@ export const requireDbUser = (req: Request, next: NextFunction): req is Request 
     }
     return true;
 };
+
+export const isAppError = (err: Error): err is Error & { statusCode: number } => {
+    return err.isAppError === true && typeof err.statusCode === 'number';
+};

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { sendCompanyDetailsPdfRequest } from '@/api/companyRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
