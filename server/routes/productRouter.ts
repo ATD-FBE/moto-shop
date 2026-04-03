@@ -4,7 +4,7 @@ import { PRODUCT_STORAGE_PATH } from '@server/config/paths.js';
 import createMulterConfig from '@server/utils/multerConfig.js';
 import {
     verifyAuth, verifyUser, verifyRole,
-    optionalAuth, optionalUser, optionalRole
+    optionalAuth, optionalUser
 } from '@server/middlewares/authMiddleware.js';
 import {
     handleProductListRequest,
@@ -34,10 +34,10 @@ const uploadImages = createMulterConfig({
 });
 
 const router: Router = Router();
-const { ADMIN, CUSTOMER } = USER_ROLE;
+const { ADMIN } = USER_ROLE;
 
-router.get('/', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handleProductListRequest);
-router.get('/:productId', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handleProductRequest);
+router.get('/', optionalAuth, optionalUser, handleProductListRequest);
+router.get('/:productId', optionalAuth, optionalUser, handleProductRequest);
 router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImages, handleProductCreateRequest);
 router.put('/:productId', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImages, handleProductUpdateRequest);
 router.patch('/bulk', verifyAuth, verifyUser, verifyRole(ADMIN), handleBulkProductUpdateRequest);

@@ -201,7 +201,7 @@ export const redistributeProductProportionallyInOrderDrafts = async (
 
     // Сохранение изменений в корзинах клиентов через формирование bulk-операций
     const customerIds = filteredTempResults.map(req => req.customerId);
-    const users: TDbUser[] = await User.find({
+    const users = await User.find({
         _id: { $in: customerIds },
         cart: { $elemMatch: { productId: productObjectId } }
     }).lean<TDbUser[]>().session(session);

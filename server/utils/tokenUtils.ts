@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 import config from '@server/config/config.js';
+import { toError } from '@shared/commonHelpers.js';
 import type { ITokenUserPayload, TTokenType, ITokenTypeConfig } from '@server/types/index.js';
 
 const TOKEN_CONFIG: Record<TTokenType, ITokenTypeConfig> = {
@@ -33,7 +34,7 @@ export const generateToken = (user: ITokenUserPayload, type: TTokenType): string
     try {
         return jwt.sign(payload, secretKey, { expiresIn });
     } catch (err) {
-        throw new Error('Не удалось сгенерировать токен');
+        throw new Error(`Не удалось сгенерировать токен: ${toError(err).message}`);
     }
 };
 

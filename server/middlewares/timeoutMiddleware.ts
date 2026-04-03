@@ -1,6 +1,7 @@
 import { ERROR_SIGNALS } from '@server/config/constants.js';
+import type { RequestHandler, Request } from 'express';
 
-export const requestTimeout = (duration) => (req, res, next) => {
+export const requestTimeout = (duration: number): RequestHandler => (req, res, next) => {
     res.setTimeout(duration, () => {
         req.connectionTimeout = true;
 
@@ -12,7 +13,7 @@ export const requestTimeout = (duration) => (req, res, next) => {
     next();
 };
 
-export const checkTimeout = (req) => {
+export const checkTimeout = (req: Request): void => {
     if (req.connectionTimeout) {
         const error = new Error(ERROR_SIGNALS.TIMEOUT_ABORT);
         error.isTimeoutAbort = true; 

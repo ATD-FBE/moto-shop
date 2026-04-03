@@ -4,7 +4,7 @@ import { PROMO_STORAGE_PATH } from '@server/config/paths.js';
 import createMulterConfig from '@server/utils/multerConfig.js';
 import {
     verifyAuth, verifyUser, verifyRole,
-    optionalAuth, optionalUser, optionalRole
+    optionalAuth, optionalUser
 } from '@server/middlewares/authMiddleware.js';
 import {
     handlePromoListRequest,
@@ -30,9 +30,9 @@ const uploadImage = createMulterConfig({
 });
 
 const router: Router = Router();
-const { ADMIN, CUSTOMER } = USER_ROLE;
+const { ADMIN } = USER_ROLE;
 
-router.get('/', optionalAuth, optionalUser, optionalRole(ADMIN, CUSTOMER), handlePromoListRequest);
+router.get('/', optionalAuth, optionalUser, handlePromoListRequest);
 router.get('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoRequest);
 router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoCreateRequest);
 router.put('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoUpdateRequest);

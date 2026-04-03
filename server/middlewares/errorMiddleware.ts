@@ -1,7 +1,9 @@
-import log from '../utils/logger.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
+import log from '@server/utils/logger.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { toError } from '@shared/commonHelpers.js';
+import type { RequestHandler, ErrorRequestHandler } from 'express';
 
-export const errorTracker = (req, res, next) => {
+export const errorTracker: RequestHandler = (req, res, next) => {
     req.connectionAborted = false;
     req.connectionTimeout = false;
 
@@ -27,20 +29,21 @@ export const errorTracker = (req, res, next) => {
     next();
 };
 
-export const globalErrorHandler = (err, req, res, next) => {
-    if (err.isTimeoutAbort) return;
+export const globalErrorHandler: ErrorRequestHandler = (err, req, res, _next) => {
+    const error = toError(err);
+    if (error.isTimeoutAbort) return;
 
-    const statusCode = err.statusCode || 500;
+    const statusCode = error.statusCode || 500;
     const isServerError = statusCode >= 500;
     const reqCtxStatus = `${req.reqCtx} - Status: ${statusCode}`;
 
     if (isServerError) {
-        log.error(`${reqCtxStatus} - Ошибка сервера:`, err);
+        log.error(`${reqCtxStatus} - Ошибка сервера:`, error);
     } else {
         const errorDescription = statusCode === 408 ? 'Таймаут запроса' : 'Ошибка клиента';
-        log.warn(`${reqCtxStatus} - ${errorDescription}: ${err.message}`);
+        log.warn(`${reqCtxStatus} - ${errorDescription}: ${error.message}`);
     }
 
-    const errorMessage = err.message || (isServerError ? 'Ошибка сервера!' : 'Ошибка запроса!');
+    const errorMessage = error.message || (isServerError ? 'Ошибка сервера!' : 'Ошибка запроса!');
     safeSendResponse(res, statusCode, { message: errorMessage });
 };

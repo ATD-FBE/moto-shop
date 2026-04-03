@@ -37,6 +37,7 @@ declare global {
 
     interface Error {
         errors?: Record<string, unknown>;
+        isTimeoutAbort?: boolean;
         isAppError?: boolean;
         statusCode?: number;
         code?: string | number;
@@ -49,6 +50,8 @@ declare global {
         interface Request {
             reqCtx: string;
             rawBody?: Buffer;
+            connectionAborted?: boolean;
+            connectionTimeout?: boolean;
             user?: TTokenDecodedUser;
             dbUser?: TDbUser;
             file?: Express.Multer.File;

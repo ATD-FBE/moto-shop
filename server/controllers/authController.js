@@ -439,7 +439,7 @@ export const handleAuthSessionRequest = async (req, res, next) => {
 };
 
 /// Проверка токена доступа ///
-export const handleAuthCheckRequest = (req, res) => {
+export const handleAuthCheckRequest = (_req, res) => {
     safeSendResponse(res, 200, { message: 'Токен доступа валидный' });
 };
 
@@ -452,11 +452,11 @@ export const handleAuthRefreshRequest = async (req, res, next) => {
             return safeSendResponse(res, 401, { message: 'Токен обновления отсутствует' });
         }
 
-        const accessTokenExp = Date.now() + ACCESS_TOKEN_MAX_AGE;
-
         const decodedUser = jwt.verify(refreshToken, config.jwt.refreshSecretKey);
         const accessToken = generateToken(decodedUser, 'access');
         res.cookie('accessToken', accessToken, { ...TOKEN_COOKIE_OPTIONS, maxAge: ACCESS_TOKEN_MAX_AGE });
+
+        const accessTokenExp = Date.now() + ACCESS_TOKEN_MAX_AGE;
         
         safeSendResponse(res, 200, { message: 'Токен доступа обновлён', accessTokenExp });
     } catch (err) {

@@ -4,41 +4,58 @@ import config from '@server/config/config.js';
 import { checkTimeout } from './timeoutMiddleware.js';
 import { requireDbUser } from '@server/utils/typeGuards.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { TTokenDecodedUser  } from '@server/types/index.js';
+import type { TActiveUserRole } from '@shared/types/index.js';
 
-export const disableCache = (req, res, next) => {
+export const disableCache: RequestHandler = (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
 };
 
-export const verifyAuth = async (req, res, next) => {
+export const verifyAuth: RequestHandler = async (req, res, next) => {
     try {
-        const accessToken = req.cookies.accessToken;
+        const accessToken: string | undefined = req.cookies.accessToken;
 
         if (!accessToken) {
             return safeSendResponse(res, 401, { message: 'Токен доступа отсутствует' });
         }
         
-        req.user = jwt.verify(accessToken, config.jwt.accessSecretKey);
+        const decoded = jwt.verify(accessToken, config.jwt.accessSecretKey);
+
+        if (typeof decoded === 'string') {
+            return safeSendResponse(res, 401, { message: 'Неверный формат токена' });
+        }
+
+        req.user = decoded as TTokenDecodedUser;
         next();
     } catch (err) {
-        if (err instanceof jwt.TokenExpiredError) {
+        const error = toError(err);
+
+        if (error instanceof jwt.TokenExpiredError) {
             return safeSendResponse(res, 401, { message: 'Срок действия токена доступа истёк' });
         }
-        if (err instanceof jwt.JsonWebTokenError) {
+        if (error instanceof jwt.JsonWebTokenError) {
             return safeSendResponse(res, 401, { message: 'Неверный токен доступа' });
         }
-        if (err instanceof jwt.NotBeforeError) {
+        if (error instanceof jwt.NotBeforeError) {
             return safeSendResponse(res, 401, { message: 'Токен доступа ещё не активен' });
         }
         
-        next(err);
+        next(error);
     }
 };
 
-export const verifyUser = async (req, res, next) => {
+export const verifyUser: RequestHandler = async (req, res, next) => {
     try {
-        const dbUser = await User.findById(req.user?._id);
+        if (!req.user) {
+            throw new Error('Критическая ошибка: user не инициализирован в защищённом маршруте');
+        }
+
+        const userId = req.user._id;
+        const dbUser = await User.findById(userId);
         checkTimeout(req);
 
         if (!dbUser) {
@@ -51,11 +68,11 @@ export const verifyUser = async (req, res, next) => {
         req.dbUser = dbUser;
         next();
     } catch (err) {
-        next(err);
+        next(toError(err));
     }
 };
 
-export const verifyRole = (...requiredRoles) => (req, res, next) => {
+export const verifyRole = (...requiredRoles: TActiveUserRole[]): RequestHandler => (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     if (!requiredRoles.includes(req.dbUser.role)) {
@@ -72,37 +89,46 @@ export const verifyRole = (...requiredRoles) => (req, res, next) => {
 /// Опциональные версии мидлвэаров проверки прав и доступа ///
 //////////////////////////////////////////////////////////////
 
-export const optionalAuth = async (req, res, next) => {
+export const optionalAuth: RequestHandler = async (req, res, next) => {
     try {
-        const accessToken = req.cookies.accessToken;
+        const accessToken: string | undefined = req.cookies.accessToken;
 
         if (accessToken) {
-            req.user = jwt.verify(accessToken, config.jwt.accessSecretKey);
+            const decoded = jwt.verify(accessToken, config.jwt.accessSecretKey);
+
+            if (typeof decoded === 'string') {
+                return safeSendResponse(res, 401, { message: 'Неверный формат токена' });
+            }
+
+            req.user = decoded as TTokenDecodedUser;
         }
         
         next();
     } catch (err) {
-        if (err instanceof jwt.TokenExpiredError) {
+        const error = toError(err);
+
+        if (error instanceof jwt.TokenExpiredError) {
             return safeSendResponse(res, 401, { message: 'Срок действия токена доступа истёк' });
         }
-        if (err instanceof jwt.JsonWebTokenError) {
+        if (error instanceof jwt.JsonWebTokenError) {
             return safeSendResponse(res, 401, { message: 'Неверный токен доступа' });
         }
-        if (err instanceof jwt.NotBeforeError) {
+        if (error instanceof jwt.NotBeforeError) {
             return safeSendResponse(res, 401, { message: 'Токен доступа ещё не активен' });
         }
 
-        next(err);
+        next(error);
     }
 };
 
-export const optionalUser = async (req, res, next) => {
+export const optionalUser: RequestHandler = async (req, res, next) => {
     if (!req.user) {
         return next();
     }
 
     try {
-        const dbUser = await User.findById(req.user._id);
+        const userId = req.user._id;
+        const dbUser = await User.findById(userId);
         checkTimeout(req);
 
         if (!dbUser) {
@@ -115,21 +141,6 @@ export const optionalUser = async (req, res, next) => {
         req.dbUser = dbUser;
         next();
     } catch (err) {
-        next(err);
+        next(toError(err));
     }
-};
-
-export const optionalRole = (...requiredRoles) => (req, res, next) => {
-    if (!req.dbUser) {
-        return next();
-    }
-
-    if (!requiredRoles.includes(req.dbUser.role)) {
-        return safeSendResponse(res, 403, {
-            message: 'Запрещено: недостаточно прав',
-            reason: REQUEST_STATUS.DENIED
-        });
-    }
-
-    next();
 };
