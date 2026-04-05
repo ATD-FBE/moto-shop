@@ -1,4 +1,5 @@
 import type {
+    TActiveUserRole,
     TProductThumbnailSize,
     TPaymentMethod,
     TRefundMethod,
@@ -33,6 +34,8 @@ export const USER_ROLE = {
     ADMIN: 'admin',
     CUSTOMER: 'customer'
 } as const;
+
+export const ACTIVE_USER_ROLES: TActiveUserRole[] = [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER];
 
 export const CURRENCY = {
     RUB: 'rub'

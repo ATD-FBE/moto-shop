@@ -17,11 +17,11 @@ const baseDeliveryFields = {
         set: (val: null | boolean): boolean | undefined => val === null ? undefined : val
     },
     shippingAddress: {
-        region: { // Опционально для заказа
+        region: {
             type: String,
             set: (val: null | string): undefined | string => val === null ? undefined : val
         },
-        district: { // Опционально для заказа
+        district: {
             type: String,
             set: (val: null | string): undefined | string => val === null ? undefined : val
         },
@@ -37,12 +37,12 @@ const baseDeliveryFields = {
             type: String,
             set: (val: null | string): undefined | string => val === null ? undefined : val
         },
-        apartment: { // Опционально для заказа
+        apartment: {
             type: String,
             match: validationRules.checkout.apartment,
             set: (val: null | string): undefined | string => val === null ? undefined : val
         },
-        postalCode: { // Опционально для заказа
+        postalCode: {
             type: String,
             match: validationRules.checkout.postalCode,
             set: (val: null | string): undefined | string => val === null ? undefined : val

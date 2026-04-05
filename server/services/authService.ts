@@ -6,8 +6,8 @@ import {
     prepareCart
 } from '@server/services/cartService.js';
 import { USER_ROLE, ORDER_STATUS, ORDER_ACTIVE_STATUSES } from '@shared/constants.js';
-import type { TDbUser, TDbUserDoc, IUser, TDbOrderDraft, ISession } from '@server/types/index.js';
-import type { IGuestCartItem } from '@shared/types/index.js';
+import type { TDbUser, TDbUserDoc, TDbOrderDraft } from '@server/types/index.js';
+import type { IUser, IGuestCartItem, ISession } from '@shared/types/index.js';
 
 export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
     const baseUserData = {

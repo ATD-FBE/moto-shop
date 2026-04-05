@@ -137,8 +137,8 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'category');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'category');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -351,8 +351,8 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
         
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'category');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'category');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });

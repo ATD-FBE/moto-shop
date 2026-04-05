@@ -2,7 +2,7 @@ import { Schema } from 'mongoose';
 import { EventEntrySchema } from './financials/EventEntrySchema.js';
 import { CurrentOnlineTransactionSchema } from './financials/CurrentOnlineTransactionSchema.js';
 import { PAYMENT_METHOD, FINANCIALS_STATE } from '@shared/constants.js';
-import { validationRules } from '@shared/fieldRules.js';
+import { currencyValidation } from '@shared/fieldRules.js';
 
 const baseFinancialsFields = {
     defaultPaymentMethod: {
@@ -29,12 +29,12 @@ export const FinalFinancialsSchema = new Schema({
     totalPaid: { // Агрегируемая сумма поступления всех траншей оплат
         type: Number,
         default: 0,
-        validate: [(val: number): boolean => validationRules.financials.totalPaid.test(String(val))]
+        validate: [(val: number): boolean => currencyValidation.test(String(val))]
     },
     totalRefunded: { // Агрегируемая сумма поступления всех траншей возвратов
         type: Number,
         default: 0,
-        validate: [(val: number): boolean => validationRules.financials.totalRefunded.test(String(val))]
+        validate: [(val: number): boolean => currencyValidation.test(String(val))]
     },
     eventHistory: [EventEntrySchema],
     currentOnlineTransaction: {

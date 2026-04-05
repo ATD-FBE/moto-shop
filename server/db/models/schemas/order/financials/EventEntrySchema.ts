@@ -8,7 +8,7 @@ import {
     CARD_ONLINE_PROVIDER,
     FINANCIALS_EVENT
 } from '@shared/constants.js';
-import { validationRules } from '@shared/fieldRules.js';
+import { validationRules, textValidation } from '@shared/fieldRules.js';
 
 export const EventEntrySchema = new Schema({
     eventId: {
@@ -42,7 +42,7 @@ export const EventEntrySchema = new Schema({
             },
             originalPaymentId: { // ID платёжной транзакции для возврата на карту онлайн
                 type: String,
-                match: validationRules.refund.originalPaymentId
+                match: textValidation
             },
             failureReason: { // Опционально для банковского перевода и онлайн-транзакций
                 type: String,

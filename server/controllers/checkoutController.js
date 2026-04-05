@@ -851,8 +851,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей при сохранении в MongoDB
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'checkout');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'checkout');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });

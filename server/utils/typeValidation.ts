@@ -1,14 +1,16 @@
 import mongoose from 'mongoose';
-import { fieldErrorMessages } from '@shared/fieldRules.js';
+import { isValidEntityField } from '@server/utils/typeGuards.js';
+import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import type {
     TCheckType,
     TCheckFn,
     TBaseTypeChecks,
     TTypeCheck,
-    IInputTypeMap,
+    TInputTypeMap,
+    IInputTypeMapConfig,
     IValidateInputTypesResult
 } from '@server/types/index.js';
-import type { TEntityType } from '@shared/types/index.js';
+import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 
 export const baseTypeChecks: TBaseTypeChecks = {
     string: (val: unknown): val is string => typeof val === 'string',
@@ -75,14 +77,14 @@ const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
 
 export const typeCheck = makeTypeCheck(baseTypeChecks);
 
-export const validateInputTypes = (
-    inputTypeMap: IInputTypeMap,
-    entityType?: TEntityType
-): IValidateInputTypesResult => {
+export const validateInputTypes = <E extends TEntityType>(
+    inputTypeMap: TInputTypeMap<E>,
+    entityType?: E
+): IValidateInputTypesResult<E> => {
     const invalidInputKeys: string[] = [];
-    const fieldErrors: Record<string, string> = {};
+    const fieldErrors: TFieldErrors<E> = {};
 
-    for (const [key, config] of Object.entries(inputTypeMap)) {
+    for (const [key, config] of Object.entries(inputTypeMap) as [string, IInputTypeMapConfig][]) {
         const { value, type, elemType, optional, form = false } = config;
 
         const validator = optional ? typeCheck.optional[type] : typeCheck[type];
@@ -91,12 +93,13 @@ export const validateInputTypes = (
             : validator?.(value) ?? false;
         if (isValid) continue;
 
-        if (form && entityType) {
+        if (form && entityType && isValidEntityField(entityType, key)) {
+            const fieldMessages = fieldErrorMessages[entityType][key];
+
             fieldErrors[key] =
-                fieldErrorMessages[entityType]?.[key]?.mismatch ||
-                fieldErrorMessages[entityType]?.[key]?.default ||
-                fieldErrorMessages.DEFAULT;
-        } else {
+                fieldMessages?.mismatch ||
+                fieldMessages?.default ||
+                DEFAULT_FIELD_ERROR_MESSAGE;
             invalidInputKeys.push(key);
         }
     }

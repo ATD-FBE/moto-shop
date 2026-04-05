@@ -1,6 +1,7 @@
 export * from './server.types.js';
 export * from './constants.types.js';
 export * from './config.types.js';
+export * from './db.types.js';
 export * from './viewPolicy.types.js';
 export * from './aggregationBuilders.types.js';
 export * from './errorUtils.types.js';
@@ -10,8 +11,6 @@ export * from './safeSendResponse.types.js';
 export * from './token.types.js';
 export * from './transaction.types.js';
 export * from './typeValidation.types.js';
-export * from './db.types.js';
-export * from './authService.types.js';
 export * from './cartService.types.js';
 export * from './checkoutService.types.js';
 export * from './productService.types.js';

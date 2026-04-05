@@ -344,8 +344,8 @@ export const handleProductCreateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -590,8 +590,8 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -755,8 +755,8 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });

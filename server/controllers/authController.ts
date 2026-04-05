@@ -7,7 +7,12 @@ import { generateToken, getTokenExpiryFromCookie } from '@server/utils/tokenUtil
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { requireDbUser, isAppError } from '@server/utils/typeGuards.js';
+import {
+    isTokenDecodedUser,
+    requireDbUser,
+    isAppError,
+    isMongooseValidationError
+} from '@server/utils/typeGuards.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import { normalizeInputDataToNull } from '@server/utils/normalizeUtils.js';
 import { isDbDataModified } from '@server/utils/compareUtils.js';
@@ -17,27 +22,39 @@ import {
     ACCESS_TOKEN_MAX_AGE,
     REFRESH_TOKEN_MAX_AGE
 } from '@server/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, DELIVERY_METHOD } from '@shared/constants.js';
-import type { RequestHandler } from 'express';
+import type { RequestHandler, Request, Response } from 'express';
+import type { TInputTypeMap, TDbUser } from '@server/types/index.js';
 import type {
-    IInputTypeMap
-} from '@server/types/index.js';
-import type {
-    TEntityType,
     IAuthRegistrationBody,
+    TAuthRegistrationResponse,
     IAuthLoginBody,
+    TAuthLoginResponse,
+    IAuthUserUpdateBody,
+    TAuthUserUpdateResponse,
+    IAuthSessionBody,
+    TAuthSessionResponse,
+    TAuthCheckResponse,
+    TAuthRefreshResponse,
+    TAuthCheckoutPrefsResponse,
+    IAuthCheckoutPrefsUpdateBody,
+    TAuthCheckoutPrefsUpdateResponse,
+    TAuthLogoutResponse
 } from '@shared/types/index.js';
 
 /// Регистрация ///
-export const handleAuthRegistrationRequest: RequestHandler<{}, any, IAuthRegistrationBody> =
-    async (req, res, next) => {
+export const handleAuthRegistrationRequest: RequestHandler<
+    {},
+    TAuthRegistrationResponse,
+    IAuthRegistrationBody
+> = async (req, res, next) => {
     // Предварительная проверка формата данных
     const { formFields, guestCart } = req.body ?? {};
     const { name, email, password, adminRegCode } = formFields ?? {};
 
-    const inputTypeMap: IInputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', elemType: 'object' },
         name: { value: name, type: 'string', form: true },
@@ -110,9 +127,9 @@ export const handleAuthRegistrationRequest: RequestHandler<{}, any, IAuthRegistr
         const error = toError(err);
 
         // Обработка ошибок валидации полей при сохранении в MongoDB
-        if (error.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(error, 'auth');
-            if (unknownFieldError) return next(unknownFieldError);
+        if (isMongooseValidationError(error)) {
+            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'auth');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -124,12 +141,16 @@ export const handleAuthRegistrationRequest: RequestHandler<{}, any, IAuthRegistr
 };
 
 /// Авторизация ///
-export const handleAuthLoginRequest: RequestHandler<{}, any, IAuthLoginBody> = async (req, res, next) => {
+export const handleAuthLoginRequest: RequestHandler<
+    {},
+    TAuthLoginResponse,
+    IAuthLoginBody
+> = async (req, res, next) => {
     // Предварительная проверка формата данных
     const { formFields, guestCart } = req.body ?? {};
     const { name, password, rememberMe } = formFields ?? {};
 
-    const inputTypeMap: IInputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', elemType: 'object' },
         name: { value: name, type: 'string', form: true },
@@ -158,18 +179,16 @@ export const handleAuthLoginRequest: RequestHandler<{}, any, IAuthLoginBody> = a
     const prepDbFields = {
         name: name.trim(),
         password
-    };
+    } as const;
     
     (Object.entries(prepDbFields) as [
-        keyof typeof validationRules.auth,
+        keyof typeof prepDbFields,
         typeof prepDbFields[keyof typeof prepDbFields]
     ][]).forEach(([field, value]) => {
         const isValid = validationRules.auth[field].test(value);
 
         if (!isValid) {
-            fieldErrors[field] =
-                fieldErrorMessages.auth[field]?.login ||
-                fieldErrorMessages.DEFAULT;
+            fieldErrors[field] = fieldErrorMessages.auth[field]?.login || DEFAULT_FIELD_ERROR_MESSAGE;
         }
     });
 
@@ -246,7 +265,13 @@ export const handleAuthLoginRequest: RequestHandler<{}, any, IAuthLoginBody> = a
 };
 
 /// Изменение данных пользователя ///
-export const handleAuthUserUpdateRequest = async (req, res, next) => {
+export const handleAuthUserUpdateRequest: RequestHandler<
+    {},
+    TAuthUserUpdateResponse,
+    IAuthUserUpdateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     // Предварительная проверка формата данных
     const { newName, newEmail, currentPassword, newPassword } = req.body ?? {};
 
@@ -254,7 +279,7 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
         return safeSendResponse(res, 204);
     }
 
-    const inputTypeMap: IInputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'auth'> = {
         newName: { value: newName, type: 'string', optional: true, form: true },
         newEmail: { value: newEmail, type: 'string', optional: true, form: true },
         currentPassword: { value: currentPassword, type: 'string', optional: true, form: true },
@@ -272,17 +297,17 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
     }
     
     const dbUser = req.dbUser;
-    const dbUserBackup = {
+    const dbUserBackup: Partial<Pick<TDbUser, 'name' | 'email'>> = {
         name: dbUser.name,
         email: dbUser.email
     };
-    const prepDbFields = {
+    const prepDbFields: Partial<IAuthUserUpdateBody> = {
         newName: newName?.trim(),
         newEmail: newEmail?.trim(),
         currentPassword,
         newPassword
     };
-    const updatedFormFields = [];
+    const updatedFormFields: (keyof typeof validationRules.auth)[] = [];
 
     // Апдейт документа в базе MongoDB
     try {
@@ -295,20 +320,20 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
                         !validationRules.auth.currentPassword.test(currentPassword)
                     ) {
                         fieldErrors.currentPassword =
-                            fieldErrorMessages.auth.currentPassword?.default ||
-                            fieldErrorMessages.DEFAULT;
+                            fieldErrorMessages.auth.currentPassword.default ||
+                            DEFAULT_FIELD_ERROR_MESSAGE;
                     } else {
                         const isPasswordCorrect = await dbUser.comparePassword(currentPassword);
                         checkTimeout(req);
         
                         if (!isPasswordCorrect) {
                             fieldErrors.currentPassword =
-                                fieldErrorMessages.auth.currentPassword?.default ||
-                                fieldErrorMessages.DEFAULT;
+                                fieldErrorMessages.auth.currentPassword.default ||
+                                DEFAULT_FIELD_ERROR_MESSAGE;
                         } else if (newPassword === currentPassword) {
                             fieldErrors.newPassword =
-                                fieldErrorMessages.auth.newPassword?.duplicate ||
-                                fieldErrorMessages.DEFAULT;
+                                fieldErrorMessages.auth.newPassword.duplicate ||
+                                DEFAULT_FIELD_ERROR_MESSAGE;
                         } else {
                             dbUser.password = newPassword;
                             updatedFormFields.push('newPassword');
@@ -316,8 +341,8 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
                     }
                 } else {
                     fieldErrors.newPassword =
-                        fieldErrorMessages.auth.newPassword?.default ||
-                        fieldErrorMessages.DEFAULT;
+                        fieldErrorMessages.auth.newPassword.default ||
+                        DEFAULT_FIELD_ERROR_MESSAGE;
                 }
             }
 
@@ -325,16 +350,19 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
             const dbFieldToFormFieldMap = {
                 name: 'newName',
                 email: 'newEmail'
-            };
+            } as const;
 
-            for (const [dbField, formField] of Object.entries(dbFieldToFormFieldMap)) {
+            for (const [dbField, formField] of Object.entries(dbFieldToFormFieldMap) as [
+                keyof typeof dbFieldToFormFieldMap,
+                keyof IAuthUserUpdateBody
+            ][]) {
                 const value = prepDbFields[formField];
                 if (value === undefined) continue;
 
                 if (dbUser[dbField] === value) {
                     fieldErrors[formField] =
                         fieldErrorMessages.auth[formField]?.duplicate ||
-                        fieldErrorMessages.DEFAULT;
+                        DEFAULT_FIELD_ERROR_MESSAGE;
                     continue;
                 }
 
@@ -350,27 +378,38 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
                 const error = toError(err);
 
                 // Обработка ошибок валидации полей при сохранении в MongoDB
-                if (error.name === 'ValidationError') {
+                if (isMongooseValidationError(error)) {
                     for (const dbField in error.errors) {
-                        const formField = dbFieldToFormFieldMap[dbField];
-                        
-                        if (!formField) {
+                        if (dbField in dbFieldToFormFieldMap) {
+                            const safeDbField = dbField as keyof typeof dbFieldToFormFieldMap;
+                            const formField = dbFieldToFormFieldMap[safeDbField];
+                            
+                            const errorMessageType = error.errors[safeDbField].kind === 'unique'
+                                ? 'unique'
+                                : 'default';
+                            fieldErrors[formField] =
+                                fieldErrorMessages.auth[formField]?.[errorMessageType] ||
+                                DEFAULT_FIELD_ERROR_MESSAGE;
+            
+                            // Восстановление старого значения
+                            if (safeDbField in dbUserBackup) {
+                                const backupValue = dbUserBackup[safeDbField];
+
+                                if (backupValue !== undefined) {
+                                    dbUser[safeDbField] = backupValue; 
+                                    
+                                    const fieldIndex = updatedFormFields.indexOf(formField);
+                                    if (fieldIndex !== -1) updatedFormFields.splice(fieldIndex, 1);
+                                }
+                            }
+                        } else {
                             throw createAppError(400, `Некорректное значение поля: ${dbField}`);
-                        }
-                        
-                        const errorMessageType = error.errors[dbField].kind === 'unique' ? 'unique' : 'default';
-                        fieldErrors[formField] =
-                            fieldErrorMessages.auth[formField]?.[errorMessageType] ||
-                            fieldErrorMessages.DEFAULT;
-        
-                        if (dbUserBackup.hasOwnProperty(dbField)) {
-                            dbUser[dbField] = dbUserBackup[dbField]; // Восстановление старого значения
-                            updatedFormFields.splice(updatedFormFields.indexOf(formField), 1);
                         }
                     }
 
+                    // Вторая попытка сохранения, исключая поля с ошибками
                     if (updatedFormFields.length > 0) {
-                        await dbUser.save({ session }); // Вторая попытка сохранения, исключая поля с ошибками
+                        await dbUser.save({ session });
                         checkTimeout(req);
                     }
                 } else {
@@ -386,32 +425,41 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
         
 
         // Отправка ответа клиенту
-        const { statusCode, message } = (() => {
+        const payload = (() => {
             const hasErrors  = Object.keys(fieldErrors).length > 0;
             const hasUpdates = updatedFormFields.length > 0;
         
             switch (true) {
                 case hasErrors && !hasUpdates:
-                    return { statusCode: 422, message: 'Ошибки в данных. Изменения не применены' };
+                    return { 
+                        statusCode: 422, 
+                        data: { message: 'Ошибки в данных. Изменения не применены', fieldErrors } 
+                    };
                 case hasErrors && hasUpdates:
-                    return { statusCode: 207, message: 'Данные пользователя частично обновлены' };
+                    return { 
+                        statusCode: 207, 
+                        data: {
+                            message: 'Данные пользователя частично обновлены',
+                            fieldErrors,
+                            updatedFormFields,
+                            updatedUser: userData
+                        } 
+                    };
                 case !hasErrors && hasUpdates:
-                    return { statusCode: 200, message: 'Данные пользователя обновлены' };
-                default: // !hasErrors && !hasUpdates
-                    return { statusCode: 204 };
+                    return { 
+                        statusCode: 200, 
+                        data: {
+                            message: 'Данные пользователя обновлены',
+                            updatedFormFields,
+                            updatedUser: userData
+                        } 
+                    };
+                default: 
+                    return { statusCode: 204, data: undefined };
             }
         })();
         
-        safeSendResponse(res, statusCode, {
-            ...(statusCode !== 204 && {
-                message,
-                fieldErrors
-            }),
-            ...([200, 207].includes(statusCode) && {
-                updatedFormFields,
-                updatedUser: userData
-            })
-        });
+        safeSendResponse(res, payload.statusCode, payload.data);
     } catch (err) {
         const error = toError(err);
 
@@ -424,7 +472,13 @@ export const handleAuthUserUpdateRequest = async (req, res, next) => {
 };
 
 /// Загрузка данных сессии пользователя ///
-export const handleAuthSessionRequest = async (req, res, next) => {
+export const handleAuthSessionRequest: RequestHandler<
+    {},
+    TAuthSessionResponse,
+    IAuthSessionBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const { guestCart } = req.body ?? {};
 
@@ -466,20 +520,25 @@ export const handleAuthSessionRequest = async (req, res, next) => {
 };
 
 /// Проверка токена доступа ///
-export const handleAuthCheckRequest = (_req, res) => {
+export const handleAuthCheckRequest = (_req: Request, res: Response<TAuthCheckResponse>): void => {
     safeSendResponse(res, 200, { message: 'Токен доступа валидный' });
 };
 
 /// Обновление токена доступа ///
-export const handleAuthRefreshRequest = async (req, res, next) => {
+export const handleAuthRefreshRequest: RequestHandler<{}, TAuthRefreshResponse> = async (req, res, next) => {
     try {
-        const refreshToken = req.cookies.refreshToken;
+        const refreshToken: string | undefined = req.cookies.refreshToken;
         
         if (!refreshToken) {
             return safeSendResponse(res, 401, { message: 'Токен обновления отсутствует' });
         }
 
         const decodedUser = jwt.verify(refreshToken, config.jwt.refreshSecretKey);
+
+        if (!isTokenDecodedUser(decodedUser)) {
+            return safeSendResponse(res, 401, { message: 'Неверный формат или поврежденный токен' });
+        }
+
         const accessToken = generateToken(decodedUser, 'access');
         res.cookie('accessToken', accessToken, { ...TOKEN_COOKIE_OPTIONS, maxAge: ACCESS_TOKEN_MAX_AGE });
 
@@ -504,15 +563,26 @@ export const handleAuthRefreshRequest = async (req, res, next) => {
 };
 
 /// Загрузка настроек заказа ///
-export const handleAuthCheckoutPrefsRequest = async (req, res) => {
+export const handleAuthCheckoutPrefsRequest: RequestHandler<
+    {},
+    TAuthCheckoutPrefsResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     safeSendResponse(res, 200, {
         message: 'Настройки заказа успешно загружены',
-        checkoutPrefs: req.dbUser.checkoutPrefs
+        checkoutPrefs: req.dbUser.checkoutPrefs ?? undefined
     });
 };
 
 /// Изменение настроек заказа ///
-export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
+export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
+    {},
+    TAuthCheckoutPrefsUpdateResponse,
+    IAuthCheckoutPrefsUpdateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
 
     // Предварительная проверка формата данных
@@ -523,7 +593,7 @@ export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
         defaultPaymentMethod
     } = req.body ?? {};
 
-    const inputTypeMap: IInputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'checkout'> = {
         firstName: { value: firstName, type: 'string', optional: true, form: true },
         lastName: { value: lastName, type: 'string', optional: true, form: true },
         middleName: { value: middleName, type: 'string', optional: true, form: true },
@@ -560,8 +630,8 @@ export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
     }
 
     // Создание и форматирование настроек заказа
-    const oldCheckoutPrefs = dbUser.checkoutPrefs.toObject();
-    const newCheckoutPrefs = normalizeInputDataToNull({
+    const oldCheckoutPrefs = dbUser.toObject().checkoutPrefs ?? {};
+    const newCheckoutPrefs: TDbUser['checkoutPrefs'] = normalizeInputDataToNull({
         customerInfo: { firstName, lastName, middleName, email, phone },
         delivery: {
             deliveryMethod,
@@ -590,9 +660,9 @@ export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
     } catch (err) {
         const error = toError(err);
 
-        if (error.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(error, 'checkout');
-            if (unknownFieldError) return next(unknownFieldError);
+        if (isMongooseValidationError(error)) {
+            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'checkout');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -604,7 +674,7 @@ export const handleAuthCheckoutPrefsUpdateRequest = async (req, res, next) => {
 };
 
 /// Выход из сессии ///
-export const handleAuthLogoutRequest = async (req, res, next) => {
+export const handleAuthLogoutRequest: RequestHandler<{}, TAuthLogoutResponse> = async (_req, res, next) => {
     try {
         res.clearCookie('accessToken', TOKEN_COOKIE_OPTIONS);
         res.clearCookie('refreshToken', TOKEN_COOKIE_OPTIONS);

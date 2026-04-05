@@ -416,8 +416,8 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
         }
 
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -574,8 +574,8 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей при сохранении в MongoDB
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -863,8 +863,8 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей при сохранении в MongoDB
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -1151,8 +1151,8 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей при сохранении в MongoDB
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });

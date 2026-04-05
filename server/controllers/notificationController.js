@@ -234,8 +234,8 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
     } catch (err) {
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
@@ -324,8 +324,8 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
 
         // Обработка ошибок валидации полей
         if (err.name === 'ValidationError') {
-            const { unknownFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
-            if (unknownFieldError) return next(unknownFieldError);
+            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
+            if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
                 return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });

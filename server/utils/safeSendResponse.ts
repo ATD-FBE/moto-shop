@@ -1,12 +1,13 @@
-import { Response } from 'express';
-import type { IBaseResponse } from '@server/types/index.js';
+import { resolveRequestStatus } from '@shared/statusResolver.js';
+import type { Response } from 'express';
+import type { TServerPayload } from '@server/types/index.js';
 
 const NO_BODY_STATUSES = new Set([204, 205, 304]);
 
-export default function safeSendResponse<T extends Record<string, unknown>>(
-    res: Response,
+export default function safeSendResponse<T>(
+    res: Response<T>,
     statusCode: number,
-    data: IBaseResponse & T = {} as IBaseResponse & T
+    data?: TServerPayload<T>
 ): void {
     if (res.writableEnded || res.destroyed || res.headersSent) return;
 
@@ -15,5 +16,12 @@ export default function safeSendResponse<T extends Record<string, unknown>>(
         return;
     }
 
-    res.status(statusCode).json(data);
+    const rawData = (data ?? {}) as any;
+
+    const finalData = {
+        ...rawData,
+        status: rawData.status || resolveRequestStatus(statusCode, rawData.reason)
+    } as T;
+
+    res.status(statusCode).json(finalData);
 }

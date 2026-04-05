@@ -15,7 +15,6 @@ import { parseRouteParams } from '@/helpers/routeHelpers.js';
 import { processFormattedFieldDeletion, calcFormattedFieldCursorPos } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { resolveRequestStatus } from '@/helpers/statusResolver.js';
 import {
     YOOKASSA_SHOP_ID,
     FORM_STATUS,
@@ -24,6 +23,7 @@ import {
     SUCCESS_DELAY
 } from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { resolveRequestStatus } from '@shared/statusResolver.js';
 import { CARD_ONLINE_PROVIDER_OPTIONS } from '@shared/constants.js';
 
 const getSubmitStates = (hasConfirmationUrl) => {

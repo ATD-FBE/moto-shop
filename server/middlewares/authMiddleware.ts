@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '@server/db/models/User.js';
 import config from '@server/config/config.js';
 import { checkTimeout } from './timeoutMiddleware.js';
-import { requireDbUser } from '@server/utils/typeGuards.js';
+import { isTokenDecodedUser, requireDbUser } from '@server/utils/typeGuards.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
@@ -23,13 +23,13 @@ export const verifyAuth: RequestHandler = async (req, res, next) => {
             return safeSendResponse(res, 401, { message: 'Токен доступа отсутствует' });
         }
         
-        const decoded = jwt.verify(accessToken, config.jwt.accessSecretKey);
+        const decodedUser = jwt.verify(accessToken, config.jwt.accessSecretKey);
 
-        if (typeof decoded === 'string') {
-            return safeSendResponse(res, 401, { message: 'Неверный формат токена' });
+        if (!isTokenDecodedUser(decodedUser)) {
+            return safeSendResponse(res, 401, { message: 'Неверный формат или поврежденный токен' });
         }
 
-        req.user = decoded as TTokenDecodedUser;
+        req.user = decodedUser as TTokenDecodedUser;
         next();
     } catch (err) {
         const error = toError(err);
@@ -94,13 +94,13 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
         const accessToken: string | undefined = req.cookies.accessToken;
 
         if (accessToken) {
-            const decoded = jwt.verify(accessToken, config.jwt.accessSecretKey);
+            const decodedUser = jwt.verify(accessToken, config.jwt.accessSecretKey);
 
-            if (typeof decoded === 'string') {
-                return safeSendResponse(res, 401, { message: 'Неверный формат токена' });
+            if (!isTokenDecodedUser(decodedUser)) {
+                return safeSendResponse(res, 401, { message: 'Неверный формат или поврежденный токен' });
             }
 
-            req.user = decoded as TTokenDecodedUser;
+            req.user = decodedUser as TTokenDecodedUser;
         }
         
         next();

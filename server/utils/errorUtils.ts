@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import { typeCheck } from './typeValidation.js';
-import { fieldErrorMessages } from '@shared/fieldRules.js';
+import { isValidEntityField } from './typeGuards.js';
+import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { FILE_FIELD_MAP } from '@server/config/constants.js';
-import type { IAppErrorData, TFieldErrors, IValidationErrors } from '@server/types/index.js';
-import type { TEntityType } from '@shared/types/index.js';
+import type { IAppErrorData, IParseValidationErrorsResult } from '@server/types/index.js';
+import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 
 export const isCriticalError = (error: Error): boolean => {
     return (
@@ -30,10 +31,11 @@ export const prepareAppErrorData = (err: Error): IAppErrorData => ({
     ...(typeCheck.object(err.details) ? err.details : { details: err.details })
 });
 
-export const parseValidationErrors = (err: any, entityType: TEntityType): IValidationErrors => {
-    const fieldErrors: TFieldErrors = {};
-
-    if (!err.errors) return { unknownFieldError: null, fieldErrors: null };
+export const parseValidationErrors = <E extends TEntityType>(
+    err: mongoose.Error.ValidationError, 
+    entityType: E
+): IParseValidationErrorsResult<E> => {
+    const fieldErrors: TFieldErrors<E> = {};
 
     for (const field in err.errors) {
         const error = err.errors[field]; // В валидаторе Mongoose используется полный путь поля
@@ -41,44 +43,41 @@ export const parseValidationErrors = (err: any, entityType: TEntityType): IValid
         if (field === 'globalFiles' && entityType in FILE_FIELD_MAP) {
             const message = error.message || 'Неизвестная ошибка файлового поля';
             const fileFields = FILE_FIELD_MAP[entityType as keyof typeof FILE_FIELD_MAP];
-            fileFields.forEach(field => fieldErrors[field] = message);
+            
+            fileFields.forEach(fieldName => {
+                if (fieldName in fieldErrorMessages[entityType]) {
+                    fieldErrors[fieldName as keyof TFieldErrors<E>] = message;
+                }
+            });
             continue;
         }
 
         // Если поле вложено field будет иметь вид дот-нотации ('delivery.shippingAddress.city')
         const fieldName = field.includes('.') ? (field.split('.').pop() as string) : field;
-        const messages = fieldErrorMessages[entityType]?.[fieldName];
 
-        if (!messages) {
-            return {
-                unknownFieldError: createAppError(400, `Неизвестная ошибка поля: ${fieldName}`),
-                fieldErrors: null
-            };
-        }
+        if (isValidEntityField(entityType, fieldName)) {
+            const messages = fieldErrorMessages[entityType][fieldName];
+            
+            if (error.kind === 'unique') {
+                fieldErrors[fieldName] = messages.unique || DEFAULT_FIELD_ERROR_MESSAGE;
+            } else if (error.kind === 'user defined') {
+                const errorType = error.message; // Тип ошибки передаётся через сообщение
 
-        if (error.kind === 'unique') {
-            fieldErrors[fieldName] =
-                messages.unique ||
-                fieldErrorMessages.DEFAULT;
-        } else if (error.kind === 'user defined') {
-            const errorType = error.message; // Тип ошибки передаётся через сообщение
-
-            if (errorType && errorType in messages) {
-                fieldErrors[fieldName] = messages[errorType];
+                fieldErrors[fieldName] = (errorType && errorType in messages) 
+                    ? (messages as any)[errorType] 
+                    : (messages.default || DEFAULT_FIELD_ERROR_MESSAGE);
             } else {
-                fieldErrors[fieldName] =
-                    messages.default ||
-                    fieldErrorMessages.DEFAULT;
+                fieldErrors[fieldName] = messages.mismatch || messages.default || DEFAULT_FIELD_ERROR_MESSAGE;
             }
         } else {
-            fieldErrors[fieldName] =
-                messages.mismatch ||
-                messages.default ||
-                fieldErrorMessages.DEFAULT;
+            return {
+                systemFieldError: createAppError(400, `Ошибка системного поля ${fieldName}: ${error.message}`),
+                fieldErrors: null
+            };
         }
     }
 
     return Object.keys(fieldErrors).length > 0 
-        ? { unknownFieldError: null, fieldErrors } 
-        : { unknownFieldError: null, fieldErrors: null };
+        ? { systemFieldError: null, fieldErrors } 
+        : { systemFieldError: null, fieldErrors: null };
 };

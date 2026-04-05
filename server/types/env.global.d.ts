@@ -3,7 +3,7 @@ import {
     TMongoMode,
     TBucketType,
     TTokenDecodedUser,
-    TDbUser
+    TDbUserDoc
 } from '@server/types/index.js';
 import { TUserRole } from '@shared/constants.js';
 
@@ -53,7 +53,7 @@ declare global {
             connectionAborted?: boolean;
             connectionTimeout?: boolean;
             user?: TTokenDecodedUser;
-            dbUser?: TDbUser;
+            dbUser?: TDbUserDoc;
             file?: Express.Multer.File;
             files?: Express.Multer.File[];
             fileUploadError?: {

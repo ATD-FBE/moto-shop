@@ -1,7 +1,7 @@
 export const isObject = (val: unknown): val is Record<string, unknown> =>
     typeof val === 'object' && val !== null && !Array.isArray(val) && !(val instanceof Date);
 
-export const normalizeInputDataToNull = (data: unknown): unknown => {
+export const normalizeInputDataToNull = (data: unknown): any => {
     if (data == null) return null;
     if (typeof data === 'string') return data.trim() || null;
     if (data instanceof Date) return new Date(data);

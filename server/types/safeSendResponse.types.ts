@@ -1,6 +1,1 @@
-import type { TRequestStatus } from '@shared/types/index.js';
-
-export interface IBaseResponse {
-    message: string;
-    reason?: TRequestStatus;
-}
+export type TServerPayload<T> = T extends any ? Omit<T, 'status'> : never;

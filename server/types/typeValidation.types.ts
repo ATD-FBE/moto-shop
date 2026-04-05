@@ -1,3 +1,5 @@
+import type { TEntityType, TValidationRules, TFieldErrors } from '@shared/types/index.js';
+
 export type TCheckType =
     'string' | 'number' | 'boolean' | 'emptyableBoolean' | 'array' |
     'arrayOf' | 'object' | 'date' | 'objectId' | 'nullableObjectId';
@@ -18,9 +20,13 @@ export interface IInputTypeMapConfig {
     form?: boolean;
 }
 
-export type IInputTypeMap = Record<string, IInputTypeMapConfig>;
+export type TInputTypeMap<E extends TEntityType = TEntityType> = {
+    [K in keyof TValidationRules[E]]?: IInputTypeMapConfig;           // Для пришедших полей форм
+} & {
+    [key: string]: IInputTypeMapConfig;                               // Для других пришедших данных
+};
 
-export interface IValidateInputTypesResult {
+export interface IValidateInputTypesResult<E extends TEntityType = TEntityType> {
     invalidInputKeys: string[];
-    fieldErrors: Record<string, string>;
+    fieldErrors: TFieldErrors<E>;
 }

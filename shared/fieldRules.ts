@@ -17,31 +17,30 @@ import type {
     TPaymentMethod,
     TRefundMethod,
     TBankProvider,
-    TValidationRules,
     TFieldErrorMessages
 } from '@shared/types/index.js';
 
 /// Валидации полей форм ///
-const userNameValidation = /^[\wа-яА-ЯёЁ.-][\wа-яА-ЯёЁ\s.-]{1,28}[\wа-яА-ЯёЁ.-]$/;
-const emailValidation = /^[a-zA-Z0-9]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
-const passwordValidation = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9@#$%^&*!?-]{8,30}$/;
-const adminRegCodeValidation = /^[a-zA-Z0-9@#$%^&*!?-]{1,30}$/;
-const textValidation = /\S+/;
-const naturalValidation = /^\d+$/;
-const decimalValidation = /^\d+(\.\d+)?$/;
-const currencyValidation = /^\d+(?:\.\d{1,2})?$/;
-const currencySignedValidation = /^-?\d+(?:\.\d{1,2})?$/;
-const dateValidation = /^\d{4}-\d{2}-\d{2}$/;
-const slugValidation = /^[a-z0-9_-]{2,}$/;
-const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
-const phoneValidation = /^(\+7|8)\d{10}$/;
-const cvcValidation = /^\d{3,4}$/;
+export const userNameValidation = /^[\wа-яА-ЯёЁ.-][\wа-яА-ЯёЁ\s.-]{1,28}[\wа-яА-ЯёЁ.-]$/;
+export const emailValidation = /^[a-zA-Z0-9]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+export const passwordValidation = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9@#$%^&*!?-]{8,30}$/;
+export const adminRegCodeValidation = /^[a-zA-Z0-9@#$%^&*!?-]{1,30}$/;
+export const textValidation = /\S+/;
+export const naturalValidation = /^\d+$/;
+export const decimalValidation = /^\d+(\.\d+)?$/;
+export const currencyValidation = /^\d+(?:\.\d{1,2})?$/;
+export const currencySignedValidation = /^-?\d+(?:\.\d{1,2})?$/;
+export const dateValidation = /^\d{4}-\d{2}-\d{2}$/;
+export const slugValidation = /^[a-z0-9_-]{2,}$/;
+export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
+export const phoneValidation = /^(\+7|8)\d{10}$/;
+export const cvcValidation = /^\d{3,4}$/;
 
-const alwaysPassValidation = (): boolean => true;
+export const alwaysPassValidation = (): boolean => true;
 
-const booleanRequiredValidation = (val: boolean): boolean => val === true;
+export const booleanRequiredValidation = (val: boolean): boolean => val === true;
 
-const imageValidation = (
+export const imageValidation = (
     file: File,
     allowedTypes: TAllowedImageMimeType[],
     maxSizeMB: number
@@ -53,31 +52,31 @@ const imageValidation = (
     return true;
 };
 
-const recipientsValidation = (recipients: string[]): boolean =>
+export const recipientsValidation = (recipients: string[]): boolean =>
     Array.isArray(recipients) && recipients.length > 0;
 
-const productUnitValidation = (val: TProductUnit): boolean => PRODUCT_UNITS.includes(val);
+export const productUnitValidation = (val: TProductUnit): boolean => PRODUCT_UNITS.includes(val);
 
-const discountValidation = (val: string | number): boolean => {
+export const discountValidation = (val: string | number): boolean => {
     const num = typeof val === 'string' ? Number(val) : val;
     return val !== '' && Number.isInteger(num) && num >= 0 && num <= 100;
 };
 
-const deliveryMethodValidation = (val: TDeliveryMethod): boolean =>
+export const deliveryMethodValidation = (val: TDeliveryMethod): boolean =>
     DELIVERY_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const paymentMethodValidation = (val: TPaymentMethod): boolean =>
+export const paymentMethodValidation = (val: TPaymentMethod): boolean =>
     PAYMENT_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const refundMethodValidation = (val: TRefundMethod): boolean =>
+export const refundMethodValidation = (val: TRefundMethod): boolean =>
     REFUND_METHOD_OPTIONS.some(opt => opt.value === val);
 
-const providerValidation = (val: TBankProvider): boolean =>
+export const providerValidation = (val: TBankProvider): boolean =>
     [...Object.values(BANK_PROVIDER), ...Object.values(CARD_ONLINE_PROVIDER)].includes(val);
 
-const cardNumberValidation = (val: string): boolean => /^\d{16}$/.test(val.replace(/\s/g, ''));
+export const cardNumberValidation = (val: string): boolean => /^\d{16}$/.test(val.replace(/\s/g, ''));
 
-const expiryDateValidation = (val: string, context: { split: string }): boolean => {
+export const expiryDateValidation = (val: string, context: { split: string }): boolean => {
     if (!val) return false;
 
     const { split } = context;
@@ -198,8 +197,6 @@ export const validationRules = {
         internalNote: textValidation
     },
     financials: {
-        totalPaid: currencyValidation,
-        totalRefunded: currencyValidation,
         amount: currencyValidation,     // Общее поле для payment и refund действий
         transactionId: textValidation,  // Общее поле для payment и refund действий
         failureReason: textValidation,  // Общее поле для payment и refund действий
@@ -222,7 +219,6 @@ export const validationRules = {
         provider: providerValidation,
         amount: currencyValidation,
         transactionId: textValidation,
-        originalPaymentId: textValidation,
         markAsFailed: alwaysPassValidation,
         failureReason: textValidation,
         externalReference: textValidation
@@ -231,8 +227,6 @@ export const validationRules = {
 
 /// Сообщения об ошибках полей формы ///
 export const fieldErrorMessages: TFieldErrorMessages = {
-    DEFAULT: 'Некорректное значение',
-
     auth: {
         name: {
             default: 'Имя (3–30 символов) может включать буквы, цифры, пробелы и знаки _ . -',
@@ -343,6 +337,9 @@ export const fieldErrorMessages: TFieldErrorMessages = {
         },
         order: {
             default: 'Некорректный номер категории'
+        },
+        parent: {     // Всегда валидно
+            default: ''
         }
     },
     
@@ -376,17 +373,14 @@ export const fieldErrorMessages: TFieldErrorMessages = {
         stock: {
             default: 'Допустимо целое число от 0'
         },
-        reserved: {     // Для парсера ошибок
-            default: ''
-        },
         price: {
             default: 'Некорректная цена'
         },
         discount: {
             default: 'Допустимо целое число от 0 до 100'
         },
-        category: {
-            default: 'Некорректное значение категории товара'
+        category: {     // Всегда валидно
+            default: ''
         },
         tags: {
             default: 'Теги должны разделяться запятой или запятой с пробелом'
@@ -415,6 +409,9 @@ export const fieldErrorMessages: TFieldErrorMessages = {
         },
         deliveryMethod: {
             default: 'Необходимо выбрать способ доставки'
+        },
+        allowCourierExtra: { // Всегда валидно
+            default: ''
         },
         region: {       // Опциональное поле
             default: ''
@@ -465,6 +462,9 @@ export const fieldErrorMessages: TFieldErrorMessages = {
         deliveryMethod: {
             default: 'Необходимо выбрать способ доставки'
         },
+        allowCourierExtra: { // Всегда валидно
+            default: ''
+        },
         region: {       // Опциональное поле
             default: ''
         },
@@ -507,12 +507,6 @@ export const fieldErrorMessages: TFieldErrorMessages = {
     },
 
     financials: {
-        totalPaid: {     // Для парсера ошибок
-            default: ''
-        },
-        totalRefunded: { // Для парсера ошибок
-            default: ''
-        },
         amount: {        // Общее поле при оплате/возврате для проверки в схеме Mongoose
             default: 'Некорректная сумма'
         },
@@ -583,11 +577,10 @@ export const fieldErrorMessages: TFieldErrorMessages = {
         failureReason: { // Опциональное поле
             default: ''
         },
-        originalPaymentId: { // Для парсера ошибок
-            default: ''
-        },
         externalReference: { // Опциональное поле
             default: ''
         }
     }
 } as const;
+
+export const DEFAULT_FIELD_ERROR_MESSAGE = 'Некорректный формат данных';

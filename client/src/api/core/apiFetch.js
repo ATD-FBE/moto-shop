@@ -5,7 +5,7 @@ import { sendAuthRefreshRequest } from '../authRequests.js';
 import waitForRequestDelay from '@/helpers/waitForRequestDelay.js';
 import { handleLogout } from '@/services/authService.js';
 import { PROD_ENV } from '@/config/constants.js';
-import { NETWORK_FAIL_STATUS_CODE } from '@/helpers/statusResolver.js';
+import { NETWORK_FAIL_STATUS_CODE } from '@shared/statusResolver.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 
 const defaultConfig = {
@@ -120,7 +120,7 @@ const apiFetch = (url, options, config) => async (dispatch, getState) => {
             }
 
             await dispatch(handleLogout({ forceRedirectToLogin: true }));
-            return createUnauthorizedResponse(response.status);
+            return createUnauthorizedResponse(response.status, 'Пользователь не найден');
         }
 
         return response;

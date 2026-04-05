@@ -169,8 +169,8 @@ export default function RegistrationForm() {
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = () =>
+        Object.entries(fieldsState).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.auth[name];
                 if (!validation) {
@@ -203,9 +203,6 @@ export default function RegistrationForm() {
             { allValid: true, fieldStateUpdates: {}, formFields: {} }
         );
     
-        return result;
-    };
-    
     const handleFormSubmit = async (e) => {
         e.preventDefault();
 
@@ -224,7 +221,7 @@ export default function RegistrationForm() {
         if (isUnmountedRef.current) return;
 
         const {
-            status, message, fieldErrors, user, accessTokenExp, refreshTokenExp,
+            status, message, fieldErrors, accessTokenExp, refreshTokenExp, user,
             purchaseProductList, cartItemList, cartWasMerged, orderDraftId
         } = responseData;
         const LOG_CTX = 'AUTH: REGISTER';

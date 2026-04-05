@@ -1,6 +1,7 @@
 import log from '@server/utils/logger.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { toError } from '@shared/commonHelpers.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler, ErrorRequestHandler } from 'express';
 
 export const errorTracker: RequestHandler = (req, res, next) => {

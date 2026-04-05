@@ -10,7 +10,7 @@ const baseCustomerInfoFields = {
         type: String,
         set: (val: null | string): undefined | string => val === null ? undefined : val
     },
-    middleName: { // Опционально для заказа
+    middleName: {
         type: String,
         set: (val: null | string): undefined | string => val === null ? undefined : val
     },
@@ -39,7 +39,7 @@ export const FinalCustomerInfoSchema = new Schema({
         match: validationRules.checkout.lastName,
         required: true
     },
-    middleName: {
+    middleName: { // Опционально для заказа
         ...baseCustomerInfoFields.middleName,
         match: validationRules.checkout.middleName,
     },
