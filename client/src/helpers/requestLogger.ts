@@ -1,7 +1,10 @@
 import { PROD_ENV } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { ILogRequestStatusConfig } from '@/types/index.js';
 
-export const logRequestStatus = ({ context, status, message, details, unhandled = false }) => {
+export const logRequestStatus = (
+    { context, status, message, details, unhandled = false }: ILogRequestStatusConfig
+): void => {
     const contextText = context ? `[${context.toUpperCase()}] ` : '';
     const statusText = `[${status ? status.toUpperCase() : '???'}]`;
     const messageText = message || '<нет сообщения>';

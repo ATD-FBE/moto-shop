@@ -217,7 +217,7 @@ export default function RegistrationForm() {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setIsNavigationBlocked(true));
 
-        const responseData = await dispatch(sendAuthRegistrationRequest(formFields, guestCart));
+        const responseData = await dispatch(sendAuthRegistrationRequest({ formFields, guestCart }));
         if (isUnmountedRef.current) return;
 
         const {

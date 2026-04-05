@@ -40,7 +40,7 @@ export default function SseOrderManagement() {
 
     const syncAfterReconnect = async () => {
         const guestCart = prepareGuestCartPayload();
-        const responseData = await dispatch(sendAuthSessionRequest(guestCart));
+        const responseData = await dispatch(sendAuthSessionRequest({ guestCart }));
         const { status, message, user: updatedUser, accessTokenExp, refreshTokenExp } = responseData;
 
         logRequestStatus({ context: LOG_CTX, status, message });

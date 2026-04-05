@@ -1,4 +1,4 @@
-import AppStore from '@/redux/Store.jsx';
+import AppStore from '@/redux/Store.js';
 import { showConfirmModal, hideConfirmModal } from '@/redux/slices/modalConfirmSlice.js';
 
 let confirmModalCallbacks = { // Передача функций, которые нельзя хранить в Redux

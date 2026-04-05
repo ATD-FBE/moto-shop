@@ -25,7 +25,7 @@ import {
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, DELIVERY_METHOD } from '@shared/constants.js';
-import type { RequestHandler, Request, Response } from 'express';
+import type { RequestHandler } from 'express';
 import type { TInputTypeMap, TDbUser } from '@server/types/index.js';
 import type {
     IAuthRegistrationBody,
@@ -36,7 +36,6 @@ import type {
     TAuthUserUpdateResponse,
     IAuthSessionBody,
     TAuthSessionResponse,
-    TAuthCheckResponse,
     TAuthRefreshResponse,
     TAuthCheckoutPrefsResponse,
     IAuthCheckoutPrefsUpdateBody,
@@ -517,11 +516,6 @@ export const handleAuthSessionRequest: RequestHandler<
     } catch (err) {
         next(toError(err));
     }
-};
-
-/// Проверка токена доступа ///
-export const handleAuthCheckRequest = (_req: Request, res: Response<TAuthCheckResponse>): void => {
-    safeSendResponse(res, 200, { message: 'Токен доступа валидный' });
 };
 
 /// Обновление токена доступа ///

@@ -42,12 +42,3 @@ export const isValidEntityField = <E extends TEntityType>(
 export const isMongooseValidationError = (err: Error): err is mongoose.Error.ValidationError => {
     return err instanceof mongoose.Error.ValidationError || err.name === 'ValidationError';
 };
-
-/*export type ProtectedRequestHandler<
-    P = {}, 
-    ResBody = any, 
-    ReqBody = any, 
-    ReqQuery = core.Query
-> = RequestHandler<P, ResBody, ReqBody, ReqQuery> extends (req: infer Req, res: infer Res, next: infer Next) => infer Ret
-    ? (req: Req & { dbUser: TDbUserDoc }, res: Res, next: Next) => Ret
-    : never;*/

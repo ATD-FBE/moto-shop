@@ -1,4 +1,4 @@
-import AppStore from '@/redux/Store.jsx';
+import AppStore from '@/redux/Store.js';
 import { showAlertModal, hideAlertModal } from '@/redux/slices/modalAlertSlice.js';
 
 let alertModalCallbacks = { onClose: null }; // Передача функций, которые нельзя хранить в Redux

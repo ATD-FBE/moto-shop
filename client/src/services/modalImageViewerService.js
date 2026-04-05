@@ -1,4 +1,4 @@
-import AppStore from '@/redux/Store.jsx';
+import AppStore from '@/redux/Store.js';
 import { showImageViewerModal, hideImageViewerModal } from '@/redux/slices/modalImageViewerSlice.js';
 
 let imageViewerModalCallbacks = { onClose: null }; // Передача функций, которые нельзя хранить в Redux

@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMiddleware.js';
 import {
-    handleAuthCheckRequest,
     handleAuthCheckoutPrefsRequest,
     handleAuthRegistrationRequest,
     handleAuthLoginRequest,
@@ -16,7 +15,6 @@ import { USER_ROLE } from '@shared/constants.js';
 const router: Router = Router();
 const { CUSTOMER } = USER_ROLE;
 
-router.get('/check', verifyAuth, handleAuthCheckRequest);
 router.get('/checkout-preferences', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleAuthCheckoutPrefsRequest);
 router.post('/register', handleAuthRegistrationRequest);
 router.post('/login', handleAuthLoginRequest);

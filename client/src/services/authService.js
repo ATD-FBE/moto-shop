@@ -1,4 +1,4 @@
-import AppStore from '@/redux/Store.jsx';
+import AppStore from '@/redux/Store.js';
 import {
     sendAuthSessionRequest,
     sendAuthRefreshRequest,
@@ -45,7 +45,7 @@ export const loadSession = () => async (dispatch) => {
 
     // Запрос данных сессии пользователя
     const guestCart = prepareGuestCartPayload();
-    const responseData = await dispatch(sendAuthSessionRequest(guestCart));
+    const responseData = await dispatch(sendAuthSessionRequest({ guestCart }));
     const {
         status, message, user, accessTokenExp, refreshTokenExp,
         purchaseProductList, cartItemList, cartWasMerged, orderDraftId
@@ -163,7 +163,7 @@ export const checkAuth = () => async (dispatch, getState) => {
 
     // Refresh token валиден — обновление access token
     const { status, message, accessTokenExp } = await dispatch(sendAuthRefreshRequest());
-    logRequestStatus({ context: 'AUTH: REFRESH', status, message });
+    logRequestStatus({ context: 'AUTH: ROUTE REFRESH', status, message });
 
     if (status === REQUEST_STATUS.SUCCESS) {
         dispatch(setAccessTokenExpiry(accessTokenExp));

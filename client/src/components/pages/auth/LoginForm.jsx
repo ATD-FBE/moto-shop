@@ -187,7 +187,7 @@ export default function LoginForm() {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setIsNavigationBlocked(true));
 
-        const responseData = await dispatch(sendAuthLoginRequest(formFields, guestCart));
+        const responseData = await dispatch(sendAuthLoginRequest({ formFields, guestCart }));
         if (isUnmountedRef.current) return;
 
         const {

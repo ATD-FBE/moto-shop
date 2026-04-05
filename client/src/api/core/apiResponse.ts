@@ -1,7 +1,12 @@
 import { resolveRequestStatus } from '@shared/statusResolver.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { IApiResponseExtraConfig } from '@/types/index.js';
+import type { TRequestStatus } from '@shared/types/index.js';
 
-const apiResponse = async (response, extra = {}) => {
+const apiResponse = async <T>(
+    response: Response,
+    extra: IApiResponseExtraConfig = {}
+): Promise<T> => {
     const { errorPrefix = '', asFile = false, ...extraRest } = extra;
 
     // Пустое тело запроса 204 (No Content)
@@ -10,7 +15,7 @@ const apiResponse = async (response, extra = {}) => {
             status: REQUEST_STATUS.UNCHANGED,
             message: 'Данные не изменены, сохранять нечего',
             ...extraRest
-        };
+        } as T;
     }
 
     const contentType = response.headers.get('Content-Type') || '';
@@ -18,7 +23,7 @@ const apiResponse = async (response, extra = {}) => {
 
     // JSON-ответ (при ошибке загрузки файла содержит данные ошибки)
     if (isJsonResponse) {
-        let data = {};
+        let data: Partial<T> = {};
 
         try { 
             data = await response.json(); 
@@ -26,16 +31,22 @@ const apiResponse = async (response, extra = {}) => {
             console.error('Ошибка парсинга JSON:', err);
         }
 
-        const { status, message, reason, ...dataRest } = data;
+        const { status, message, reason, ...dataRest }: {
+            status?: TRequestStatus;
+            message?: string;
+            reason?: TRequestStatus;
+            [key: string]: unknown;
+        } = data;
+
         const safeStatus = status || resolveRequestStatus(response.status, reason);
         const safeMessage = message || (response.ok ? 'OK' : `Ошибка сервера (${response.status})`);
     
         return {
             status: safeStatus || (response.ok ? REQUEST_STATUS.SUCCESS : REQUEST_STATUS.ERROR),
             message: !response.ok && errorPrefix ? `${errorPrefix}: ${safeMessage}` : safeMessage,
-            ...extraRest,
-            ...dataRest
-        };
+            ...dataRest,
+            ...extraRest
+        } as T;
     }
 
     // Бинарные данные в ответе
@@ -52,7 +63,7 @@ const apiResponse = async (response, extra = {}) => {
             blob,
             filename,
             ...extraRest
-        };
+        } as T;
     }
 
     // Текстовый ответ
@@ -62,7 +73,7 @@ const apiResponse = async (response, extra = {}) => {
         status: resolveRequestStatus(response.status),
         text,
         ...extraRest
-    };
+    } as T;
 };
 
 export default apiResponse;

@@ -89,9 +89,6 @@ export type TAuthSessionResponse =
     | TSuccessResponse<TAuthSuccessData>
     | IErrorResponse;
 
-/// Проверка токена доступа ///
-export type TAuthCheckResponse = IBaseResponse;
-
 /// Обновление токена доступа ///
 interface IAuthRefreshSuccessData {
     accessTokenExp: number;

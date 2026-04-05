@@ -8,7 +8,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import GlobalLoader from '@/components/GlobalLoader.jsx';
 import Layout from '@/components/Layout.jsx';
 import RouteGuard from '@/components/RouteGuard.jsx';
-import AppStore from '@/redux/Store.jsx';
+import AppStore from '@/redux/Store.js';
 import { StructureRefsProvider } from '@/context/StructureRefsContext.js';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
 
