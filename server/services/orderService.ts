@@ -10,7 +10,7 @@ import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '@server/con
 import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getPopulatedDbField } from '@server/utils/dbUtils.js';
 import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
-import { fieldErrorMessages } from '@shared/fieldRules.js';
+import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import {
     USER_ROLE,
     CURRENCY,
@@ -58,6 +58,8 @@ import type {
     IOrderStatusConfig,
     IOrderStatusStepConfig,
     TEntityType,
+    TEntityField,
+    TFieldErrors,
     TTransactionStatus
 } from '@shared/types/index.js';
 
@@ -521,16 +523,18 @@ export const returnProductsToStore = async (
     await applyProductBulkUpdate(orderItemList, ORDER_ADJUSTMENT_TYPE.RETURN, session);
 };
 
-export const getFieldErrors = (invalidFields: string[], entityType: TEntityType): Record<string, string> => {
-    return Object.fromEntries(
+export const getFieldErrors = <E extends TEntityType>(
+    invalidFields: TEntityField<E>[],
+    entityType: E
+): TFieldErrors<E> =>
+    Object.fromEntries(
         invalidFields.map(field => [
             field,
             fieldErrorMessages[entityType]?.[field]?.mismatch ||
                 fieldErrorMessages[entityType]?.[field]?.default ||
-                fieldErrorMessages.DEFAULT
+                DEFAULT_FIELD_ERROR_MESSAGE
         ])
-    );
-};
+    ) as TFieldErrors<E>;
 
 export const applyOrderFinancials = (
     dbOrder: TDbOrderFinal,
