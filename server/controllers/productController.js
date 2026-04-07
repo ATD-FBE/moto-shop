@@ -15,7 +15,7 @@ import {
     buildSortPipeline,
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
-} from '@server/utils/aggregationBuilders.js';
+} from '@server/utils/aggregationUtils.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';

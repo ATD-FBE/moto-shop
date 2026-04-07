@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import GlobalRedirect from '@/components/route-guard/GlobalRedirect.jsx';
 import ProtectedRoute from '@/components/route-guard/ProtectedRoute.jsx';

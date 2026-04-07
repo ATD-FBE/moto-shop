@@ -1,4 +1,4 @@
-import type { TDiscountSource } from './constants.types.js';
+import type { TDiscountSource } from './shared.types.js';
 
 export interface IGuestCartItem {
     id: string;

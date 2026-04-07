@@ -289,6 +289,7 @@ const fieldsStateReducer = (state, action) => {
                         : state[name].saveStatusMessage
                 };
             }
+            
             return saveState;
         }
 

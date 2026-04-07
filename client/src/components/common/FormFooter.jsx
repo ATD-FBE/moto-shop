@@ -6,7 +6,7 @@ export default function FormFooter({
     submitStatus,
     uiBlocked,
     reloadBtnLabel = 'Повторить',
-    reloadData
+    reloadData = null
 }) {
     const submitState = submitStates[submitStatus] ?? {};
 

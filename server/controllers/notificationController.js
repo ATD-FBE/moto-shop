@@ -3,7 +3,7 @@ import User from '@server/db/models/User.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNotification } from '@server/services/notificationService.js';
 import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';
-import { parseSortParam } from '@server/utils/aggregationBuilders.js';
+import { parseSortParam } from '@server/utils/aggregationUtils.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';

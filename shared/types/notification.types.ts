@@ -1,4 +1,4 @@
-import type { TNotification } from './constants.types.js';
+import type { TNotification } from './shared.types.js';
 
 export interface INotification {
     id: string;

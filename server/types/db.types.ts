@@ -1,4 +1,4 @@
-import { InferSchemaType, HydratedDocument, Model, Schema, Types } from 'mongoose';
+import { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
 import { UpdateHistoryItemSchema } from '@server/db/models/schemas/UpdateHistoryItemSchema.js';
 import { NotificationItemSchema } from '@server/db/models/schemas/user/NotificationItemSchema.js';
 import { CartItemSchema } from '@server/db/models/schemas/user/CartItemSchema.js';

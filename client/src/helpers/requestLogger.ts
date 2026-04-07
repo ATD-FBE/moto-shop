@@ -14,7 +14,7 @@ export const logRequestStatus = (
     }
 
     const formattedMessage = `${contextText}${statusText} ${messageText}${details ? ':' : ''}`;
-    const logArgs = [formattedMessage];
+    const logArgs: any[] = [formattedMessage];
     
     if (details) logArgs.push(details);
 

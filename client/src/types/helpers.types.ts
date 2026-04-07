@@ -5,6 +5,6 @@ export interface ILogRequestStatusConfig {
     context?: string;
     status?: TRequestStatus;
     message?: string;
-    details?: string;
+    details?: unknown;
     unhandled?: boolean;
 }

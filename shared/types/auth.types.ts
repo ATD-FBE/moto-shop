@@ -5,11 +5,10 @@ import type {
     IValidationErrorResponse,
     IErrorResponse,
     TSuccessResponse,
-} from './api.types.js';
+} from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
 import type { IProduct, IProductSnapshot } from './product.types.js';
-import type { TActiveUserRole } from './constants.types.js';
-import type { TFieldErrors } from './fieldRules.types.js';
+import type { TActiveUserRole, TFieldErrors } from './shared.types.js';
 import type { TDbUser } from '@server/types/index.js';
 
 /// Общие типы ///

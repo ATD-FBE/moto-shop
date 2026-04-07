@@ -1,6 +1,5 @@
 import { REQUEST_STATUS } from '@shared/constants.js';
-import type { TRequestStatus } from './constants.types.js';
-import type { TEntityType, TFieldErrors } from './fieldRules.types.js';
+import type { TRequestStatus, TEntityType, TFieldErrors } from './shared.types.js';
 
 export interface IEmptyResponse {
     status: typeof REQUEST_STATUS.UNCHANGED;

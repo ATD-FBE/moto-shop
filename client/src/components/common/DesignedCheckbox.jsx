@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import cn from 'classnames';
 
 export default function DesignedCheckbox({
@@ -10,7 +10,7 @@ export default function DesignedCheckbox({
     checkIcon = '✓',
     checkIconColor = 'blue',
     checked = false,
-    onChange = () => {},
+    onChange = (e) => {},
     onBlur = () => {},
     disabled = false
 }) {

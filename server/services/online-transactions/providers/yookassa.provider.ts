@@ -19,7 +19,7 @@ import type {
     TExternalTx,
     TAnyExternalTx,
     TYooKassaExternalTx,
-    IYooKassaListResponse,
+    IYooKassaTxListResponse,
     ICreateOnlinePaymentParams,
     ICreateOnlinePaymentResult,
     ICreateOnlineRefundsParams,
@@ -227,14 +227,14 @@ export const fetchYooKassaExternalTransactions = async (
 
     do {
         // Параллельные запросы оплат и возвратов в YooKassa
-        const paymentsPromise: Promise<IYooKassaListResponse<Payment>> = isFetchingPayments 
+        const paymentsPromise: Promise<IYooKassaTxListResponse<Payment>> = isFetchingPayments 
             ? yooKassaCheckout.getPaymentList({
                 ...yooKassaParams,
                 ...(paymentsNextCursor && { cursor: paymentsNextCursor })
             })
             : Promise.resolve({ type: 'list', items: [] });
 
-        const refundsPromise: Promise<IYooKassaListResponse<Refund>> = isFetchingRefunds 
+        const refundsPromise: Promise<IYooKassaTxListResponse<Refund>> = isFetchingRefunds 
             ? yooKassaCheckout.getRefundList({
                 ...yooKassaParams,
                 ...(refundsNextCursor && { cursor: refundsNextCursor })

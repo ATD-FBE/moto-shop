@@ -1,4 +1,4 @@
-import type { TProductThumbnailKey } from '@shared/types/index.js';
+import type { TProductThumbnailKey } from './shared.types.js';
 
 export type TProductImageThumbs = {
     [K in TProductThumbnailKey]: string;

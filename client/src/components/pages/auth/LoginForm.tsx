@@ -1,164 +1,137 @@
 import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
+import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { sendAuthRegistrationRequest } from '@/api/authRequests.js';
+import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
+import { sendAuthLoginRequest } from '@/api/authRequests.js';
+import { routeConfig } from '@/config/appRouting.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { login, resetSuppressAuthRedirect } from '@/redux/slices/authSlice.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
-import { routeConfig } from '@/config/appRouting.js';
+import {
+    getLockedStatuses,
+    applyCommonFieldConfig,
+    createFieldConfigMap,
+    createInitFieldsState,
+    fieldsStateReducer
+} from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type {
+    TFormStatus,
+    IBaseSubmitState,
+    IGetSubmitStatesResult,
+    IFieldState,
+    TFieldsState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type { IAuthLoginBody } from '@shared/types/index.js';
 
-const getSubmitStates = () => {
+const getSubmitStates = (): IGetSubmitStatesResult => {
+    const { DEFAULT, UNAUTH, BAD_REQUEST, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
     const base = BASE_SUBMIT_STATES;
-    const { DEFAULT, BAD_REQUEST, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
-    const actionLabel = 'Зарегистрироваться';
+    const actionLabel = 'Войти';
 
-    const submitStates = {
+    const submitStates: Record<TFormStatus, IBaseSubmitState> = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
+        [UNAUTH]: {
+            ...base[UNAUTH],
+            icon: '⚠️',
+            mainMessage: 'Некорректные данные.',
+            addMessage: 'Исправьте ошибки в форме.',
+            submitBtnLabel: actionLabel,
+            locked: false
+        },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
         [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
-            mainMessage: 'Регистрация завершена!',
-            addMessage: 'Вы автоматически войдёте в аккаунт и будете перенаправлены на главную страницу.',
+            mainMessage: 'Вход выполнен успешно!',
+            addMessage: 'Вы будете перенаправлены на главную страницу.',
             submitBtnLabel: 'Перенаправление...'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const getFieldConfigs = (isAdminRegistration) => {
-    const baseFieldConfigs = [
-        {
-            name: 'name',
-            label: 'Имя',
-            elem: 'input',
-            type: 'text',
-            placeholder: 'Укажите имя пользователя',
-            autoComplete: 'on',
-            trim: true
-        },
-        {
-            name: 'email',
-            label: 'Email',
-            elem: 'input',
-            type: 'email',
-            placeholder: 'Укажите почтовый ящик',
-            autoComplete: 'on',
-            trim: true
-        },
-        {
-            name: 'password',
-            label: 'Пароль',
-            elem: 'input',
-            type: 'password',
-            placeholder: 'Укажите пароль',
-            autoComplete: 'off'
-        },
-        {
-            name: 'confirmPassword',
-            label: 'Пароль (повтор)',
-            elem: 'input',
-            type: 'password',
-            placeholder: 'Подтвердите пароль',
-            autoComplete: 'off'
-        }
-    ];
-    
-    const adminRegCodeFieldConfig = [
-        {
-            name: 'adminRegCode',
-            label: 'Код администратора',
-            elem: 'input',
-            type: 'password',
-            placeholder: 'Введите код администратора',
-            autoComplete: 'off'
-        }
-    ];
-
-    const fieldConfigs = isAdminRegistration
-        ? baseFieldConfigs.concat(adminRegCodeFieldConfig)
-        : baseFieldConfigs;
-
-    const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-        acc[config.name] = config;
-        return acc;
-    }, {});
-
-    return { fieldConfigs, fieldConfigMap };
-};
-
-const initFieldsStateReducer = (fieldConfigs) =>
-    fieldConfigs.reduce((acc, { name }) => {
-        acc[name] = { value: '', uiStatus: '', error: '' };
-        return acc;
-    }, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
+const fieldConfigs = applyCommonFieldConfig([
+    {
+        name: 'name',
+        label: 'Имя',
+        elem: 'input',
+        type: 'text',
+        placeholder: 'Укажите имя пользователя',
+        autoComplete: 'on',
+        trim: true
+    },
+    {
+        name: 'password',
+        label: 'Пароль',
+        elem: 'input',
+        type: 'password',
+        placeholder: 'Укажите пароль',
+        autoComplete: 'on'
     }
-};
+] as const);
 
-export default function RegistrationForm() {
-    const [searchParams] = useSearchParams();
-    const isAdminRegistration = searchParams.get('admin') === 'true';
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
 
-    const { fieldConfigs, fieldConfigMap } = useMemo(
-        () => getFieldConfigs(isAdminRegistration),
-        [isAdminRegistration]
-    );
+// Проверка наличия полей конфига в наборе полей для валидации по сущности
+type TAuthEntityFields = keyof typeof validationRules['auth'];
+type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
+
+// Создание карты и начального состояния полей
+const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+
+export default function LoginForm() {
     const guestCart = useMemo(() => prepareGuestCartPayload(), []);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer,
-        fieldConfigs,
-        initFieldsStateReducer
+        fieldsStateReducer<TValidFieldName>,
+        initialFieldsState
     );
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+    const [rememberMe, setRememberMe] = useState(localStorage.getItem('rememberMe') === 'true');
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
 
     const isUnmountedRef = useRef(false);
-
-    const dispatch = useDispatch();
+    
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e) => {
+    const handleRememberMe = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setRememberMe(e.target.checked);
+        localStorage.setItem('rememberMe', String(e.target.checked));
+    };
+
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        
+
         dispatchFieldsState({
             type: 'UPDATE',
             payload: { [name]: { value, uiStatus: '', error: '' } }
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -169,8 +142,11 @@ export default function RegistrationForm() {
         });
     };
 
-    const processFormFields = () =>
-        Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TValidFieldName,
+        IAuthLoginBody['formFields']
+    > => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.auth[name];
                 if (!validation) {
@@ -178,32 +154,39 @@ export default function RegistrationForm() {
                     return acc;
                 }
 
-                const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
-                const isConfirmNewPassword = name === 'confirmNewPassword';
-                
-                const isValid = validation.test(normalizedValue) &&
-                    (!isConfirmNewPassword || normalizedValue === fieldsState.password.value);
+                const { trim } = fieldConfigMap[name] ?? {};
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const isValid = validation.test(String(normalizedValue));
 
                 acc.fieldStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.auth[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.auth[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
-                if (isValid && !isConfirmNewPassword) {
+                if (isValid) {
                     acc.formFields[name] = normalizedValue;
+                } else {
+                    acc.allValid = false;
                 }
-        
-                if (!isValid) acc.allValid = false;
-                
+
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {} }
+            {
+                allValid: true,
+                fieldStateUpdates: {} as TFieldsState<TValidFieldName>,
+                formFields: {} as IAuthLoginBody['formFields'] & Record<TValidFieldName, any>
+            }
         );
     
-    const handleFormSubmit = async (e) => {
+        if (result.allValid) result.formFields.rememberMe = rememberMe;
+        
+        return result;
+    };
+
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const { allValid, fieldStateUpdates, formFields } = processFormFields();
@@ -217,14 +200,11 @@ export default function RegistrationForm() {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setIsNavigationBlocked(true));
 
-        const responseData = await dispatch(sendAuthRegistrationRequest({ formFields, guestCart }));
+        const responseData = await dispatch(sendAuthLoginRequest({ formFields, guestCart }));
         if (isUnmountedRef.current) return;
 
-        const {
-            status, message, fieldErrors, accessTokenExp, refreshTokenExp, user,
-            purchaseProductList, cartItemList, cartWasMerged, orderDraftId
-        } = responseData;
-        const LOG_CTX = 'AUTH: REGISTER';
+        const { status, message } = responseData;
+        const LOG_CTX = 'AUTH: LOGIN';
 
         switch (status) {
             case FORM_STATUS.BAD_REQUEST:
@@ -235,27 +215,34 @@ export default function RegistrationForm() {
                 dispatch(setIsNavigationBlocked(false));
                 break;
                 
+            case FORM_STATUS.UNAUTH:
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
-                Object.entries(fieldErrors).forEach(([name, error]) => {
+                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
+                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
                     fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
-        
+
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
                 break;
             }
-        
+
             case FORM_STATUS.SUCCESS: {
+                const {
+                    user, accessTokenExp, refreshTokenExp,
+                    purchaseProductList, cartItemList, cartWasMerged, orderDraftId
+                } = responseData;
+
                 logRequestStatus({ context: LOG_CTX, status, message });
                 saveUserToLocalStorage(user);
 
-                const fieldStateUpdates = {};
+                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
                 fieldConfigs.forEach(({ name }) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
         
@@ -271,16 +258,19 @@ export default function RegistrationForm() {
                         refreshTokenExp
                     }));
 
-                    let targetPath = routeConfig.home.paths[0];
+                    const locationFrom = location.state?.from;
+                    const fromPath = locationFrom
+                        ? locationFrom.pathname + (locationFrom.search || '')
+                        : null;
+                    let targetPath = fromPath || routeConfig.home.paths[0];
 
-                    if (user.role === 'customer') {
+                    if (user.role === USER_ROLE.CUSTOMER) {
                         const { redirectTo } = await dispatch(initCustomerSession({
                             purchaseProductList,
                             cartItemList,
                             customerDiscount: user.discount,
                             orderDraftId,
-                            cartWasMerged,
-                            isFirstLogin: true
+                            cartWasMerged
                         }));
                         if (redirectTo) targetPath = redirectTo;
                     }
@@ -305,7 +295,7 @@ export default function RegistrationForm() {
             isUnmountedRef.current = true;
             dispatch(resetSuppressAuthRedirect());
         };
-    }, []);
+    }, [dispatch]);
 
     // Сброс статуса формы при отсутствии ошибок полей
     useEffect(() => {
@@ -317,23 +307,32 @@ export default function RegistrationForm() {
 
     return (
         <div className="auth-page">
-            <form className="auth-form" data-type="registration" onSubmit={handleFormSubmit} noValidate>
+            <form className="auth-form" data-type="login" onSubmit={handleFormSubmit} noValidate>
                 <header className="form-header">
-                    <h2>Форма регистрации</h2>
+                    <h2>Форма авторизации</h2>
                 </header>
 
                 <div className="form-body">
-                    {fieldConfigs.map(({ name, label, type, placeholder, autoComplete, trim }) => (
-                        <p key={`registration-${name}`} className="form-entry">
-                            <label htmlFor={`reg-${name}`} className="form-entry-label">{label}:</label>
+                    {fieldConfigs.map(({
+                        name,
+                        label,
+                        type,
+                        placeholder,
+                        autoComplete,
+                        trim
+                    }) => (
+                        <p key={`login-${name}`} className="form-entry">
+                            <label htmlFor={`login-${name}`} className="form-entry-label">
+                                {label}:
+                            </label>
                             
                             <span className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
                                 <input
-                                    id={`reg-${name}`}
+                                    id={`login-${name}`}
                                     name={name}
                                     type={type}
                                     placeholder={placeholder}
-                                    value={fieldsState[name]?.value}
+                                    value={(fieldsState[name]?.value as string) ?? ''}
                                     autoComplete={autoComplete}
                                     onChange={handleFieldChange}
                                     onBlur={trim ? handleTrimmedFieldBlur : undefined}
@@ -348,6 +347,17 @@ export default function RegistrationForm() {
                             </span>
                         </p>
                     ))}
+
+                    <p className="form-entry">
+                        <DesignedCheckbox
+                            id="remember-me"
+                            name="remember-me"
+                            label="Запомнить меня"
+                            checked={rememberMe}
+                            onChange={handleRememberMe}
+                            disabled={isFormLocked}
+                        />
+                    </p>
                 </div>
 
                 <FormFooter

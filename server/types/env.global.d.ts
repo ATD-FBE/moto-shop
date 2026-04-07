@@ -1,11 +1,7 @@
-import {
-    TStorageType,
-    TMongoMode,
-    TBucketType,
-    TTokenDecodedUser,
-    TDbUserDoc
-} from '@server/types/index.js';
 import { TUserRole } from '@shared/constants.js';
+import type { TStorageType, TMongoMode, TBucketType } from './config.types.js';
+import type { TTokenDecodedUser } from './utils.types.js';
+import type { TDbUserDoc } from './db.types.js';
 
 declare global {
     namespace NodeJS {

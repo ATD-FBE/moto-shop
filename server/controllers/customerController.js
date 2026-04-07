@@ -8,7 +8,7 @@ import {
     buildFilterMatch,
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
-} from '@server/utils/aggregationBuilders.js';
+} from '@server/utils/aggregationUtils.js';
 import { validateInputTypes } from '@server/utils/typeValidation.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';

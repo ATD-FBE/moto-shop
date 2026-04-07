@@ -1,6 +1,6 @@
-import type { IDataChange } from './shared.types.js';
-import type { IDotNotationPatch } from './commonHelpers.types.js';
 import type {
+    IDataChange,
+    IDotNotationPatch,
     TUserRole,
     TActiveUserRole,
     TDiscountSource,
@@ -14,7 +14,7 @@ import type {
     TCardOnlineProvider,
     TTransactionType,
     TTransactionStatus
-} from './constants.types.js';
+} from './shared.types.js';
 
 export interface IOrderDataChange extends IDataChange {
     currency?: boolean;

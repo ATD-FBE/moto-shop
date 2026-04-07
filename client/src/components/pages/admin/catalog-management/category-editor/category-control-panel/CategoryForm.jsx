@@ -2,12 +2,17 @@ import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { sendCategoryCreateRequest, sendCategoryUpdateRequest } from '@/api/categoryRequests.js';
+import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
+import {
+    createFieldConfigMap,
+    createInitFieldsState,
+    fieldsStateReducer
+} from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
+import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 
 const getSubmitStates = (isEditMode) => {
     const base = BASE_SUBMIT_STATES;
@@ -103,37 +108,9 @@ const getFieldConfigs = (
         }
     ];
 
-    const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-        acc[config.name] = config;
-        return acc;
-    }, {});
+    const fieldConfigMap = createFieldConfigMap(fieldConfigs); // Плюс дженерик <TValidFieldName>
 
     return { fieldConfigs, fieldConfigMap };
-};
-
-const initFieldsStateReducer = (fieldConfigs) =>
-    fieldConfigs.reduce((acc, { name, value, max }) => {
-        acc[name] = { value, ...(name === 'order' && { max }), uiStatus: '', error: '' };
-        return acc;
-    }, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        case 'RESET':
-            return payload;
-
-        default:
-            return state;
-    }
 };
 
 export default function CategoryForm({
@@ -157,9 +134,11 @@ export default function CategoryForm({
     );
 
     const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer,
+        fieldsStateReducer, // Плюс дженерик <TValidFieldName>
         fieldConfigs,
-        initFieldsStateReducer
+        (configs) => createInitFieldsState(configs, { // Плюс дженерик <TValidFieldName>
+            extraStateFields: { order: ['max'] } // Добавление дополнительного поля в состояние
+        })
     );
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
@@ -357,7 +336,7 @@ export default function CategoryForm({
     // Обновление всех полей при изменении их конфигов (смена категории, пересоздание карты)
     useEffect(() => {
         setSubmitStatus(FORM_STATUS.DEFAULT);
-        dispatchFieldsState({ type: 'RESET', payload: initFieldsStateReducer(fieldConfigs) });
+        dispatchFieldsState({ type: 'RESET', payload: createInitFieldsState(fieldConfigs) });
     }, [fieldConfigs]);
 
     // Обновление поля order при изменении родителя категории в режиме редактирования

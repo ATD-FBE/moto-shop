@@ -22,7 +22,7 @@ import {
     buildSearchMatch,
     buildFilterMatch,
     parseSortParam
-} from '@server/utils/aggregationBuilders.js';
+} from '@server/utils/aggregationUtils.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
