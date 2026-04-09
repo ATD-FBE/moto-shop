@@ -23,7 +23,7 @@ import {
 const getSubmitStates = (markAsFailed) => {
     const base = BASE_SUBMIT_STATES;
     const {
-        DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, NETWORK, SUCCESS
+        DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Внести оплату';
 
@@ -38,7 +38,7 @@ const getSubmitStates = (markAsFailed) => {
         },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: markAsFailed
@@ -254,7 +254,7 @@ export default function PaymentForm({
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -273,7 +273,7 @@ export default function PaymentForm({
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {}, changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
         );
     
         return result;
@@ -286,9 +286,9 @@ export default function PaymentForm({
             return setSubmitStatus(FORM_STATUS.FORBIDDEN);
         }
 
-        const { allValid, fieldStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -314,7 +314,7 @@ export default function PaymentForm({
             case FORM_STATUS.NOT_FOUND:
             case FORM_STATUS.CONFLICT:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -323,11 +323,11 @@ export default function PaymentForm({
             case FORM_STATUS.INVALID: {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -337,11 +337,11 @@ export default function PaymentForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
 
@@ -380,11 +380,11 @@ export default function PaymentForm({
 
     // Сброс ошибок полей и статуса формы при смене метода
     useEffect(() => {
-        const fieldStateUpdates = {};
+        const fieldsStateUpdates = {};
         Object.keys(fieldsState).forEach(name => {
-            fieldStateUpdates[name] = { uiStatus: '', error: '' };
+            fieldsStateUpdates[name] = { uiStatus: '', error: '' };
         });
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
         setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [method]);

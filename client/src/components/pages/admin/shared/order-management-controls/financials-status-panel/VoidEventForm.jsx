@@ -11,7 +11,7 @@ import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 
 const getSubmitStates = () => {
     const base = BASE_SUBMIT_STATES;
-    const { DEFAULT, BAD_REQUEST, NOT_FOUND, CONFLICT, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
+    const { DEFAULT, BAD_REQUEST, NOT_FOUND, CONFLICT, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const actionLabel = 'Аннулировать';
 
     const submitStates = {
@@ -27,7 +27,7 @@ const getSubmitStates = () => {
         [CONFLICT]: { ...base[CONFLICT], submitBtnLabel: actionLabel, locked: false },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Запись аннулирована!',
@@ -132,7 +132,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -151,7 +151,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {}, changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
         );
     
         return result;
@@ -160,9 +160,9 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -188,7 +188,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             case FORM_STATUS.NOT_FOUND:
             case FORM_STATUS.CONFLICT:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -197,11 +197,11 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             case FORM_STATUS.INVALID: {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -211,11 +211,11 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
 
@@ -223,9 +223,9 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
                     if (isUnmountedRef.current) return;
 
                     changedFields.forEach(name => {
-                        fieldStateUpdates[name] = { value: '', uiStatus: '' };
+                        fieldsStateUpdates[name] = { value: '', uiStatus: '' };
                     });
-                    dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                    dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
                     dispatch(setIsNavigationBlocked(false));

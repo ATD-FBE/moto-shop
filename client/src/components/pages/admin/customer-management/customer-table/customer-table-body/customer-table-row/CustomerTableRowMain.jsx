@@ -99,7 +99,7 @@ export default function CustomerTableRowMain({
     };
 
     const processFormField = (fieldCfg) => {
-        const fieldStateUpdates = {};
+        const fieldsStateUpdates = {};
         let allValid = true;
         let changedField = '';
         let newValue;
@@ -109,7 +109,7 @@ export default function CustomerTableRowMain({
 
         if (!validation) {
             console.error(`Отсутствует правило валидации для поля: ${name}`);
-            return { allValid, fieldStateUpdates, newValue, changedField };
+            return { allValid, fieldsStateUpdates, newValue, changedField };
         }
 
         const value = fieldsState[name]?.value;
@@ -121,7 +121,7 @@ export default function CustomerTableRowMain({
 
         const isValid = ruleCheck;
 
-        fieldStateUpdates[name] = {
+        fieldsStateUpdates[name] = {
             value: normalizedValue,
             uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
             error: isValid
@@ -138,15 +138,15 @@ export default function CustomerTableRowMain({
             allValid = false;
         }
     
-        return { allValid, fieldStateUpdates, newValue, changedField };
+        return { allValid, fieldsStateUpdates, newValue, changedField };
     };
 
     const handleFormSubmit = async (e, fieldCfg) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, newValue, changedField } = processFormField(fieldCfg);
+        const { allValid, fieldsStateUpdates, newValue, changedField } = processFormField(fieldCfg);
 
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
         if (!allValid || !changedField) return;
 
@@ -158,22 +158,22 @@ export default function CustomerTableRowMain({
 
         if (!success) {
             if (fieldErrors) { // Обработка полей с ошибками
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
             }
             onComplete();
         } else { // Обработка изменённых полей
-            const fieldStateUpdates = { [changedField]: { uiStatus: FIELD_UI_STATUS.CHANGED } };
-            dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+            const fieldsStateUpdates = { [changedField]: { uiStatus: FIELD_UI_STATUS.CHANGED } };
+            dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
             setTimeout(() => {
                 if (isUnmountedRef.current) return;
 
-                fieldStateUpdates[changedField] = { uiStatus: '' };
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                fieldsStateUpdates[changedField] = { uiStatus: '' };
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 onComplete();
             }, SUCCESS_DELAY);

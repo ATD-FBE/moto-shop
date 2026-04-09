@@ -135,7 +135,7 @@ export default function OrderDetailsItems({
 
                 const isValid = ruleCheck && value >= min && value <= max;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -154,7 +154,7 @@ export default function OrderDetailsItems({
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, items: [], changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, items: [], changedFields: [] }
         );
     
         return result;
@@ -200,9 +200,9 @@ export default function OrderDetailsItems({
             return;
         }
 
-        const { allValid, fieldStateUpdates, items, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, items, changedFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return onItemsSubmitResult({ ok: false });
@@ -225,13 +225,13 @@ export default function OrderDetailsItems({
         }
 
         // Обработка полей с ошибками
-        const fieldStateUpdates = {};
+        const fieldsStateUpdates = {};
 
         if (fieldErrors) {
             Object.entries(fieldErrors).forEach(([name, error]) => {
-                fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
             });
-            dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+            dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
             clearItemsResponseResult();
             return;
@@ -242,15 +242,15 @@ export default function OrderDetailsItems({
 
         if (changedFields) {
             changedFields.forEach(name => {
-                fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
             });
-            dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+            dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
             highlightTimerId = setTimeout(() => {
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: '' };
+                    fieldsStateUpdates[name] = { uiStatus: '' };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 clearItemsResponseResult();
                 loadItemsAvailability(); // Для обновления максимального количества товаров

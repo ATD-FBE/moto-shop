@@ -29,7 +29,7 @@ import { CARD_ONLINE_PROVIDER_OPTIONS } from '@shared/constants.js';
 const getSubmitStates = (hasConfirmationUrl) => {
     const base = BASE_SUBMIT_STATES;
     const {
-        DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, NETWORK, SUCCESS
+        DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Оплатить';
 
@@ -46,7 +46,7 @@ const getSubmitStates = (hasConfirmationUrl) => {
         },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Платёж создан и обрабатывается!',
@@ -332,7 +332,7 @@ export default function CardOnlinePayment() {
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -364,7 +364,7 @@ export default function CardOnlinePayment() {
             },
             {
                 allValid: true,
-                fieldStateUpdates: {},
+                fieldsStateUpdates: {},
                 checkoutFields: {},
                 formFields: {},
                 changedFields: []
@@ -420,7 +420,7 @@ export default function CardOnlinePayment() {
     
         if (!collected.allValid) {
             return {
-                fieldStateUpdates: collected.fieldStateUpdates,
+                fieldsStateUpdates: collected.fieldsStateUpdates,
                 errorRequestStatus: FORM_STATUS.INVALID
             };
         }
@@ -432,11 +432,11 @@ export default function CardOnlinePayment() {
         );
 
         // Объединение состояний полей при ошибках валидации через скрипт
-        let mergedFieldStateUpdates = collected.fieldStateUpdates;
+        let mergedFieldsStateUpdates = collected.fieldsStateUpdates;
 
         if (checkoutResult.checkoutFieldErrors) {
-            mergedFieldStateUpdates = Object.fromEntries(
-                Object.entries(collected.fieldStateUpdates).map(([name, state]) => [
+            mergedFieldsStateUpdates = Object.fromEntries(
+                Object.entries(collected.fieldsStateUpdates).map(([name, state]) => [
                     name,
                     checkoutResult.checkoutFieldErrors[name]
                         ? { ...state, ...checkoutResult.checkoutFieldErrors[name] }
@@ -446,7 +446,7 @@ export default function CardOnlinePayment() {
         }
     
         return {
-            fieldStateUpdates: mergedFieldStateUpdates,
+            fieldsStateUpdates: mergedFieldsStateUpdates,
             errorRequestStatus: checkoutResult.errorRequestStatus,
             paymentToken: checkoutResult.paymentToken,
             formFields: collected.formFields,
@@ -461,11 +461,11 @@ export default function CardOnlinePayment() {
         dispatch(setIsNavigationBlocked(true));
 
         const {
-            fieldStateUpdates, errorRequestStatus, paymentToken, formFields, changedFields
+            fieldsStateUpdates, errorRequestStatus, paymentToken, formFields, changedFields
         } = await processFormFields();
         if (isUnmountedRef.current) return;
 
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (errorRequestStatus) {
             setSubmitStatus(errorRequestStatus);
@@ -492,7 +492,7 @@ export default function CardOnlinePayment() {
             case FORM_STATUS.NOT_FOUND:
             case FORM_STATUS.CONFLICT:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -501,11 +501,11 @@ export default function CardOnlinePayment() {
             case FORM_STATUS.INVALID: {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -515,11 +515,11 @@ export default function CardOnlinePayment() {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setConfirmationUrl(confirmationUrl);
                 setSubmitStatus(status);

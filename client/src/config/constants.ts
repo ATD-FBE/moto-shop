@@ -241,19 +241,11 @@ export const BASE_SUBMIT_STATES: Record<TFormStatus, IBaseSubmitState> = {
         cancelBtnLabel: 'Отменить',
         intent: INTENT.NEGATIVE
     },
-    [FORM_STATUS.NETWORK]: {
-        icon: '❌',
-        mainMessage: 'Не удалось выполнить запрос.',
-        addMessage: 'Ошибка сети. Попробуйте снова.',
-        submitBtnLabel: 'Отправить',
-        cancelBtnLabel: 'Отменить',
-        intent: INTENT.NEGATIVE
-    },
     [FORM_STATUS.TIMEOUT]: {
         icon: '⏰',
-        mainMessage: 'Время ожидания истекло.',
-        addMessage: 'Сервер слишком долго не отвечал.',
-        submitBtnLabel: 'Повторить',
+        mainMessage: 'Не удалось выполнить запрос.',
+        addMessage: 'Время ожидания истекло.',
+        submitBtnLabel: 'Отправить',
         cancelBtnLabel: 'Отменить',
         intent: INTENT.NEGATIVE
     },

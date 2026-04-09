@@ -6,7 +6,6 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import waitForRequestDelay from '@/helpers/waitForRequestDelay.js';
 import { handleLogout } from '@/services/authService.js';
 import { PROD_ENV } from '@/config/constants.js';
-import { NETWORK_FAIL_STATUS_CODE } from '@shared/statusResolver.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import { toError } from '@shared/commonHelpers.js';
 import type { IApiFetchConfig, TAppThunk } from '@/types/index.js';
@@ -155,7 +154,7 @@ const apiFetch = (
                 ? 'Запрос отменен'
                 : toError(err).message;
 
-        const statusCode = isTimeout ? NETWORK_FAIL_STATUS_CODE : isAborted ? 499 : 500;
+        const statusCode = isTimeout ? 408 : isAborted ? 499 : 500;
 
         const statusText = isTimeout
             ? 'Request Timeout'
@@ -164,8 +163,7 @@ const apiFetch = (
                 : 'Internal Error';
 
         const body = JSON.stringify({
-            message: `${errorPrefix ? errorPrefix + ': ' : ''}${errorMessage}`,
-            ...(isTimeout && { reason: REQUEST_STATUS.TIMEOUT })
+            message: `${errorPrefix ? errorPrefix + ': ' : ''}${errorMessage}`
         });
 
         return new Response(body, {

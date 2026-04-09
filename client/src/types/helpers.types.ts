@@ -15,7 +15,7 @@ export interface IGetSubmitStatesResult {
     lockedStatuses: Set<TFormStatus>;
 }
 
-export interface ICommonFieldConfig {
+export interface IFieldConfig {
     name: string;
     label: string;
     elem: string;
@@ -23,6 +23,7 @@ export interface ICommonFieldConfig {
     placeholder?: string;
     autoComplete?: 'on' | 'off';
     trim?: boolean;
+    isPassword?: boolean;
 }
 
 export interface IFieldState {
@@ -35,10 +36,6 @@ export interface IFieldState {
     saveStatus?: TFieldSaveStatus | '';
     saveStatusMessage?: string;
     [key: string]: any; // Для любых других полей, добавленных в стейт
-}
-
-export interface IFieldStateEnabled extends IFieldState {
-    enabled: boolean;
 }
 
 export type TFieldsState<TFieldName extends string> = Record<TFieldName, IFieldState>;
@@ -57,7 +54,7 @@ export type TFieldsAction<TFieldName extends string> =
 
 export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> {
     allValid: boolean;
-    fieldStateUpdates: TFieldsState<TFieldName>;
+    fieldsStateUpdates: TFieldsState<TFieldName>;
     formFields: TFormBody;
 }
 

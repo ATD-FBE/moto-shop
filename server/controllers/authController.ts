@@ -26,7 +26,7 @@ import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, DELIVERY_METHOD } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
-import type { TInputTypeMap, TDbUser } from '@server/types/index.js';
+import type { TInputTypeMap, TDbUser, TResponsePayload } from '@server/types/index.js';
 import type {
     IAuthRegistrationBody,
     TAuthRegistrationResponse,
@@ -40,7 +40,8 @@ import type {
     TAuthCheckoutPrefsResponse,
     IAuthCheckoutPrefsUpdateBody,
     TAuthCheckoutPrefsUpdateResponse,
-    TAuthLogoutResponse
+    TAuthLogoutResponse,
+    TEntityField
 } from '@shared/types/index.js';
 
 /// Регистрация ///
@@ -69,7 +70,7 @@ export const handleAuthRegistrationRequest: RequestHandler<
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
+        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors});
     }
 
     for (const { id, quantity } of guestCart) {
@@ -306,7 +307,7 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         currentPassword,
         newPassword
     };
-    const updatedFormFields: (keyof typeof validationRules.auth)[] = [];
+    const updatedFormFields: Partial<TEntityField<'auth'>>[] = [];
 
     // Апдейт документа в базе MongoDB
     try {
@@ -424,41 +425,31 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         
 
         // Отправка ответа клиенту
-        const payload = (() => {
-            const hasErrors  = Object.keys(fieldErrors).length > 0;
-            const hasUpdates = updatedFormFields.length > 0;
-        
-            switch (true) {
-                case hasErrors && !hasUpdates:
-                    return { 
-                        statusCode: 422, 
-                        data: { message: 'Ошибки в данных. Изменения не применены', fieldErrors } 
-                    };
-                case hasErrors && hasUpdates:
-                    return { 
-                        statusCode: 207, 
-                        data: {
-                            message: 'Данные пользователя частично обновлены',
-                            fieldErrors,
-                            updatedFormFields,
-                            updatedUser: userData
-                        } 
-                    };
-                case !hasErrors && hasUpdates:
-                    return { 
-                        statusCode: 200, 
-                        data: {
-                            message: 'Данные пользователя обновлены',
-                            updatedFormFields,
-                            updatedUser: userData
-                        } 
-                    };
-                default: 
-                    return { statusCode: 204, data: undefined };
-            }
-        })();
-        
-        safeSendResponse(res, payload.statusCode, payload.data);
+        const hasErrors  = Object.keys(fieldErrors).length > 0;
+        const hasUpdates = updatedFormFields.length > 0;
+    
+        switch (true) {
+            case hasErrors && !hasUpdates:
+                return safeSendResponse(res, 422, {
+                    message: 'Ошибки в данных. Изменения не применены',
+                    fieldErrors
+                });
+            case hasErrors && hasUpdates:
+                return safeSendResponse(res, 207, {
+                    message: 'Данные пользователя частично обновлены',
+                    fieldErrors,
+                    updatedFormFields,
+                    updatedUser: userData
+                });
+            case !hasErrors && hasUpdates:
+                return safeSendResponse(res, 200, {
+                    message: 'Данные пользователя обновлены',
+                    updatedFormFields,
+                    updatedUser: userData
+                });
+            default: // !hasErrors && !hasUpdates
+                return safeSendResponse(res, 204);
+        }
     } catch (err) {
         const error = toError(err);
 

@@ -1,14 +1,21 @@
 import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
 import winston from 'winston';
 import { allowedConfigTypes } from '@server/utils/multerConfig.js';
+import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JwtPayload, SignOptions } from 'jsonwebtoken';
 import type { TMulterMode, TSearchTypes } from './config.types.js';
-import type { 
-    TEntityType, 
-    TFieldErrors, 
+import type {
+    TEntityType,
+    TFieldErrors,
     TAllowedMimeType, 
     TActiveUserRole,
-    TValidationRules 
+    TEntityField,
+    TBaseResponse,
+    TRequestStatus,
+    TAuthErrorStatus,
+    TValidationStatuses,
+    TCommonErrorStatus,
+    TSuccessStatus
 } from '@shared/types/index.js';
 
 //////////////
@@ -94,7 +101,7 @@ export interface IInputTypeMapConfig {
 }
 
 export type TInputTypeMap<E extends TEntityType = TEntityType> = {
-    [K in keyof TValidationRules[E]]?: IInputTypeMapConfig;
+    [K in TEntityField<E>]?: IInputTypeMapConfig;
 } & {
     [key: string]: IInputTypeMapConfig;
 };
@@ -150,8 +157,31 @@ export interface IOrderedFiltersArgs {
     searchType: TSearchTypes;
 }
 
-///////////////////////////
-/// SAFE RESPONSE UTILS ///
-///////////////////////////
+//////////////////////////
+/// SAFE SEND RESPONSE ///
+//////////////////////////
 
-export type TServerPayload<T> = T extends any ? Omit<T, 'status'> : never;
+// Карта типов статусов по кодам
+type TCodeToStatusMap<C extends number> =
+    C extends 204 | 205 | 304
+        ? typeof REQUEST_STATUS.UNCHANGED
+    : C extends 401 | 403 | 410
+        ? TAuthErrorStatus
+    : C extends 422
+        ? TValidationStatuses
+    : C extends 400 | 500 | 520
+        ? TCommonErrorStatus
+    : C extends 200 | 201 | 207
+        ? TSuccessStatus
+    : TRequestStatus;
+
+// Экстрактор нужного типа интерфейса по типу статус-кода
+export type TInferPayload<
+    T extends TBaseResponse,
+    C extends number
+> = Omit<
+    Extract<T, { status: TCodeToStatusMap<C> }>, 
+    'status'
+>;
+
+export type TResponsePayload<T> = T extends TBaseResponse ? Omit<T, 'status'> : never;

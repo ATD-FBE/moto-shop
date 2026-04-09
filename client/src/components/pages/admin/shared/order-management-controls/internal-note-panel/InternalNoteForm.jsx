@@ -12,7 +12,7 @@ import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 const getSubmitStates = () => {
     const base = BASE_SUBMIT_STATES;
     const {
-        DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, UNCHANGED, INVALID, ERROR, NETWORK, SUCCESS
+        DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
@@ -32,7 +32,7 @@ const getSubmitStates = () => {
         },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Заметка обновлена!',
@@ -130,7 +130,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -151,7 +151,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {}, changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
         );
     
         return result;
@@ -160,9 +160,9 @@ export default function InternalNoteForm({ orderId, internalNote }) {
     const handleFormSubmit = async (e) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -187,7 +187,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
             case FORM_STATUS.NOT_FOUND:
             case FORM_STATUS.UNCHANGED:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -196,11 +196,11 @@ export default function InternalNoteForm({ orderId, internalNote }) {
             case FORM_STATUS.INVALID: {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -210,11 +210,11 @@ export default function InternalNoteForm({ orderId, internalNote }) {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
 
@@ -222,9 +222,9 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                     if (isUnmountedRef.current) return;
 
                     changedFields.forEach(name => {
-                        fieldStateUpdates[name] = { uiStatus: '' };
+                        fieldsStateUpdates[name] = { uiStatus: '' };
                     });
-                    dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                    dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
                     dispatch(setIsNavigationBlocked(false));

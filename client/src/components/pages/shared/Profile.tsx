@@ -1,21 +1,37 @@
 import { useReducer, useState, useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendAuthUserUpdateRequest } from '@/api/authRequests.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { updateUser } from '@/redux/slices/authSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
+import {
+    getLockedStatuses,
+    defineFieldConfigs,
+    createFieldConfigMap,
+    createInitFieldsState,
+    fieldsStateReducer
+} from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
+import type {
+    TFormStatus,
+    IBaseSubmitState,
+    IGetSubmitStatesResult,
+    IFieldState,
+    TFieldsState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
 
-const getSubmitStates = () => {
+const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
-    const { DEFAULT, BAD_REQUEST, UNCHANGED, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
+    const { DEFAULT, BAD_REQUEST, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
-    const submitStates = {
+    const submitStates: Record<TFormStatus, IBaseSubmitState> = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
@@ -25,24 +41,22 @@ const getSubmitStates = () => {
             submitBtnLabel: actionLabel },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Данные пользователя обновлены!',
             submitBtnLabel: 'Сохранено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const fieldConfigs = [
+const fieldConfigs = defineFieldConfigs([
     {
         name: 'newName',
         label: 'Новое имя',
@@ -86,44 +100,31 @@ const fieldConfigs = [
         placeholder: 'Подтвердите новый пароль',
         isPassword: true
     }
-];
+] as const);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
+// Проверка наличия полей конфига в наборе полей сущности
+type TAuthEntityFields = TEntityField<'auth'>;
+type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
+// Создание карты и начального состояния полей
+const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
  
 export default function Profile() {
-    const { user } = useSelector(state => state.auth);
+    const { user } = useAppSelector(state => state.auth);
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e) => {
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         
         dispatchFieldsState({
@@ -132,7 +133,7 @@ export default function Profile() {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -143,19 +144,21 @@ export default function Profile() {
         });
     };
 
-    const processFormFields = () => {
-        const isAnyPasswordFieldFilled = Object.entries(fieldsState)
+    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, IAuthUserUpdateBody> => {
+        const fieldsStateEntries = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]);
+
+        const isAnyPasswordFieldFilled = fieldsStateEntries
             .some(([name, { value }]) => fieldConfigMap[name]?.isPassword && value !== '');
       
-        const result = Object.entries(fieldsState).reduce(
+        const result = fieldsStateEntries.reduce(
             (acc, [name, { value }]) => {
                 const { trim, isPassword } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
                 const isNonPasswordFieldEmpty = !isPassword && normalizedValue === '';
                 const isPasswordFieldInEmptyGroup = isPassword && !isAnyPasswordFieldFilled;
 
                 if (isNonPasswordFieldEmpty || isPasswordFieldInEmptyGroup) {
-                    acc.fieldStateUpdates[name] = {
+                    acc.fieldsStateUpdates[name] = {
                         value: normalizedValue,
                         uiStatus: '',
                         error: ''
@@ -170,15 +173,15 @@ export default function Profile() {
                 }
 
                 const isConfirmNewPassword = name === 'confirmNewPassword';
-                const isValid = validation.test(normalizedValue) &&
+                const isValid = validation.test(String(normalizedValue)) &&
                     (!isConfirmNewPassword || normalizedValue === fieldsState.newPassword.value);
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.auth[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.auth[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid && !isConfirmNewPassword) {
@@ -189,18 +192,22 @@ export default function Profile() {
 
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {} }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
+                formFields: {} as IAuthUserUpdateBody & Record<TValidFieldName, any>
+            }
         );
     
         return result;
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, formFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -212,7 +219,7 @@ export default function Profile() {
         dispatch(setIsNavigationBlocked(true));
 
         const responseData = await dispatch(sendAuthUserUpdateRequest(formFields));
-        const { status, message, fieldErrors, updatedFormFields, updatedUser } = responseData;
+        const { status, message } = responseData;
         if (isUnmountedRef.current) return;
 
         const LOG_CTX = 'AUTH: UPDATE';
@@ -224,20 +231,21 @@ export default function Profile() {
             case FORM_STATUS.BAD_REQUEST:
             case FORM_STATUS.UNCHANGED:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {};
-                Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
+                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -246,6 +254,8 @@ export default function Profile() {
         
             case FORM_STATUS.PARTIAL:
             case FORM_STATUS.SUCCESS: {
+                const { fieldErrors = {}, updatedFormFields, updatedUser } = responseData;
+
                 logRequestStatus({
                     context: LOG_CTX,
                     status,
@@ -253,19 +263,19 @@ export default function Profile() {
                     ...(Object.keys(fieldErrors).length && { details: fieldErrors })
                 });
 
-                const fieldStateUpdates = {};
-                const fieldsToUpdate = [...updatedFormFields];
-
+                const fieldsToUpdate = [...updatedFormFields] as TValidFieldName[];
                 if (fieldsToUpdate.includes('newPassword')) {
                     fieldsToUpdate.push('currentPassword', 'confirmNewPassword');
                 }
+
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
                 fieldsToUpdate.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
                 });
-                Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 saveUserToLocalStorage(updatedUser);
                 dispatch(updateUser(updatedUser));
@@ -275,11 +285,11 @@ export default function Profile() {
                     if (isUnmountedRef.current) return;
 
                     fieldConfigs.forEach(({ name }) => {
-                        fieldStateUpdates[name] = {
-                            ...(fieldsToUpdate.includes(name) && { value: '', uiStatus: '' })
-                        };
+                        if (fieldsToUpdate.includes(name)) {
+                            fieldsStateUpdates[name] = { value: '', uiStatus: '', error: '' };
+                        }
                     });
-                    dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                    dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
                     dispatch(setIsNavigationBlocked(false));
@@ -309,6 +319,8 @@ export default function Profile() {
         const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
+
+    if (!user) return null;
 
     return (
         <div className="profile-page">
@@ -346,7 +358,7 @@ export default function Profile() {
                                         id="newName"
                                         name="newName"
                                         placeholder="Укажите новое имя пользователя"
-                                        value={fieldsState.newName.value}
+                                        value={fieldsState.newName.value as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -390,7 +402,7 @@ export default function Profile() {
                                         name="newEmail"
                                         type="email"
                                         placeholder="Укажите новый почтовый ящик"
-                                        value={fieldsState.newEmail.value}
+                                        value={fieldsState.newEmail.value as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -429,7 +441,7 @@ export default function Profile() {
                                         id="currentPassword"
                                         name="currentPassword"
                                         placeholder="Укажите текущий пароль"
-                                        value={fieldsState.currentPassword.value}
+                                        value={fieldsState.currentPassword.value as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -461,7 +473,7 @@ export default function Profile() {
                                         id="newPassword"
                                         name="newPassword"
                                         placeholder="Укажите новый пароль"
-                                        value={fieldsState.newPassword.value}
+                                        value={fieldsState.newPassword.value as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -493,7 +505,7 @@ export default function Profile() {
                                         id="confirmNewPassword"
                                         name="confirmNewPassword"
                                         placeholder="Подтвердите новый пароль"
-                                        value={fieldsState.confirmNewPassword.value}
+                                        value={fieldsState.confirmNewPassword.value as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}

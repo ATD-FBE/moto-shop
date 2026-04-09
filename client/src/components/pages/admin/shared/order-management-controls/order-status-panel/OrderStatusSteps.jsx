@@ -219,7 +219,7 @@ export default function OrderStatusSteps({
                 const ruleCheck = validation.test(normalizedValue);
                 const isValid = ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -235,7 +235,7 @@ export default function OrderStatusSteps({
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {} }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {} }
         );
     
         return result;
@@ -248,10 +248,10 @@ export default function OrderStatusSteps({
     
         if (!rollback) {
             const processed = processFormFields(newStatus);
-            const { allValid, fieldStateUpdates } = processed;
+            const { allValid, fieldsStateUpdates } = processed;
             formFields = processed.formFields;
         
-            dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+            dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
             if (!allValid) return;
         }
     
@@ -281,11 +281,11 @@ export default function OrderStatusSteps({
         });
     
         if (status === REQUEST_STATUS.INVALID && !rollback) {
-            const fieldStateUpdates = {};
+            const fieldsStateUpdates = {};
             Object.entries(fieldErrors).forEach(([name, error]) => {
-                fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
             });
-            dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+            dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         } else if (status !== REQUEST_STATUS.SUCCESS) {
             openAlertModal({
                 type: 'error',

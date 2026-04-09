@@ -12,7 +12,7 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
 import {
     getLockedStatuses,
-    applyCommonFieldConfig,
+    defineFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
     fieldsStateReducer
@@ -24,16 +24,15 @@ import type {
     TFormStatus,
     IBaseSubmitState,
     IGetSubmitStatesResult,
-    ICommonFieldConfig,
     IFieldState,
     TFieldsState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
-import type { IAuthRegistrationBody } from '@shared/types/index.js';
+import type { TEntityField, IAuthRegistrationBody } from '@shared/types/index.js';
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
-    const { DEFAULT, BAD_REQUEST, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
+    const { DEFAULT, BAD_REQUEST, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const actionLabel = 'Зарегистрироваться';
 
     const submitStates: Record<TFormStatus, IBaseSubmitState> = {
@@ -42,7 +41,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Регистрация завершена!',
@@ -111,7 +110,7 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
         ? [...baseFieldConfigs, ...adminRegCodeFieldConfig]
         : [...baseFieldConfigs];
 
-    return applyCommonFieldConfig(resultFieldConfigs);
+    return defineFieldConfigs(resultFieldConfigs);
 };
 
 // Локальная типизация конфигов полей
@@ -119,8 +118,8 @@ type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = TFieldConfig['name'];
 
-// Проверка наличия полей конфига в наборе полей для валидации по сущности
-type TAuthEntityFields = keyof typeof validationRules['auth'];
+// Проверка наличия полей конфига в наборе полей сущности
+type TAuthEntityFields = TEntityField<'auth'>;
 type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
 export default function RegistrationForm() {
@@ -190,7 +189,7 @@ export default function RegistrationForm() {
                 const isValid = validation.test(String(normalizedValue)) &&
                     (!isConfirmPassword || normalizedValue === fieldsState.password.value);
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -208,7 +207,7 @@ export default function RegistrationForm() {
             },
             {
                 allValid: true,
-                fieldStateUpdates: {} as TFieldsState<TValidFieldName>,
+                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
                 formFields: {} as IAuthRegistrationBody['formFields'] & Record<TValidFieldName, any>
             }
         );
@@ -219,9 +218,9 @@ export default function RegistrationForm() {
     const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, formFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -239,7 +238,7 @@ export default function RegistrationForm() {
         switch (status) {
             case FORM_STATUS.BAD_REQUEST:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -249,11 +248,11 @@ export default function RegistrationForm() {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -269,11 +268,11 @@ export default function RegistrationForm() {
                 logRequestStatus({ context: LOG_CTX, status, message });
                 saveUserToLocalStorage(user);
 
-                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
                 fieldConfigs.forEach(({ name }) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
                 setSubmitStatus(status);
         

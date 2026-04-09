@@ -498,7 +498,7 @@ export default function CheckoutForm({
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -517,7 +517,7 @@ export default function CheckoutForm({
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {}, changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
         );
     
         return result;
@@ -531,10 +531,10 @@ export default function CheckoutForm({
         clearTimeout(updateDebounceTimerRef.current);
         updateDebounceTimerRef.current = null;
 
-        const { allValid, fieldStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
         setIsOrderItemsValid(true);
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             submitInProgressRef.current = false;
@@ -567,7 +567,7 @@ export default function CheckoutForm({
 
             case FORM_STATUS.BAD_REQUEST:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message });
                 updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
@@ -686,11 +686,11 @@ export default function CheckoutForm({
                 });
                 updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 break;
@@ -699,14 +699,14 @@ export default function CheckoutForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = {
+                    fieldsStateUpdates[name] = {
                         savedValue: fieldsState[name].value,
                         uiStatus: FIELD_UI_STATUS.CHANGED
                     };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
 

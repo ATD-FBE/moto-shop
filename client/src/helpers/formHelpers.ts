@@ -1,7 +1,7 @@
 import { FIELD_SAVE_STATUS, FIELD_SAVE_STATUS_MESSAGES } from '@/config/constants.js';
 import type {
     IBaseSubmitState,
-    ICommonFieldConfig,
+    IFieldConfig,
     IFieldState,
     TFieldsState,
     TFieldsAction,
@@ -20,17 +20,17 @@ export const getLockedStatuses = <TFormStatus extends string>(
 };
 
 // Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
-export const applyCommonFieldConfig = <
-    T extends readonly ICommonFieldConfig[]
+export const defineFieldConfigs = <
+    T extends readonly IFieldConfig[]
 >(configs: T): {
-    [K in keyof T]: T[K] & ICommonFieldConfig
+    [K in keyof T]: T[K] & IFieldConfig
 } => {
     return configs as any;
 };
 
 export const createFieldConfigMap = <
     TFieldName extends string, 
-    TFieldConfig extends ICommonFieldConfig & { name: TFieldName }
+    TFieldConfig extends IFieldConfig & { name: TFieldName }
 >(
     fieldConfigs: readonly TFieldConfig[]
 ): Record<TFieldName, TFieldConfig> => {

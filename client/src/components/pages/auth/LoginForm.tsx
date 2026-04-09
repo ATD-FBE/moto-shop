@@ -13,7 +13,7 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
 import {
     getLockedStatuses,
-    applyCommonFieldConfig,
+    defineFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
     fieldsStateReducer
@@ -29,10 +29,10 @@ import type {
     TFieldsState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
-import type { IAuthLoginBody } from '@shared/types/index.js';
+import type { TEntityField, IAuthLoginBody } from '@shared/types/index.js';
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
-    const { DEFAULT, UNAUTH, BAD_REQUEST, INVALID, ERROR, NETWORK, SUCCESS } = FORM_STATUS;
+    const { DEFAULT, UNAUTH, BAD_REQUEST, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const base = BASE_SUBMIT_STATES;
     const actionLabel = 'Войти';
 
@@ -50,7 +50,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Вход выполнен успешно!',
@@ -66,7 +66,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const fieldConfigs = applyCommonFieldConfig([
+const fieldConfigs = defineFieldConfigs([
     {
         name: 'name',
         label: 'Имя',
@@ -91,8 +91,8 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = TFieldConfig['name'];
 
-// Проверка наличия полей конфига в наборе полей для валидации по сущности
-type TAuthEntityFields = keyof typeof validationRules['auth'];
+// Проверка наличия полей конфига в наборе полей сущности
+type TAuthEntityFields = TEntityField<'auth'>;
 type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
 // Создание карты и начального состояния полей
@@ -158,7 +158,7 @@ export default function LoginForm() {
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
                 const isValid = validation.test(String(normalizedValue));
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -176,7 +176,7 @@ export default function LoginForm() {
             },
             {
                 allValid: true,
-                fieldStateUpdates: {} as TFieldsState<TValidFieldName>,
+                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
                 formFields: {} as IAuthLoginBody['formFields'] & Record<TValidFieldName, any>
             }
         );
@@ -189,9 +189,9 @@ export default function LoginForm() {
     const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const { allValid, fieldStateUpdates, formFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             return setSubmitStatus(FORM_STATUS.INVALID);
@@ -209,7 +209,7 @@ export default function LoginForm() {
         switch (status) {
             case FORM_STATUS.BAD_REQUEST:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -220,11 +220,11 @@ export default function LoginForm() {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
                 dispatch(setIsNavigationBlocked(false));
@@ -240,11 +240,11 @@ export default function LoginForm() {
                 logRequestStatus({ context: LOG_CTX, status, message });
                 saveUserToLocalStorage(user);
 
-                const fieldStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
                 fieldConfigs.forEach(({ name }) => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
                 setSubmitStatus(status);
         

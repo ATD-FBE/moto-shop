@@ -30,7 +30,7 @@ const getSubmitStates = (isCancelPath) => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, CANCELING, CANCEL_ERROR, CANCEL_SUCCESS, FORBIDDEN,
-        BAD_REQUEST, NOT_FOUND, CONFLICT, LIMITATION, MODIFIED, INVALID, ERROR, NETWORK, SUCCESS
+        BAD_REQUEST, NOT_FOUND, CONFLICT, LIMITATION, MODIFIED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const submitActionLabel = 'Оформить заказ';
     const cancelActionLabel = 'Отменить заказ';
@@ -97,8 +97,8 @@ const getSubmitStates = (isCancelPath) => {
             submitBtnLabel: submitActionLabel,
             cancelBtnLabel: cancelActionLabel
         },
-        [NETWORK]: {
-            ...base[NETWORK],
+        [TIMEOUT]: {
+            ...base[TIMEOUT],
             submitBtnLabel: submitActionLabel,
             cancelBtnLabel: cancelActionLabel
         },

@@ -39,7 +39,7 @@ export const logRequestStatus = (
             break;
 
         case REQUEST_STATUS.ERROR:
-        case REQUEST_STATUS.NETWORK:
+        case REQUEST_STATUS.TIMEOUT:
             console.error(...logArgs);
             break;
 

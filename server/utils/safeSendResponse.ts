@@ -1,13 +1,28 @@
 import { resolveRequestStatus } from '@shared/statusResolver.js';
 import type { Response } from 'express';
-import type { TServerPayload } from '@server/types/index.js';
+import type { TInferPayload } from '@server/types/index.js';
+import type { TBaseResponse } from '@shared/types/index.js';
 
 const NO_BODY_STATUSES = new Set([204, 205, 304]);
 
-export default function safeSendResponse<T>(
+// Сигнатура 1: Для ответов БЕЗ тела
+export default function safeSendResponse<T extends TBaseResponse>(
     res: Response<T>,
+    statusCode: 204 | 205 | 304
+): void;
+
+// Сигнатура 2: Для ответов С телом
+export default function safeSendResponse<T extends TBaseResponse, C extends number>(
+    res: Response<T>,
+    statusCode: C,
+    data: TInferPayload<T, C>
+): void;
+
+// Главная реализация ответа
+export default function safeSendResponse(
+    res: Response,
     statusCode: number,
-    data?: TServerPayload<T>
+    data: Record<string, any> = {}
 ): void {
     if (res.writableEnded || res.destroyed || res.headersSent) return;
 
@@ -16,12 +31,10 @@ export default function safeSendResponse<T>(
         return;
     }
 
-    const rawData = (data ?? {}) as any;
-
     const finalData = {
-        ...rawData,
-        status: rawData.status || resolveRequestStatus(statusCode, rawData.reason)
-    } as T;
+        ...data,
+        status: data.status || resolveRequestStatus(statusCode, data.reason)
+    };
 
     res.status(statusCode).json(finalData);
 }

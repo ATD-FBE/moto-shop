@@ -435,7 +435,6 @@ export const REQUEST_STATUS = {
     CONFLICT: 'conflict',
     INVALID: 'invalid',
     ERROR: 'error',
-    NETWORK: 'network',
-    TIMEOUT: 'timeout',
+    TIMEOUT: 'network',
     ABORTED: 'aborted'
 } as const;

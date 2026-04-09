@@ -23,7 +23,7 @@ const getSubmitStates = () => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, BAD_REQUEST, NOT_FOUND, UNCHANGED, LIMITATION,
-        MODIFIED, INVALID, ERROR, NETWORK, SUCCESS
+        MODIFIED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
@@ -49,7 +49,7 @@ const getSubmitStates = () => {
             submitBtnLabel: actionLabel
         },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
-        [NETWORK]: { ...base[NETWORK], submitBtnLabel: actionLabel },
+        [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
         [SUCCESS]: {
             ...base[SUCCESS],
             mainMessage: 'Данные заказа обновлены!',
@@ -337,7 +337,7 @@ export default function SectionForm({
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
-                acc.fieldStateUpdates[name] = {
+                acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
@@ -362,7 +362,7 @@ export default function SectionForm({
         
                 return acc;
             },
-            { allValid: true, fieldStateUpdates: {}, formFields: {}, changedFields: [] }
+            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
         );
     
         return result;
@@ -395,9 +395,9 @@ export default function SectionForm({
     };
 
     const prepareFormFields = () => {
-        const { allValid, fieldStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
         if (!allValid) {
             setSubmitStatus(FORM_STATUS.INVALID);
@@ -433,7 +433,7 @@ export default function SectionForm({
             case FORM_STATUS.CONFLICT:
             case FORM_STATUS.UNCHANGED:
             case FORM_STATUS.ERROR:
-            case FORM_STATUS.NETWORK:
+            case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 if (isItemsSection) setIsItemsSubmitting(false);
                 setSubmitStatus(status);
@@ -492,11 +492,11 @@ export default function SectionForm({
                 logRequestStatus({ context: LOG_CTX, status, message, details: combinedErrors });
 
                 if (fieldErrors) {
-                    const fieldStateUpdates = {};
+                    const fieldsStateUpdates = {};
                     Object.entries(fieldErrors).forEach(([name, error]) => {
-                        fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                     });
-                    dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                    dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
                 }
 
                 if (isItemsSection) {
@@ -515,11 +515,11 @@ export default function SectionForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldStateUpdates = {};
+                const fieldsStateUpdates = {};
                 changedFields.forEach(name => {
-                    fieldStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 if (isItemsSection) onItemsResponseResult({ changedFields: changedItemsFields });
                 setSubmitStatus(status);
@@ -538,12 +538,12 @@ export default function SectionForm({
                     }
 
                     changedFields.forEach(name => {
-                        fieldStateUpdates[name] = {
+                        fieldsStateUpdates[name] = {
                             ...(name === 'editReason' && { value: '' }),
                             uiStatus: ''
                         };
                     });
-                    dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+                    dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     if (isItemsSection) setIsItemsSubmitting(false);
                     setSubmitStatus(FORM_STATUS.DEFAULT);
@@ -582,7 +582,7 @@ export default function SectionForm({
             ...financials
         };
 
-        const fieldStateUpdates = {};
+        const fieldsStateUpdates = {};
 
         fieldConfigs.forEach(cfg => {
             if (cfg.name === 'editReason') return;
@@ -590,10 +590,10 @@ export default function SectionForm({
             const initValue = allFlatInitValues[cfg.name] ?? '';
 
             initValuesRef.current[cfg.name] = initValue;
-            fieldStateUpdates[cfg.name] = { value: initValue };
+            fieldsStateUpdates[cfg.name] = { value: initValue };
         });
 
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldStateUpdates });
+        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [order, fieldConfigs]);
 

@@ -1,9 +1,9 @@
 import { resolveRequestStatus } from '@shared/statusResolver.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { IApiResponseExtraConfig } from '@/types/index.js';
-import type { TRequestStatus } from '@shared/types/index.js';
+import type { TRequestStatus, TBaseResponse } from '@shared/types/index.js';
 
-const apiResponse = async <T>(
+const apiResponse = async <T extends TBaseResponse>(
     response: Response,
     extra: IApiResponseExtraConfig = {}
 ): Promise<T> => {
@@ -63,7 +63,7 @@ const apiResponse = async <T>(
             blob,
             filename,
             ...extraRest
-        } as T;
+        } as unknown as T;
     }
 
     // Текстовый ответ
@@ -71,9 +71,10 @@ const apiResponse = async <T>(
     
     return {
         status: resolveRequestStatus(response.status),
+        message: response.ok ? 'OK' : 'Error',
         text,
         ...extraRest
-    } as T;
+    } as unknown as T;
 };
 
 export default apiResponse;
