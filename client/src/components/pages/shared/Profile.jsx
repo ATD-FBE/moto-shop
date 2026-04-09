@@ -3,11 +3,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendAuthUserUpdateRequest } from '@/api/authRequests.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { updateUser } from '@/redux/slices/authSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 
 const getSubmitStates = () => {

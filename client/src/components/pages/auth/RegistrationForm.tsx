@@ -24,6 +24,7 @@ import type {
     TFormStatus,
     IBaseSubmitState,
     IGetSubmitStatesResult,
+    ICommonFieldConfig,
     IFieldState,
     TFieldsState,
     IProcessFormFieldsResult
@@ -106,11 +107,11 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
         }
     ] as const;
 
-    return applyCommonFieldConfig(
-        isAdminRegistration
-            ? [...baseFieldConfigs, ...adminRegCodeFieldConfig]
-            : [...baseFieldConfigs]
-    );
+    const resultFieldConfigs = isAdminRegistration
+        ? [...baseFieldConfigs, ...adminRegCodeFieldConfig]
+        : [...baseFieldConfigs];
+
+    return applyCommonFieldConfig(resultFieldConfigs);
 };
 
 // Локальная типизация конфигов полей

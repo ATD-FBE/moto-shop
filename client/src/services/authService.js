@@ -140,13 +140,6 @@ export const initCustomerSession = ({
     return { redirectTo };
 };
 
-const delayAndShowAlert = (alertOptions, delay = 1000) => {
-    setTimeout(() => {
-        const isAuthenticated = AppStore.getState().auth.isAuthenticated;
-        if (isAuthenticated) openAlertModal(alertOptions);
-    }, delay);
-};
-
 export const checkAuth = () => async (dispatch, getState) => {
     const { isLocalSession, accessTokenExpiresAt, refreshTokenExpiresAt } = getState().auth;
     if (isLocalSession) return;
@@ -207,4 +200,11 @@ export const handleLogout = ({ forceRedirectToLogin = false } = {}) => async (di
 
     // Сигнал для выхода со всех вкладок браузера
     localStorage.setItem('auth:logout', String(Date.now()));
+};
+
+const delayAndShowAlert = (alertOptions, delay = 1000) => {
+    setTimeout(() => {
+        const isAuthenticated = AppStore.getState().auth.isAuthenticated;
+        if (isAuthenticated) openAlertModal(alertOptions);
+    }, delay);
 };

@@ -21,7 +21,7 @@ export const getLockedStatuses = <TFormStatus extends string>(
 
 // Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
 export const applyCommonFieldConfig = <
-    T extends readonly {}[]
+    T extends readonly ICommonFieldConfig[]
 >(configs: T): {
     [K in keyof T]: T[K] & ICommonFieldConfig
 } => {
@@ -30,7 +30,7 @@ export const applyCommonFieldConfig = <
 
 export const createFieldConfigMap = <
     TFieldName extends string, 
-    TFieldConfig extends { name: TFieldName }
+    TFieldConfig extends ICommonFieldConfig & { name: TFieldName }
 >(
     fieldConfigs: readonly TFieldConfig[]
 ): Record<TFieldName, TFieldConfig> => {
