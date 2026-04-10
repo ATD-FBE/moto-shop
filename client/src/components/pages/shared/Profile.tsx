@@ -241,9 +241,11 @@ export default function Profile() {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -263,17 +265,21 @@ export default function Profile() {
                     ...(Object.keys(fieldErrors).length && { details: fieldErrors })
                 });
 
-                const fieldsToUpdate = [...updatedFormFields] as TValidFieldName[];
+                const fieldsToUpdate = updatedFormFields.filter(
+                    (name): name is TValidFieldName => name in fieldConfigMap
+                );
                 if (fieldsToUpdate.includes('newPassword')) {
                     fieldsToUpdate.push('currentPassword', 'confirmNewPassword');
                 }
 
-                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
                 fieldsToUpdate.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
                 });
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 

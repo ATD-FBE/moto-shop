@@ -220,9 +220,11 @@ export default function LoginForm() {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -240,9 +242,11 @@ export default function LoginForm() {
                 logRequestStatus({ context: LOG_CTX, status, message });
                 saveUserToLocalStorage(user);
 
-                const fieldsStateUpdates = {} as TFieldsState<TValidFieldName>;
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
                 fieldConfigs.forEach(({ name }) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
