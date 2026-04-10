@@ -556,7 +556,7 @@ export const handleAuthCheckoutPrefsRequest: RequestHandler<
 
     safeSendResponse(res, 200, {
         message: 'Настройки заказа успешно загружены',
-        checkoutPrefs: req.dbUser.checkoutPrefs ?? undefined
+        checkoutPrefs: req.dbUser.checkoutPrefs
     });
 };
 

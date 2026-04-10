@@ -4,23 +4,23 @@ import { validationRules } from '@shared/fieldRules.js';
 const baseCustomerInfoFields = {
     firstName: {
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     lastName: {
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     middleName: {
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     email: {
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     phone: {
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     }
 };
 

@@ -9,13 +9,35 @@ import {
     sendAuthCheckoutPrefsUpdateRequest
 } from '@/api/authRequests.js';
 import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import {
+    getLockedStatuses,
+    extractFieldConfigs,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitFieldsState,
+    fieldsStateReducer
+} from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@shared/constants.js';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    IFieldState,
+    TFieldsState,
+    TFieldValue,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type {
+    TDeliveryMethod,
+    TEntityField,
+    IAuthCheckoutPrefsUpdateBody
+} from '@shared/types/index.js';
 
-const getSubmitStates = () => {
+const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND,
@@ -23,7 +45,7 @@ const getSubmitStates = () => {
     } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка настроек заказа...' },
@@ -46,18 +68,16 @@ const getSubmitStates = () => {
             mainMessage: 'Настройки заказа сохранены!',
             submitBtnLabel: 'Сохранено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const isDeliveryRequired = (deliveryMethod) =>
+const isDeliveryRequired = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
     deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 
 const formGroupConfigs = [
@@ -134,7 +154,8 @@ const formGroupConfigs = [
                 tooltip:
                     'При удалении свыше 10 км от магазина возможен выезд курьера с доплатой. ' +
                     'Стоимость рассчитывается индивидуально.',
-                canApply: ({ deliveryMethod }) => deliveryMethod === DELIVERY_METHOD.COURIER
+                canApply: ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
+                    deliveryMethod === DELIVERY_METHOD.COURIER
             },
             {
                 name: 'region',
@@ -144,7 +165,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите полное название региона',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'district',
@@ -154,7 +175,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите район',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'city',
@@ -164,7 +185,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите город',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'street',
@@ -174,7 +195,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите улицу',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'house',
@@ -184,7 +205,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите номер дома',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'apartment',
@@ -194,7 +215,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите номер квартиры',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'postalCode',
@@ -204,7 +225,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите почтовый индекс',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             }
         ]
     },
@@ -224,70 +245,57 @@ const formGroupConfigs = [
             }
         ]
     }
-];
+] as const;
 
-const fieldConfigs = formGroupConfigs
-    .flatMap(groupConfig => groupConfig.fieldConfigs ?? null)
-    .filter(Boolean);
+const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
+// Проверка наличия полей конфига в наборе полей сущности
+type TAuthEntityFields = TEntityField<'checkout'>;
+type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
+// Создание карты и начального состояния полей
+const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
+const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
  
-export default function CheckoutPreferences() {
+export default function CheckoutPreferences(): React.JSX.Element {
     const user = useAppSelector(state => state.auth.user);
 
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.LOADING);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 
-    const initValuesRef = useRef({});
+    const initValuesRef = useRef<Partial<Record<TValidFieldName, TFieldValue>>>({});
     const isUnmountedRef = useRef(false);
 
     const dispatch = useAppDispatch();
+
+    const deliveryMethodVal = fieldsState.deliveryMethod.value as TDeliveryMethod;
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
             fieldConfigs.map(cfg => [
                 cfg.name,
                 typeof cfg.canApply === 'function'
-                    ? cfg.canApply({ deliveryMethod: fieldsState.deliveryMethod.value })
+                    ? cfg.canApply({ deliveryMethod: deliveryMethodVal })
                     : true
             ])
-        ),
-        [fieldsState.deliveryMethod.value]
+        ) as Record<TValidFieldName, boolean>,
+        [deliveryMethodVal]
     );
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const loadCheckoutPrefs = async () => {
+    const loadCheckoutPrefs = async (): Promise<void> => {
         setSubmitStatus(FORM_STATUS.LOADING);
 
         const responseData = await dispatch(sendAuthCheckoutPrefsRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, checkoutPrefs } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'AUTH: LOAD CHECKOUT PREFS', status, message });
 
         if (status !== FORM_STATUS.SUCCESS) {
@@ -295,31 +303,49 @@ export default function CheckoutPreferences() {
             return setSubmitStatus(finalStatus);
         }
 
-        const { customerInfo = {}, delivery = {}, financials = {} } = checkoutPrefs ?? {};
-        const { deliveryMethod, allowCourierExtra = false, shippingAddress = {} } = delivery;
+        const { checkoutPrefs } = responseData;
+        const { customerInfo, delivery, financials } = checkoutPrefs ?? {};
+        const { firstName, lastName, middleName, email, phone } = customerInfo ?? {};
+        const { deliveryMethod, allowCourierExtra, shippingAddress } = delivery ?? {};
+        const { region, district, city, street, house, apartment, postalCode } = shippingAddress ?? {};
+        const { defaultPaymentMethod } = financials ?? {};
 
         initValuesRef.current = {
-            ...customerInfo,
+            ...(firstName && { firstName }),
+            ...(lastName && { lastName }),
+            ...(middleName && { middleName }),
+            ...(email && { email }),
+            ...(phone && { phone }),
             ...(deliveryMethod && { deliveryMethod }),
-            allowCourierExtra,
-            ...shippingAddress,
-            ...financials
+            allowCourierExtra: allowCourierExtra ?? false,
+            ...(region && { region }),
+            ...(district && { district }),
+            ...(city && { city }),
+            ...(street && { street }),
+            ...(house && { house }),
+            ...(apartment && { apartment }),
+            ...(postalCode && { postalCode }),
+            ...(defaultPaymentMethod && { defaultPaymentMethod })
         };
 
-        if (Object.keys(initValuesRef.current).length > 0) {
+        const initValues = initValuesRef.current;
+        const initValuesEntries = Object.entries(initValues) as [TValidFieldName, TFieldValue][];
+
+        if (initValuesEntries.length > 0) {
             dispatchFieldsState({
                 type: 'UPDATE',
                 payload: Object.fromEntries(
-                    Object.entries(initValuesRef.current).map(([key, value]) => ([key, { value }]))
-                )
+                    initValuesEntries.map(([key, value]) => ([key, { value }]))
+                ) as Record<TValidFieldName, { value?: TFieldValue }>
             });
         }
         
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const handleFieldChange = (e) => {
-        const { type, name, value, checked } = e.target;
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { type, name, value } = e.target;
+        const checked = e.target instanceof HTMLInputElement && e.target.checked;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -328,7 +354,7 @@ export default function CheckoutPreferences() {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -340,14 +366,19 @@ export default function CheckoutPreferences() {
     };
 
     const fillRegistrationEmail = () => {
+        if (!user) return;
+
         dispatchFieldsState({
             type: 'UPDATE',
             payload: { email: { value: user.email, uiStatus: '', error: '' } }
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TValidFieldName,
+        IAuthCheckoutPrefsUpdateBody
+    > => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) return acc;
@@ -359,24 +390,31 @@ export default function CheckoutPreferences() {
                 }
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+
                 const ruleCheck =
                     typeof validation === 'function'
-                        ? validation(normalizedValue)
-                        : validation.test(normalizedValue);
-
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                        ? (validation as (val: typeof normalizedValue) => boolean)(normalizedValue)
+                        : typeof normalizedValue === 'string' 
+                            ? validation.test(normalizedValue) 
+                            : false;
+                const isValid = optional
+                    ? (normalizedValue === undefined || normalizedValue === '' || ruleCheck)
+                    : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.checkout[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.checkout[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid) {
-                    if (normalizedValue !== '') acc.formFields[name] = normalizedValue;
+                    if (normalizedValue !== undefined && normalizedValue !== '') {
+                        type TFieldsCollector = Record<TValidFieldName, typeof normalizedValue>;
+                        (acc.formFields as TFieldsCollector)[name] = normalizedValue;
+                    }
 
                     const initValue = initValuesRef.current[name] ?? '';
                     if (normalizedValue !== initValue) acc.changedFields.push(name);
@@ -386,16 +424,21 @@ export default function CheckoutPreferences() {
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
+                formFields: {} as IAuthCheckoutPrefsUpdateBody,
+                changedFields: [] as TValidFieldName[]
+            }
         );
     
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -411,7 +454,7 @@ export default function CheckoutPreferences() {
         const responseData = await dispatch(sendAuthCheckoutPrefsUpdateRequest(formFields));
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'AUTH: UPDATE CHECKOUT PREFS';
 
         switch (status) {
@@ -428,11 +471,14 @@ export default function CheckoutPreferences() {
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
-                Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -451,9 +497,11 @@ export default function CheckoutPreferences() {
                         .filter(([_, value]) => Boolean(value))
                 );
 
-                const fieldsStateUpdates = {};
-                changedFields.forEach(name => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
+                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                fieldConfigs.forEach(({ name }) => {
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -463,7 +511,7 @@ export default function CheckoutPreferences() {
                     if (isUnmountedRef.current) return;
 
                     changedFields.forEach(name => {
-                        fieldsStateUpdates[name] = { uiStatus: '' };
+                        fieldsStateUpdates[name] = { uiStatus: '', error: '' };
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -537,15 +585,25 @@ export default function CheckoutPreferences() {
     );
 }
 
+interface FormGroupEntriesProps {
+    fieldConfigs: TFieldConfigs;
+    fieldsState: TFieldsState<TValidFieldName>;
+    applicabilityMap: Record<TValidFieldName, boolean>;
+    isFormLocked: boolean;
+    handleFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    handleTrimmedFieldBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+    fillRegistrationEmail: () => void;
+}
+
 function FormGroupEntries({
     fieldConfigs,
     fieldsState,
     applicabilityMap,
+    isFormLocked,
     handleFieldChange,
     handleTrimmedFieldBlur,
-    isFormLocked,
     fillRegistrationEmail
-}) {
+}: FormGroupEntriesProps): React.JSX.Element {
     return (
         <div className="form-group-entries">
             {fieldConfigs.map(({
@@ -563,25 +621,24 @@ function FormGroupEntries({
                 const fieldId = `checkout-${toKebabCase(name)}`;
                 const fieldInfoClass = getFieldInfoClass(elem, type, name);
                 const isApplicable = applicabilityMap[name];
-                const collapsible = !!canApply;
+                const isCollapsible = !!canApply;
 
-                const elemProps = {
+                const baseProps = {
                     id: fieldId,
                     name,
-                    type,
-                    placeholder,
-                    value: fieldsState[name]?.value,
                     autoComplete: 'off',
+                    disabled: isFormLocked || !isApplicable,
                     onChange: handleFieldChange,
-                    onBlur: trim ? handleTrimmedFieldBlur : undefined,
-                    disabled: isFormLocked || !isApplicable
                 };
 
-                let fieldElem;
+                let fieldElem: React.JSX.Element;
 
                 if (elem === 'select') {
                     fieldElem = (
-                        <select {...elemProps}>
+                        <select
+                            {...baseProps}
+                            value={(fieldsState[name]?.value ?? '') as string}
+                        >
                             {options.map((option, idx) => (
                                 <option key={`${idx}-${option.value}`} value={option.value}>
                                     {option.label}
@@ -592,14 +649,21 @@ function FormGroupEntries({
                 } else if (elem === 'checkbox') {
                     fieldElem = (
                         <DesignedCheckbox
-                            {...elemProps}
+                            {...baseProps}
                             label={checkboxLabel}
-                            checked={fieldsState[name]?.value}
-                            value={undefined}
+                            checked={(fieldsState[name]?.value ?? false) as boolean}
                         />
                     );
                 } else {
-                    fieldElem = React.createElement(elem, elemProps);
+                    fieldElem = (
+                        <input
+                            {...baseProps}
+                            type={type}
+                            placeholder={placeholder}
+                            value={(fieldsState[name]?.value ?? '') as string}
+                            onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                        />
+                    );
                 }
 
                 const formEntryElem = (
@@ -634,7 +698,7 @@ function FormGroupEntries({
                     </div>
                 );
 
-                if (collapsible) {
+                if (isCollapsible) {
                     return (
                         <Collapsible
                             key={`field-${name}`}

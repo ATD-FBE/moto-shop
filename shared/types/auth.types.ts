@@ -107,6 +107,7 @@ interface IAuthCheckoutPrefsSuccessData {
     checkoutPrefs?: TDbUser['checkoutPrefs'];
 }
 export type TAuthCheckoutPrefsResponse =
+    | TAuthErrorResponse
     | TCommonErrorResponse
     | TSuccessResponse<IAuthCheckoutPrefsSuccessData>;
 
@@ -131,6 +132,7 @@ export interface IAuthCheckoutPrefsUpdateBody {
 
 export type TAuthCheckoutPrefsUpdateResponse =
     | TEmptyResponse
+    | TAuthErrorResponse
     | TValidationErrorResponse<'checkout'>
     | TCommonErrorResponse
     | TSuccessResponse;

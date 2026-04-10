@@ -1,18 +1,27 @@
 import cn from 'classnames';
 import { FORM_STATUS } from '@/config/constants.js';
+import type { TFormStatus, TSubmitStates } from '@/types/index.js';
+
+interface FormFooterProps {
+    submitStates: TSubmitStates;
+    submitStatus: TFormStatus;
+    uiBlocked: boolean;
+    reloadBtnLabel?: string;
+    reloadData?: () => void;
+}
 
 export default function FormFooter({
     submitStates,
     submitStatus,
     uiBlocked,
     reloadBtnLabel = 'Повторить',
-    reloadData = null
-}) {
+    reloadData
+}: FormFooterProps): React.JSX.Element {
     const submitState = submitStates[submitStatus] ?? {};
 
     return (
         <div className="form-footer">
-            <div className={cn('form-status', submitState.intent)}>
+            <div className={cn('form-status', submitState.intent || '')}>
                 <div className="icon-box">
                     {submitState.icon || ''}
                 </div>

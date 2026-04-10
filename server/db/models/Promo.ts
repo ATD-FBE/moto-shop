@@ -11,7 +11,7 @@ export const PromoSchema = new Schema({
     },
     imageFilename: { // Опционально
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     description: {
         type: String,

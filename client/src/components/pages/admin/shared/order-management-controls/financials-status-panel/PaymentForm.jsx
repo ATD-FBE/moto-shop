@@ -127,7 +127,7 @@ const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
+const initFieldsState = fieldConfigs.reduce((acc, { name }) => {
     acc[name] = { value: '', uiStatus: '', error: '' };
     return acc;
 }, {});
@@ -155,7 +155,7 @@ export default function PaymentForm({
     netPaid,
     totalAmount
 }) {
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const [initialized, setInitialized] = useState(false);
     const isUnmountedRef = useRef(false);

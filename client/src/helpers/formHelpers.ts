@@ -1,6 +1,8 @@
 import { FIELD_SAVE_STATUS, FIELD_SAVE_STATUS_MESSAGES } from '@/config/constants.js';
 import type {
-    IBaseSubmitState,
+    TFormStatus,
+    TSubmitStates,
+    IFormGroupConfig,
     IFieldConfig,
     IFieldState,
     TFieldsState,
@@ -9,9 +11,7 @@ import type {
     IProcessFormattedFieldDeletionResult
 } from '@/types/index.js';
 
-export const getLockedStatuses = <TFormStatus extends string>(
-    submitStates: Record<TFormStatus, IBaseSubmitState>
-): Set<TFormStatus> => {
+export const getLockedStatuses = (submitStates: TSubmitStates): Set<TFormStatus> => {
     const lockedArray = (Object.entries(submitStates) as [TFormStatus, { locked: boolean }][])
         .map(([status, state]) => state.locked && status)
         .filter((status): status is TFormStatus => Boolean(status));
@@ -19,39 +19,37 @@ export const getLockedStatuses = <TFormStatus extends string>(
     return new Set(lockedArray);
 };
 
+export const extractFieldConfigs = <T extends readonly IFormGroupConfig[]>(
+    formGroupConfigs: T
+) => formGroupConfigs.flatMap(cfg => cfg.fieldConfigs || []) as T[number]['fieldConfigs'];
+
 // Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
 export const extendFieldConfigs = <T extends readonly IFieldConfig[]>(
     configs: T
-) => configs as unknown as { [K in keyof T]: T[K] & IFieldConfig };
+) => configs as { [K in keyof T]: T[K] & IFieldConfig };
 
 export const createFieldConfigMap = <
     TFieldName extends string, 
     TFieldConfig extends IFieldConfig & { name: TFieldName }
 >(
     fieldConfigs: readonly TFieldConfig[]
-): Record<TFieldName, TFieldConfig> => {
-    return fieldConfigs.reduce((acc, config) => {
+): Record<TFieldName, TFieldConfig> =>
+    fieldConfigs.reduce((acc, config) => {
         acc[config.name] = config;
         return acc;
     }, {} as Record<TFieldName, TFieldConfig>);
-};
 
 export const createInitFieldsState = <TFieldName extends string>(
-    fieldConfigs: readonly ({
-        enabled?: boolean;
-        name: TFieldName;
-        type?: string;
-        value?: any
-    } & Record<string, any>)[],
+    fieldConfigs: readonly (IFieldConfig & { name: TFieldName })[],
     options: {
-        extraStateFields?: Record<TFieldName, string[]>,
+        extraStateFields?: Record<TFieldName, (keyof IFieldConfig)[]>,
         autoSave?: boolean,
     } = {}
 ): TFieldsState<TFieldName> => {
     const { extraStateFields, autoSave } = options;
 
     return fieldConfigs.reduce((acc, config) => {
-        const { enabled, name, type, value } = config;
+        const { enabled, name, type, defaultValue } = config;
 
         const state: IFieldState = {
             uiStatus: '',
@@ -65,8 +63,23 @@ export const createInitFieldsState = <TFieldName extends string>(
         if (type === 'file') {
             state.files = [];
         } else {
-            state.value = value !== undefined ? value : '';
+            state.value = defaultValue !== undefined ? defaultValue : '';
         }
+
+        /*const getTypedDefaultValue = (defaultValue: TFieldValue, elem: string, type: string) => {
+            if (defaultValue !== undefined) return defaultValue;
+
+            if (elem === 'input') {
+                if (type === 'number') return 0;
+                return ''; // type = 'text' | 'file' | 'email' | 'tel'
+            }
+            if (elem === 'textarea') return '';
+            if (elem === 'checkbox') return false;
+            if (elem === 'select') return '';
+            return ''; // Фоллбэк
+        };
+        
+        state.value = getTypedDefaultValue(defaultValue, elem, type);*/
 
         const fieldsToCopy = extraStateFields?.[name];
 

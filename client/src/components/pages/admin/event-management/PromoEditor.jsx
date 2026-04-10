@@ -102,7 +102,7 @@ const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name, type }) => {
+const initFieldsState = fieldConfigs.reduce((acc, { name, type }) => {
     acc[name] = {
         ...(type === 'file' ? { files: [] } : { value: '' }),
         uiStatus: '',
@@ -132,7 +132,7 @@ export default function PromoEditor({ promoId }) {
 
     const { submitStates, lockedStatuses } = useMemo(() => getSubmitStates(isEditMode), [isEditMode]);
     
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS[isEditMode ? 'LOADING' : 'DEFAULT']);
     const [shouldRemoveImage, setShouldRemoveImage] = useState(false);
     const initValuesRef = useRef({});

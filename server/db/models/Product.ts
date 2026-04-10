@@ -11,14 +11,14 @@ export const ProductSchema = new Schema({
     },
     mainImageIndex: { // Зависит от imageFilenames
         type: Number,
-        set: (val: null | number): undefined | number => val === null ? undefined : val
+        set: (val: null | number): number | undefined => val === null ? undefined : val
     },
     sku: { // Опционально
         type: String,
         match: validationRules.product.sku,
         unique: true,
         sparse: true, // Индекс уникальности не будет срабатывать на документах с отсутствующим полем
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     name: {
         type: String,
@@ -28,12 +28,12 @@ export const ProductSchema = new Schema({
     brand: { // Опционально
         type: String,
         match: validationRules.product.brand,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     description: { // Опционально
         type: String,
         match: validationRules.product.description,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     stock: {
         type: Number,

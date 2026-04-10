@@ -22,7 +22,7 @@ import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from
 import { USER_ROLE } from '@shared/constants.js';
 import type {
     TFormStatus,
-    IBaseSubmitState,
+    TSubmitStates,
     IGetSubmitStatesResult,
     IFieldState,
     TFieldsState,
@@ -35,7 +35,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
     const { DEFAULT, BAD_REQUEST, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const actionLabel = 'Зарегистрироваться';
 
-    const submitStates: Record<TFormStatus, IBaseSubmitState> = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
@@ -122,7 +122,7 @@ type TFieldName = TFieldConfig['name'];
 type TAuthEntityFields = TEntityField<'auth'>;
 type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
-export default function RegistrationForm() {
+export default function RegistrationForm(): React.JSX.Element {
     const [searchParams] = useSearchParams();
     const isAdminRegistration = searchParams.get('admin') === 'true';
 
@@ -186,8 +186,11 @@ export default function RegistrationForm() {
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
                 const isConfirmPassword = name === 'confirmPassword';
                 
-                const isValid = validation.test(String(normalizedValue)) &&
-                    (!isConfirmPassword || normalizedValue === fieldsState.password.value);
+                const isValid =
+                    typeof normalizedValue === 'string' 
+                        ? validation.test(normalizedValue) &&
+                            (!isConfirmPassword || normalizedValue === fieldsState.password.value)
+                        : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -352,7 +355,7 @@ export default function RegistrationForm() {
                                     name={name}
                                     type={type}
                                     placeholder={placeholder}
-                                    value={(fieldsState[name]?.value as string) ?? ''}
+                                    value={(fieldsState[name]?.value ?? '') as string}
                                     autoComplete={autoComplete}
                                     onChange={handleFieldChange}
                                     onBlur={trim ? handleTrimmedFieldBlur : undefined}

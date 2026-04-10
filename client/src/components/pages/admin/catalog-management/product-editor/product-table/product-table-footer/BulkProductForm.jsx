@@ -71,7 +71,7 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Бренд',
             elem: 'input',
             type: 'text',
-            value: '',
+            defaultValue: '',
             placeholder: 'Укажите бренд товаров',
             autoComplete: 'off',
             trim: true,
@@ -83,7 +83,7 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Единица измерения',
             elem: 'select',
             options: PRODUCT_UNITS.map(unit => ({ value: unit, label: unit })),
-            value: PRODUCT_UNITS[0],
+            defaultValue: PRODUCT_UNITS[0],
             enabled: false
         },
         {
@@ -94,7 +94,7 @@ const getFieldConfigs = (allowedCategories) => {
             step: 0.5,
             min: 0,
             max: 100,
-            value: 0,
+            defaultValue: 0,
             enabled: false
         },
         {
@@ -102,7 +102,7 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Категория товаров',
             elem: 'select',
             options: allowedCategories.map(cat => ({ value: cat.id, label: cat.name })),
-            value: allowedCategories[0]?.id || '',
+            defaultValue: allowedCategories[0]?.id || '',
             enabled: false
         },
         {
@@ -111,7 +111,7 @@ const getFieldConfigs = (allowedCategories) => {
             elem: 'input',
             type: 'text',
             placeholder: 'Укажите общие теги',
-            value: '',
+            defaultValue: '',
             autoComplete: 'off',
             trim: true,
             allowEmpty: true,
@@ -122,7 +122,7 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Активность',
             elem: 'checkbox',
             checkboxLabel: 'Доступен для продажи',
-            value: true
+            defaultValue: true
         }
     ];
 
@@ -135,8 +135,8 @@ const getFieldConfigs = (allowedCategories) => {
 };
 
 const initFieldsStateReducer = (fieldConfigs) =>
-    fieldConfigs.reduce((acc, { name, enabled, value }) => {
-        acc[name] = { enabled, value, uiStatus: '', error: '' };
+    fieldConfigs.reduce((acc, { name, enabled, defaultValue }) => {
+        acc[name] = { enabled, value: defaultValue ?? '', uiStatus: '', error: '' };
         return acc;
     }, {});
 

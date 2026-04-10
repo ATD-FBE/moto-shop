@@ -22,9 +22,9 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type {
-    TFormStatus,
-    IBaseSubmitState,
     IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
     IFieldState,
     TFieldsState,
     IProcessFormFieldsResult
@@ -36,7 +36,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const actionLabel = 'Войти';
 
-    const submitStates: Record<TFormStatus, IBaseSubmitState> = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [UNAUTH]: {
@@ -97,14 +97,14 @@ type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initialFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
 
-export default function LoginForm() {
+export default function LoginForm(): React.JSX.Element {
     const guestCart = useMemo(() => prepareGuestCartPayload(), []);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer<TValidFieldName>,
-        initialFieldsState
+        initFieldsState
     );
     const [rememberMe, setRememberMe] = useState(localStorage.getItem('rememberMe') === 'true');
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
@@ -156,7 +156,11 @@ export default function LoginForm() {
 
                 const { trim } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
-                const isValid = validation.test(String(normalizedValue));
+                
+                const isValid =
+                    typeof normalizedValue === 'string' 
+                        ? validation.test(normalizedValue) 
+                        : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -336,7 +340,7 @@ export default function LoginForm() {
                                     name={name}
                                     type={type}
                                     placeholder={placeholder}
-                                    value={(fieldsState[name]?.value as string) ?? ''}
+                                    value={(fieldsState[name]?.value ?? '') as string}
                                     autoComplete={autoComplete}
                                     onChange={handleFieldChange}
                                     onBlur={trim ? handleTrimmedFieldBlur : undefined}

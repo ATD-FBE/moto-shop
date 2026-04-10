@@ -146,7 +146,7 @@ const fieldNameByCheckoutErrorCode = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name, options }) => {
+const initFieldsState = fieldConfigs.reduce((acc, { name, options }) => {
     acc[name] = { value: options?.[0].value ?? '', uiStatus: '', error: '' };
     return acc;
 }, {});
@@ -168,7 +168,7 @@ const fieldsStateReducer = (state, action) => {
 };
 
 export default function CardOnlinePayment() {
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.LOADING);
     const [loadingRemainingAmount, setLoadingRemainingAmount] = useState(false);
     const [confirmationUrl, setConfirmationUrl] = useState(null);

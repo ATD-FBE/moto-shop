@@ -17,9 +17,9 @@ import {
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import type {
-    TFormStatus,
-    IBaseSubmitState,
     IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
     IFieldState,
     TFieldsState,
     IProcessFormFieldsResult
@@ -31,14 +31,15 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
     const { DEFAULT, BAD_REQUEST, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
-    const submitStates: Record<TFormStatus, IBaseSubmitState> = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
         [UNCHANGED]: {
             ...base[UNCHANGED],
             addMessage: 'Данные пользователя остались без изменений.',
-            submitBtnLabel: actionLabel },
+            submitBtnLabel: actionLabel
+        },
         [INVALID]: { ...base[INVALID], submitBtnLabel: actionLabel },
         [ERROR]: { ...base[ERROR], submitBtnLabel: actionLabel },
         [TIMEOUT]: { ...base[TIMEOUT], submitBtnLabel: actionLabel },
@@ -113,11 +114,11 @@ type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initialFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
  
-export default function Profile() {
-    const { user } = useAppSelector(state => state.auth);
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
+export default function Profile(): React.JSX.Element | null {
+    const user = useAppSelector(state => state.auth.user);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();
@@ -173,8 +174,12 @@ export default function Profile() {
                 }
 
                 const isConfirmNewPassword = name === 'confirmNewPassword';
-                const isValid = validation.test(String(normalizedValue)) &&
-                    (!isConfirmNewPassword || normalizedValue === fieldsState.newPassword.value);
+
+                const isValid =
+                    typeof normalizedValue === 'string' 
+                        ? validation.test(normalizedValue) &&
+                            (!isConfirmNewPassword || normalizedValue === fieldsState.newPassword.value)
+                        : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -364,7 +369,7 @@ export default function Profile() {
                                         id="newName"
                                         name="newName"
                                         placeholder="Укажите новое имя пользователя"
-                                        value={fieldsState.newName.value as string}
+                                        value={(fieldsState.newName.value ?? '') as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -408,7 +413,7 @@ export default function Profile() {
                                         name="newEmail"
                                         type="email"
                                         placeholder="Укажите новый почтовый ящик"
-                                        value={fieldsState.newEmail.value as string}
+                                        value={(fieldsState.newEmail.value ?? '') as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -447,7 +452,7 @@ export default function Profile() {
                                         id="currentPassword"
                                         name="currentPassword"
                                         placeholder="Укажите текущий пароль"
-                                        value={fieldsState.currentPassword.value as string}
+                                        value={(fieldsState.currentPassword.value ?? '') as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -479,7 +484,7 @@ export default function Profile() {
                                         id="newPassword"
                                         name="newPassword"
                                         placeholder="Укажите новый пароль"
-                                        value={fieldsState.newPassword.value as string}
+                                        value={(fieldsState.newPassword.value ?? '') as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -511,7 +516,7 @@ export default function Profile() {
                                         id="confirmNewPassword"
                                         name="confirmNewPassword"
                                         placeholder="Подтвердите новый пароль"
-                                        value={fieldsState.confirmNewPassword.value as string}
+                                        value={(fieldsState.confirmNewPassword.value ?? '') as string}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}

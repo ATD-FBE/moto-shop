@@ -1,5 +1,5 @@
 import { REQUEST_STATUS, INTENT } from '@shared/constants.js';
-import type { IBaseSubmitState, TFieldSaveStatus, TFormStatus } from '@/types/index.js';
+import type { TSubmitStates, TFieldSaveStatus } from '@/types/index.js';
 
 export const APP_ENV = process.env.APP_ENV;
 export const PROD_ENV = process.env.APP_ENV === 'production';
@@ -80,7 +80,7 @@ export const FORM_STATUS = {
     UNKNOWN: 'unknown'
 } as const;
 
-export const BASE_SUBMIT_STATES: Record<TFormStatus, IBaseSubmitState> = {
+export const BASE_SUBMIT_STATES: TSubmitStates = {
     [FORM_STATUS.DEFAULT]: {
         submitBtnLabel: 'Отправить',
         cancelBtnLabel: 'Отменить'

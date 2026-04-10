@@ -1,6 +1,6 @@
 import type {
     TFormStatus,
-    IBaseSubmitState,
+    TSubmitStates,
     TFieldUiStatus,
     TFieldSaveStatus
 } from './config.types.js';
@@ -11,31 +11,48 @@ import type { TRequestStatus } from '@shared/types/index.js';
 ////////////////////
 
 export interface IGetSubmitStatesResult {
-    submitStates: Record<TFormStatus, IBaseSubmitState>;
+    submitStates: TSubmitStates;
     lockedStatuses: Set<TFormStatus>;
 }
 
+export interface IFormGroupConfig {
+    readonly name: string;
+    readonly title?: string;
+    readonly description?: string;
+    readonly collapsible?: boolean;
+    readonly fieldConfigs?: readonly IFieldConfig[];
+}
+
+export type TFieldValue = string | number | boolean;
+
 export interface IFieldConfig {
-    name: string;
-    label: string;
-    elem: string;
-    type?: string;
-    placeholder?: string;
-    autoComplete?: 'on' | 'off';
-    trim?: boolean;
-    isPassword?: boolean;
+    readonly name: string;
+    readonly label: string;
+    readonly elem: string;
+    readonly type?: string;
+    readonly options?: readonly { value: string; label: string; }[]
+    readonly defaultValue?: TFieldValue;
+    readonly placeholder?: string;
+    readonly autoComplete?: 'on' | 'off';
+    readonly trim?: boolean;
+    readonly isPassword?: boolean;
+    readonly checkboxLabel?: string;
+    readonly tooltip?: string;
+    readonly enabled?: boolean;
+    readonly optional?: boolean;
+    readonly canApply?: (data: any) => boolean;
 }
 
 export interface IFieldState {
     enabled?: boolean;
     files?: File[];
-    value?: string | number | boolean;
+    value?: TFieldValue;
     uiStatus: TFieldUiStatus | '';
     error: string;
-    savedValue?: string | number | boolean;
+    savedValue?: TFieldValue;
     saveStatus?: TFieldSaveStatus | '';
     saveStatusMessage?: string;
-    [key: string]: any; // Для любых других полей, добавленных в стейт
+    [key: string]: any; // Для любых других полей из конфига, добавленных в стейт
 }
 
 export type TFieldsState<TFieldName extends string> = Record<TFieldName, IFieldState>;
@@ -56,6 +73,7 @@ export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> 
     allValid: boolean;
     fieldsStateUpdates: TFieldsState<TFieldName>;
     formFields: TFormBody;
+    changedFields?: TFieldName[];
 }
 
 export interface IProcessFormattedFieldDeletionContext {

@@ -7,45 +7,42 @@ const baseDeliveryFields = {
     deliveryMethod: {
         type: String,
         enum: DELIVERY_METHOD_OPTIONS.map(opt => opt.value),
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     allowCourierExtra: {
         type: Boolean,
-        default: function (this: { deliveryMethod?: TDeliveryMethod }): boolean | undefined {
-            return this.deliveryMethod === DELIVERY_METHOD.COURIER ? false : undefined;
-        },
         set: (val: null | boolean): boolean | undefined => val === null ? undefined : val
     },
     shippingAddress: {
         region: {
             type: String,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         district: {
             type: String,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         city: {
             type: String,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         street: {
             type: String,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         house: {
             type: String,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         apartment: {
             type: String,
             match: validationRules.checkout.apartment,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         },
         postalCode: {
             type: String,
             match: validationRules.checkout.postalCode,
-            set: (val: null | string): undefined | string => val === null ? undefined : val
+            set: (val: null | string): string | undefined => val === null ? undefined : val
         }
     }
 };
@@ -61,41 +58,36 @@ export const FinalDeliverySchema = new Schema({
     },
     allowCourierExtra: baseDeliveryFields.allowCourierExtra,
     shippingAddress: {
-        type: {
-            region: { // Опционально для заказа
-                ...baseDeliveryFields.shippingAddress.region,
-                match: validationRules.checkout.region
-            },
-            district: { // Опционально для заказа
-                ...baseDeliveryFields.shippingAddress.district,
-                match: validationRules.checkout.district
-            },
-            city: {
-                ...baseDeliveryFields.shippingAddress.city,
-                required: true,
-                match: validationRules.checkout.city
-            },
-            street: {
-                ...baseDeliveryFields.shippingAddress.street,
-                required: true,
-                match: validationRules.checkout.street
-            },
-            house: {
-                ...baseDeliveryFields.shippingAddress.house,
-                required: true,
-                match: validationRules.checkout.house
-            },
-            apartment: { // Опционально для заказа
-                ...baseDeliveryFields.shippingAddress.apartment,
-                match: validationRules.checkout.apartment
-            },
-            postalCode: { // Опционально для заказа
-                ...baseDeliveryFields.shippingAddress.postalCode,
-                match: validationRules.checkout.postalCode
-            }
+        region: { // Опционально для заказа
+            ...baseDeliveryFields.shippingAddress.region,
+            match: validationRules.checkout.region
         },
-        required: function (this: { deliveryMethod: TDeliveryMethod }): boolean {
-            return this.deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
+        district: { // Опционально для заказа
+            ...baseDeliveryFields.shippingAddress.district,
+            match: validationRules.checkout.district
+        },
+        city: {
+            ...baseDeliveryFields.shippingAddress.city,
+            required: true,
+            match: validationRules.checkout.city
+        },
+        street: {
+            ...baseDeliveryFields.shippingAddress.street,
+            required: true,
+            match: validationRules.checkout.street
+        },
+        house: {
+            ...baseDeliveryFields.shippingAddress.house,
+            required: true,
+            match: validationRules.checkout.house
+        },
+        apartment: { // Опционально для заказа
+            ...baseDeliveryFields.shippingAddress.apartment,
+            match: validationRules.checkout.apartment
+        },
+        postalCode: { // Опционально для заказа
+            ...baseDeliveryFields.shippingAddress.postalCode,
+            match: validationRules.checkout.postalCode
         }
     },
     shippingCost: {

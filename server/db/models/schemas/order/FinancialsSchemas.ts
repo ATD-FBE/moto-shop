@@ -8,7 +8,7 @@ const baseFinancialsFields = {
     defaultPaymentMethod: {
         type: String,
         enum: Object.values(PAYMENT_METHOD),
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     }
 };
 

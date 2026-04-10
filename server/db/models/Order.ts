@@ -44,7 +44,7 @@ export const BaseOrderSchema = new Schema({
     },
     customerComment: { // Опционально
         type: String,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     }
 }, {
     discriminatorKey: '_modelType', // Ключ дискриминатора для подсхем OrderDraftSchema/OrderFinalSchema
@@ -89,7 +89,7 @@ export const OrderFinalSchema = new Schema({
     internalNote: { // Опционально
         type: String,
         match: validationRules.order.internalNote,
-        set: (val: null | string): undefined | string => val === null ? undefined : val
+        set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     auditLog: {
         type: [AuditLogSchema],
