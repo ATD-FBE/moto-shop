@@ -20,13 +20,9 @@ export const getLockedStatuses = <TFormStatus extends string>(
 };
 
 // Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
-export const defineFieldConfigs = <
-    T extends readonly IFieldConfig[]
->(configs: T): {
-    [K in keyof T]: T[K] & IFieldConfig
-} => {
-    return configs as any;
-};
+export const extendFieldConfigs = <T extends readonly IFieldConfig[]>(
+    configs: T
+) => configs as unknown as { [K in keyof T]: T[K] & IFieldConfig };
 
 export const createFieldConfigMap = <
     TFieldName extends string, 

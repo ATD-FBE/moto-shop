@@ -12,7 +12,7 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
 import {
     getLockedStatuses,
-    defineFieldConfigs,
+    extendFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
     fieldsStateReducer
@@ -110,7 +110,7 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
         ? [...baseFieldConfigs, ...adminRegCodeFieldConfig]
         : [...baseFieldConfigs];
 
-    return defineFieldConfigs(resultFieldConfigs);
+    return extendFieldConfigs(resultFieldConfigs);
 };
 
 // Локальная типизация конфигов полей

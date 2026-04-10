@@ -1,6 +1,6 @@
 import React, { useReducer, useState, useRef, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
@@ -257,7 +257,7 @@ const fieldsStateReducer = (state, action) => {
 };
  
 export default function CheckoutPreferences() {
-    const user = useSelector(state => state.auth.user);
+    const user = useAppSelector(state => state.auth.user);
 
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.LOADING);
@@ -265,7 +265,7 @@ export default function CheckoutPreferences() {
     const initValuesRef = useRef({});
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -535,7 +535,7 @@ export default function CheckoutPreferences() {
             </form>
         </div>
     );
-};
+}
 
 function FormGroupEntries({
     fieldConfigs,

@@ -9,7 +9,7 @@ import { updateUser } from '@/redux/slices/authSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import {
     getLockedStatuses,
-    defineFieldConfigs,
+    extendFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
     fieldsStateReducer
@@ -56,7 +56,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const fieldConfigs = defineFieldConfigs([
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'newName',
         label: 'Новое имя',
