@@ -276,18 +276,16 @@ export default function CheckoutPreferences(): React.JSX.Element {
 
     const dispatch = useAppDispatch();
 
-    const deliveryMethodVal = fieldsState.deliveryMethod.value as TDeliveryMethod;
+    const deliveryMethod = fieldsState.deliveryMethod.value as TDeliveryMethod | '';
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
             fieldConfigs.map(cfg => [
                 cfg.name,
-                typeof cfg.canApply === 'function'
-                    ? cfg.canApply({ deliveryMethod: deliveryMethodVal })
-                    : true
+                typeof cfg.canApply === 'function' ? cfg.canApply({ deliveryMethod }) : true
             ])
         ) as Record<TValidFieldName, boolean>,
-        [deliveryMethodVal]
+        [deliveryMethod]
     );
 
     const isFormLocked = lockedStatuses.has(submitStatus);
