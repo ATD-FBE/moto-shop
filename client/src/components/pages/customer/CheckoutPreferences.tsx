@@ -265,7 +265,10 @@ const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
 export default function CheckoutPreferences(): React.JSX.Element {
     const user = useAppSelector(state => state.auth.user);
 
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(
+        fieldsStateReducer<TValidFieldName>,
+        initFieldsState
+    );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 
     const initValuesRef = useRef<Partial<Record<TValidFieldName, TFieldValue>>>({});
