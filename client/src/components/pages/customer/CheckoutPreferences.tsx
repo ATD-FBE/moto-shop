@@ -261,6 +261,16 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
 type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
+interface FormGroupEntriesProps {
+    fieldConfigs: TFieldConfigs;
+    fieldsState: TFieldsState<TValidFieldName>;
+    applicabilityMap: Record<TValidFieldName, boolean>;
+    isFormLocked: boolean;
+    handleFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    handleTrimmedFieldBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+    fillRegistrationEmail: () => void;
+}
+
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
 const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
@@ -585,16 +595,6 @@ export default function CheckoutPreferences(): React.JSX.Element {
             </form>
         </div>
     );
-}
-
-interface FormGroupEntriesProps {
-    fieldConfigs: TFieldConfigs;
-    fieldsState: TFieldsState<TValidFieldName>;
-    applicabilityMap: Record<TValidFieldName, boolean>;
-    isFormLocked: boolean;
-    handleFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-    handleTrimmedFieldBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
-    fillRegistrationEmail: () => void;
 }
 
 function FormGroupEntries({

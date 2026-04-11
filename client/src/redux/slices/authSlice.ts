@@ -34,15 +34,10 @@ const authSlice = createSlice({
             state.refreshTokenExpiresAt = refreshTokenExp;
         },
 
-        logout: (state, action: PayloadAction<boolean>) => {
-            state.isAuthenticated = false;
-            state.isLocalSession = false;
-            state.suppressAuthRedirect = false;
-            state.forceRedirectToLogin = action.payload;
-            state.user = null;
-            state.accessTokenExpiresAt = 0;
-            state.refreshTokenExpiresAt = 0;
-        },
+        logout: (_state, action: PayloadAction<boolean>) => ({
+            ...initialState,
+            forceRedirectToLogin: action.payload
+        }),
 
         updateUser: (state, action: PayloadAction<IUser>) => {
             state.user = action.payload;
@@ -50,11 +45,7 @@ const authSlice = createSlice({
 
         updateCustomerDiscount: (state, action: PayloadAction<number>) => {
             if (!state.user) return;
-            
-            state.user = { 
-                ...state.user, 
-                discount: action.payload
-            };
+            state.user.discount = action.payload;
         },
 
         setAccessTokenExpiry(state, action: PayloadAction<number>) {
@@ -72,11 +63,7 @@ const authSlice = createSlice({
             if (!newCount) return;
 
             const oldCount = state.user.unreadNotificationsCount ?? 0;
-
-            state.user = { 
-                ...state.user, 
-                unreadNotificationsCount: Math.max(0, oldCount + newCount) 
-            };
+            state.user.unreadNotificationsCount = Math.max(0, oldCount + newCount);
         },
 
         adjustManagedActiveOrdersCount: (state, action: PayloadAction<number>) => {
@@ -86,11 +73,7 @@ const authSlice = createSlice({
             if (!newCount) return;
 
             const oldCount = state.user.managedActiveOrdersCount ?? 0;
-
-            state.user = { 
-                ...state.user, 
-                managedActiveOrdersCount: Math.max(0, oldCount + newCount) 
-            };
+            state.user.managedActiveOrdersCount = Math.max(0, oldCount + newCount);
         }
     }
 });

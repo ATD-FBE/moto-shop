@@ -26,7 +26,6 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFieldState,
-    TFieldsState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthLoginBody } from '@shared/types/index.js';

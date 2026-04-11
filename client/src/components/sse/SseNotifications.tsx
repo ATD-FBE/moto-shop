@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { sendAuthSessionRequest } from '@/api/authRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { login, adjustUnreadNotificationsCount } from '@/redux/slices/authSlice.js';
@@ -10,16 +9,21 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { getSseUrl } from '@/helpers/sseHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { TAppThunk } from '@/types/index.js';
+
+interface ISseMessageData {
+    newUnreadNotificationsCount: number;
+}
 
 const LOG_CTX = 'SSE: CUSTOMER NOTIFICATION';
 
-export default function SseNotifications() {
-    const unreadNotificationsCount = useSelector(state =>
+export default function SseNotifications(): null {
+    const unreadNotificationsCount = useAppSelector(state =>
         state.auth.user?.unreadNotificationsCount ?? 0
     );
 
-    const location = useLocation();
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
 
     const locationPathRef = useRef(location.pathname);
     const unreadNotificationsCountRef = useRef(unreadNotificationsCount);
@@ -28,40 +32,51 @@ export default function SseNotifications() {
     const syncAfterReconnect = async () => {
         const guestCart = prepareGuestCartPayload();
         const responseData = await dispatch(sendAuthSessionRequest({ guestCart }));
-        const { status, message, user: updatedUser, accessTokenExp, refreshTokenExp } = responseData;
+        const { status, message } = responseData;
 
         logRequestStatus({ context: LOG_CTX, status, message });
     
         if (status === REQUEST_STATUS.SUCCESS) {
+            const { user: updatedUser, accessTokenExp, refreshTokenExp } = responseData;
+
             dispatch(login({ user: updatedUser, accessTokenExp, refreshTokenExp }));
             saveUserToLocalStorage(updatedUser);
 
+            const locationPath = locationPathRef.current;
+            const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
+
+            const oldUnreadNotifsCount = unreadNotificationsCountRef.current;
+            const newUnreadNotifsCount = updatedUser.unreadNotificationsCount;
+
             if (
-                routeConfig.customerNotifications.paths.includes(locationPathRef.current) &&
-                updatedUser.unreadNotificationsCount !== unreadNotificationsCountRef.current
+                isNotificationsPage &&
+                typeof newUnreadNotifsCount === 'number' &&
+                newUnreadNotifsCount !== oldUnreadNotifsCount
             ) {
-                dispatch(adjustNewNotificationsCount(
-                    updatedUser.unreadNotificationsCount - unreadNotificationsCountRef.current
-                ));
+                dispatch(adjustNewNotificationsCount(newUnreadNotifsCount - oldUnreadNotifsCount));
             }
         }
     };
 
-    const adjustAndSyncUnreadNotificationsCount = (count) => (dispatch, getState) => {
-        dispatch(adjustUnreadNotificationsCount(count)); // Обновляет user в сторе auth
-        saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
-    };
+    const isSseMessage = (data: any): data is ISseMessageData =>
+        data && typeof data === 'object' && typeof data.newUnreadNotificationsCount === 'number';
 
-    const applySseMessage = (data) => {
+    const adjustAndSyncUnreadNotificationsCount = (count: number): TAppThunk<void> =>
+        (dispatch, getState) => {
+            dispatch(adjustUnreadNotificationsCount(count)); // Обновляет user в сторе auth
+            saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
+        };
+
+    const applySseMessage = (data: ISseMessageData) => {
         const { newUnreadNotificationsCount } = data;
 
-        if (newUnreadNotificationsCount) {
+        if (newUnreadNotificationsCount !== 0) {
             dispatch(adjustAndSyncUnreadNotificationsCount(newUnreadNotificationsCount));
 
-            if (
-                newUnreadNotificationsCount > 0 &&
-                routeConfig.customerNotifications.paths.includes(locationPathRef.current)
-            ) {
+            const locationPath = locationPathRef.current;
+            const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
+
+            if (newUnreadNotificationsCount > 0 && isNotificationsPage) {
                 dispatch(adjustNewNotificationsCount(newUnreadNotificationsCount));
             }
         }
@@ -86,9 +101,9 @@ export default function SseNotifications() {
         };
 
         eventSource.onmessage = (event) => {
-            let data = null;
+            let data: unknown;
             try { data = JSON.parse(event.data); } catch { return; } // Для битых данных и мусора
-            applySseMessage(data);
+            if (isSseMessage(data)) applySseMessage(data);
         };
 
         eventSource.onerror = () => {

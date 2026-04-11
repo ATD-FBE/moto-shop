@@ -1,12 +1,11 @@
 import { useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { sendAuthSessionRequest } from '@/api/authRequests.js';
+import { routeConfig } from '@/config/appRouting.js';
 import { login, adjustManagedActiveOrdersCount } from '@/redux/slices/authSlice.js';
 import { adjustNewManagedActiveOrdersCount } from '@/redux/slices/uiSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
-import { routeConfig } from '@/config/appRouting.js';
 import { getSseUrl } from '@/helpers/sseHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
@@ -27,12 +26,12 @@ export const notifyOrderUpdate = (orderUpdate) => {
 
 // SSE компонент
 export default function SseOrderManagement() {
-    const managedActiveOrdersCount = useSelector(state =>
+    const managedActiveOrdersCount = useAppSelector(state =>
         state.auth.user?.managedActiveOrdersCount ?? 0
     );
 
-    const location = useLocation();
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
 
     const locationPathRef = useRef(location.pathname);
     const managedActiveOrdersCountRef = useRef(managedActiveOrdersCount);
