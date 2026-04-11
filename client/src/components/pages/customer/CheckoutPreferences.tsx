@@ -15,7 +15,7 @@ import {
     extractFieldConfigs,
     extendFieldConfigs,
     createFieldConfigMap,
-    createInitFieldsState,
+    createInitialFieldsState,
     fieldsStateReducer,
     getStringValue,
     getBoolValue
@@ -29,7 +29,7 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFieldState,
-    TFieldsState,
+    TFormState,
     TFieldValue,
     IProcessFormFieldsResult
 } from '@/types/index.js';
@@ -265,7 +265,7 @@ type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>
 
 interface FormGroupEntriesProps {
     fieldConfigs: TFieldConfigs;
-    fieldsState: TFieldsState<TValidFieldName>;
+    fieldsState: TFormState<TValidFieldName>;
     applicabilityMap: Record<TValidFieldName, boolean>;
     isFormLocked: boolean;
     handleFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -275,14 +275,14 @@ interface FormGroupEntriesProps {
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
  
 export default function CheckoutPreferences(): React.JSX.Element {
     const user = useAppSelector(state => state.auth.user);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer<TValidFieldName>,
-        initFieldsState
+        initialFieldsState
     );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 

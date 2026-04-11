@@ -14,7 +14,7 @@ import {
     getLockedStatuses,
     extendFieldConfigs,
     createFieldConfigMap,
-    createInitFieldsState,
+    createInitialFieldsState,
     fieldsStateReducer,
     getStringValue
 } from '@/helpers/formHelpers.js';
@@ -138,11 +138,10 @@ export default function RegistrationForm(): React.JSX.Element {
     }, [isAdminRegistration]);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer<TValidFieldName>,
+        fieldsStateReducer,
         fieldConfigs,
-        createInitFieldsState<TValidFieldName>
+        createInitialFieldsState<TValidFieldName>
     );
-
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
 
     const isUnmountedRef = useRef(false);

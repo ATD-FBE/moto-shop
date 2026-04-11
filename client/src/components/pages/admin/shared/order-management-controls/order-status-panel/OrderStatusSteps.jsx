@@ -50,7 +50,7 @@ const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initFieldsState = fieldConfigs.reduce((acc, { name }) => {
+const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
     acc[name] = { value: '', uiStatus: '', error: '' };
     return acc;
 }, {});
@@ -81,7 +81,7 @@ export default function OrderStatusSteps({
     netPaid,
     totalAmount
 }) {
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [orderStatusLoading, setOrderStatusLoading] = useState(false);
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();

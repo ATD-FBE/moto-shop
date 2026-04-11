@@ -68,7 +68,7 @@ const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initFieldsState = fieldConfigs.reduce((acc, { name }) => {
+const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
     acc[name] = { value: '', uiStatus: '', error: '' };
     return acc;
 }, {});
@@ -90,7 +90,7 @@ const fieldsStateReducer = (state, action) => {
 };
 
 export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();

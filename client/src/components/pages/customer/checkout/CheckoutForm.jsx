@@ -251,7 +251,7 @@ const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
     return acc;
 }, {});
 
-const initFieldsState = fieldConfigs.reduce((acc, { name }) => {
+const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
     acc[name] = {
         value: '',
         uiStatus: '',
@@ -312,7 +312,7 @@ export default function CheckoutForm({
     setOrderDraft,
     reloadOrderDraft
 }) {
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     
     const [initializedValues, setInitializedValues] = useState(false);
     const [expandedFormGroup, setExpandedFormGroup] = useState('');

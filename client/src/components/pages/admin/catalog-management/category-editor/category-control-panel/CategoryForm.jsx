@@ -7,7 +7,7 @@ import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
 import {
     createFieldConfigMap,
-    createInitFieldsState,
+    createInitialFieldsState,
     fieldsStateReducer
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
@@ -136,7 +136,7 @@ export default function CategoryForm({
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer, // Плюс дженерик <TValidFieldName>
         fieldConfigs,
-        (configs) => createInitFieldsState(configs, { // Плюс дженерик <TValidFieldName>
+        (configs) => createInitialFieldsState(configs, { // Плюс дженерик <TValidFieldName>
             extraStateFields: { order: ['max'] } // Добавление дополнительного поля в состояние
         })
     );
@@ -336,7 +336,7 @@ export default function CategoryForm({
     // Обновление всех полей при изменении их конфигов (смена категории, пересоздание карты)
     useEffect(() => {
         setSubmitStatus(FORM_STATUS.DEFAULT);
-        dispatchFieldsState({ type: 'RESET', payload: createInitFieldsState(fieldConfigs) });
+        dispatchFieldsState({ type: 'RESET', payload: createInitialFieldsState(fieldConfigs) });
     }, [fieldConfigs]);
 
     // Обновление поля order при изменении родителя категории в режиме редактирования

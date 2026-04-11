@@ -15,7 +15,7 @@ import {
     getLockedStatuses,
     extendFieldConfigs,
     createFieldConfigMap,
-    createInitFieldsState,
+    createInitialFieldsState,
     fieldsStateReducer,
     getStringValue
 } from '@/helpers/formHelpers.js';
@@ -99,15 +99,12 @@ type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
 
 export default function LoginForm(): React.JSX.Element {
     const guestCart = useMemo(() => prepareGuestCartPayload(), []);
 
-    const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer<TValidFieldName>,
-        initFieldsState
-    );
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [rememberMe, setRememberMe] = useState(localStorage.getItem('rememberMe') === 'true');
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
 

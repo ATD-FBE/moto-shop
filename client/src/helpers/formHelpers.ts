@@ -6,7 +6,7 @@ import type {
     TFieldValue,
     IFieldConfig,
     IFieldState,
-    TFieldsState,
+    TFormState,
     TFieldsAction,
     IProcessFormattedFieldDeletionContext,
     IProcessFormattedFieldDeletionResult
@@ -40,13 +40,13 @@ export const createFieldConfigMap = <
         return acc;
     }, {} as Record<TFieldName, TFieldConfig>);
 
-export const createInitFieldsState = <TFieldName extends string>(
+export const createInitialFieldsState = <TFieldName extends string>(
     fieldConfigs: readonly (IFieldConfig & { name: TFieldName })[],
     options: {
         extraStateFields?: Record<TFieldName, (keyof IFieldConfig)[]>,
         autoSave?: boolean,
     } = {}
-): TFieldsState<TFieldName> => {
+): TFormState<TFieldName> => {
     const { extraStateFields, autoSave } = options;
 
     return fieldConfigs.reduce((acc, config) => {
@@ -89,13 +89,13 @@ export const createInitFieldsState = <TFieldName extends string>(
 
         acc[name] = state;
         return acc;
-    }, {} as TFieldsState<TFieldName>);
+    }, {} as TFormState<TFieldName>);
 };
 
 export const fieldsStateReducer = <TFieldName extends string>(
-    state: TFieldsState<TFieldName>,
+    state: TFormState<TFieldName>,
     action: TFieldsAction<TFieldName>
-): TFieldsState<TFieldName> => {
+): TFormState<TFieldName> => {
     switch (action.type) {
         case 'UPDATE': {
             const newState = { ...state };

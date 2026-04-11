@@ -11,7 +11,7 @@ import {
     getLockedStatuses,
     extendFieldConfigs,
     createFieldConfigMap,
-    createInitFieldsState,
+    createInitialFieldsState,
     fieldsStateReducer,
     getStringValue
 } from '@/helpers/formHelpers.js';
@@ -116,11 +116,11 @@ type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initFieldsState = createInitFieldsState<TValidFieldName>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
  
 export default function Profile(): React.JSX.Element | null {
     const user = useAppSelector(state => state.auth.user);
-    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initFieldsState);
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();

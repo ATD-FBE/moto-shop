@@ -55,7 +55,7 @@ export interface IFieldState {
     [key: string]: TFieldValue | File[] | undefined; // Добавленные поля конфигов в стейт
 }
 
-export type TFieldsState<TFieldName extends string> = Record<TFieldName, IFieldState>;
+export type TFormState<TFieldName extends string> = Record<TFieldName, IFieldState>;
 
 export type TFieldsAction<TFieldName extends string> =
     | { type: 'UPDATE'; payload: Partial<Record<TFieldName, Partial<IFieldState>>> }
@@ -67,7 +67,7 @@ export type TFieldsAction<TFieldName extends string> =
             status: TFieldSaveStatus | ''; 
         } 
     }
-    | { type: 'RESET'; payload: TFieldsState<TFieldName> };
+    | { type: 'RESET'; payload: TFormState<TFieldName> };
 
 export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> {
     allValid: boolean;
