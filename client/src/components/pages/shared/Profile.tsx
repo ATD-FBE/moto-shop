@@ -12,7 +12,8 @@ import {
     extendFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
-    fieldsStateReducer
+    fieldsStateReducer,
+    getStringValue
 } from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
@@ -21,7 +22,6 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFieldState,
-    TFieldsState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
@@ -127,7 +127,7 @@ export default function Profile(): React.JSX.Element | null {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         
         dispatchFieldsState({
@@ -136,7 +136,7 @@ export default function Profile(): React.JSX.Element | null {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -209,7 +209,7 @@ export default function Profile(): React.JSX.Element | null {
         return result;
     };
 
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields } = processFormFields();
@@ -369,7 +369,7 @@ export default function Profile(): React.JSX.Element | null {
                                         id="newName"
                                         name="newName"
                                         placeholder="Укажите новое имя пользователя"
-                                        value={(fieldsState.newName.value ?? '') as string}
+                                        value={getStringValue(fieldsState.newName.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -413,7 +413,7 @@ export default function Profile(): React.JSX.Element | null {
                                         name="newEmail"
                                         type="email"
                                         placeholder="Укажите новый почтовый ящик"
-                                        value={(fieldsState.newEmail.value ?? '') as string}
+                                        value={getStringValue(fieldsState.newEmail.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         onBlur={handleTrimmedFieldBlur}
@@ -452,7 +452,7 @@ export default function Profile(): React.JSX.Element | null {
                                         id="currentPassword"
                                         name="currentPassword"
                                         placeholder="Укажите текущий пароль"
-                                        value={(fieldsState.currentPassword.value ?? '') as string}
+                                        value={getStringValue(fieldsState.currentPassword.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -484,7 +484,7 @@ export default function Profile(): React.JSX.Element | null {
                                         id="newPassword"
                                         name="newPassword"
                                         placeholder="Укажите новый пароль"
-                                        value={(fieldsState.newPassword.value ?? '') as string}
+                                        value={getStringValue(fieldsState.newPassword.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}
@@ -516,7 +516,7 @@ export default function Profile(): React.JSX.Element | null {
                                         id="confirmNewPassword"
                                         name="confirmNewPassword"
                                         placeholder="Подтвердите новый пароль"
-                                        value={(fieldsState.confirmNewPassword.value ?? '') as string}
+                                        value={getStringValue(fieldsState.confirmNewPassword.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
                                         disabled={isFormLocked}

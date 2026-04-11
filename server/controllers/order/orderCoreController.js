@@ -376,7 +376,7 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
 
     // Работа с базой данных
     try {
-        const { updatedOrderData, orderLbl } = await runInDbTransaction(async (session) => {
+        const { orderUpdateData, orderLbl } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -400,13 +400,13 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
 
             // Формирование данных для SSE-сообщения
             const orderPatches = [{ path: 'internalNote', value: prepDbFields.internalNote }];
-            const updatedOrderData = { orderPatches };
+            const orderUpdateData = { orderPatches };
 
-            return { updatedOrderData, orderLbl };
+            return { orderUpdateData, orderLbl };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, { message: `Внутренняя заметка заказа ${orderLbl} изменена` });
@@ -493,7 +493,7 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -556,13 +556,13 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
             const newAuditLogEntry = updatedDbOrder.auditLog.at(-1).toObject();
-            const updatedOrderData = { orderPatches, newAuditLogEntry };
+            const orderUpdateData = { orderPatches, newAuditLogEntry };
 
-            return { orderLbl, updatedOrderData };
+            return { orderLbl, orderUpdateData };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, { message: `Заказ ${orderLbl} успешно изменён` });
@@ -646,7 +646,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     try {
         const imageFilenamesToDelete = [];
 
-        const { orderLbl, updatedOrderData, itemsAdjustments } = await runInDbTransaction(async (session) => {
+        const { orderLbl, orderUpdateData, itemsAdjustments } = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -836,13 +836,13 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
             const newAuditLogEntry = updatedDbOrder.auditLog.at(-1).toObject();
-            const updatedOrderData = { orderPatches, newAuditLogEntry };
+            const orderUpdateData = { orderPatches, newAuditLogEntry };
 
-            return { orderLbl, updatedOrderData, itemsAdjustments };
+            return { orderLbl, orderUpdateData, itemsAdjustments };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Отправка ответа клиенту
@@ -908,7 +908,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
     try {
         // Транзакция MongoDB
-        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск и проверка наличия документа заказа
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -1122,18 +1122,18 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                 newOrderStatusEntry.lastActiveStatus = getLastActiveOrderStatus(updatedDbOrder.statusHistory);
             }
 
-            const updatedOrderData = {
+            const orderUpdateData = {
                 ...(orderPatches.length > 0 && { orderPatches }),
                 newOrderStatusEntry
             };
 
-            return { orderLbl, updatedOrderData };
+            return { orderLbl, orderUpdateData };
         });
 
-        const newOrderStatus = updatedOrderData.newOrderStatusEntry.status;
+        const newOrderStatus = orderUpdateData.newOrderStatusEntry.status;
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         if (ORDER_FINAL_STATUSES.includes(newOrderStatus)) {
             sseMessageData.newManagedActiveOrdersCount = -1;
         }

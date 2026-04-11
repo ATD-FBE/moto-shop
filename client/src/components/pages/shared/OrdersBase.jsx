@@ -126,13 +126,13 @@ export default function OrdersBase({
         });
     };
     
-    const updateOrderState = (orderId, updatedOrderData = {}) => {
+    const updateOrderState = (orderId, orderUpdateData = {}) => {
         const {
             orderPatches = [],
             newOrderStatusEntry,
             newFinancialsEventEntry,
             lastFinancialsEventEntry
-        } = updatedOrderData;
+        } = orderUpdateData;
 
         if (
             !orderPatches.length &&
@@ -185,7 +185,7 @@ export default function OrdersBase({
         if (!subscribeToUpdates) return;
 
         const unsubscribe = subscribeToOrderUpdates((orderUpdate) => {
-            updateOrderState(orderUpdate.orderId, orderUpdate.updatedOrderData);
+            updateOrderState(orderUpdate.orderId, orderUpdate.orderUpdateData);
         });
         return unsubscribe;
     }, []);

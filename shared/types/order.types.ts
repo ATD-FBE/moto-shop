@@ -1,6 +1,5 @@
 import type {
     IDataChange,
-    IDotNotationPatch,
     TUserRole,
     TActiveUserRole,
     TDiscountSource,
@@ -206,13 +205,4 @@ export interface IRefundablePayment {
     provider: TCardOnlineProvider;
     transactionId: string;
     amount: number;
-}
-
-export interface IUpdatedOrderData {
-    orderPatches?: IDotNotationPatch[];
-    newOrderStatusEntry?: IOrderStatusEntry;
-    newFinancialsEventEntry?: IFinancialsEventEntry;
-    voidedFinancialsEventEntry?: IFinancialsEventEntry;
-    lastFinancialsEventEntry?: IFinancialsEventEntry | null;
-    newAuditLogEntry?: IAuditLogEntry;
 }

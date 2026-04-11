@@ -36,7 +36,7 @@ import type {
 import type {
     TCardOnlineProvider,
     TTransactionStatus,
-    IUpdatedOrderData,
+    IOrderUpdateData,
     IDotNotationPatch
 } from '@shared/types/index.js';
 
@@ -101,9 +101,9 @@ export const startInitOnlineTransactionCleaner = (): void => {
                                     path: orderDotNotationMap.currentOnlineTransaction,
                                     value: undefined
                                 }];
-                                const updatedOrderData = { orderPatches };
+                                const orderUpdateData: IOrderUpdateData = { orderPatches };
     
-                                const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+                                const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
                                 sseOrderManagement.sendToAllClients(sseMessageData);
                             }
 
@@ -163,9 +163,9 @@ const processStuckTransactionGroup = async (
     stuckOnlineTxStatus: TTransactionStatus,
     transactionGroup: INormalizedExternalTx<TAnyExternalTx>[]
 ): Promise<void> => {
-    const { shouldClearTransaction, updatedOrderData } = await runInDbTransaction<{
+    const { shouldClearTransaction, orderUpdateData } = await runInDbTransaction<{
         shouldClearTransaction: boolean;
-        updatedOrderData: IUpdatedOrderData | null;
+        orderUpdateData: IOrderUpdateData | null;
     }>(async (session) => {
         // Обновление данных заказа
         const dbOrder = await Order.findById<TDbOrderFinalDoc>(orderId).session(session);
@@ -174,7 +174,7 @@ const processStuckTransactionGroup = async (
         const currentOnlineTx = dbOrder?.financials.currentOnlineTransaction;
 
         if (!currentOnlineTx || currentOnlineTx.status !== stuckOnlineTxStatus) {
-            return { shouldClearTransaction: false, updatedOrderData: null };
+            return { shouldClearTransaction: false, orderUpdateData: null };
         }
         if (dbOrder.currentStatus === ORDER_STATUS.DRAFT) {
             logCriticalEvent({
@@ -187,7 +187,7 @@ const processStuckTransactionGroup = async (
             });
             return {
                 shouldClearTransaction: true,
-                updatedOrderData: {
+                orderUpdateData: {
                     orderPatches: [{
                         path: orderDotNotationMap.currentOnlineTransaction,
                         value: undefined
@@ -292,9 +292,9 @@ const processStuckTransactionGroup = async (
             { path: orderDotNotationMap.totalRefunded, value: updatedDbOrder.financials.totalRefunded },
             { path: orderDotNotationMap.eventHistory, value: updatedDbOrder.financials.eventHistory }
         ];
-        const updatedOrderData = { orderPatches };
+        const orderUpdateData = { orderPatches };
 
-        return { shouldClearTransaction: false, updatedOrderData };
+        return { shouldClearTransaction: false, orderUpdateData };
     });
     
     // Очистка данных онлайн транзакции
@@ -305,8 +305,8 @@ const processStuckTransactionGroup = async (
     }
 
     // Отправка SSE-сообщения админам
-    if (updatedOrderData && (!shouldClearTransaction || clearedTransactionCount > 0)) {
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+    if (orderUpdateData && (!shouldClearTransaction || clearedTransactionCount > 0)) {
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
     }
 };

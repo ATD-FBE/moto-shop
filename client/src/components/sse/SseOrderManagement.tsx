@@ -9,23 +9,31 @@ import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { getSseUrl } from '@/helpers/sseHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { TAppThunk } from '@/types/index.js';
+import type { IOrderUpdate, IAdminSseMessageData } from '@shared/types/index.js';
+
+type TOrderUpdateHandler = (orderUpdate: IOrderUpdate) => void;
 
 const LOG_CTX = 'SSE: ORDER MANAGEMENT';
 
 // Подписка внутренних страниц на обновление со своим обработчиком
-const orderUpdateSubscribers = new Set();
+const orderUpdateSubscribers: Set<TOrderUpdateHandler> = new Set();
 
-export const subscribeToOrderUpdates = (fn) => {
+export const subscribeToOrderUpdates = (fn: TOrderUpdateHandler): (() => void) => {
     orderUpdateSubscribers.add(fn);
-    return () => orderUpdateSubscribers.delete(fn);
+
+    // Возвращение функции, удаляющей хэндлер из подписчика для очистки при размонтировании
+    return () => {
+        orderUpdateSubscribers.delete(fn);
+    };
 };
 
-export const notifyOrderUpdate = (orderUpdate) => {
+export const notifyOrderUpdate = (orderUpdate: IOrderUpdate): void => {
     orderUpdateSubscribers.forEach(fn => fn(orderUpdate));
 };
 
-// SSE компонент
-export default function SseOrderManagement() {
+// SSE
+export default function SseOrderManagement(): null {
     const managedActiveOrdersCount = useAppSelector(state =>
         state.auth.user?.managedActiveOrdersCount ?? 0
     );
@@ -37,45 +45,62 @@ export default function SseOrderManagement() {
     const managedActiveOrdersCountRef = useRef(managedActiveOrdersCount);
     const wasSseErrorRef = useRef(false);
 
-    const syncAfterReconnect = async () => {
+    const syncAfterReconnect = async (): Promise<void> => {
         const guestCart = prepareGuestCartPayload();
         const responseData = await dispatch(sendAuthSessionRequest({ guestCart }));
-        const { status, message, user: updatedUser, accessTokenExp, refreshTokenExp } = responseData;
+        const { status, message } = responseData;
 
         logRequestStatus({ context: LOG_CTX, status, message });
     
         if (status === REQUEST_STATUS.SUCCESS) {
+            const { user: updatedUser, accessTokenExp, refreshTokenExp } = responseData;
+
             saveUserToLocalStorage(updatedUser);
             dispatch(login({ user: updatedUser, accessTokenExp, refreshTokenExp }));
 
+            const isAdminOrdersPage = routeConfig.adminOrders.paths.includes(locationPathRef.current);
+
+            const oldActiveOrdersCount = managedActiveOrdersCountRef.current;
+            const newActiveOrdersCount = updatedUser.managedActiveOrdersCount;
+
             if (
-                routeConfig.adminOrders.paths.includes(locationPathRef.current) &&
-                updatedUser.managedActiveOrdersCount !== managedActiveOrdersCountRef.current
+                isAdminOrdersPage &&
+                typeof newActiveOrdersCount === 'number' &&
+                newActiveOrdersCount !== oldActiveOrdersCount
             ) {
-                dispatch(adjustNewManagedActiveOrdersCount(
-                    updatedUser.managedActiveOrdersCount - managedActiveOrdersCountRef.current
-                ));
+                dispatch(adjustNewManagedActiveOrdersCount(newActiveOrdersCount - oldActiveOrdersCount));
             }
         }
     };
 
-    const adjustAndSyncManagedActiveOrdersCount = (count) => (dispatch, getState) => {
-        dispatch(adjustManagedActiveOrdersCount(count)); // Обновляет user в сторе auth
-        saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
+    const isOrderManagementSseMessage = (data: any): data is IAdminSseMessageData => {
+        const hasActiveOrdersCount = typeof data?.newManagedActiveOrdersCount === 'number';
+        
+        const hasOrderUpdate = 
+            data?.orderUpdate && 
+            typeof data.orderUpdate === 'object' && 
+            'orderId' in data.orderUpdate;
+    
+        return hasActiveOrdersCount || hasOrderUpdate;
     };
 
-    const applySseMessage = (data) => {
+    const adjustAndSyncManagedActiveOrdersCount = (count: number): TAppThunk<void> =>
+        (dispatch, getState): void => {
+            dispatch(adjustManagedActiveOrdersCount(count)); // Обновляет user в сторе auth
+            saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
+        };
+
+    const applySseMessage = (data: IAdminSseMessageData) => {
         const { newManagedActiveOrdersCount, orderUpdate } = data;
 
-        if (newManagedActiveOrdersCount) {
+        if (typeof newManagedActiveOrdersCount === 'number' && newManagedActiveOrdersCount !== 0) {
             // Обновление счётчика активных заказов
             dispatch(adjustAndSyncManagedActiveOrdersCount(newManagedActiveOrdersCount));
 
             // Обновление счётчика новых заказов для страницы списка всех заказов админа
-            if (
-                newManagedActiveOrdersCount > 0 &&
-                routeConfig.adminOrders.paths.includes(locationPathRef.current)
-            ) {
+            const isAdminOrdersPage = routeConfig.adminOrders.paths.includes(locationPathRef.current);
+
+            if (newManagedActiveOrdersCount > 0 && isAdminOrdersPage) {
                 dispatch(adjustNewManagedActiveOrdersCount(newManagedActiveOrdersCount));
             }
         }
@@ -97,7 +122,7 @@ export default function SseOrderManagement() {
                 message: 'SSE-соединение для управления заказами открыто'
             });
 
-            // Синхронизация данных сессии после переподключения SSE
+            // Синхронизация данных сессии при переподключениях SSE
             if (wasSseErrorRef.current) {
                 syncAfterReconnect();
                 wasSseErrorRef.current = false;
@@ -105,9 +130,9 @@ export default function SseOrderManagement() {
         };
 
         eventSource.onmessage = (event) => {
-            let data = null;
+            let data: unknown;
             try { data = JSON.parse(event.data); } catch { return; } // Для битых данных и мусора
-            applySseMessage(data);
+            if (isOrderManagementSseMessage(data)) applySseMessage(data);
         };
 
         eventSource.onerror = () => {

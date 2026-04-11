@@ -10,10 +10,7 @@ import { getSseUrl } from '@/helpers/sseHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { TAppThunk } from '@/types/index.js';
-
-interface ISseMessageData {
-    newUnreadNotificationsCount: number;
-}
+import type { ICustomerSseMessageData } from '@shared/types/index.js';
 
 const LOG_CTX = 'SSE: CUSTOMER NOTIFICATION';
 
@@ -29,7 +26,7 @@ export default function SseNotifications(): null {
     const unreadNotificationsCountRef = useRef(unreadNotificationsCount);
     const wasSseErrorRef = useRef(false);
 
-    const syncAfterReconnect = async () => {
+    const syncAfterReconnect = async (): Promise<void> => {
         const guestCart = prepareGuestCartPayload();
         const responseData = await dispatch(sendAuthSessionRequest({ guestCart }));
         const { status, message } = responseData;
@@ -58,21 +55,23 @@ export default function SseNotifications(): null {
         }
     };
 
-    const isSseMessage = (data: any): data is ISseMessageData =>
+    const isSseMessage = (data: any): data is ICustomerSseMessageData =>
         data && typeof data === 'object' && typeof data.newUnreadNotificationsCount === 'number';
 
     const adjustAndSyncUnreadNotificationsCount = (count: number): TAppThunk<void> =>
-        (dispatch, getState) => {
+        (dispatch, getState): void => {
             dispatch(adjustUnreadNotificationsCount(count)); // Обновляет user в сторе auth
             saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
         };
 
-    const applySseMessage = (data: ISseMessageData) => {
+    const applySseMessage = (data: ICustomerSseMessageData) => {
         const { newUnreadNotificationsCount } = data;
 
         if (newUnreadNotificationsCount !== 0) {
+            // Обновление счётчика непрочитанных уведомлений
             dispatch(adjustAndSyncUnreadNotificationsCount(newUnreadNotificationsCount));
 
+            // Обновление счётчика новых уведомлений для страницы списка всех уведомлений покупателя
             const locationPath = locationPathRef.current;
             const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
 
@@ -93,7 +92,7 @@ export default function SseNotifications(): null {
                 message: 'SSE-соединение для уведомлений открыто'
             });
 
-            // Синхронизация данных сессии после переподключения SSE
+            // Синхронизация данных сессии при переподключениях SSE
             if (wasSseErrorRef.current) {
                 syncAfterReconnect();
                 wasSseErrorRef.current = false;

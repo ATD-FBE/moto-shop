@@ -3,6 +3,7 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFormGroupConfig,
+    TFieldValue,
     IFieldConfig,
     IFieldState,
     TFieldsState,
@@ -152,6 +153,12 @@ export const fieldsStateReducer = <TFieldName extends string>(
             return state;
     }
 };
+
+export const getStringValue = (val?: TFieldValue): string =>
+    typeof val === 'string' ? val : String(val ?? '');
+
+export const getBoolValue = (val?: TFieldValue, fallback = false): boolean =>
+    typeof val === 'boolean' ? val : fallback;
 
 export const processFormattedFieldDeletion = (
     e: React.KeyboardEvent<HTMLInputElement>,

@@ -16,7 +16,9 @@ import {
     extendFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
-    fieldsStateReducer
+    fieldsStateReducer,
+    getStringValue,
+    getBoolValue
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
@@ -357,7 +359,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { type, name, value } = e.target;
         const checked = e.target instanceof HTMLInputElement && e.target.checked;
         const processedValue = type === 'checkbox' ? checked : value;
@@ -368,7 +370,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -379,7 +381,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         });
     };
 
-    const fillRegistrationEmail = () => {
+    const fillRegistrationEmail = (): void => {
         if (!user) return;
 
         dispatchFieldsState({
@@ -448,12 +450,10 @@ export default function CheckoutPreferences(): React.JSX.Element {
         return result;
     };
     
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
-
-        console.log(formFields);
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -633,13 +633,11 @@ function FormGroupEntries({
                     onChange: handleFieldChange,
                 };
 
-                let fieldElem: React.JSX.Element;
-
-                if (elem === 'select') {
-                    fieldElem = (
+                const fieldElem = (() => {
+                    if (elem === 'select') return (
                         <select
                             {...baseProps}
-                            value={(fieldsState[name]?.value ?? '') as string}
+                            value={getStringValue(fieldsState[name]?.value)}
                         >
                             {options.map((option, idx) => (
                                 <option key={`${idx}-${option.value}`} value={option.value}>
@@ -648,25 +646,25 @@ function FormGroupEntries({
                             ))}
                         </select>
                     );
-                } else if (elem === 'checkbox') {
-                    fieldElem = (
+                    
+                    if (elem === 'checkbox') return (
                         <DesignedCheckbox
                             {...baseProps}
                             label={checkboxLabel}
-                            checked={(fieldsState[name]?.value ?? false) as boolean}
+                            checked={getBoolValue(fieldsState[name]?.value)}
                         />
                     );
-                } else {
-                    fieldElem = (
+                
+                    return (
                         <input
                             {...baseProps}
                             type={type}
                             placeholder={placeholder}
-                            value={(fieldsState[name]?.value ?? '') as string}
+                            value={getStringValue(fieldsState[name]?.value)}
                             onBlur={trim ? handleTrimmedFieldBlur : undefined}
                         />
                     );
-                }
+                })();
 
                 const formEntryElem = (
                     <div key={`field-${name}`} className={cn('form-entry', fieldInfoClass)}>

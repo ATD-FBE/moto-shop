@@ -95,8 +95,8 @@ export default function OrderDetailsBase({
         setOrderLoading(false);
     };
 
-    const updateOrderState = (updatedOrderId, updatedOrderData = {}) => {
-        if (updatedOrderId !== orderId) return
+    const updateOrderState = (updatedOrderId, orderUpdateData = {}) => {
+        if (updatedOrderId !== orderId) return;
         
         const {
             orderPatches = [],
@@ -104,7 +104,7 @@ export default function OrderDetailsBase({
             newFinancialsEventEntry,
             voidedFinancialsEventEntry,
             newAuditLogEntry
-        } = updatedOrderData;
+        } = orderUpdateData;
 
         if (
             !orderPatches.length &&
@@ -173,7 +173,7 @@ export default function OrderDetailsBase({
         if (!subscribeToUpdates) return;
 
         const unsubscribe = subscribeToOrderUpdates((orderUpdate) => {
-            updateOrderState(orderUpdate.orderId, orderUpdate.updatedOrderData);
+            updateOrderState(orderUpdate.orderId, orderUpdate.orderUpdateData);
         });
         return unsubscribe;
     }, []);

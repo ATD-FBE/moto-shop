@@ -16,7 +16,8 @@ import {
     extendFieldConfigs,
     createFieldConfigMap,
     createInitFieldsState,
-    fieldsStateReducer
+    fieldsStateReducer,
+    getStringValue
 } from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
@@ -118,12 +119,12 @@ export default function LoginForm(): React.JSX.Element {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleRememberMe = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleRememberMe = (e: React.ChangeEvent<HTMLInputElement>): void => {
         setRememberMe(e.target.checked);
         localStorage.setItem('rememberMe', String(e.target.checked));
     };
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
 
         dispatchFieldsState({
@@ -132,7 +133,7 @@ export default function LoginForm(): React.JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -191,7 +192,7 @@ export default function LoginForm(): React.JSX.Element {
         return result;
     };
 
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields } = processFormFields();
@@ -341,7 +342,7 @@ export default function LoginForm(): React.JSX.Element {
                                     name={name}
                                     type={type}
                                     placeholder={placeholder}
-                                    value={(fieldsState[name]?.value ?? '') as string}
+                                    value={getStringValue(fieldsState[name]?.value)}
                                     autoComplete={autoComplete}
                                     onChange={handleFieldChange}
                                     onBlur={trim ? handleTrimmedFieldBlur : undefined}

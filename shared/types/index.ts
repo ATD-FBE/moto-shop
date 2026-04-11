@@ -7,3 +7,4 @@ export * from './notification.types.js';
 export * from './product.types.js';
 export * from './cart.types.js';
 export * from './order.types.js';
+export * from './sse.types.js';

@@ -164,7 +164,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
 
     // Работа с базой данных
     try {
-        const { orderLbl, eventLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderLbl, eventLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -290,17 +290,17 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
 
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
-            const updatedOrderData = {
+            const orderUpdateData = {
                 orderPatches,
                 voidedFinancialsEventEntry: targetFinancialsEventEntry,
                 ...(isLastEventEntryVoided && { lastFinancialsEventEntry: newLastFinancialsEventEntry })
             };
 
-            return { orderLbl, eventLbl, updatedOrderData };
+            return { orderLbl, eventLbl, orderUpdateData };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, {
@@ -389,7 +389,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -472,13 +472,13 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
                 { path: orderDotNotationMap.totalPaid, value: updatedDbOrder.financials.totalPaid }
             ];
             const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1).toObject();
-            const updatedOrderData = { orderPatches, newFinancialsEventEntry };
+            const orderUpdateData = { orderPatches, newFinancialsEventEntry };
 
-            return { orderLbl, updatedOrderData };
+            return { orderLbl, orderUpdateData };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, {
@@ -569,7 +569,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     }
 
     try {
-        const { orderLbl, updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -647,13 +647,13 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
                 { path: orderDotNotationMap.totalRefunded, value: updatedDbOrder.financials.totalRefunded }
             ];
             const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1).toObject();
-            const updatedOrderData = { orderPatches, newFinancialsEventEntry };
+            const orderUpdateData = { orderPatches, newFinancialsEventEntry };
         
-            return { orderLbl, updatedOrderData };
+            return { orderLbl, orderUpdateData };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, {
@@ -818,9 +818,9 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
                 value: updatedDbOrder.financials.currentOnlineTransaction
             }
         ];
-        const updatedOrderData = { orderPatches };
+        const orderUpdateData = { orderPatches };
 
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Проверка таймаута после SSE-сообщения
@@ -854,9 +854,9 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
                     path: orderDotNotationMap.currentOnlineTransaction,
                     value: undefined
                 }];
-                const updatedOrderData = { orderPatches };
+                const orderUpdateData = { orderPatches };
     
-                const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+                const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
                 sseOrderManagement.sendToAllClients(sseMessageData);
             }
 
@@ -895,9 +895,9 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
                     value: updatedDbOrder.financials.currentOnlineTransaction
                 }
             ];
-            const updatedOrderData = { orderPatches };
+            const orderUpdateData = { orderPatches };
     
-            const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+            const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
             sseOrderManagement.sendToAllClients(sseMessageData);
         }
 
@@ -1034,9 +1034,9 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
                 value: updatedDbOrder.financials.currentOnlineTransaction
             }
         ];
-        const updatedOrderData = { orderPatches };
+        const orderUpdateData = { orderPatches };
 
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Проверка таймаута после SSE-сообщения
@@ -1084,9 +1084,9 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
                     path: orderDotNotationMap.currentOnlineTransaction,
                     value: undefined
                 }];
-                const updatedOrderData = { orderPatches };
+                const orderUpdateData = { orderPatches };
     
-                const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+                const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
                 sseOrderManagement.sendToAllClients(sseMessageData);
             }
 
@@ -1122,9 +1122,9 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
                     value: updatedDbOrder.financials.currentOnlineTransaction
                 }
             ];
-            const updatedOrderData = { orderPatches };
+            const orderUpdateData = { orderPatches };
 
-            const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+            const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
             sseOrderManagement.sendToAllClients(sseMessageData);
         }
 
@@ -1209,7 +1209,7 @@ export const handleWebhook = async (req, res, next) => {
 
     // Синхронизация БД с данными вебхука в транзакции
     try {
-        const { updatedOrderData } = await runInDbTransaction(async (session) => {
+        const { orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
@@ -1316,13 +1316,13 @@ export const handleWebhook = async (req, res, next) => {
                     value: updatedDbOrder.financials.currentOnlineTransaction
                 }
             ];
-            const updatedOrderData = { orderPatches };
+            const orderUpdateData = { orderPatches };
 
-            return { updatedOrderData };
+            return { orderUpdateData };
         });
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, updatedOrderData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Отправка успешного ответа YooKassa
