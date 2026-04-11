@@ -255,8 +255,11 @@ type TFieldConfig = TFieldConfigs[number];
 type TFieldName = TFieldConfig['name'];
 
 // Проверка наличия полей конфига в наборе полей сущности
-type TAuthEntityFields = TEntityField<'checkout'>;
-type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
+type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
+
+// Вспомогательные типы
+type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
@@ -271,7 +274,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
     );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 
-    const initValuesRef = useRef<Partial<Record<TValidFieldName, TFieldValue>>>({});
+    const initValuesRef = useRef<TFieldValuesMap>({} as TFieldValuesMap);
     const isUnmountedRef = useRef(false);
 
     const dispatch = useAppDispatch();
@@ -312,21 +315,21 @@ export default function CheckoutPreferences(): React.JSX.Element {
         const { defaultPaymentMethod } = financials ?? {};
 
         initValuesRef.current = {
-            ...(firstName && { firstName }),
-            ...(lastName && { lastName }),
-            ...(middleName && { middleName }),
-            ...(email && { email }),
-            ...(phone && { phone }),
-            ...(deliveryMethod && { deliveryMethod }),
+            firstName: firstName ?? '',
+            lastName: lastName ?? '',
+            middleName: middleName ?? '',
+            email: email ?? '',
+            phone: phone ?? '',
+            deliveryMethod: deliveryMethod ?? '',
             allowCourierExtra: allowCourierExtra ?? false,
-            ...(region && { region }),
-            ...(district && { district }),
-            ...(city && { city }),
-            ...(street && { street }),
-            ...(house && { house }),
-            ...(apartment && { apartment }),
-            ...(postalCode && { postalCode }),
-            ...(defaultPaymentMethod && { defaultPaymentMethod })
+            region: region ?? '',
+            district: district ?? '',
+            city: city ?? '',
+            street: street ?? '',
+            house: house ?? '',
+            apartment: apartment ?? '',
+            postalCode: postalCode ?? '',
+            defaultPaymentMethod: defaultPaymentMethod ?? ''
         };
 
         const initValues = initValuesRef.current;
@@ -337,7 +340,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
                 type: 'UPDATE',
                 payload: Object.fromEntries(
                     initValuesEntries.map(([key, value]) => ([key, { value }]))
-                ) as Record<TValidFieldName, { value?: TFieldValue }>
+                ) as Record<TValidFieldName, { value: TFieldValue }>
             });
         }
         
@@ -412,12 +415,11 @@ export default function CheckoutPreferences(): React.JSX.Element {
                 };
         
                 if (isValid) {
-                    if (normalizedValue !== undefined && normalizedValue !== '') {
-                        type TFieldsCollector = Record<TValidFieldName, typeof normalizedValue>;
-                        (acc.formFields as TFieldsCollector)[name] = normalizedValue;
+                    if (normalizedValue !== '') {
+                        (acc.formFields as TFieldValuesMap)[name] = normalizedValue;
                     }
 
-                    const initValue = initValuesRef.current[name] ?? '';
+                    const initValue = initValuesRef.current[name];
                     if (normalizedValue !== initValue) acc.changedFields.push(name);
                 } else {
                     acc.allValid = false;
@@ -427,7 +429,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
             },
             {
                 allValid: true,
-                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as IAuthCheckoutPrefsUpdateBody,
                 changedFields: [] as TValidFieldName[]
             }
@@ -440,6 +442,8 @@ export default function CheckoutPreferences(): React.JSX.Element {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
+
+        console.log(formFields);
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -475,7 +479,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
                     if (name in fieldConfigMap) {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -493,16 +497,13 @@ export default function CheckoutPreferences(): React.JSX.Element {
 
                 // Обновление начальных значений полей
                 initValuesRef.current = Object.fromEntries(
-                    Object.entries(fieldsState)
+                    (Object.entries(fieldsState) as [TValidFieldName, IFieldState][])
                         .map(([key, { value }]) => ([key, value]))
-                        .filter(([_, value]) => Boolean(value))
-                );
+                ) as Record<TValidFieldName, TFieldValue>;
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
-                fieldConfigs.forEach(({ name }) => {
-                    if (name in fieldConfigMap) {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
-                    }
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
+                changedFields.forEach(name => {
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -512,7 +513,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
                     if (isUnmountedRef.current) return;
 
                     changedFields.forEach(name => {
-                        fieldsStateUpdates[name] = { uiStatus: '', error: '' };
+                        fieldsStateUpdates[name] = { uiStatus: '' };
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 

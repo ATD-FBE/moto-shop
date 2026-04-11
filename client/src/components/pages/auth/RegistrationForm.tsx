@@ -119,8 +119,10 @@ type TFieldConfig = TFieldConfigs[number];
 type TFieldName = TFieldConfig['name'];
 
 // Проверка наличия полей конфига в наборе полей сущности
-type TAuthEntityFields = TEntityField<'auth'>;
-type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
+type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 export default function RegistrationForm(): React.JSX.Element {
     const [searchParams] = useSearchParams();
@@ -210,7 +212,7 @@ export default function RegistrationForm(): React.JSX.Element {
             },
             {
                 allValid: true,
-                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as IAuthRegistrationBody['formFields'] & Record<TValidFieldName, any>
             }
         );
@@ -251,7 +253,7 @@ export default function RegistrationForm(): React.JSX.Element {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
                     if (name in fieldConfigMap) {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -273,10 +275,10 @@ export default function RegistrationForm(): React.JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message });
                 saveUserToLocalStorage(user);
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 fieldConfigs.forEach(({ name }) => {
                     if (name in fieldConfigMap) {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                     }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });

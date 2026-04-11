@@ -49,9 +49,10 @@ export const createInitFieldsState = <TFieldName extends string>(
     const { extraStateFields, autoSave } = options;
 
     return fieldConfigs.reduce((acc, config) => {
-        const { enabled, name, type, defaultValue } = config;
+        const { enabled, name, elem, type, defaultValue } = config;
 
         const state: IFieldState = {
+            value: defaultValue !== undefined ? defaultValue : elem === 'checkbox' ? false : '',
             uiStatus: '',
             error: ''
         };
@@ -62,37 +63,25 @@ export const createInitFieldsState = <TFieldName extends string>(
 
         if (type === 'file') {
             state.files = [];
-        } else {
-            state.value = defaultValue !== undefined ? defaultValue : '';
         }
-
-        /*const getTypedDefaultValue = (defaultValue: TFieldValue, elem: string, type: string) => {
-            if (defaultValue !== undefined) return defaultValue;
-
-            if (elem === 'input') {
-                if (type === 'number') return 0;
-                return ''; // type = 'text' | 'file' | 'email' | 'tel'
-            }
-            if (elem === 'textarea') return '';
-            if (elem === 'checkbox') return false;
-            if (elem === 'select') return '';
-            return ''; // Фоллбэк
-        };
-        
-        state.value = getTypedDefaultValue(defaultValue, elem, type);*/
 
         const fieldsToCopy = extraStateFields?.[name];
 
         if (fieldsToCopy) {
             fieldsToCopy.forEach(key => {
-                if (config[key] !== undefined) {
-                    state[key] = config[key];
+                const val = config[key];
+
+                if (
+                    val !== undefined &&
+                    (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean')
+                ) {
+                    (state as Partial<Record<typeof key, typeof val>>)[key] = val;
                 }
             });
         }
 
         if (autoSave) {
-            state.savedValue = '';
+            state.savedValue = elem === 'checkbox' ? false : '';
             state.saveStatus = '';
             state.saveStatusMessage = '';
         }

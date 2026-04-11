@@ -109,8 +109,10 @@ type TFieldConfig = TFieldConfigs[number];
 type TFieldName = TFieldConfig['name'];
 
 // Проверка наличия полей конфига в наборе полей сущности
-type TAuthEntityFields = TEntityField<'auth'>;
-type TValidFieldName = Extract<TFieldName, TAuthEntityFields>;
+type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 // Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
@@ -199,7 +201,7 @@ export default function Profile(): React.JSX.Element | null {
             },
             {
                 allValid: true,
-                fieldsStateUpdates: {} as TFieldsState<TValidFieldName>,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as IAuthUserUpdateBody & Record<TValidFieldName, any>
             }
         );
@@ -246,7 +248,7 @@ export default function Profile(): React.JSX.Element | null {
                 const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
                     if (name in fieldConfigMap) {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -277,9 +279,9 @@ export default function Profile(): React.JSX.Element | null {
                     fieldsToUpdate.push('currentPassword', 'confirmNewPassword');
                 }
 
-                const fieldsStateUpdates: Partial<TFieldsState<TValidFieldName>> = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 fieldsToUpdate.forEach(name => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED, error: '' };
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
                 (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
                     if (name in fieldConfigMap) {
@@ -295,10 +297,8 @@ export default function Profile(): React.JSX.Element | null {
                 setTimeout(() => {
                     if (isUnmountedRef.current) return;
 
-                    fieldConfigs.forEach(({ name }) => {
-                        if (fieldsToUpdate.includes(name)) {
-                            fieldsStateUpdates[name] = { value: '', uiStatus: '', error: '' };
-                        }
+                    fieldsToUpdate.forEach(name => {
+                        fieldsStateUpdates[name] = { value: '', uiStatus: '' };
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 

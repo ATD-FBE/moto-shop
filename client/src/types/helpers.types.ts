@@ -45,14 +45,14 @@ export interface IFieldConfig {
 
 export interface IFieldState {
     enabled?: boolean;
+    value: TFieldValue;
     files?: File[];
-    value?: TFieldValue;
     uiStatus: TFieldUiStatus | '';
     error: string;
     savedValue?: TFieldValue;
     saveStatus?: TFieldSaveStatus | '';
     saveStatusMessage?: string;
-    [key: string]: any; // Для любых других полей из конфига, добавленных в стейт
+    [key: string]: TFieldValue | File[] | undefined; // Добавленные поля конфигов в стейт
 }
 
 export type TFieldsState<TFieldName extends string> = Record<TFieldName, IFieldState>;
@@ -71,7 +71,7 @@ export type TFieldsAction<TFieldName extends string> =
 
 export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> {
     allValid: boolean;
-    fieldsStateUpdates: TFieldsState<TFieldName>;
+    fieldsStateUpdates: Partial<Record<TFieldName, Partial<IFieldState>>>;
     formFields: TFormBody;
     changedFields?: TFieldName[];
 }
