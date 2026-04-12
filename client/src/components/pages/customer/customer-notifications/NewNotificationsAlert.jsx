@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
-import { resetNewNotificationsCount } from '@/redux/slices/uiSlice.js';
+import { resetNewNotifications } from '@/redux/slices/uiSlice.js';
 
 export default function NewNotificationsAlert({
     sort,
@@ -52,7 +52,7 @@ export default function NewNotificationsAlert({
     // Сброс флага и счётчика новых уведомлений при размонтировании
     useEffect(() => {
         return () => {
-            dispatch(resetNewNotificationsCount());
+            dispatch(resetNewNotifications());
         };
     }, [dispatch]);
 
@@ -69,7 +69,7 @@ export default function NewNotificationsAlert({
 
     // Сброс счётчика новых уведомлений после изменения количества уведомлений (уже включает их в себя)
     useEffect(() => {
-        dispatch(resetNewNotificationsCount());
+        dispatch(resetNewNotifications());
     }, [totalNotifications, dispatch]);
 
     return (

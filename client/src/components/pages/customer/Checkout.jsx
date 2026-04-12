@@ -11,7 +11,7 @@ import {
     sendOrderDraftDeleteRequest
 } from '@/api/checkoutRequests.js';
 import {
-    setIsNavigationBlocked,
+    setNavigationLock,
     setLockedRouteCancelPath,
     freezeLockedRouteCancel,
     clearLockedRoute
@@ -119,7 +119,7 @@ const getSubmitStates = (isCancelPath) => {
 
 export default function Checkout() {
     const user = useSelector(state => state.auth.user);
-    const { dashboardPanelActive, lockedRoute } = useSelector(state => state.ui);
+    const { isDashboardPanelActive, lockedRoute } = useSelector(state => state.ui);
     const productMap = useSelector(state => state.products.byId);
 
     const [frozenSubmitStates, setFrozenSubmitStates] = useState(() => getSubmitStates(false));
@@ -143,7 +143,7 @@ export default function Checkout() {
 
     const topStickyOffset = 
         (mainHeaderRef.current?.offsetHeight ?? 0) +
-        (dashboardPanelActive ? 0 : checkoutSidebarRef.current?.offsetHeight ?? 0) +
+        (isDashboardPanelActive ? 0 : checkoutSidebarRef.current?.offsetHeight ?? 0) +
         6; // Дополнительный отступ сверху
 
     const loadOrderDraft = async (orderId) => {
@@ -227,7 +227,7 @@ export default function Checkout() {
         if (hasAdjustments) {
             openAlertModal({
                 openDelay: 1000,
-                type: 'warning',
+                type: 'warn',
                 dismissible: false,
                 title: 'Заказ был синхронизирован с текущими данными каталога',
                 message: adjustmentsMsg
@@ -281,7 +281,7 @@ export default function Checkout() {
     // Блокирование ссылок при первой загрузке страницы
     useLayoutEffect(() => {
         if (lockedRoute && location.pathname === lockedRoute.path) {
-            dispatch(setIsNavigationBlocked(true));
+            dispatch(setNavigationLock(true));
         }
     }, [lockedRoute, location.pathname, dispatch]);
 
@@ -345,7 +345,7 @@ export default function Checkout() {
                     ref={checkoutSidebarRef}
                     className={cn(
                         'checkout-sidebar',
-                        { 'dashboard-panel-active': dashboardPanelActive }
+                        { 'dashboard-panel-active': isDashboardPanelActive }
                     )}
                 >
                     <CheckoutSummary

@@ -13,7 +13,7 @@ import { StructureRefsProvider } from '@/context/StructureRefsContext.js';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
 
 const App = () => {
-    const sessionReady = useSelector(state => state.ui.sessionReady);
+    const isSessionReady = useSelector(state => state.ui.isSessionReady);
     const dispatch = useDispatch();
 
     useDeviceInfo();
@@ -25,9 +25,9 @@ const App = () => {
 
     return (
         <>
-            <GlobalLoader visibility={!sessionReady} />
+            <GlobalLoader visibility={!isSessionReady} />
 
-            {sessionReady && (
+            {isSessionReady && (
                 <BrowserRouter>
                     <Routes>
                         <Route path='/' element={

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
 import {
-    resetNewManagedActiveOrdersCount as resetNewActiveOrdersCount
+    resetNewActiveOrders as resetNewActiveOrdersCount
 } from '@/redux/slices/uiSlice.js';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
@@ -20,7 +20,7 @@ export default function NewActiveOrdersAlert({
     totalFilteredOrders,
     reloadOrders
 }) {
-    const newActiveOrdersCount = useSelector(state => state.ui.newManagedActiveOrdersCount);
+    const newActiveOrdersCount = useSelector(state => state.ui.newActiveOrdersCount);
     const [newActiveOrdersAvailable, setNewActiveOrdersAvailable] = useState(false);
     const dispatch = useDispatch();
 

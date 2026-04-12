@@ -9,6 +9,8 @@ export const CLIENT_PORT = process.env.CLIENT_PORT;
 export const SERVER_PORT = process.env.SERVER_PORT;
 export const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID;
 
+export const ACCESS_TOKEN_BUFFER = 10000;
+export const REFRESH_TOKEN_BUFFER = 60000;
 export const SUCCESS_DELAY = 1800;
 export const PRODUCT_AUTOSLIDE_TIMER = 5000;
 
@@ -25,7 +27,7 @@ export const SCREEN_SIZE = {
     XS: 540,
     SMALL: 780,
     MEDIUM: 1180,
-    LARGE: Infinity
+    LARGE: 9999
 } as const;
 
 export const DASHBOARD_TITLES = {

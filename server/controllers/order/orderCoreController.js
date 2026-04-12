@@ -1135,7 +1135,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
         // Отправка SSE-сообщения админам
         const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         if (ORDER_FINAL_STATUSES.includes(newOrderStatus)) {
-            sseMessageData.newManagedActiveOrdersCount = -1;
+            sseMessageData.newActiveOrdersChange = -1;
         }
         sseOrderManagement.sendToAllClients(sseMessageData);
 

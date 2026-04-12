@@ -20,7 +20,7 @@ const modalPortalRoot = document.getElementById('modal-root') || document.body;
 export default function AlertModal() {
     const {
         isOpen,
-        type = 'info', // 'info', 'warning', 'error'
+        type = 'info', // 'info', 'warn', 'error'
         dismissible = true,
         title = '',
         message = '',

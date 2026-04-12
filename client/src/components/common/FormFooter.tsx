@@ -1,3 +1,4 @@
+import { JSX } from 'react';
 import cn from 'classnames';
 import { FORM_STATUS } from '@/config/constants.js';
 import type { TFormStatus, TSubmitStates } from '@/types/index.js';
@@ -16,7 +17,7 @@ export default function FormFooter({
     uiBlocked,
     reloadBtnLabel = 'Повторить',
     reloadData
-}: FormFooterProps): React.JSX.Element {
+}: FormFooterProps): JSX.Element {
     const submitState = submitStates[submitStatus] ?? {};
 
     return (

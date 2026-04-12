@@ -5,7 +5,7 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderDetailsUpdateRequest, sendOrderItemsUpdateRequest } from '@/api/orderRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { formatOrderItemsAdjustmentLogs } from '@/services/orderService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
@@ -412,7 +412,7 @@ export default function SectionForm({
 
     const performFormSubmission = async (formFields, changedFields, changedItemsFields) => {
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const requestThunk = isItemsSection
             ? sendOrderItemsUpdateRequest(order.id, formFields)
@@ -437,7 +437,7 @@ export default function SectionForm({
                 logRequestStatus({ context: LOG_CTX, status, message });
                 if (isItemsSection) setIsItemsSubmitting(false);
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             // Секция items: сумма заказа меньше минимальной в результате изменения кол-ва товаров
@@ -463,7 +463,7 @@ export default function SectionForm({
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
                     message: minOrderAmountMsg + (hasAdjustments ? `\n\n\n${adjustmentsMsg}` : ''),
-                    onClose: () => dispatch(setIsNavigationBlocked(false))
+                    onClose: () => dispatch(setNavigationLock(false))
                 });
                 break;
             }
@@ -478,11 +478,11 @@ export default function SectionForm({
 
                 openAlertModal({
                     openDelay: 1000,
-                    type: 'warning',
+                    type: 'warn',
                     dismissible: false,
                     title: 'Корректировки при изменении товаров в заказе',
                     message: formatOrderItemsAdjustmentLogs(orderItemsAdjustments),
-                    onClose: () => dispatch(setIsNavigationBlocked(false))
+                    onClose: () => dispatch(setNavigationLock(false))
                 });
                 break;
             }
@@ -508,7 +508,7 @@ export default function SectionForm({
                 }
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -529,11 +529,11 @@ export default function SectionForm({
 
                     if (hasAdjustments) {
                         openAlertModal({
-                            type: 'warning',
+                            type: 'warn',
                             dismissible: false,
                             title: 'Корректировки при изменении товаров в заказе',
                             message: formatOrderItemsAdjustmentLogs(orderItemsAdjustments),
-                            onClose: () => dispatch(setIsNavigationBlocked(false))
+                            onClose: () => dispatch(setNavigationLock(false))
                         });
                     }
 
@@ -547,7 +547,7 @@ export default function SectionForm({
 
                     if (isItemsSection) setIsItemsSubmitting(false);
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -556,7 +556,7 @@ export default function SectionForm({
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 if (isItemsSection) setIsItemsSubmitting(false);
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

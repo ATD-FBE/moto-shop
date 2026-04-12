@@ -1,3 +1,4 @@
+import { KeyboardEvent } from 'react';
 import { FIELD_SAVE_STATUS, FIELD_SAVE_STATUS_MESSAGES } from '@/config/constants.js';
 import type {
     TFormStatus,
@@ -161,7 +162,7 @@ export const getBoolValue = (val?: TFieldValue, fallback = false): boolean =>
     typeof val === 'boolean' ? val : fallback;
 
 export const processFormattedFieldDeletion = (
-    e: React.KeyboardEvent<HTMLInputElement>,
+    e: KeyboardEvent<HTMLInputElement>,
     context: IProcessFormattedFieldDeletionContext
 ): IProcessFormattedFieldDeletionResult | null => {
     const { value, charRegex = /\d/, format } = context;

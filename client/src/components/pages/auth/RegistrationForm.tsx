@@ -1,4 +1,7 @@
-import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import {
+    JSX, ChangeEvent, FocusEvent, SubmitEvent,
+    useMemo, useReducer, useState, useRef, useEffect
+} from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import cn from 'classnames';
@@ -6,7 +9,7 @@ import FormFooter from '@/components/common/FormFooter.jsx';
 import { routeConfig } from '@/config/appRouting.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { sendAuthRegistrationRequest } from '@/api/authRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { login, resetSuppressAuthRedirect } from '@/redux/slices/authSlice.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
@@ -29,6 +32,25 @@ import type {
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthRegistrationBody } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
@@ -113,18 +135,7 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
     return extendFieldConfigs(resultFieldConfigs);
 };
 
-// Локальная типизация конфигов полей
-type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
-type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
-
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
-
-export default function RegistrationForm(): React.JSX.Element {
+export default function RegistrationForm(): JSX.Element {
     const [searchParams] = useSearchParams();
     const isAdminRegistration = searchParams.get('admin') === 'true';
 
@@ -151,7 +162,7 @@ export default function RegistrationForm(): React.JSX.Element {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         
         dispatchFieldsState({
@@ -160,7 +171,7 @@ export default function RegistrationForm(): React.JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -219,7 +230,7 @@ export default function RegistrationForm(): React.JSX.Element {
         return result;
     };
     
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields } = processFormFields();
@@ -231,7 +242,7 @@ export default function RegistrationForm(): React.JSX.Element {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const responseData = await dispatch(sendAuthRegistrationRequest({ formFields, guestCart }));
         if (isUnmountedRef.current) return;
@@ -245,7 +256,7 @@ export default function RegistrationForm(): React.JSX.Element {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
                 
             case FORM_STATUS.INVALID: {
@@ -261,7 +272,7 @@ export default function RegistrationForm(): React.JSX.Element {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -284,7 +295,7 @@ export default function RegistrationForm(): React.JSX.Element {
         
                 setSubmitStatus(status);
         
-                setTimeout(async () => {
+                setTimeout(() => {
                     if (isUnmountedRef.current) return;
 
                     dispatch(login({
@@ -297,7 +308,7 @@ export default function RegistrationForm(): React.JSX.Element {
                     let targetPath = routeConfig.home.paths[0];
 
                     if (user.role === USER_ROLE.CUSTOMER) {
-                        const { redirectTo } = await dispatch(initCustomerSession({
+                        const { redirectTo } = dispatch(initCustomerSession({
                             purchaseProductList,
                             cartItemList,
                             customerDiscount: user.discount,
@@ -305,6 +316,7 @@ export default function RegistrationForm(): React.JSX.Element {
                             cartWasMerged,
                             isFirstLogin: true
                         }));
+                        
                         if (redirectTo) targetPath = redirectTo;
                     }
 
@@ -317,7 +329,7 @@ export default function RegistrationForm(): React.JSX.Element {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

@@ -8,7 +8,7 @@ import {
     sendOrderOfflineRefundApplyRequest,
     sendOrderOnlineRefundsCreateRequest
 } from '@/api/orderRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
@@ -316,7 +316,7 @@ export default function RefundForm({
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         let requestThunk;
 
@@ -344,7 +344,7 @@ export default function RefundForm({
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -357,7 +357,7 @@ export default function RefundForm({
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -382,7 +382,7 @@ export default function RefundForm({
                     dispatchFieldsState({ type: 'UPDATE', payload: resetPayload });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -390,7 +390,7 @@ export default function RefundForm({
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

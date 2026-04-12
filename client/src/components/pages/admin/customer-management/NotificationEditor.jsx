@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import {
     sendNotificationRequest,
     sendNotificationCreateRequest,
@@ -312,7 +312,7 @@ export default function NotificationEditor({
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const requestThunk = isEditMode
             ? sendNotificationUpdateRequest(notificationId, formFields)
@@ -333,7 +333,7 @@ export default function NotificationEditor({
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -346,7 +346,7 @@ export default function NotificationEditor({
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -371,7 +371,7 @@ export default function NotificationEditor({
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

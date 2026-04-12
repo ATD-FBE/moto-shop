@@ -10,7 +10,7 @@ import {
     sendPromoUpdateRequest
 } from '@/api/promoRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
@@ -349,7 +349,7 @@ export default function PromoEditor({ promoId }) {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const requestThunk = isEditMode
             ? sendPromoUpdateRequest(promoId, formData)
@@ -370,7 +370,7 @@ export default function PromoEditor({ promoId }) {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -383,7 +383,7 @@ export default function PromoEditor({ promoId }) {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -408,7 +408,7 @@ export default function PromoEditor({ promoId }) {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

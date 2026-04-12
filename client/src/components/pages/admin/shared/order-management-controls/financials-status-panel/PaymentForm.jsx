@@ -5,7 +5,7 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderOfflinePaymentApplyRequest } from '@/api/orderRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
@@ -295,7 +295,7 @@ export default function PaymentForm({
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const responseData = await dispatch(sendOrderOfflinePaymentApplyRequest(orderId, {
             transaction: formFields
@@ -317,7 +317,7 @@ export default function PaymentForm({
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -330,7 +330,7 @@ export default function PaymentForm({
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -355,7 +355,7 @@ export default function PaymentForm({
                     dispatchFieldsState({ type: 'UPDATE', payload: resetPayload });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -363,7 +363,7 @@ export default function PaymentForm({
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

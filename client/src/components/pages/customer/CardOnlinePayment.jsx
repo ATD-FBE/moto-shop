@@ -10,7 +10,7 @@ import {
 } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { YOOKASSA_SCRIPT } from '@/config/externalScripts.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { parseRouteParams } from '@/helpers/routeHelpers.js';
 import { processFormattedFieldDeletion, calcFormattedFieldCursorPos } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
@@ -458,7 +458,7 @@ export default function CardOnlinePayment() {
         e.preventDefault();
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const {
             fieldsStateUpdates, errorRequestStatus, paymentToken, formFields, changedFields
@@ -469,7 +469,7 @@ export default function CardOnlinePayment() {
 
         if (errorRequestStatus) {
             setSubmitStatus(errorRequestStatus);
-            dispatch(setIsNavigationBlocked(false));
+            dispatch(setNavigationLock(false));
             return;
         }
 
@@ -495,7 +495,7 @@ export default function CardOnlinePayment() {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -508,7 +508,7 @@ export default function CardOnlinePayment() {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -543,7 +543,7 @@ export default function CardOnlinePayment() {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

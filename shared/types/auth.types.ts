@@ -6,7 +6,7 @@ import type {
     TSuccessResponse
 } from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
-import type { IProduct, IProductSnapshot } from './product.types.js';
+import type { TPurchaseProduct } from './product.types.js';
 import type { TActiveUserRole, TFieldErrors, TEntityField } from './shared.types.js';
 import type { TDbUser } from '@server/types/index.js';
 
@@ -15,13 +15,13 @@ export interface IUser {
     name: string;
     email: string;
     role: TActiveUserRole;
-    unreadNotificationsCount?: number;
     discount?: number;
-    managedActiveOrdersCount?: number;
+    unreadNotificationsCount?: number;
+    activeOrdersCount?: number;
 }
 export interface ISession {
     user: IUser;
-    purchaseProductList?: (IProduct | IProductSnapshot)[];
+    purchaseProductList?: TPurchaseProduct[];
     cartItemList?: ICartItem[];
     cartWasMerged?: boolean;
     orderDraftId?: string | null;
@@ -90,6 +90,7 @@ export interface IAuthSessionBody {
 }
 
 export type TAuthSessionResponse =
+    | TAuthErrorResponse
     | TCommonErrorResponse
     | TSuccessResponse<TAuthSuccessData>;
 

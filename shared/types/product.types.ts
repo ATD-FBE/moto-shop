@@ -36,3 +36,5 @@ export interface IProductSnapshot {
     name: string;
     brand?: string | null;
 }
+
+export type TPurchaseProduct = IProduct | IProductSnapshot;

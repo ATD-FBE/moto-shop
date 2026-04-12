@@ -1,7 +1,7 @@
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { TRequestStatus, TEntityType, TFieldErrors } from './shared.types.js';
 
-// Объединения типов статусов для интерфейса ответа
+/// Объединения типов статусов для интерфейса ответа ///
 export type TAuthErrorStatus =
     | typeof REQUEST_STATUS.UNAUTH
     | typeof REQUEST_STATUS.USER_GONE
@@ -22,7 +22,7 @@ export type TSuccessStatus =
     | typeof REQUEST_STATUS.SUCCESS
     | typeof REQUEST_STATUS.PARTIAL;
 
-// Интерфейсы ответа
+/// Интерфейсы ответа ///
 export type TBaseResponse = {
     message: string;
     status: TRequestStatus;

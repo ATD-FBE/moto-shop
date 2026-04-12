@@ -2,16 +2,16 @@ import React from 'react';
 import { useDispatch } from 'react-redux';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import { handleLogout } from '@/services/authService.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 
 export default function AuthNav({ userRole, userName, navigationMap, setActiveClass }) {
     const authNavItems = navigationMap[`${userRole}Auth`] || [];
     const dispatch = useDispatch();
 
     const safeHandleLogout = async () => {
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
         await dispatch(handleLogout());
-        dispatch(setIsNavigationBlocked(false));
+        dispatch(setNavigationLock(false));
     };
 
     return (

@@ -393,7 +393,7 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
         // Отправка SSE-сообщения клиентам-получателям
         if (recipientsSentCount > 0) {
             sseNotifications.sendToClients(updatedDbNotification.recipients, {
-                newUnreadNotificationsCount: 1
+                newUnreadNotificationsChange: 1
             });
         }
 
@@ -459,7 +459,7 @@ export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
         });
 
         // Отправка SSE-сообщения клиенту
-        sseNotifications.sendToClients([dbUser._id], { newUnreadNotificationsCount: -1 });
+        sseNotifications.sendToClients([dbUser._id], { newUnreadNotificationsChange: -1 });
 
         safeSendResponse(res, 200, {
             message: `Уведомление ${notifLbl} отмечено как прочитанное`,

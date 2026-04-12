@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendCategoryCreateRequest, sendCategoryUpdateRequest } from '@/api/categoryRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
 import {
     createFieldConfigMap,
@@ -239,7 +239,7 @@ export default function CategoryForm({
 
         const performFormSubmission = async () => {
             setSubmitStatus(FORM_STATUS.SENDING);
-            dispatch(setIsNavigationBlocked(true));
+            dispatch(setNavigationLock(true));
 
             const requestThunk = isEditMode
                 ? sendCategoryUpdateRequest(categoryId, formFields)
@@ -267,7 +267,7 @@ export default function CategoryForm({
                 case FORM_STATUS.TIMEOUT:
                     logRequestStatus({ context: LOG_CTX, status, message });
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
 
                 case FORM_STATUS.INVALID: {
@@ -285,7 +285,7 @@ export default function CategoryForm({
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
                 }
             
@@ -307,7 +307,7 @@ export default function CategoryForm({
                         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                         setSubmitStatus(FORM_STATUS.DEFAULT);
-                        dispatch(setIsNavigationBlocked(false));
+                        dispatch(setNavigationLock(false));
                     };
 
                     return { status, finalizeSuccessHandling, newCategoryId, movedProductCount };
@@ -316,7 +316,7 @@ export default function CategoryForm({
                 default:
                     logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                     setSubmitStatus(FORM_STATUS.UNKNOWN);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
             }
 

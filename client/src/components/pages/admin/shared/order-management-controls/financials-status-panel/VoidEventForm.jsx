@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderFinancialsEventVoidRequest } from '@/api/orderRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
@@ -169,7 +169,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const { eventId, ...restFormFields } = formFields;
         const responseData = await dispatch(
@@ -191,7 +191,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -204,7 +204,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -228,7 +228,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -236,7 +236,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

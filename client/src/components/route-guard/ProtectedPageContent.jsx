@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useOutlet } from 'react-router-dom';
 import Breadcrumbs from '@/components/common/Breadcrumbs.jsx';
 import { checkAuth } from '@/services/authService.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { abortAllApiControllers } from '@/services/apiControllerService.js';
 import { routeConfig } from '@/config/appRouting.js';
 
@@ -26,12 +26,12 @@ export default function ProtectedPageContent() {
         abortAllApiControllers(); // Отмена API-запросов через контроллеры
 
         if (isAuthenticated) {
-            dispatch(setIsNavigationBlocked(true));
+            dispatch(setNavigationLock(true));
 
             await dispatch(checkAuth());
             if (isUnmountedRef.current) return;
 
-            dispatch(setIsNavigationBlocked(false));
+            dispatch(setNavigationLock(false));
         }
 
         setBreadcrumbPath(location.pathname); // Обновление хлебных крошек

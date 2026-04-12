@@ -1,6 +1,22 @@
 import { PROD_ENV } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
-import type { ILogRequestStatusConfig } from '@/types/index.js';
+import type { TRequestStatus } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ILogRequestStatusConfig {
+    context?: string;
+    status?: TRequestStatus;
+    message?: string;
+    details?: unknown;
+    unhandled?: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const logRequestStatus = (
     { context, status, message, details, unhandled = false }: ILogRequestStatusConfig

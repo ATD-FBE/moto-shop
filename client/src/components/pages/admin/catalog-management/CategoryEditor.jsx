@@ -63,7 +63,7 @@ export default function CategoryEditor({
                     'перемещены']);
 
                 openAlertModal({
-                    type: 'warning',
+                    type: 'warn',
                     dismissible: false,
                     title: 'Внимание!',
                     message:
@@ -128,7 +128,7 @@ export default function CategoryEditor({
                     'перемещены']);
 
                 openAlertModal({
-                    type: 'warning',
+                    type: 'warn',
                     dismissible: false,
                     title: 'Внимание!',
                     message:

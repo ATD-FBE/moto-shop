@@ -1,4 +1,7 @@
-import React, { useReducer, useState, useRef, useMemo, useEffect } from 'react';
+import {
+    JSX, ChangeEvent, FocusEvent, SubmitEvent,
+    useReducer, useState, useRef, useMemo, useEffect
+} from 'react';
 import cn from 'classnames';
 import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
@@ -8,7 +11,7 @@ import {
     sendAuthCheckoutPrefsRequest,
     sendAuthCheckoutPrefsUpdateRequest
 } from '@/api/authRequests.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import {
     getLockedStatuses,
@@ -38,6 +41,36 @@ import type {
     TEntityField,
     IAuthCheckoutPrefsUpdateBody
 } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
+
+// Вспомогательные типы
+type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+interface FormGroupEntriesProps {
+    fieldConfigs: TFieldConfigs;
+    fieldsState: TFormState<TValidFieldName>;
+    applicabilityMap: Record<TValidFieldName, boolean>;
+    isFormLocked: boolean;
+    handleFieldChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
+    fillRegistrationEmail: () => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
@@ -250,34 +283,10 @@ const formGroupConfigs = [
 ] as const;
 
 const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
-
-// Локальная типизация конфигов полей
-type TFieldConfigs = typeof fieldConfigs;
-type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
-
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
-
-// Вспомогательные типы
-type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
-
-interface FormGroupEntriesProps {
-    fieldConfigs: TFieldConfigs;
-    fieldsState: TFormState<TValidFieldName>;
-    applicabilityMap: Record<TValidFieldName, boolean>;
-    isFormLocked: boolean;
-    handleFieldChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-    handleTrimmedFieldBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
-    fillRegistrationEmail: () => void;
-}
-
-// Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
  
-export default function CheckoutPreferences(): React.JSX.Element {
+export default function CheckoutPreferences(): JSX.Element {
     const user = useAppSelector(state => state.auth.user);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
@@ -359,7 +368,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { type, name, value } = e.target;
         const checked = e.target instanceof HTMLInputElement && e.target.checked;
         const processedValue = type === 'checkbox' ? checked : value;
@@ -370,7 +379,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -450,7 +459,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         return result;
     };
     
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
@@ -464,7 +473,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const responseData = await dispatch(sendAuthCheckoutPrefsUpdateRequest(formFields));
         if (isUnmountedRef.current) return;
@@ -482,7 +491,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -498,7 +507,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -528,7 +537,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -536,7 +545,7 @@ export default function CheckoutPreferences(): React.JSX.Element {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };
@@ -605,7 +614,7 @@ function FormGroupEntries({
     handleFieldChange,
     handleTrimmedFieldBlur,
     fillRegistrationEmail
-}: FormGroupEntriesProps): React.JSX.Element {
+}: FormGroupEntriesProps): JSX.Element {
     return (
         <div className="form-group-entries">
             {fieldConfigs.map(({

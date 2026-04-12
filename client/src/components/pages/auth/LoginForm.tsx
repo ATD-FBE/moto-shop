@@ -1,4 +1,7 @@
-import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import {
+    JSX, ChangeEvent, FocusEvent, SubmitEvent,
+    useMemo, useReducer, useState, useRef, useEffect
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
@@ -7,7 +10,7 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import { sendAuthLoginRequest } from '@/api/authRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { login, resetSuppressAuthRedirect } from '@/redux/slices/authSlice.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
@@ -30,6 +33,25 @@ import type {
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthLoginBody } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
     const { DEFAULT, UNAUTH, BAD_REQUEST, INVALID, ERROR, TIMEOUT, SUCCESS } = FORM_STATUS;
@@ -86,22 +108,10 @@ const fieldConfigs = extendFieldConfigs([
     }
 ] as const);
 
-// Локальная типизация конфигов полей
-type TFieldConfigs = typeof fieldConfigs;
-type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
-
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
-
-// Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
 
-export default function LoginForm(): React.JSX.Element {
+export default function LoginForm(): JSX.Element {
     const guestCart = useMemo(() => prepareGuestCartPayload(), []);
 
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
@@ -116,12 +126,12 @@ export default function LoginForm(): React.JSX.Element {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleRememberMe = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const handleRememberMe = (e: ChangeEvent<HTMLInputElement>): void => {
         setRememberMe(e.target.checked);
         localStorage.setItem('rememberMe', String(e.target.checked));
     };
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
 
         dispatchFieldsState({
@@ -130,7 +140,7 @@ export default function LoginForm(): React.JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -189,7 +199,7 @@ export default function LoginForm(): React.JSX.Element {
         return result;
     };
 
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields } = processFormFields();
@@ -201,7 +211,7 @@ export default function LoginForm(): React.JSX.Element {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const responseData = await dispatch(sendAuthLoginRequest({ formFields, guestCart }));
         if (isUnmountedRef.current) return;
@@ -215,7 +225,7 @@ export default function LoginForm(): React.JSX.Element {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
                 
             case FORM_STATUS.UNAUTH:
@@ -232,7 +242,7 @@ export default function LoginForm(): React.JSX.Element {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
 
@@ -255,7 +265,7 @@ export default function LoginForm(): React.JSX.Element {
         
                 setSubmitStatus(status);
         
-                setTimeout(async () => {
+                setTimeout(() => {
                     if (isUnmountedRef.current) return;
 
                     dispatch(login({
@@ -272,13 +282,14 @@ export default function LoginForm(): React.JSX.Element {
                     let targetPath = fromPath || routeConfig.home.paths[0];
 
                     if (user.role === USER_ROLE.CUSTOMER) {
-                        const { redirectTo } = await dispatch(initCustomerSession({
+                        const { redirectTo } = dispatch(initCustomerSession({
                             purchaseProductList,
                             cartItemList,
                             customerDiscount: user.discount,
                             orderDraftId,
                             cartWasMerged
                         }));
+
                         if (redirectTo) targetPath = redirectTo;
                     }
 
@@ -291,7 +302,7 @@ export default function LoginForm(): React.JSX.Element {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

@@ -655,7 +655,7 @@ export default function CheckoutForm({
 
                 openAlertModal({
                     openDelay: 1000,
-                    type: 'warning',
+                    type: 'warn',
                     dismissible: false,
                     title: 'Заказ был синхронизирован с текущими данными каталога',
                     message: adjustmentsMsg + '\n\n\nПожалуйста, подтвердите заказ ещё раз.',

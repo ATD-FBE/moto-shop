@@ -1,3 +1,12 @@
+import type {
+    TEmptyResponse,
+    TAuthErrorResponse,
+    TValidationErrorResponse,
+    TCommonErrorResponse,
+    TSuccessResponse
+} from './apiResponse.types.js';
+
+/// Общие типы ///
 export interface INews {
     id: string;
     publishDate: string;
@@ -6,3 +15,5 @@ export interface INews {
     createdBy?: string;
     updateHistory?: { updatedBy: string; updatedAt: string }[];
 }
+
+

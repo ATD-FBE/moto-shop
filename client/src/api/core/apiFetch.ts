@@ -1,11 +1,11 @@
 import { sendAuthRefreshRequest } from '../authRequests.js';
+import { PROD_ENV, REFRESH_TOKEN_BUFFER } from '@/config/constants.js';
 import { incrementApiRequests, decrementApiRequests } from '@/redux/slices/loadingSlice.js';
 import { setAccessTokenExpiry } from '@/redux/slices/authSlice.js';
 import { addApiController, removeApiController } from '@/services/apiControllerService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import waitForRequestDelay from '@/helpers/waitForRequestDelay.js';
 import { handleLogout } from '@/services/authService.js';
-import { PROD_ENV } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import { toError } from '@shared/commonHelpers.js';
 import type { IApiFetchConfig, TAppThunk } from '@/types/index.js';
@@ -76,7 +76,7 @@ const apiFetch = (
             // Проверка токена обновления в клиенте
             if (!skipRefreshTokenCheck) {
                 const refreshTokenExpiresAt = getState().auth.refreshTokenExpiresAt;
-                const isRefreshTokenValid = new Date().getTime() < refreshTokenExpiresAt;
+                const isRefreshTokenValid = Date.now() + REFRESH_TOKEN_BUFFER < refreshTokenExpiresAt;
     
                 if (!isRefreshTokenValid) {
                     logRequestStatus({

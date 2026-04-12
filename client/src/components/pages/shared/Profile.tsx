@@ -1,10 +1,13 @@
-import { useReducer, useState, useRef, useEffect } from 'react';
+import {
+    JSX, ChangeEvent, FocusEvent, SubmitEvent,
+    useReducer, useState, useRef, useEffect
+} from 'react';
 import cn from 'classnames';
 import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendAuthUserUpdateRequest } from '@/api/authRequests.js';
 import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { updateUser } from '@/redux/slices/authSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import {
@@ -25,6 +28,25 @@ import type {
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
@@ -103,22 +125,10 @@ const fieldConfigs = extendFieldConfigs([
     }
 ] as const);
 
-// Локальная типизация конфигов полей
-type TFieldConfigs = typeof fieldConfigs;
-type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
-
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
-
-// Создание карты и начального состояния полей
 const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
  
-export default function Profile(): React.JSX.Element | null {
+export default function Profile(): JSX.Element | null {
     const user = useAppSelector(state => state.auth.user);
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
@@ -127,7 +137,7 @@ export default function Profile(): React.JSX.Element | null {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         
         dispatchFieldsState({
@@ -136,7 +146,7 @@ export default function Profile(): React.JSX.Element | null {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -209,7 +219,7 @@ export default function Profile(): React.JSX.Element | null {
         return result;
     };
 
-    const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>): Promise<void> => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         const { allValid, fieldsStateUpdates, formFields } = processFormFields();
@@ -223,7 +233,7 @@ export default function Profile(): React.JSX.Element | null {
         }
 
         setSubmitStatus(FORM_STATUS.SENDING);
-        dispatch(setIsNavigationBlocked(true));
+        dispatch(setNavigationLock(true));
 
         const responseData = await dispatch(sendAuthUserUpdateRequest(formFields));
         const { status, message } = responseData;
@@ -241,7 +251,7 @@ export default function Profile(): React.JSX.Element | null {
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
 
             case FORM_STATUS.INVALID: {
@@ -257,7 +267,7 @@ export default function Profile(): React.JSX.Element | null {
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
             }
         
@@ -303,7 +313,7 @@ export default function Profile(): React.JSX.Element | null {
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                     setSubmitStatus(FORM_STATUS.DEFAULT);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
                 break;
             }
@@ -311,7 +321,7 @@ export default function Profile(): React.JSX.Element | null {
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
-                dispatch(setIsNavigationBlocked(false));
+                dispatch(setNavigationLock(false));
                 break;
         }
     };

@@ -14,7 +14,7 @@ export default function HeaderContentLargeScreen({
     setActiveClass,
     setFeaturedClass
 }) {
-    const isDashboardActive = useSelector(state => state.ui.dashboardPanelActive);
+    const isDashboardActive = useSelector(state => state.ui.isDashboardPanelActive);
 
     return (
         <>

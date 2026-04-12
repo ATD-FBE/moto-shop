@@ -1,7 +1,6 @@
 import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
 import winston from 'winston';
 import { allowedConfigTypes } from '@server/utils/multerConfig.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JwtPayload, SignOptions } from 'jsonwebtoken';
 import type { TMulterMode, TSearchTypes } from './config.types.js';
 import type {
@@ -9,13 +8,7 @@ import type {
     TFieldErrors,
     TAllowedMimeType, 
     TActiveUserRole,
-    TEntityField,
-    TBaseResponse,
-    TRequestStatus,
-    TAuthErrorStatus,
-    TValidationStatuses,
-    TCommonErrorStatus,
-    TSuccessStatus
+    TEntityField
 } from '@shared/types/index.js';
 
 //////////////
@@ -156,32 +149,3 @@ export interface IOrderedFiltersArgs {
     extraFilters: PipelineStage[];
     searchType: TSearchTypes;
 }
-
-//////////////////////////
-/// SAFE SEND RESPONSE ///
-//////////////////////////
-
-// Карта типов статусов по кодам
-type TCodeToStatusMap<C extends number> =
-    C extends 204 | 205 | 304
-        ? typeof REQUEST_STATUS.UNCHANGED
-    : C extends 401 | 403 | 410
-        ? TAuthErrorStatus
-    : C extends 422
-        ? TValidationStatuses
-    : C extends 400 | 500 | 520
-        ? TCommonErrorStatus
-    : C extends 200 | 201 | 207
-        ? TSuccessStatus
-    : TRequestStatus;
-
-// Экстрактор нужного типа интерфейса по типу статус-кода
-export type TInferPayload<
-    T extends TBaseResponse,
-    C extends number
-> = Omit<
-    Extract<T, { status: TCodeToStatusMap<C> }>, 
-    'status'
->;
-
-export type TResponsePayload<T> = T extends TBaseResponse ? Omit<T, 'status'> : never;

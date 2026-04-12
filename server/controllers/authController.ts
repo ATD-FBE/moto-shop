@@ -26,7 +26,7 @@ import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, DELIVERY_METHOD } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
-import type { TInputTypeMap, TDbUser, TResponsePayload } from '@server/types/index.js';
+import type { TInputTypeMap, TDbUser } from '@server/types/index.js';
 import type {
     IAuthRegistrationBody,
     TAuthRegistrationResponse,

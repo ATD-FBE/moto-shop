@@ -23,7 +23,7 @@ const cartHiddenRoutes = [
 export default function Layout() {
     const { mainHeaderRef, mainFooterRef } = useStructureRefs();
     const { isAuthenticated, user } = useSelector(state => state.auth);
-    const { dashboardPanelActive } = useSelector(state => state.ui);
+    const { isDashboardPanelActive } = useSelector(state => state.ui);
     const isAuthenticatedRef = useRef(isAuthenticated);
     const location = useLocation();
     const dispatch = useDispatch();
@@ -33,7 +33,7 @@ export default function Layout() {
     const showFloatingCart = !isAuthenticated ||
         (
             userRole === 'customer' &&
-            !dashboardPanelActive &&
+            !isDashboardPanelActive &&
             !cartHiddenRoutes.some(pattern => matchPath(pattern, location.pathname))
         );
     const showSseNotifications = isAuthenticated && userRole === 'customer';

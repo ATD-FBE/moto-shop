@@ -2,8 +2,8 @@ import { useRef, useEffect } from 'react';
 import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { sendAuthSessionRequest } from '@/api/authRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { login, adjustUnreadNotificationsCount } from '@/redux/slices/authSlice.js';
-import { adjustNewNotificationsCount } from '@/redux/slices/uiSlice.js';
+import { login, adjustUnreadNotifications } from '@/redux/slices/authSlice.js';
+import { incrementNewNotifications } from '@/redux/slices/uiSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { getSseUrl } from '@/helpers/sseHelpers.js';
@@ -48,35 +48,35 @@ export default function SseNotifications(): null {
             if (
                 isNotificationsPage &&
                 typeof newUnreadNotifsCount === 'number' &&
-                newUnreadNotifsCount !== oldUnreadNotifsCount
+                newUnreadNotifsCount > oldUnreadNotifsCount
             ) {
-                dispatch(adjustNewNotificationsCount(newUnreadNotifsCount - oldUnreadNotifsCount));
+                dispatch(incrementNewNotifications(newUnreadNotifsCount - oldUnreadNotifsCount));
             }
         }
     };
 
     const isSseMessage = (data: any): data is ICustomerSseMessageData =>
-        data && typeof data === 'object' && typeof data.newUnreadNotificationsCount === 'number';
+        data && typeof data === 'object' && typeof data.newUnreadNotificationsChange === 'number';
 
-    const adjustAndSyncUnreadNotificationsCount = (count: number): TAppThunk<void> =>
+    const adjustAndSyncUnreadNotifications = (count: number): TAppThunk<void> =>
         (dispatch, getState): void => {
-            dispatch(adjustUnreadNotificationsCount(count)); // Обновляет user в сторе auth
+            dispatch(adjustUnreadNotifications(count)); // Обновляет user в сторе auth
             saveUserToLocalStorage(getState().auth.user); // Сохраняет обновлённого user локально
         };
 
     const applySseMessage = (data: ICustomerSseMessageData) => {
-        const { newUnreadNotificationsCount } = data;
+        const { newUnreadNotificationsChange } = data;
 
-        if (newUnreadNotificationsCount !== 0) {
+        if (newUnreadNotificationsChange !== 0) {
             // Обновление счётчика непрочитанных уведомлений
-            dispatch(adjustAndSyncUnreadNotificationsCount(newUnreadNotificationsCount));
+            dispatch(adjustAndSyncUnreadNotifications(newUnreadNotificationsChange));
 
-            // Обновление счётчика новых уведомлений для страницы списка всех уведомлений покупателя
+            // Увеличение счётчика новых уведомлений для страницы списка всех уведомлений покупателя
             const locationPath = locationPathRef.current;
             const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
 
-            if (newUnreadNotificationsCount > 0 && isNotificationsPage) {
-                dispatch(adjustNewNotificationsCount(newUnreadNotificationsCount));
+            if (newUnreadNotificationsChange > 0 && isNotificationsPage) {
+                dispatch(incrementNewNotifications(newUnreadNotificationsChange));
             }
         }
     };

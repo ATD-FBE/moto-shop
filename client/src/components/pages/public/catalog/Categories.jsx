@@ -12,7 +12,7 @@ export default function Categories({
     selectedCategoryId,
     setSelectedCategoryId
 }) {
-    const isDashboardActive = useSelector(state => state.ui.dashboardPanelActive);
+    const isDashboardActive = useSelector(state => state.ui.isDashboardPanelActive);
     const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
 
     const selectedCategoryPath = useMemo(

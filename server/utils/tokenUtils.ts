@@ -45,7 +45,7 @@ export const getTokenExpiryFromCookie = (req: Request, type: TTokenType): number
     const decoded = jwt.decode(token);
     
     if (decoded && typeof decoded !== 'string' && decoded.exp) {
-        return decoded.exp * 1000; // exp в секундах, умножаем на 1000 для мс
+        return decoded.exp * 1000; // exp в секундах, умножение на 1000 для мс
     }
 
     return 0;

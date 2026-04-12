@@ -37,7 +37,7 @@ import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 import { MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
  
 export default function Cart() {
-    const { isTouchDevice, screenSize, dashboardPanelActive } = useSelector(state => state.ui);
+    const { isTouchDevice, screenSize, isDashboardPanelActive } = useSelector(state => state.ui);
     const { isAuthenticated, user } = useSelector(state => state.auth);
     const cartState = useSelector(state => state.cart);
     const productMap = useSelector(state => state.products.byId);
@@ -239,7 +239,7 @@ export default function Cart() {
 
         if (hasAdjustments) {
             openAlertModal({
-                type: 'warning',
+                type: 'warn',
                 dismissible: false,
                 title: 'Корзина была синхронизирована с текущими данными каталога',
                 message: adjustmentsMsg,
@@ -381,7 +381,7 @@ export default function Cart() {
 
             <section className={cn(
                 'cart-summary-wrapper',
-                { 'dashboard-panel-active': dashboardPanelActive }
+                { 'dashboard-panel-active': isDashboardPanelActive }
             )}>
                 <div className="cart-summary">
                     <div className="cart-totals">

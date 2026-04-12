@@ -19,19 +19,19 @@ export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
     if (dbUser.role === USER_ROLE.CUSTOMER) {
         return {
             ...baseUserData,
-            unreadNotificationsCount: dbUser.notifications.filter(n => !n.isRead).length,
-            discount: dbUser.discount
+            discount: dbUser.discount,
+            unreadNotificationsCount: dbUser.notifications.filter(n => !n.isRead).length
         };
     }
 
     if (dbUser.role === USER_ROLE.ADMIN) {
-        const managedActiveOrdersCount = await Order.countDocuments({
+        const activeOrdersCount = await Order.countDocuments({
             currentStatus: { $in: ORDER_ACTIVE_STATUSES }
         });
         
         return {
             ...baseUserData,
-            managedActiveOrdersCount
+            activeOrdersCount
         };
     }
 
@@ -54,7 +54,7 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
     const orderDraftId = orderDraft ? orderDraft._id.toString() : null;
 
     /// Объединение товаров гостевой и серверной корзин, если нет начатого заказа ///
-    let cartWasMerged: boolean = false;
+    let cartWasMerged = false;
 
     if (guestCart.length > 0 && !orderDraftId) {
         const dbGuestCart = await prepareDbGuestCart(guestCart);

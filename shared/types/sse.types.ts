@@ -3,7 +3,7 @@ import type { IDotNotationPatch } from './shared.types.js';
 
 // SSE администратора
 export interface IAdminSseMessageData {
-    newManagedActiveOrdersCount?: number;
+    newActiveOrdersChange?: number;
     orderUpdate?: IOrderUpdate;
 }
 export interface IOrderUpdate {
@@ -21,5 +21,5 @@ export interface IOrderUpdateData {
 
 // SSE покупателя
 export interface ICustomerSseMessageData {
-    newUnreadNotificationsCount: number;
+    newUnreadNotificationsChange: number;
 }

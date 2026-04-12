@@ -4,7 +4,7 @@ import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { sendBulkProductUpdateRequest } from '@/api/productRequests.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
@@ -298,7 +298,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
 
         const performFormSubmission = async () => {
             setSubmitStatus(FORM_STATUS.SENDING);
-            dispatch(setIsNavigationBlocked(true));
+            dispatch(setNavigationLock(true));
 
             const responseData = await dispatch(sendBulkProductUpdateRequest(productIds, formFields));
             if (isUnmountedRef.current) return;
@@ -318,7 +318,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
                 case FORM_STATUS.TIMEOUT:
                     logRequestStatus({ context: LOG_CTX, status, message });
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
 
                 case FORM_STATUS.INVALID: {
@@ -336,7 +336,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
                 }
             
@@ -361,7 +361,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
                         });
 
                         setSubmitStatus(FORM_STATUS.DEFAULT);
-                        dispatch(setIsNavigationBlocked(false));
+                        dispatch(setNavigationLock(false));
                         resolve();
                     }, SUCCESS_DELAY));
 
@@ -371,7 +371,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
                 default:
                     logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                     setSubmitStatus(FORM_STATUS.UNKNOWN);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
             }
 

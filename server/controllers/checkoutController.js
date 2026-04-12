@@ -836,7 +836,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
         });
 
         // Отправка SSE-сообщения админам
-        sseOrderManagement.sendToAllClients({ newManagedActiveOrdersCount: 1 });
+        sseOrderManagement.sendToAllClients({ newActiveOrdersChange: 1 });
 
         // Отправка ответа заказчику
         safeSendResponse(res, statusCode, responseData);

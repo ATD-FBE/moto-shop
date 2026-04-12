@@ -6,7 +6,7 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
-import { setIsNavigationBlocked } from '@/redux/slices/uiSlice.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { sendProductCreateRequest, sendProductUpdateRequest } from '@/api/productRequests.js';
 import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
@@ -584,7 +584,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
 
         const performFormSubmission = async () => {
             setSubmitStatus(FORM_STATUS.SENDING);
-            dispatch(setIsNavigationBlocked(true));
+            dispatch(setNavigationLock(true));
 
             const requestThunk = isEditMode
                 ? sendProductUpdateRequest(product.id, formData)
@@ -606,7 +606,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                 case FORM_STATUS.TIMEOUT:
                     logRequestStatus({ context: LOG_CTX, status, message });
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
 
                 case FORM_STATUS.INVALID: {
@@ -624,7 +624,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
                 }
             
@@ -656,7 +656,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                         }
 
                         setSubmitStatus(FORM_STATUS.DEFAULT);
-                        dispatch(setIsNavigationBlocked(false));
+                        dispatch(setNavigationLock(false));
                         resolve();
                     }, SUCCESS_DELAY));
 
@@ -667,7 +667,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                 default:
                     logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
                     setSubmitStatus(FORM_STATUS.UNKNOWN);
-                    dispatch(setIsNavigationBlocked(false));
+                    dispatch(setNavigationLock(false));
                     break;
             }
 

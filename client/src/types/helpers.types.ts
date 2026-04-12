@@ -4,7 +4,6 @@ import type {
     TFieldUiStatus,
     TFieldSaveStatus
 } from './config.types.js';
-import type { TRequestStatus } from '@shared/types/index.js';
 
 ////////////////////
 /// FORM HELPERS ///
@@ -88,16 +87,4 @@ export interface IProcessFormattedFieldDeletionResult {
     preventDefault: boolean;
     nextValue: string;
     nextCursorPos: number;
-}
-
-//////////////////////
-/// REQUEST LOGGER ///
-//////////////////////
-
-export interface ILogRequestStatusConfig {
-    context?: string;
-    status?: TRequestStatus;
-    message?: string;
-    details?: unknown;
-    unhandled?: boolean;
 }

@@ -1,6 +1,31 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { IAuthState, IAuthLoginPayload } from '@/types/index.js';
 import type { IUser } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface IAuthState {
+    isAuthenticated: boolean;
+    isLocalSession: boolean;
+    suppressAuthRedirect: boolean;
+    forceRedirectToLogin: boolean;
+    user: IUser | null;
+    accessTokenExpiresAt: number;
+    refreshTokenExpiresAt: number;
+}
+
+interface IAuthLoginPayload {
+    user: IUser;
+    isLocalSession?: boolean;
+    suppressAuthRedirect?: boolean;
+    accessTokenExp?: number;
+    refreshTokenExp?: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const initialState: IAuthState = {
     isAuthenticated: false,
@@ -56,24 +81,24 @@ const authSlice = createSlice({
             state.suppressAuthRedirect = false;
         },
 
-        adjustUnreadNotificationsCount: (state, action: PayloadAction<number>) => {
+        adjustUnreadNotifications: (state, action: PayloadAction<number>) => {
             if (!state.user) return;
 
-            const newCount = action.payload ?? 0;
-            if (!newCount) return;
+            const change = action.payload;
+            if (!change) return;
 
-            const oldCount = state.user.unreadNotificationsCount ?? 0;
-            state.user.unreadNotificationsCount = Math.max(0, oldCount + newCount);
+            const currentCount = state.user.unreadNotificationsCount ?? 0;
+            state.user.unreadNotificationsCount = Math.max(0, currentCount + change);
         },
 
-        adjustManagedActiveOrdersCount: (state, action: PayloadAction<number>) => {
+        adjustActiveOrders: (state, action: PayloadAction<number>) => {
             if (!state.user) return;
 
-            const newCount = action.payload ?? 0;
-            if (!newCount) return;
+            const change = action.payload;
+            if (!change) return;
 
-            const oldCount = state.user.managedActiveOrdersCount ?? 0;
-            state.user.managedActiveOrdersCount = Math.max(0, oldCount + newCount);
+            const currentCount = state.user.activeOrdersCount ?? 0;
+            state.user.activeOrdersCount = Math.max(0, currentCount + change);
         }
     }
 });
@@ -85,8 +110,8 @@ export const {
     updateCustomerDiscount,
     setAccessTokenExpiry,
     resetSuppressAuthRedirect,
-    adjustUnreadNotificationsCount,
-    adjustManagedActiveOrdersCount
+    adjustUnreadNotifications,
+    adjustActiveOrders
 } = authSlice.actions;
 
 export default authSlice.reducer;
