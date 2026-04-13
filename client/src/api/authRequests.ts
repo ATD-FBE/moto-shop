@@ -21,14 +21,14 @@ const AUTH_TIMEOUT = 20000;
 
 /// Регистрация ///
 export const sendAuthRegistrationRequest = (
-    dataObj: IAuthRegistrationBody
+    objData: IAuthRegistrationBody
 ): TAppThunk<Promise<TAuthRegistrationResponse>> =>
     async (dispatch) => {
         const url = '/api/auth/register';
         const options: RequestInit = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataObj)
+            body: JSON.stringify(objData)
         };
         const errorPrefix = 'Ошибка регистрации';
         const config = {
@@ -44,14 +44,14 @@ export const sendAuthRegistrationRequest = (
 
 /// Авторизация ///
 export const sendAuthLoginRequest = (
-    dataObj: IAuthLoginBody
+    objData: IAuthLoginBody
 ): TAppThunk<Promise<TAuthLoginResponse>> =>
     async (dispatch) => {
         const url = '/api/auth/login';
         const options: RequestInit = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataObj)
+            body: JSON.stringify(objData)
         };
         const errorPrefix = 'Ошибка авторизации';
         const config = {
@@ -67,14 +67,14 @@ export const sendAuthLoginRequest = (
 
 /// Изменение данных пользователя ///
 export const sendAuthUserUpdateRequest = (
-    dataObj: IAuthUserUpdateBody
+    objData: IAuthUserUpdateBody
 ): TAppThunk<Promise<TAuthUserUpdateResponse>> =>
     async (dispatch) => {
         const url = '/api/auth/user';
         const options: RequestInit = {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataObj)
+            body: JSON.stringify(objData)
         };
         const errorPrefix = 'Не удалось изменить данные пользователя';
         const config = {
@@ -90,14 +90,14 @@ export const sendAuthUserUpdateRequest = (
 
 /// Загрузка данных сессии пользователя ///
 export const sendAuthSessionRequest = (
-    dataObj: IAuthSessionBody
+    objData: IAuthSessionBody
 ): TAppThunk<Promise<TAuthSessionResponse>> =>
     async (dispatch) => {
         const url = '/api/auth/session';
         const options: RequestInit = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataObj)
+            body: JSON.stringify(objData)
         };
         const errorPrefix = 'Не удалось получить данные пользователя';
         const config = {
@@ -148,14 +148,14 @@ export const sendAuthCheckoutPrefsRequest = (): TAppThunk<Promise<TAuthCheckoutP
 
 /// Изменение настроек заказа ///
 export const sendAuthCheckoutPrefsUpdateRequest = (
-    dataObj: IAuthCheckoutPrefsUpdateBody
+    objData: IAuthCheckoutPrefsUpdateBody
 ): TAppThunk<Promise<TAuthCheckoutPrefsUpdateResponse>> =>
     async (dispatch) => {
         const url = '/api/auth/checkout-preferences';
         const options: RequestInit = {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataObj)
+            body: JSON.stringify(objData)
         };
         const errorPrefix = 'Не удалось изменить настройки заказа';
         const config = {

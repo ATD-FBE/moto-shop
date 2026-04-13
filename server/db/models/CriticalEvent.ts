@@ -14,10 +14,6 @@ export const CriticalEventSchema = new Schema({
         type: Schema.Types.Mixed,
         required: true
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
     resolved: {
         type: Boolean,
         default: false
@@ -28,6 +24,8 @@ export const CriticalEventSchema = new Schema({
     comment: {
         type: String
     }
+}, {
+    timestamps: true // Автоматическое добавление полей createdAt и updatedAt
 });
 
 const CriticalEvent = model<TDbCriticalEvent>('CriticalEvent', CriticalEventSchema);

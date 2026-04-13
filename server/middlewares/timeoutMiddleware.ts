@@ -13,7 +13,7 @@ export const requestTimeout = (duration: number): RequestHandler => (req, res, n
     next();
 };
 
-export const checkTimeout = (req: Request): void => {
+export const checkTimeout = (req: Request<any, any, any, any>): void => {
     if (req.connectionTimeout) {
         const error = new Error(ERROR_SIGNALS.TIMEOUT_ABORT);
         error.isTimeoutAbort = true; 

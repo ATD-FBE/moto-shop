@@ -2,7 +2,7 @@ import type {
     TEmptyResponse,
     TAuthErrorResponse,
     TValidationErrorResponse,
-    TCommonErrorResponse,
+    TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
@@ -44,7 +44,7 @@ export interface IAuthRegistrationBody {
 
 export type TAuthRegistrationResponse =
     | TValidationErrorResponse<'auth'>
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<TAuthSuccessData>;
 
 /// Авторизация ///
@@ -61,7 +61,7 @@ type TLoginAuthError = TAuthErrorResponse & { fieldErrors: TFieldErrors<'auth'> 
 export type TAuthLoginResponse =
     | TLoginAuthError
     | TValidationErrorResponse<'auth'>
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<TAuthSuccessData>;
 
 /// Изменение данных пользователя ///
@@ -81,7 +81,7 @@ export type TAuthUserUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TValidationErrorResponse<'auth'>
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<IAuthUserUpdateSuccessData>;
 
 /// Загрузка данных сессии пользователя ///
@@ -91,7 +91,7 @@ export interface IAuthSessionBody {
 
 export type TAuthSessionResponse =
     | TAuthErrorResponse
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<TAuthSuccessData>;
 
 /// Обновление токена доступа ///
@@ -100,7 +100,7 @@ interface IAuthRefreshSuccessData {
 }
 export type TAuthRefreshResponse =
     | TAuthErrorResponse
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<IAuthRefreshSuccessData>;
 
 /// Загрузка настроек заказа ///
@@ -109,7 +109,7 @@ interface IAuthCheckoutPrefsSuccessData {
 }
 export type TAuthCheckoutPrefsResponse =
     | TAuthErrorResponse
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse<IAuthCheckoutPrefsSuccessData>;
 
 /// Изменение настроек заказа ///
@@ -135,10 +135,10 @@ export type TAuthCheckoutPrefsUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TValidationErrorResponse<'checkout'>
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse;
 
 /// Выход из сессии ///
 export type TAuthLogoutResponse =
-    | TCommonErrorResponse
+    | TGeneralErrorResponse
     | TSuccessResponse;

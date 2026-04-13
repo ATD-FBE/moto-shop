@@ -16,7 +16,7 @@ export const isCriticalError = (error: Error): boolean => {
 
 export const createAppError = (
     statusCode: number,
-    message: string,
+    message: string = '',
     details?: Record<string, unknown>
 ): Error => {
     const error = new Error(message);

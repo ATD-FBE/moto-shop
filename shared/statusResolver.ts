@@ -8,6 +8,8 @@ export const resolveRequestStatus = (statusCode: number, reason?: TRequestStatus
             return REQUEST_STATUS.SUCCESS;
 
         case 204:
+        case 205:
+        case 304:
             return REQUEST_STATUS.UNCHANGED;
 
         case 207:
@@ -21,6 +23,7 @@ export const resolveRequestStatus = (statusCode: number, reason?: TRequestStatus
             return REQUEST_STATUS.UNAUTH;
 
         case 402: // YooKassa - Ошибка подключения к API
+        case 408:
             return REQUEST_STATUS.TIMEOUT;
 
         case 403:
@@ -30,15 +33,12 @@ export const resolveRequestStatus = (statusCode: number, reason?: TRequestStatus
         case 404:
             return REQUEST_STATUS.NOT_FOUND;
 
-        case 408:
-            return REQUEST_STATUS.TIMEOUT;
-
         case 409:
             return REQUEST_STATUS.CONFLICT;
 
         case 410:
             if (reason === REQUEST_STATUS.USER_GONE) return REQUEST_STATUS.USER_GONE;
-            return REQUEST_STATUS.ERROR;
+            return REQUEST_STATUS.ERROR; // Данные удалены навсегда
 
         case 412:
             return REQUEST_STATUS.MODIFIED;
@@ -47,12 +47,10 @@ export const resolveRequestStatus = (statusCode: number, reason?: TRequestStatus
             if (reason === REQUEST_STATUS.LIMITATION) return REQUEST_STATUS.LIMITATION;
             return REQUEST_STATUS.INVALID;
 
-        case 499: // Происходит только при переходе на другую страницу с активными запросами
+        case 499: // При переходе на другую страницу с активными запросами
             return REQUEST_STATUS.ABORTED;
 
         case 500:
-            return REQUEST_STATUS.ERROR;
-
         default:
             return REQUEST_STATUS.ERROR;
     }

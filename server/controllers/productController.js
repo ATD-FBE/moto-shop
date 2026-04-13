@@ -635,7 +635,8 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     const total = uniqueProductIds.length;
 
     if (!total) {
-        return safeSendResponse(res, 400, 'Товары для изменения не выбраны', {
+        return safeSendResponse(res, 400, {
+            message: 'Товары для изменения не выбраны',
             reason: REQUEST_STATUS.NO_SELECTION
         });
     }

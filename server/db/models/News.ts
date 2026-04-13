@@ -4,10 +4,6 @@ import { validationRules } from '@shared/fieldRules.js';
 import type { TDbNews } from '@server/types/index.js';
 
 export const NewsSchema = new Schema({
-    publishDate: {
-        type: Date,
-        default: Date.now
-    },
     title: {
         type: String,
         required: true,
@@ -18,9 +14,14 @@ export const NewsSchema = new Schema({
         required: true,
         match: validationRules.news.content
     },
+    publishDate: {
+        type: Date,
+        default: Date.now
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: true
     },
     updateHistory: [UpdateHistoryItemSchema]
 });

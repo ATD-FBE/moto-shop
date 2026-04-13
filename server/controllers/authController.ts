@@ -297,11 +297,11 @@ export const handleAuthUserUpdateRequest: RequestHandler<
     }
     
     const dbUser = req.dbUser;
-    const dbUserBackup: Partial<Pick<TDbUser, 'name' | 'email'>> = {
+    const dbUserBackup: Pick<TDbUser, 'name' | 'email'> = {
         name: dbUser.name,
         email: dbUser.email
     };
-    const prepDbFields: Partial<IAuthUserUpdateBody> = {
+    const prepDbFields: IAuthUserUpdateBody = {
         newName: newName?.trim(),
         newEmail: newEmail?.trim(),
         currentPassword,

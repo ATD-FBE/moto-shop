@@ -6,7 +6,7 @@ import type {
     TRequestStatus,
     TAuthErrorStatus,
     TValidationStatuses,
-    TCommonErrorStatus,
+    TGeneralErrorStatus,
     TSuccessStatus
 } from '@shared/types/index.js';
 
@@ -22,8 +22,10 @@ type TCodeToStatusMap<C extends number> =
         ? TAuthErrorStatus
     : C extends 422
         ? TValidationStatuses
-    : C extends 400 | 500 | 520
-        ? TCommonErrorStatus
+    : C extends 400 | 404 | 408 | 409 | 500
+        ? TGeneralErrorStatus
+    : C extends 412
+        ? typeof REQUEST_STATUS.MODIFIED
     : C extends 200 | 201 | 207
         ? TSuccessStatus
     : TRequestStatus;
@@ -39,9 +41,9 @@ type TInferPayload<
 
 type TNoBodyStatus = typeof NO_BODY_STATUS_ARRAY[number];
 
-//////////////////////////
-/// FUNCTIONS & LOGICS ///
-//////////////////////////
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const NO_BODY_STATUS_ARRAY = [204, 205, 304] as const;
 const NO_BODY_STATUSES = new Set(NO_BODY_STATUS_ARRAY);

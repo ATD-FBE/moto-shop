@@ -420,21 +420,21 @@ export const ORDER_ACTION = {
 } as const;
 
 export const REQUEST_STATUS = {
-    SUCCESS: 'success',
-    PARTIAL: 'partial',
-    MODIFIED: 'modified',
     UNAUTH: 'unauth',
     USER_GONE: 'user_gone',
     DENIED: 'denied',
-    BAD_REQUEST: 'bad_request',
     FORBIDDEN: 'forbidden',
+    BAD_REQUEST: 'bad_request',
     NOT_FOUND: 'not_found',
-    UNCHANGED: 'unchanged',
     NO_SELECTION: 'no_selection',
     LIMITATION: 'limitation',
     CONFLICT: 'conflict',
+    MODIFIED: 'modified',
     INVALID: 'invalid',
+    UNCHANGED: 'unchanged',
     ERROR: 'error',
-    TIMEOUT: 'network',
-    ABORTED: 'aborted'
+    TIMEOUT: 'timeout',
+    ABORTED: 'aborted',
+    PARTIAL: 'partial',
+    SUCCESS: 'success'
 } as const;

@@ -1,22 +1,25 @@
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { TRequestStatus, TEntityType, TFieldErrors } from './shared.types.js';
 
-/// Объединения типов статусов для интерфейса ответа ///
+/// Группировка типов статусов в интерфейсах ответа ///
 export type TAuthErrorStatus =
     | typeof REQUEST_STATUS.UNAUTH
     | typeof REQUEST_STATUS.USER_GONE
     | typeof REQUEST_STATUS.DENIED
     | typeof REQUEST_STATUS.FORBIDDEN;
 
+export type TGeneralErrorStatus =
+    | typeof REQUEST_STATUS.BAD_REQUEST
+    | typeof REQUEST_STATUS.NOT_FOUND
+    | typeof REQUEST_STATUS.NO_SELECTION
+    | typeof REQUEST_STATUS.CONFLICT
+    | typeof REQUEST_STATUS.ERROR
+    | typeof REQUEST_STATUS.TIMEOUT
+    | typeof REQUEST_STATUS.ABORTED;
+
 export type TValidationStatuses = 
     | typeof REQUEST_STATUS.INVALID 
     | typeof REQUEST_STATUS.LIMITATION;
-
-export type TCommonErrorStatus =
-    | typeof REQUEST_STATUS.BAD_REQUEST
-    | typeof REQUEST_STATUS.NO_SELECTION
-    | typeof REQUEST_STATUS.ERROR
-    | typeof REQUEST_STATUS.TIMEOUT;
 
 export type TSuccessStatus =
     | typeof REQUEST_STATUS.SUCCESS
@@ -37,19 +40,23 @@ export type TAuthErrorResponse = TBaseResponse & {
     status: TAuthErrorStatus;
 };
 
+export type TGeneralErrorResponse = TBaseResponse & {
+    status: TGeneralErrorStatus;
+};
+
 export type TValidationErrorResponse<E extends TEntityType> = TBaseResponse & {
     status: typeof REQUEST_STATUS.INVALID;
     fieldErrors: TFieldErrors<E>;
 };
 
-export type TLimitationErrorResponse<T extends Record<string, any> = {}> = TBaseResponse & {
+export type TLimitationErrorResponse<T = Record<string, never>> = TBaseResponse & {
     status: typeof REQUEST_STATUS.LIMITATION;
     reason: typeof REQUEST_STATUS.LIMITATION; // reason обязателен, чтобы отличить от INVALID
 } & T;
 
-export type TCommonErrorResponse = TBaseResponse & {
-    status: TCommonErrorStatus;
-};
+export type TModifiedErrorResponse<T = Record<string, never>> = TBaseResponse & {
+    status: typeof REQUEST_STATUS.MODIFIED;
+} & T;
 
 export type TSuccessResponse<Data = {}> = TBaseResponse & Data & {
     status: TSuccessStatus;

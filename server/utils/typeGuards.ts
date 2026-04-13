@@ -17,7 +17,7 @@ export const isTokenDecodedUser = (decoded: string | JwtPayload | null): decoded
     return hasId && hasRole;
 };
 
-export const requireDbUser = <R extends Request>(
+export const requireDbUser = <R extends Request<any, any, any, any>>(
     req: R,
     next: NextFunction
 ): req is R & { dbUser: TDbUserDoc } => {

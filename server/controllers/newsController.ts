@@ -2,13 +2,37 @@ import News from '@server/db/models/News.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
 import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { requireDbUser, isAppError, isMongooseValidationError } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { toError } from '@shared/commonHelpers.js';
+import type { RequestHandler } from 'express';
+import type { TInputTypeMap, TDbNews } from '@server/types/index.js';
+import type {
+    INewsBody,
+    TNewsListResponse,
+    TNewsResponse,
+    TNewsCreateResponse,
+    TNewsUpdateResponse,
+    TNewsDeleteResponse
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface INewsParams {
+    newsId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка всех новостей ///
-export const handleNewsListRequest = async (req, res, next) => {
+export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === 'admin';
     const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
 
@@ -23,38 +47,7 @@ export const handleNewsListRequest = async (req, res, next) => {
                 .populate('updateHistory.updatedBy', 'name');
         }
 
-        const dbNewsList = await dbNewsQuery.lean(); // Преобразование в обычный JS-объект
-        checkTimeout(req);
-
-        const newsList = dbNewsList.map(news => prepareNews(news, { managed: isAdmin }));
-
-        safeSendResponse(res, 200, { message: 'Новости успешно загружены', newsList });
-    } catch (err) {
-        next(err);
-    }
-};
-
-/*import type { Request, Response, NextFunction } from 'express';
-import type { TDbNews } from '@server/types/index.js';
-
-export const handleNewsListRequest = async (
-    req: Request, 
-    res: Response, 
-    next: NextFunction
-): Promise<void> => {
-    const isAdmin = req.dbUser?.role === 'admin';
-    const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
-
-    try {
-        let dbNewsQuery: TDbNews = News.find().sort({ publishDate: -1 }).select(selectedDbFields);
-
-        if (isAdmin) {
-            dbNewsQuery = dbNewsQuery
-                .populate('createdBy', 'name')
-                .populate('updateHistory.updatedBy', 'name');
-        }
-
-        const dbNewsList: TDbNews = await dbNewsQuery.lean<TDbNews>();
+        const dbNewsList = await dbNewsQuery.lean<TDbNews[]>(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
         const newsList = dbNewsList.map(news => prepareNews(news, { managed: isAdmin }));
@@ -63,10 +56,10 @@ export const handleNewsListRequest = async (
     } catch (err) {
         next(toError(err));
     }
-};*/
+};
 
 /// Загрузка отдельной новости для редактирования ///
-export const handleNewsRequest = async (req, res, next) => {
+export const handleNewsRequest: RequestHandler<INewsParams, TNewsResponse> = async (req, res, next) => {
     const newsId = req.params.newsId;
 
     if (!typeCheck.objectId(newsId)) {
@@ -74,7 +67,7 @@ export const handleNewsRequest = async (req, res, next) => {
     }
 
     try {
-        const dbNews = await News.findById(newsId).select('title content').lean();
+        const dbNews = await News.findById(newsId).lean<TDbNews>();
         checkTimeout(req);
 
         if (!dbNews) {
@@ -86,17 +79,23 @@ export const handleNewsRequest = async (req, res, next) => {
             news: prepareNews(dbNews)
         });
     } catch (err) {
-        next(err);
+        next(toError(err));
     }
 };
 
 /// Создание новости ///
-export const handleNewsCreateRequest = async (req, res, next) => {
+export const handleNewsCreateRequest: RequestHandler<
+    {},
+    TNewsCreateResponse,
+    INewsBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userId = req.dbUser._id;
     const { title, content } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'news'> = {
         title: { value: title, type: 'string', form: true },
         content: { value: content, type: 'string', form: true }
     };
@@ -131,9 +130,11 @@ export const handleNewsCreateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 201, { message: `Новость "${newsLbl}" успешно создана` });
     } catch (err) {
+        const error = toError(err);
+
         // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'news');
+        if (isMongooseValidationError(error)) {
+            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'news');
             if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
@@ -141,18 +142,24 @@ export const handleNewsCreateRequest = async (req, res, next) => {
             }
         }
 
-        next(err);
+        next(error);
     }
 };
 
 /// Изменение новости ///
-export const handleNewsUpdateRequest = async (req, res, next) => {
+export const handleNewsUpdateRequest: RequestHandler<
+    INewsParams,
+    TNewsUpdateResponse,
+    INewsBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userId = req.dbUser._id;
     const newsId = req.params.newsId;
     const { title, content } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const inputTypeMap: TInputTypeMap<'news'> = {
         newsId: { value: newsId, type: 'objectId' },
         title: { value: title, type: 'string', form: true },
         content: { value: content, type: 'string', form: true }
@@ -201,14 +208,16 @@ export const handleNewsUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Новость "${newsLbl}" успешно изменена` });
     } catch (err) {
+        const error = toError(err);
+
         // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
+        if (isAppError(error)) {
+            return safeSendResponse(res, error.statusCode, prepareAppErrorData(error));
         }
 
         // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'news');
+        if (isMongooseValidationError(error)) {
+            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'news');
             if (systemFieldError) return next(systemFieldError);
         
             if (fieldErrors) {
@@ -216,12 +225,15 @@ export const handleNewsUpdateRequest = async (req, res, next) => {
             }
         }
 
-        next(err);
+        next(error);
     }
 };
 
 /// Удаление новости ///
-export const handleNewsDeleteRequest = async (req, res, next) => {
+export const handleNewsDeleteRequest: RequestHandler<
+    INewsParams,
+    TNewsDeleteResponse
+> = async (req, res, next) => {
     const newsId = req.params.newsId;
 
     if (!typeCheck.objectId(newsId)) {
@@ -230,7 +242,7 @@ export const handleNewsDeleteRequest = async (req, res, next) => {
 
     try {
         const { newsLbl } = await runInDbTransaction(async (session) => {
-            const dbNews = await News.findByIdAndDelete(newsId).session(session);
+            const dbNews = await News.findByIdAndDelete(newsId).lean<TDbNews>().session(session);
             checkTimeout(req);
 
             const newsLbl = dbNews ? `"${dbNews.title}"` : `(ID: ${newsId})`;
@@ -244,10 +256,12 @@ export const handleNewsDeleteRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Новость ${newsLbl} успешно удалена` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
+        const error = toError(err);
+
+        if (isAppError(error)) {
+            return safeSendResponse(res, error.statusCode, prepareAppErrorData(error));
         }
 
-        next(err);
+        next(error);
     }
 };
