@@ -3,12 +3,12 @@ import cn from 'classnames';
 import { FORM_STATUS } from '@/config/constants.js';
 import type { TFormStatus, TSubmitStates } from '@/types/index.js';
 
-interface FormFooterProps {
+interface IFormFooterProps {
     submitStates: TSubmitStates;
     submitStatus: TFormStatus;
     uiBlocked: boolean;
     reloadBtnLabel?: string;
-    reloadData?: () => void;
+    reloadData?: (() => void) | null;
 }
 
 export default function FormFooter({
@@ -16,8 +16,8 @@ export default function FormFooter({
     submitStatus,
     uiBlocked,
     reloadBtnLabel = 'Повторить',
-    reloadData
-}: FormFooterProps): JSX.Element {
+    reloadData = null
+}: IFormFooterProps): JSX.Element {
     const submitState = submitStates[submitStatus] ?? {};
 
     return (
@@ -34,7 +34,7 @@ export default function FormFooter({
                     <p className="additional-message">
                         {submitState.addMessage || ''}
 
-                        {submitStatus === FORM_STATUS.LOAD_ERROR && !!reloadData && (
+                        {submitStatus === FORM_STATUS.LOAD_ERROR && reloadData && (
                             <button type="button" className="reload-btn" onClick={reloadData}>
                                 {reloadBtnLabel}
                             </button>

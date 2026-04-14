@@ -4,11 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import PromoTimer from './promotions/PromoTimer.jsx';
-import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { sendPromoListRequest, sendPromoDeleteRequest } from '@/api/promoRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { openConfirmModal } from '@/services/modalConfirmService.js';
+import { formatLocalDate } from '@/helpers/textHelpers.js';
+import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function Promotions() {
@@ -215,8 +216,6 @@ function PromoCard({ promo, isPrivilegedUser, editPromo, confirmPromoDeletion })
     const isOneDayAction = end.getTime() - start.getTime() <= dayTimestamp;
     
     const promoDatesFormatOpts = { day: '2-digit', month: '2-digit', year: 'numeric' };
-
-    const formatLocalDate = (date, format = {}) => new Date(date)?.toLocaleString(undefined, format);
 
     return (
         <article data-id={id} className={cn('promo-card', promoActivity)}>

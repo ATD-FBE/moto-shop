@@ -225,10 +225,10 @@ export const handleProductCreateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -387,10 +387,10 @@ export const handleProductUpdateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -620,10 +620,10 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {

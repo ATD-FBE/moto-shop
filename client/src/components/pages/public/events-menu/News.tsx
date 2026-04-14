@@ -1,27 +1,59 @@
-import { useState, useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { JSX, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { openConfirmModal } from '@/services/modalConfirmService.js';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendNewsListRequest, sendNewsDeleteRequest } from '@/api/newsRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
+import { DATA_LOAD_STATUS, NO_VALUE_LABEL } from '@/config/constants.js';
+import { openConfirmModal } from '@/services/modalConfirmService.js';
+import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS } from '@/config/constants.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type { INews } from '@shared/types/index.js';
 
-export default function News() {
-    const { isAuthenticated, user } = useSelector(state => state.auth);
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IDeletingNews {
+    id: string;
+    title: string;
+}
+
+interface INewsMainProps {
+    isPrivilegedUser: boolean;
+    loadStatus: TDataLoadStatus;
+    reloadNews: () => void;
+    newsList: INews[];
+    editNews: (newsId: string) => void;
+    confirmNewsDeletion: (news: IDeletingNews) => void;
+}
+
+interface INewsCardProps {
+    news: INews;
+    isPrivilegedUser: boolean;
+    editNews: (newsId: string) => void;
+    confirmNewsDeletion: (news: IDeletingNews) => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function News(): JSX.Element {
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
 
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
-    const [newsList, setNewsList] = useState([]);
+    const [newsList, setNewsList] = useState<INews[]>([]);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    const userRole = user?.role ?? 'guest';
-    const isPrivilegedUser = isAuthenticated && ['admin'].includes(userRole);
+    const userRole = user?.role ?? USER_ROLE.GUEST;
+    const isPrivilegedUser = isAuthenticated && userRole === USER_ROLE.ADMIN;
     
     const newsLoadStatus =
         loading
@@ -32,46 +64,47 @@ export default function News() {
                     ? DATA_LOAD_STATUS.NOT_FOUND
                     : DATA_LOAD_STATUS.READY;
 
-    const loadNews = async () => {
+    const loadNews = async (): Promise<void> => {
         setLoadError(false);
         setLoading(true);
 
-        const { status, message, newsList } = await dispatch(sendNewsListRequest(isAuthenticated));
+        const responseData = await dispatch(sendNewsListRequest(isAuthenticated));
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'NEWS: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setLoadError(true);
         } else {
-            setNewsList(newsList);
+            setNewsList(responseData.newsList);
         }
         
         setLoading(false);
     };
 
-    const reloadNews = async () => {
-        await loadNews();
+    const reloadNews = (): void => {
+        loadNews();
     };
 
-    const editNews = (newsId) => {
+    const editNews = (newsId: string): void => {
         navigate(routeConfig.adminEvents.paths[0], { state: { newsId } });
     };
 
-    const confirmNewsDeletion = (news) => {
+    const confirmNewsDeletion = (news: IDeletingNews): void => {
         if (!news) return;
 
-        const processNewsDeletion = async (newsId) => {
+        const processNewsDeletion = async (newsId: string): Promise<void> => {
             const { status, message } = await dispatch(sendNewsDeleteRequest(newsId));
             if (isUnmountedRef.current) return;
     
             logRequestStatus({ context: 'NEWS: DELETE', status, message });
     
-            const isAllowed = [REQUEST_STATUS.SUCCESS, REQUEST_STATUS.NOT_FOUND].includes(status);
+            const isAllowed = status === REQUEST_STATUS.SUCCESS || status === REQUEST_STATUS.NOT_FOUND;
             if (!isAllowed) throw new Error(message);
         };
     
-        const finalizaNewsDeletion = (newsId) => {
+        const finalizaNewsDeletion = (newsId: string): void => {
             setNewsList(prev => prev.filter(news => news.id !== newsId));
         };
 
@@ -119,7 +152,7 @@ function NewsMain({
     newsList,
     editNews,
     confirmNewsDeletion
-}) {
+}: INewsMainProps): JSX.Element {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div className="news-main">
@@ -178,10 +211,13 @@ function NewsMain({
     );
 }
 
-function NewsCard({news, isPrivilegedUser, editNews, confirmNewsDeletion }) {
+function NewsCard({
+    news,
+    isPrivilegedUser,
+    editNews,
+    confirmNewsDeletion
+}: INewsCardProps): JSX.Element {
     const { id, publishDate, title, content, createdBy, updateHistory } = news;
-
-    const formatLocalDate = (date, format = {}) => new Date(date)?.toLocaleString(undefined, format);
 
     return (
         <article data-id={id} className="news-card">
@@ -195,8 +231,6 @@ function NewsCard({news, isPrivilegedUser, editNews, confirmNewsDeletion }) {
 
             <h3 className="news-title">{title}</h3>
 
-            <br />
-
             <div className="news-content">
                 {content.split(/\r?\n/).map((paragraph, idx) =>
                     paragraph
@@ -208,12 +242,11 @@ function NewsCard({news, isPrivilegedUser, editNews, confirmNewsDeletion }) {
             {isPrivilegedUser && (
                 <>
                     <div className="news-meta">
-                        <br />
-                        <p>Автор: {createdBy} ({formatLocalDate(publishDate)})</p>
-                        {updateHistory.length > 0 && (
+                        <p>Автор: {createdBy ?? NO_VALUE_LABEL} ({formatLocalDate(publishDate)})</p>
+                        {(updateHistory ?? []).length > 0 && (
                             <p>
                                 Редактор(ы):{' '}
-                                {updateHistory
+                                {(updateHistory ?? [])
                                     .map(upd => `${upd.updatedBy} (${formatLocalDate(upd.updatedAt)})`)
                                     .join(', ')}
                             </p>

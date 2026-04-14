@@ -43,8 +43,7 @@ export default function Delivery() {
                             {COMPANY_DETAILS.emails.payments}
                         </a>
                         {' '}
-                        — иначе мы можем задержать отправку.
-                        <br />
+                        — иначе мы можем задержать отправку.<br />
                         Вы также можете оплатить заказ частями различными способами,
                         не только выбранным. <span className="color-orange">🔄</span>
                     </p>

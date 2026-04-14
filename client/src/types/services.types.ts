@@ -1,3 +1,5 @@
+type TModalAction = (() => void) | null;
+
 ///////////////////
 /// ALERT MODAL ///
 ///////////////////
@@ -9,11 +11,32 @@ export interface IOpenAlertModalParams {
     title?: string;
     message?: string;
     dismissBtnLabel?: string;
-    onClose?: TAlertModalOnClose;
+    onClose?: TModalAction;
 }
 
-export interface TAlertModalCallbacks {
-    onClose: TAlertModalOnClose;
+export interface TAlertModalActions {
+    onClose: TModalAction;
 }
 
-export type TAlertModalOnClose = (() => void) | null;
+/////////////////////
+/// CONFIRM MODAL ///
+/////////////////////
+
+export interface IOpenConfirmModalParams {
+    openDelay?: number;
+    dismissible?: boolean;
+    prompt?: string;
+    confirmBtnLabel?: string;
+    cancelBtnLabel?: string;
+    onConfirm?: TModalAction;
+    onFinalize?: TModalAction;
+    onCancel?: TModalAction;
+    onClose?: TModalAction;
+}
+
+export interface TConfirmModalActions {
+    onConfirm: TModalAction;
+    onFinalize: TModalAction;
+    onCancel: TModalAction;
+    onClose: TModalAction;
+}

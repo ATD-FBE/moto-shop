@@ -3837,26 +3837,24 @@ main {
                         font-size: 13pt;
                         letter-spacing: -0.02em;
                     }
-        
                     .news-title {
                         margin-top: 12px;
                         font-size: 20pt;
                         text-decoration: underline $color-additional;
                         text-align: center;
                     }
-        
                     .news-content {
+                        margin-top: $main-content-spacing;
                         width: 100%;
                         font-size: 16pt;
                         text-align: justify;
                     }
-        
                     .news-meta {
+                        margin-top: $main-content-spacing;
                         margin-bottom: 4px;
                         font-size: 9pt;
                         text-align: right;
                     }
-        
                     .news-controls {
                         position: absolute;
                         right: 5%;

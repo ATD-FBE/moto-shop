@@ -14,5 +14,6 @@ export type TRootState = ReturnType<typeof AppStore.getState>;
 
 export interface TLocationState {
     from?: Location;
-    //itemId?: string;
+    newsId?: string;
+    promoId?: string;
 }

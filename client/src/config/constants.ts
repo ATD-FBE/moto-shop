@@ -11,6 +11,7 @@ export const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID;
 
 export const ACCESS_TOKEN_BUFFER = 10000;
 export const REFRESH_TOKEN_BUFFER = 60000;
+
 export const SUCCESS_DELAY = 1800;
 export const PRODUCT_AUTOSLIDE_TIMER = 5000;
 
@@ -36,9 +37,9 @@ export const DASHBOARD_TITLES = {
     CUSTOMER: 'Панель покупателя'
 } as const;
 
-export const CATEGORY_ROOT_LABEL = '(корень)';
 export const NO_VALUE_LABEL = '---';
 export const TEXT_LOG_LINE_BREAK = '\n\n';
+export const CATEGORY_ROOT_LABEL = '(корень)';
 
 export const PRODUCT_IMAGE_LOADER = '/images/product_image_loader.jpg';
 export const PRODUCT_IMAGE_PLACEHOLDER = '/images/product_image_placeholder.jpg';

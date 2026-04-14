@@ -1137,7 +1137,7 @@ function FormGroupEntries({
                 }
 
                 const formEntryElem = (
-                    <div key={`field-${name}`} className={cn('form-entry', fieldInfoClass)}>
+                    <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
                         <label htmlFor={fieldId} className="form-entry-label">
                             {label}
                             {tooltip && <span className="info" title={tooltip}>ⓘ</span>}
@@ -1179,7 +1179,7 @@ function FormGroupEntries({
                 if (collapsible) {
                     return (
                         <Collapsible
-                            key={`field-${name}`}
+                            key={fieldId}
                             isExpanded={isApplicable}
                             className="form-entry-collapsible"
                             showContextIndicator={false}

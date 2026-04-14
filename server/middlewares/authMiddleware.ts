@@ -8,7 +8,7 @@ import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { TTokenDecodedUser  } from '@server/types/index.js';
-import type { TActiveUserRole } from '@shared/types/index.js';
+import type { TRegisteredUserRole } from '@shared/types/index.js';
 
 export const disableCache: RequestHandler = (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
@@ -72,7 +72,7 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
     }
 };
 
-export const verifyRole = (...requiredRoles: TActiveUserRole[]): RequestHandler => (req, res, next) => {
+export const verifyRole = (...requiredRoles: TRegisteredUserRole[]): RequestHandler => (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     if (!requiredRoles.includes(req.dbUser.role)) {

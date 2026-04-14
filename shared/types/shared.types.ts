@@ -2,6 +2,7 @@ import {
     ALLOWED_IMAGE_MIME_TYPES,
     PRODUCT_UNITS,
     USER_ROLE,
+    REGISTERED_USER_ROLES,
     CURRENCY,
     DISCOUNT_SOURCE,
     PRODUCT_THUMBNAIL_PRESETS,
@@ -41,7 +42,7 @@ export type TAllowedMimeType = TAllowedImageMimeType;
 export type TProductUnit = typeof PRODUCT_UNITS[number];
 
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
-export type TActiveUserRole = Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
+export type TRegisteredUserRole = typeof REGISTERED_USER_ROLES[number];
 
 export type TCurrency = typeof CURRENCY[keyof typeof CURRENCY];
 

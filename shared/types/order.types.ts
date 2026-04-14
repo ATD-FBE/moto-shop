@@ -1,7 +1,7 @@
 import type {
     IDataChange,
     TUserRole,
-    TActiveUserRole,
+    TRegisteredUserRole,
     TDiscountSource,
     TDeliveryMethod,
     TPaymentMethod,
@@ -50,7 +50,7 @@ export interface IOrderStatusEntry {
     changedBy: {
         id: string;
         name: string;
-        role: TActiveUserRole;
+        role: TRegisteredUserRole;
     };
     changedAt: string;
     lastActiveStatus?: TOrderStatus;
@@ -147,7 +147,7 @@ export interface IFinancialsEventVoided {
     changedBy: {
         id: string;
         name: string;
-        role: TActiveUserRole;
+        role: TRegisteredUserRole;
     };
     changedAt: string;
 }
@@ -166,7 +166,7 @@ export interface IAuditLogEntry {
     changedBy: {
         id: string;
         name: string;
-        role: TActiveUserRole;
+        role: TRegisteredUserRole;
     };
     changedAt: string;
 }

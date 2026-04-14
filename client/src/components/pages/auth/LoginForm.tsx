@@ -22,6 +22,7 @@ import {
     fieldsStateReducer,
     getStringValue
 } from '@/helpers/formHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { USER_ROLE } from '@shared/constants.js';
@@ -334,39 +335,43 @@ export default function LoginForm(): JSX.Element {
                     {fieldConfigs.map(({
                         name,
                         label,
+                        elem,
                         type,
                         placeholder,
                         autoComplete,
                         trim
-                    }) => (
-                        <p key={`login-${name}`} className="form-entry">
-                            <label htmlFor={`login-${name}`} className="form-entry-label">
-                                {label}:
-                            </label>
-                            
-                            <span className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
-                                <input
-                                    id={`login-${name}`}
-                                    name={name}
-                                    type={type}
-                                    placeholder={placeholder}
-                                    value={getStringValue(fieldsState[name]?.value)}
-                                    autoComplete={autoComplete}
-                                    onChange={handleFieldChange}
-                                    onBlur={trim ? handleTrimmedFieldBlur : undefined}
-                                    disabled={isFormLocked}
-                                />
-                                
-                                {fieldsState[name]?.error && (
-                                    <span className="invalid-message">
-                                        *{fieldsState[name].error}
-                                    </span>
-                                )}
-                            </span>
-                        </p>
-                    ))}
+                    }) => {
+                        const fieldId = `login-${toKebabCase(name)}`;
+                        const fieldInfoClass = getFieldInfoClass(elem, type, name);
 
-                    <p className="form-entry">
+                        return (
+                            <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
+                                <label htmlFor={fieldId} className="form-entry-label">{label}:</label>
+                                
+                                <span className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
+                                    <input
+                                        id={fieldId}
+                                        name={name}
+                                        type={type}
+                                        placeholder={placeholder}
+                                        value={getStringValue(fieldsState[name]?.value)}
+                                        autoComplete={autoComplete}
+                                        onChange={handleFieldChange}
+                                        onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                        disabled={isFormLocked}
+                                    />
+                                    
+                                    {fieldsState[name]?.error && (
+                                        <span className="invalid-message">
+                                            *{fieldsState[name].error}
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        );
+                    })}
+
+                    <div className="form-entry">
                         <DesignedCheckbox
                             id="remember-me"
                             name="remember-me"
@@ -375,7 +380,7 @@ export default function LoginForm(): JSX.Element {
                             onChange={handleRememberMe}
                             disabled={isFormLocked}
                         />
-                    </p>
+                    </div>
                 </div>
 
                 <FormFooter

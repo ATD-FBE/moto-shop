@@ -504,7 +504,7 @@ export default function PromoEditor({ promoId }) {
                     submitStates={submitStates}
                     submitStatus={submitStatus}
                     uiBlocked={isFormLocked}
-                    reloadData={isEditMode ? reloadPromo : undefined}
+                    reloadData={isEditMode ? reloadPromo : null}
                 />
             </form>
         </div>

@@ -269,7 +269,7 @@ function OrderDetailsMain({
         eventHistory: financialsEventHistory
     } = financials;
 
-    const confirmedDate = new Date(confirmedAt)?.toLocaleString();
+    const confirmedDate = new Date(confirmedAt).toLocaleString();
 
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
     const lastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
@@ -285,9 +285,9 @@ function OrderDetailsMain({
     const lastFinancialsEventConfig = FINANCIALS_EVENT_CONFIG[lastFinancialsEventEntry?.event];
 
     const currentOrderStatusChangedDate =
-        new Date(currentOrderStatusEntry.changedAt)?.toLocaleString();
+        new Date(currentOrderStatusEntry.changedAt).toLocaleString();
     const lastFinancialsEventChangedDate =
-        new Date(lastFinancialsEventEntry?.changedAt)?.toLocaleString();
+        new Date(lastFinancialsEventEntry?.changedAt).toLocaleString();
 
     const netPaid = totalPaid - totalRefunded;
     const paymentBalance = netPaid - totalAmount;

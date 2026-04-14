@@ -2,6 +2,7 @@ import { Schema, Types } from 'mongoose';
 import { EventVoidedSchema } from './EventVoidedSchema.js';
 import {
     USER_ROLE,
+    REGISTERED_USER_ROLES,
     PAYMENT_METHOD,
     REFUND_METHOD,
     BANK_PROVIDER,
@@ -67,7 +68,7 @@ export const EventEntrySchema = new Schema({
             },
             role: {
                 type: String,
-                enum: Object.values(USER_ROLE),
+                enum: [...REGISTERED_USER_ROLES, USER_ROLE.SYSTEM],
                 default: USER_ROLE.SYSTEM
             }
         },

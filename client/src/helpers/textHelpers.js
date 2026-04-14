@@ -1,6 +1,15 @@
 import { escapeRegExp } from '@shared/commonHelpers.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 
+export const formatLocalDate = (
+    date/*: string | number | Date*/,
+    format/*: Intl.DateTimeFormatOptions*/ = {}
+)/*: string*/ => {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return NO_VALUE_LABEL;
+    return d.toLocaleString(undefined, format);
+};
+
 export const capitalizeFirstLetter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
 export const toKebabCase = (str) => str.replace(/([A-Z])/g, '-$1').toLowerCase();

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { JSX, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppLocation } from '@/hooks/storeHooks.js';
 import NewsEditor from './event-management/NewsEditor.jsx';
 import PromoEditor from './event-management/PromoEditor.jsx';
  
-export default function EventManagement() {
-    const location = useLocation();
+export default function EventManagement(): JSX.Element {
+    const location = useAppLocation();
     const navigate = useNavigate();
     const [locationState] = useState(location.state);
 

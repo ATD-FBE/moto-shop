@@ -1,14 +1,15 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
-import { openConfirmModal } from '@/services/modalConfirmService.js';
 import {
     sendNotificationSendingRequest,
     sendNotificationDeleteRequest
 } from '@/api/notificationRequests.js';
-import { openAlertModal } from '@/services/modalAlertService.js';
 import { routeConfig } from '@/config/appRouting.js';
+import { openConfirmModal } from '@/services/modalConfirmService.js';
+import { openAlertModal } from '@/services/modalAlertService.js';
+import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
 
@@ -35,8 +36,6 @@ export default function NotificationCardManagement({
         id, status, recipients, subject, message, signature,
         createdBy, createdAt, updatedAt, updateHistory, sentBy, sentAt
     } = notification;
-
-    const formatLocalDate = (date, format = {}) => new Date(date)?.toLocaleString(undefined, format);
 
     const createdDateStr = formatLocalDate(createdAt);
     const updatedDateStr = formatLocalDate(updatedAt);

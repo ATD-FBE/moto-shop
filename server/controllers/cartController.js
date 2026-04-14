@@ -64,10 +64,10 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
         quantity: { value: quantity, type: 'number' }
     };
 
-    const { invalidInputKeys } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
 
@@ -133,10 +133,10 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
         position: { value: position, type: 'number' }
     };
 
-    const { invalidInputKeys } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
 

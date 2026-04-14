@@ -1,7 +1,10 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import {
+    JSX, ChangeEvent, FocusEvent, SubmitEvent, createElement,
+    useMemo, useReducer, useState, useRef, useEffect
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import {
     sendNewsRequest,
@@ -9,13 +12,54 @@ import {
     sendNewsUpdateRequest
 } from '@/api/newsRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue
+} from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldValue,
+    IFieldState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type { TEntityField, INewsBody } from '@shared/types/index.js';
 
-const getSubmitStates = (isEditMode) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'news'>>;
+
+// Вспомогательные типы
+type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+interface INewsEditorProps {
+    newsId: string | null;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND,
@@ -23,7 +67,7 @@ const getSubmitStates = (isEditMode) => {
     } = FORM_STATUS;
     const actionLabel = isEditMode ? 'Обновить' : 'Опубликовать';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка новости...' },
@@ -47,16 +91,14 @@ const getSubmitStates = (isEditMode) => {
             addMessage: 'Вы будете перенаправлены на страницу новостей магазина.',
             submitBtnLabel: 'Перенаправление...'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'title',
         label: 'Название новости',
@@ -74,55 +116,36 @@ const fieldConfigs = [
         autoComplete: 'off',
         trim: true
     }
-];
+] as const);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
-
-export default function NewsEditor({ newsId }) {
+export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
     const isEditMode = Boolean(newsId);
 
     const { submitStates, lockedStatuses } = useMemo(() => getSubmitStates(isEditMode), [isEditMode]);
 
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS[isEditMode ? 'LOADING' : 'DEFAULT']);
-    const initValuesRef = useRef({});
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(
+        isEditMode ? FORM_STATUS.LOADING : FORM_STATUS.DEFAULT
+    );
+
+    const initValuesRef = useRef<TFieldValuesMap>({} as TFieldValuesMap);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const loadNews = async (newsId) => {
+    const loadNews = async (newsId: string): Promise<void> => {
         setSubmitStatus(FORM_STATUS.LOADING);
 
-        const { status, message, news } = await dispatch(sendNewsRequest(newsId));
+        const responseData = await dispatch(sendNewsRequest(newsId));
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'NEWS: LOAD SINGLE', status, message });
 
         if (status !== FORM_STATUS.SUCCESS) {
@@ -130,7 +153,7 @@ export default function NewsEditor({ newsId }) {
             return setSubmitStatus(finalStatus);
         }
 
-        const { title, content } = news;
+        const { title, content } = responseData.news;
         initValuesRef.current = { title, content };
 
         dispatchFieldsState({
@@ -144,9 +167,11 @@ export default function NewsEditor({ newsId }) {
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const reloadNews = () => loadNews(newsId);
+    const reloadNews = (): void => {
+        if (isEditMode && newsId) loadNews(newsId);
+    }
 
-    const handleFieldChange = (e) => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
 
         dispatchFieldsState({
@@ -155,7 +180,7 @@ export default function NewsEditor({ newsId }) {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -166,8 +191,8 @@ export default function NewsEditor({ newsId }) {
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, INewsBody> => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.news[name];
                 if (!validation) {
@@ -175,19 +200,24 @@ export default function NewsEditor({ newsId }) {
                     return acc;
                 }
 
-                const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
-                const isValid = validation.test(normalizedValue);
+                const { trim } = fieldConfigMap[name] ?? {};
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+
+                const isValid =
+                    typeof normalizedValue === 'string' 
+                        ? validation.test(normalizedValue) 
+                        : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.news[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.news[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid) {
-                    acc.formFields[name] = normalizedValue;
+                    (acc.formFields as TFieldValuesMap)[name] = normalizedValue;
 
                     const initValue = initValuesRef.current[name];
                     if (normalizedValue !== initValue) acc.changedFields.push(name);
@@ -197,16 +227,21 @@ export default function NewsEditor({ newsId }) {
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as INewsBody,
+                changedFields: [] as TValidFieldName[]
+            }
         );
     
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -219,12 +254,13 @@ export default function NewsEditor({ newsId }) {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isEditMode
+        const requestThunk = isEditMode && newsId
             ? sendNewsUpdateRequest(newsId, formFields)
             : sendNewsCreateRequest(formFields);
-        const { status, message, fieldErrors } = await dispatch(requestThunk);
+        const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         const LOG_CTX = `NEWS: ${isEditMode ? 'UPDATE' : 'CREATE'}`;
 
         switch (status) {
@@ -242,11 +278,15 @@ export default function NewsEditor({ newsId }) {
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
+
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
-                Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
+                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
+                    if (name in fieldConfigMap) {
+                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                    }
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -258,7 +298,7 @@ export default function NewsEditor({ newsId }) {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -283,7 +323,7 @@ export default function NewsEditor({ newsId }) {
 
     // Стартовая загрузка новости в режиме редактирования и очистка при размонтировании
     useEffect(() => {
-        if (isEditMode) loadNews(newsId);
+        if (isEditMode && newsId) loadNews(newsId);
 
         return () => {
             isUnmountedRef.current = true;
@@ -323,7 +363,7 @@ export default function NewsEditor({ newsId }) {
                             name,
                             type,
                             placeholder,
-                            value: fieldsState[name]?.value,
+                            value: getStringValue(fieldsState[name]?.value),
                             autoComplete,
                             onChange: handleFieldChange,
                             onBlur: trim ? handleTrimmedFieldBlur : undefined,
@@ -335,7 +375,7 @@ export default function NewsEditor({ newsId }) {
                                 <label htmlFor={fieldId} className="form-entry-label">{label}:</label>
 
                                 <div className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
-                                    {React.createElement(elem, elemProps)}
+                                    {createElement(elem, elemProps)}
                                     
                                     {fieldsState[name]?.error && (
                                         <span className="invalid-message">
@@ -352,7 +392,7 @@ export default function NewsEditor({ newsId }) {
                     submitStates={submitStates}
                     submitStatus={submitStatus}
                     uiBlocked={isFormLocked}
-                    reloadData={isEditMode ? reloadNews : undefined}
+                    reloadData={isEditMode ? reloadNews : null}
                 />
             </form>
         </div>

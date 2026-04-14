@@ -101,10 +101,10 @@ export const handlePromoCreateRequest = async (req, res, next) => {
         endDate: { value: endDate, type: 'date', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -206,10 +206,10 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
         removeImage: { value: removeImage, type: 'boolean', optional: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {

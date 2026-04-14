@@ -217,7 +217,7 @@ export default function CustomerTableRowMain({
             <div role="cell" className="row-cell reg-date">
                 <div className="cell-label">Дата регистрации:</div>
                 <div className="cell-content">
-                    {new Date(createdAt)?.toLocaleDateString()}
+                    {new Date(createdAt).toLocaleDateString()}
                 </div>
             </div>
             <div role="cell" className="row-cell discount">

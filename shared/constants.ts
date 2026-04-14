@@ -1,5 +1,4 @@
 import type {
-    TActiveUserRole,
     TProductThumbnailSize,
     TPaymentMethod,
     TRefundMethod,
@@ -32,10 +31,11 @@ export const CURRENCY_EPS = 0.05;
 export const USER_ROLE = {
     SYSTEM: 'system',
     ADMIN: 'admin',
-    CUSTOMER: 'customer'
+    CUSTOMER: 'customer',
+    GUEST: 'guest'
 } as const;
 
-export const ACTIVE_USER_ROLES: TActiveUserRole[] = [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER];
+export const REGISTERED_USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER] as const;
 
 export const CURRENCY = {
     RUB: 'rub'

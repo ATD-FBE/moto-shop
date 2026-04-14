@@ -1,15 +1,16 @@
+import { ParamsDictionary } from 'express-serve-static-core';
 import News from '@server/db/models/News.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
-import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
 import { requireDbUser, isAppError, isMongooseValidationError } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { toError } from '@shared/commonHelpers.js';
+import { USER_ROLE } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
-import type { TInputTypeMap, TDbNews } from '@server/types/index.js';
+import type { TDbNews } from '@server/types/index.js';
 import type {
     INewsBody,
     TNewsListResponse,
@@ -23,7 +24,7 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-interface INewsParams {
+interface INewsParams extends ParamsDictionary {
     newsId: string;
 }
 
@@ -33,7 +34,7 @@ interface INewsParams {
 
 /// Загрузка всех новостей ///
 export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = async (req, res, next) => {
-    const isAdmin = req.dbUser?.role === 'admin';
+    const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
     const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
 
     try {
@@ -62,10 +63,6 @@ export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = asyn
 export const handleNewsRequest: RequestHandler<INewsParams, TNewsResponse> = async (req, res, next) => {
     const newsId = req.params.newsId;
 
-    if (!typeCheck.objectId(newsId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: newsId' });
-    }
-
     try {
         const dbNews = await News.findById(newsId).lean<TDbNews>();
         checkTimeout(req);
@@ -92,23 +89,7 @@ export const handleNewsCreateRequest: RequestHandler<
     if (!requireDbUser(req, next)) return;
 
     const userId = req.dbUser._id;
-    const { title, content } = req.body ?? {};
-
-    // Предварительная проверка формата данных
-    const inputTypeMap: TInputTypeMap<'news'> = {
-        title: { value: title, type: 'string', form: true },
-        content: { value: content, type: 'string', form: true }
-    };
-
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'news');
-
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    const { title, content } = req.body;
 
     // Создание документа в базе MongoDB
     try {
@@ -156,24 +137,7 @@ export const handleNewsUpdateRequest: RequestHandler<
 
     const userId = req.dbUser._id;
     const newsId = req.params.newsId;
-    const { title, content } = req.body ?? {};
-
-    // Предварительная проверка формата данных
-    const inputTypeMap: TInputTypeMap<'news'> = {
-        newsId: { value: newsId, type: 'objectId' },
-        title: { value: title, type: 'string', form: true },
-        content: { value: content, type: 'string', form: true }
-    };
-
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'news');
-
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    const { title, content } = req.body;
 
     // Апдейт документа в базе MongoDB
     try {
@@ -235,10 +199,6 @@ export const handleNewsDeleteRequest: RequestHandler<
     TNewsDeleteResponse
 > = async (req, res, next) => {
     const newsId = req.params.newsId;
-
-    if (!typeCheck.objectId(newsId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: newsId' });
-    }
 
     try {
         const { newsLbl } = await runInDbTransaction(async (session) => {

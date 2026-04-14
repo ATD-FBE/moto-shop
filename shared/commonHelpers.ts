@@ -49,6 +49,11 @@ export const formatDateToMoscowLog = (date: Date): string => {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} MSK`;
 };
 
+export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    return path.split('.').reduce((acc, key) => acc?.[key], obj);
+};
+
 export const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const ensureArray = <T>(val: T | T[] | undefined): T[] => {

@@ -41,7 +41,7 @@ import type {
     IApplyOrderFinancialsResult
 } from '@server/types/index.js';
 import type {
-    TActiveUserRole,
+    TRegisteredUserRole,
     IOrder,
     IOrderItem,
     TDeliveryMethod,
@@ -114,7 +114,7 @@ export const prepareOrder = (
         inList?: boolean;
         managed?: boolean;
         details?: boolean;
-        viewerRole?: TActiveUserRole
+        viewerRole?: TRegisteredUserRole
     } = {}
 ): IOrder => ({
     id: dbOrder._id.toString(),
@@ -337,7 +337,7 @@ const summarizeFinancialsEventEntry = (
 
 const prepareCurrentOnlineTransaction = (
     currentOnlineTx: TDbOrderCurrentOnlineTransaction | null | undefined,
-    { inList, viewerRole }: { inList: boolean, viewerRole: TActiveUserRole }
+    { inList, viewerRole }: { inList: boolean, viewerRole: TRegisteredUserRole }
 ): ICurrentOnlineTransaction | undefined => {
     if (!currentOnlineTx) return undefined;
 

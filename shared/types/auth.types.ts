@@ -7,14 +7,14 @@ import type {
 } from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
 import type { TPurchaseProduct } from './product.types.js';
-import type { TActiveUserRole, TFieldErrors, TEntityField } from './shared.types.js';
+import type { TRegisteredUserRole, TFieldErrors, TEntityField } from './shared.types.js';
 import type { TDbUser } from '@server/types/index.js';
 
 /// Общие типы ///
 export interface IUser {
     name: string;
     email: string;
-    role: TActiveUserRole;
+    role: TRegisteredUserRole;
     discount?: number;
     unreadNotificationsCount?: number;
     activeOrdersCount?: number;

@@ -525,7 +525,7 @@ export default function RefundForm({
                     if (collapsible) {
                         return (
                             <Collapsible
-                                key={`field-${name}`}
+                                key={fieldId}
                                 isExpanded={isApplicable}
                                 className="form-entry-collapsible"
                                 showContextIndicator={false}

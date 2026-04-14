@@ -63,10 +63,10 @@ export const handleAuthRegistrationRequest: RequestHandler<
         adminRegCode: { value: adminRegCode, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -158,10 +158,10 @@ export const handleAuthLoginRequest: RequestHandler<
         rememberMe: { value: rememberMe, type: 'boolean' }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -286,10 +286,10 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         newPassword: { value: newPassword, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -596,10 +596,10 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
         defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'checkout');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'checkout');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {

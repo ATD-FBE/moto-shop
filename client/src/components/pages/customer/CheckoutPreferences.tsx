@@ -31,9 +31,9 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
+    TFieldValue,
     IFieldState,
     TFormState,
-    TFieldValue,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type {
@@ -58,7 +58,7 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
 type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
-interface FormGroupEntriesProps {
+interface IFormGroupEntriesProps {
     fieldConfigs: TFieldConfigs;
     fieldsState: TFormState<TValidFieldName>;
     applicabilityMap: Record<TValidFieldName, boolean>;
@@ -614,7 +614,7 @@ function FormGroupEntries({
     handleFieldChange,
     handleTrimmedFieldBlur,
     fillRegistrationEmail
-}: FormGroupEntriesProps): JSX.Element {
+}: IFormGroupEntriesProps): JSX.Element {
     return (
         <div className="form-group-entries">
             {fieldConfigs.map(({
@@ -676,7 +676,7 @@ function FormGroupEntries({
                 })();
 
                 const formEntryElem = (
-                    <div key={`field-${name}`} className={cn('form-entry', fieldInfoClass)}>
+                    <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
                         <label htmlFor={fieldId} className="form-entry-label">
                             {label}
                             {tooltip && <span className="info" title={tooltip}>ⓘ</span>}
@@ -710,7 +710,7 @@ function FormGroupEntries({
                 if (isCollapsible) {
                     return (
                         <Collapsible
-                            key={`field-${name}`}
+                            key={fieldId}
                             isExpanded={isApplicable}
                             className="form-entry-collapsible"
                             showContextIndicator={false}

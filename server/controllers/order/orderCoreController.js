@@ -222,8 +222,8 @@ export const handleOrderListRequest = async (req, res, next) => {
 /// Загрузка или обновление отдельного заказа ///
 export const handleOrderRequest = async (req, res, next) => {
     const viewerRole = req.dbUser.role;
-    const viewMode = req.query.viewMode;
     const orderId = req.params.orderId;
+    const viewMode = req.query.viewMode;
 
     if (!typeCheck.objectId(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
@@ -364,10 +364,10 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
         internalNote: { value: internalNote, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -463,10 +463,10 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
         editReason: { value: editReason, type: 'string', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -601,10 +601,10 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
         editReason: { value: editReason, type: 'string', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
 
@@ -891,10 +891,10 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
         cancellationReason: { value: cancellationReason, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'order');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {

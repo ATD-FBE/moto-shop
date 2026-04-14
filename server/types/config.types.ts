@@ -5,7 +5,7 @@ import {
     SEARCH_TYPES,
     ORDER_ADJUSTMENT_TYPE
 } from '@server/config/constants.js';
-import type { TActiveUserRole } from '@shared/types/index.js';
+import type { TRegisteredUserRole } from '@shared/types/index.js';
 
 /////////////////
 /// CONSTANTS ///
@@ -76,7 +76,7 @@ interface IS3StorageConfig {
 /// VIEW POICY ///
 //////////////////
 
-export type TOrderViewMatrix = Record<TActiveUserRole, IOrderViewMatrixEntry>;
+export type TOrderViewMatrix = Record<TRegisteredUserRole, IOrderViewMatrixEntry>;
 
 interface IOrderViewMatrixEntry {
     readonly page: IOrderViewConfig;

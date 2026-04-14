@@ -5,7 +5,7 @@ import parse from 'html-react-parser';
 import cn from 'classnames';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
-import { getAlertModalCallbacks, closeAlertModal } from '@/services/modalAlertService.js';
+import { getAlertModalActions, closeAlertModal } from '@/services/modalAlertService.js';
 import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
 
 const alertIconByType = {
@@ -34,7 +34,7 @@ export default function AlertModal() {
     const lastFocusedElemRef = useRef(null);
     const fallbackCloseTimer = useRef(null);
 
-    const { onClose } = getAlertModalCallbacks();
+    const { onClose } = getAlertModalActions();
 
     const clearFallbackCloseTimer = () => {
         clearTimeout(fallbackCloseTimer.current);

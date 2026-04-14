@@ -8,7 +8,7 @@ import { DraftDeliverySchema } from './schemas/order/DeliverySchemas.js';
 import { DraftFinancialsSchema } from './schemas/order/FinancialsSchemas.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { toError } from '@shared/commonHelpers.js';
-import { USER_ROLE } from '@shared/constants.js';
+import { USER_ROLE, REGISTERED_USER_ROLES } from '@shared/constants.js';
 import type { TDbUser } from '@server/types/index.js';
 
 const SALT_ROUNDS = 12;
@@ -35,7 +35,7 @@ export const UserSchema = new Schema({
     },
     role: {
         type: String,
-        enum: [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER],
+        enum: REGISTERED_USER_ROLES,
         default: USER_ROLE.CUSTOMER
     },
     notifications: [NotificationItemSchema],

@@ -81,28 +81,40 @@ export const validateInputTypes = <E extends TEntityType>(
     inputTypeMap: TInputTypeMap<E>,
     entityType?: E
 ): IValidateInputTypesResult<E> => {
-    const invalidInputKeys: string[] = [];
+    const invalidInputPaths: string[] = [];
     const fieldErrors: TFieldErrors<E> = {};
 
-    for (const [key, config] of Object.entries(inputTypeMap) as [string, IInputTypeMapConfig][]) {
-        const { value, type, elemType, optional, form = false } = config;
+    for (const [path, config] of Object.entries(inputTypeMap) as [string, IInputTypeMapConfig][]) {
+        const { value, type, elemType, optional, form = false, enumValues } = config;
 
+        // Проверка типа значения
         const validator = optional ? typeCheck.optional[type] : typeCheck[type];
-        const isValid = type === 'arrayOf'
+
+        let isValid = type === 'arrayOf'
             ? validator?.(value, elemType, typeCheck) ?? false
             : validator?.(value) ?? false;
+
+        // Проверка значения среди разрешённых
+        if (isValid && enumValues && enumValues.length > 0) {
+            isValid = enumValues.includes(value);
+        }
+        
         if (isValid) continue;
 
-        if (form && entityType && isValidEntityField(entityType, key)) {
-            const fieldMessages = fieldErrorMessages[entityType][key];
+        // Сбор данных об ошибке для поля формы или другого ключа
+        const fieldName = path.split('.').pop()!;
 
-            fieldErrors[key] =
+        if (form && entityType && isValidEntityField(entityType, fieldName)) {
+            const fieldMessages = fieldErrorMessages[entityType][fieldName];
+
+            fieldErrors[fieldName] =
                 fieldMessages?.mismatch ||
                 fieldMessages?.default ||
                 DEFAULT_FIELD_ERROR_MESSAGE;
-            invalidInputKeys.push(key);
+        } else {
+            invalidInputPaths.push(path);
         }
     }
 
-    return { invalidInputKeys, fieldErrors };
+    return { invalidInputPaths, fieldErrors };
 };

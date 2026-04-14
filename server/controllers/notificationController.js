@@ -198,10 +198,10 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
         signature: { value: signature, type: 'string', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
@@ -261,10 +261,10 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
         signature: { value: signature, type: 'string', form: true }
     };
 
-    const { invalidInputKeys, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
 
-    if (invalidInputKeys.length > 0) {
-        const invalidKeysStr = invalidInputKeys.join(', ');
+    if (invalidInputPaths.length > 0) {
+        const invalidKeysStr = invalidInputPaths.join(', ');
         return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {

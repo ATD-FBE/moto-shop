@@ -21,7 +21,7 @@ export default function OrderStatusPanel({
     const [logs, setLogs] = useState('');
 
     const currentOrderStatusConfig = ORDER_STATUS_CONFIG[currentOrderStatusEntry.status];
-    const currentOrderStatusDate = new Date(currentOrderStatusEntry.changedAt)?.toLocaleString();
+    const currentOrderStatusDate = new Date(currentOrderStatusEntry.changedAt).toLocaleString();
 
     useEffect(() => {
         if (!showExtras) return;

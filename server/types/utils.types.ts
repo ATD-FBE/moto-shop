@@ -7,7 +7,7 @@ import type {
     TEntityType,
     TFieldErrors,
     TAllowedMimeType, 
-    TActiveUserRole,
+    TRegisteredUserRole,
     TEntityField
 } from '@shared/types/index.js';
 
@@ -35,7 +35,7 @@ export interface IWinstonPreparedLogInfo {
 
 export interface ITokenUserPayload {
     _id: string | Types.ObjectId;
-    role: TActiveUserRole;
+    role: TRegisteredUserRole;
 }
 
 export type TTokenDecodedUser = JwtPayload & ITokenUserPayload;
@@ -91,6 +91,7 @@ export interface IInputTypeMapConfig {
     elemType?: TCheckType;
     optional?: boolean;
     form?: boolean;
+    enumValues?: readonly any[];
 }
 
 export type TInputTypeMap<E extends TEntityType = TEntityType> = {
@@ -100,7 +101,7 @@ export type TInputTypeMap<E extends TEntityType = TEntityType> = {
 };
 
 export interface IValidateInputTypesResult<E extends TEntityType = TEntityType> {
-    invalidInputKeys: string[];
+    invalidInputPaths: string[];
     fieldErrors: TFieldErrors<E>;
 }
 

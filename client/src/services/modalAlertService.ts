@@ -1,9 +1,9 @@
 import AppStore from '@/redux/Store.js';
 import { showAlertModal, hideAlertModal } from '@/redux/slices/modalAlertSlice.js';
-import type { IOpenAlertModalParams, TAlertModalCallbacks } from '@/types/index.js';
+import type { IOpenAlertModalParams, TAlertModalActions } from '@/types/index.js';
 
-// Передача функций, которые нельзя хранить в Redux
-let alertModalCallbacks: TAlertModalCallbacks = { onClose: null };
+// Передача функций, которые нельзя хранить в Redux Store
+let alertModalActions: TAlertModalActions = { onClose: null };
 
 export const openAlertModal = ({
     openDelay = 0,
@@ -15,16 +15,16 @@ export const openAlertModal = ({
     onClose = null
 }: IOpenAlertModalParams): void => {
     setTimeout(() => {
-        alertModalCallbacks = { onClose };
+        alertModalActions = { onClose };
         AppStore.dispatch(showAlertModal({ type, dismissible, title, message, dismissBtnLabel }));
     }, openDelay);
 };
 
-export const getAlertModalCallbacks = (): TAlertModalCallbacks => {
-    return alertModalCallbacks;
+export const getAlertModalActions = (): TAlertModalActions => {
+    return alertModalActions;
 };
 
 export const closeAlertModal = (): void => {
-    alertModalCallbacks = { onClose: null };
+    alertModalActions = { onClose: null };
     AppStore.dispatch(hideAlertModal());
 };

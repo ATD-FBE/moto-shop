@@ -1,7 +1,7 @@
 import mongoose, { Types } from 'mongoose';
 import { JwtPayload } from 'jsonwebtoken';
 import { validationRules } from '@shared/fieldRules.js';
-import { ACTIVE_USER_ROLES } from '@shared/constants.js';
+import { REGISTERED_USER_ROLES } from '@shared/constants.js';
 import type { Request, NextFunction } from 'express';
 import type { TDbUserDoc, TTokenDecodedUser } from '@server/types/index.js';
 import type { TEntityType, TEntityField } from '@shared/types/index.js';
@@ -12,7 +12,7 @@ export const isTokenDecodedUser = (decoded: string | JwtPayload | null): decoded
     const { _id, role } = decoded as Partial<TTokenDecodedUser>;
 
     const hasId = typeof _id === 'string' || _id instanceof Types.ObjectId;
-    const hasRole = typeof role === 'string' && ACTIVE_USER_ROLES.includes(role);
+    const hasRole = typeof role === 'string' && REGISTERED_USER_ROLES.includes(role);
 
     return hasId && hasRole;
 };
@@ -34,9 +34,9 @@ export const isAppError = (err: Error): err is Error & { statusCode: number } =>
 
 export const isValidEntityField = <E extends TEntityType>(
     entityType: E,
-    field: string
-): field is Extract<TEntityField<E>, string> => { // Extract выбирает только ключи с типом string
-    return field in validationRules[entityType];
+    fieldName: string
+): fieldName is Extract<TEntityField<E>, string> => { // Extract выбирает только ключи с типом string
+    return fieldName in validationRules[entityType];
 };
 
 export const isMongooseValidationError = (err: Error): err is mongoose.Error.ValidationError => {

@@ -5,7 +5,7 @@ import parse from 'html-react-parser';
 import cn from 'classnames';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
-import { getConfirmModalCallbacks, closeConfirmModal } from '@/services/modalConfirmService.js';
+import { getconfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
 
 const appRoot = document.getElementById('app');
@@ -29,7 +29,7 @@ export default function ConfirmModal() {
     const lastFocusedElemRef = useRef(null);
     const fallbackCloseTimer = useRef(null);
 
-    const { onConfirm, onFinalize, onCancel, onClose } = getConfirmModalCallbacks();
+    const { onConfirm, onFinalize, onCancel, onClose } = getconfirmModalActions();
 
     const handleConfirm = async () => {
         try {

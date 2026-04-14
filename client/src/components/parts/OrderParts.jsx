@@ -34,7 +34,7 @@ export function OrderCardOverview({
     const orderUrl = routeConfig[`${userRole}OrderDetails`]
         ?.generatePath({ orderNumber, orderId: id }) || '/';
 
-    const confirmedDateTime = new Date(confirmedAt)?.toLocaleString();
+    const confirmedDateTime = new Date(confirmedAt).toLocaleString();
 
     const orderSummaryDisplay =
         `${totalOrderItems} ` +
@@ -63,7 +63,7 @@ export function OrderCardInfoGrid({
     currentOnlineTransaction,
     renderCardOnlinePaymentLink
 }) {
-    const confirmedDate = new Date(confirmedAt)?.toLocaleDateString();
+    const confirmedDate = new Date(confirmedAt).toLocaleDateString();
     const netPaid = totalPaid - totalRefunded;
     const paymentBalance = netPaid - totalAmount;
 
@@ -165,7 +165,7 @@ export function OrderCardStatusSummary({
     financialsState,
     lastFinancialsEventEntry
 }) {
-    const lastActivityDate = new Date(lastActivityAt)?.toLocaleString();
+    const lastActivityDate = new Date(lastActivityAt).toLocaleString();
 
     const orderStatusConfig = ORDER_STATUS_CONFIG[orderStatus];
     const financialsStateConfig = FINANCIALS_STATE_CONFIG[financialsState];
@@ -196,7 +196,7 @@ export function OrderLastFinancialsEvent({ lastFinancialsEventEntry, showDate = 
     return (
         <p className="last-financials-event">
             {'Последнее финансовое событие'}
-            {showDate && ` (${new Date(lastFinancialsEventEntry.changedAt)?.toLocaleString()})`}
+            {showDate && ` (${new Date(lastFinancialsEventEntry.changedAt).toLocaleString()})`}
             {': '}
             <span className={cn(
                 'last-financials-event-label',
