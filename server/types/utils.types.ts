@@ -74,7 +74,7 @@ export interface IParseValidationErrorsResult<E extends TEntityType = TEntityTyp
 ///////////////////////
 
 export type TCheckType =
-    | 'string' | 'number' | 'boolean' | 'emptyableBoolean' | 'array'
+    | 'string' | 'number' | 'integer' | 'boolean' | 'emptyableBoolean' | 'array'
     | 'arrayOf' | 'object' | 'date' | 'objectId' | 'nullableObjectId';
 
 export type TCheckFn = (val: unknown, ...args: any[]) => boolean;
@@ -85,22 +85,36 @@ export type TTypeCheck = TBaseTypeChecks & {
     optional: TBaseTypeChecks;
 };
 
-export interface IInputTypeMapConfig {
-    value: unknown;
+export interface IValidationSchema {
     type: TCheckType;
-    elemType?: TCheckType;
+    min?: number;
+    max?: number;
+    arrElemType?: TCheckType;
+    arrElemSchema?: Record<string, IValidationSchema>;
+    enumValues?: readonly any[];
     optional?: boolean;
     form?: boolean;
-    enumValues?: readonly any[];
 }
 
-export type TInputTypeMap<E extends TEntityType = TEntityType> = {
-    [K in TEntityField<E>]?: IInputTypeMapConfig;
+export interface IValidationConfig extends Omit<IValidationSchema, 'arrElemSchema'> {
+    value: unknown;
+    arrElemConfig?: Record<string, IValidationConfig>;
+}
+
+export interface IValidationInputSchema<E extends TEntityType = TEntityType> {
+    entityType?: E;
+    params?: Record<string, TCheckType>;
+    body?: Record<string, IValidationSchema>;
+    query?: Record<string, IValidationSchema>;
+}
+
+export type TValidationConfigMap<E extends TEntityType = TEntityType> = {
+    [K in TEntityField<E>]?: IValidationConfig;
 } & {
-    [key: string]: IInputTypeMapConfig;
+    [key: string]: IValidationConfig;
 };
 
-export interface IValidateInputTypesResult<E extends TEntityType = TEntityType> {
+export interface IValidateInputDataResult<E extends TEntityType = TEntityType> {
     invalidInputPaths: string[];
     fieldErrors: TFieldErrors<E>;
 }

@@ -15,7 +15,7 @@ import {
 } from '@server/services/online-transactions/onlineTransactionsService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
-import { typeCheck } from '@server/utils/typeValidation.js';
+import { typeCheck } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import log from '@server/utils/logger.js';
 import { toError } from '@shared/commonHelpers.js';

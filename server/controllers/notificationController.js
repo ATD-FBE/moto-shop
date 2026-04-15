@@ -5,7 +5,7 @@ import { prepareNotification } from '@server/services/notificationService.js';
 import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';
 import { parseSortParam } from '@server/utils/aggregationUtils.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
-import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -191,18 +191,18 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
     const { recipients, subject, message, signature } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
-        recipients: { value: recipients, type: 'arrayOf', elemType: 'objectId', form: true },
+    const validationConfigMap = {
+        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
         subject: { value: subject, type: 'string', form: true },
         message: { value: message, type: 'string', form: true },
         signature: { value: signature, type: 'string', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'notification');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -253,19 +253,19 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
     const { recipients, subject, message, signature } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         notificationId: { value: notificationId, type: 'objectId' },
-        recipients: { value: recipients, type: 'arrayOf', elemType: 'objectId', form: true },
+        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
         subject: { value: subject, type: 'string', form: true },
         message: { value: message, type: 'string', form: true },
         signature: { value: signature, type: 'string', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'notification');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

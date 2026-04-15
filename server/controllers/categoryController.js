@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import Category from '../db/models/Category.js';
 import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
+import { typeCheck, validateInputData } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
@@ -28,18 +28,18 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
     const { name, slug, order, parent } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         name: { value: name, type: 'string', form: true },
         slug: { value: slug, type: 'string', form: true },
         order: { value: order, type: 'number', form: true },
         parent: { value: parent, type: 'nullableObjectId', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'category');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'category');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -155,7 +155,7 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
     const { name, slug, order, parent } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         categoryId: { value: categoryId, type: 'objectId' },
         name: { value: name, type: 'string', form: true },
         slug: { value: slug, type: 'string', form: true },
@@ -163,11 +163,11 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
         parent: { value: parent, type: 'nullableObjectId', form: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'category');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'category');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

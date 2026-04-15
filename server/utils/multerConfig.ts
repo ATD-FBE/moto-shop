@@ -2,7 +2,7 @@ import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import { typeCheck } from './typeValidation.js';
+import { typeCheck } from '../validation/validationEngine.js';
 import { MULTER_MODE } from '@server/config/constants.js';
 import type {
     IMulterErrorContext,

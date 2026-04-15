@@ -2,7 +2,7 @@ import Promo from '../db/models/Promo.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { preparePromo } from '../services/promoService.js';
 import { storageService } from '../services/storage/storageService.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
+import { typeCheck, validateInputData } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
@@ -93,7 +93,7 @@ export const handlePromoCreateRequest = async (req, res, next) => {
     const { title, description, startDate, endDate } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         image: { value: image, type: 'object', optional: true, form: true },
         title: { value: title, type: 'string', form: true },
         description: { value: description, type: 'string', form: true },
@@ -101,11 +101,11 @@ export const handlePromoCreateRequest = async (req, res, next) => {
         endDate: { value: endDate, type: 'date', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'promotion');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -196,7 +196,7 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
     const { title, description, startDate, endDate, removeImage } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         promoId: { value: promoId, type: 'objectId' },
         image: { value: image, type: 'object', optional: true, form: true },
         title: { value: title, type: 'string', form: true },
@@ -206,11 +206,11 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
         removeImage: { value: removeImage, type: 'boolean', optional: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'promotion');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

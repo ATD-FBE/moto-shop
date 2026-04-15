@@ -4,7 +4,7 @@ import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareUser, prepareSession } from '@server/services/authService.js';
 import { generateToken, getTokenExpiryFromCookie } from '@server/utils/tokenUtils.js';
-import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import {
@@ -26,7 +26,7 @@ import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, DELIVERY_METHOD } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
-import type { TInputTypeMap, TDbUser } from '@server/types/index.js';
+import type { TValidationConfigMap, TDbUser } from '@server/types/index.js';
 import type {
     IAuthRegistrationBody,
     TAuthRegistrationResponse,
@@ -54,20 +54,20 @@ export const handleAuthRegistrationRequest: RequestHandler<
     const { formFields, guestCart } = req.body ?? {};
     const { name, email, password, adminRegCode } = formFields ?? {};
 
-    const inputTypeMap: TInputTypeMap<'auth'> = {
+    const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
-        guestCart: { value: guestCart, type: 'arrayOf', elemType: 'object' },
+        guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
         name: { value: name, type: 'string', form: true },
         email: { value: email, type: 'string', form: true },
         password: { value: password, type: 'string', form: true },
         adminRegCode: { value: adminRegCode, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors});
@@ -150,19 +150,19 @@ export const handleAuthLoginRequest: RequestHandler<
     const { formFields, guestCart } = req.body ?? {};
     const { name, password, rememberMe } = formFields ?? {};
 
-    const inputTypeMap: TInputTypeMap<'auth'> = {
+    const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
-        guestCart: { value: guestCart, type: 'arrayOf', elemType: 'object' },
+        guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
         name: { value: name, type: 'string', form: true },
         password: { value: password, type: 'string', form: true },
         rememberMe: { value: rememberMe, type: 'boolean' }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -279,18 +279,18 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         return safeSendResponse(res, 204);
     }
 
-    const inputTypeMap: TInputTypeMap<'auth'> = {
+    const validationConfigMap: TValidationConfigMap<'auth'> = {
         newName: { value: newName, type: 'string', optional: true, form: true },
         newEmail: { value: newEmail, type: 'string', optional: true, form: true },
         currentPassword: { value: currentPassword, type: 'string', optional: true, form: true },
         newPassword: { value: newPassword, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -578,7 +578,7 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
         defaultPaymentMethod
     } = req.body ?? {};
 
-    const inputTypeMap: TInputTypeMap<'checkout'> = {
+    const validationConfigMap: TValidationConfigMap<'checkout'> = {
         firstName: { value: firstName, type: 'string', optional: true, form: true },
         lastName: { value: lastName, type: 'string', optional: true, form: true },
         middleName: { value: middleName, type: 'string', optional: true, form: true },
@@ -596,11 +596,11 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
         defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'checkout');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'checkout');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

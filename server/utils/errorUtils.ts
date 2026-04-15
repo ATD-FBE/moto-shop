@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { typeCheck } from './typeValidation.js';
+import { typeCheck } from '../validation/validationEngine.js';
 import { isValidEntityField } from './typeGuards.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { FILE_FIELD_MAP } from '@server/config/constants.js';

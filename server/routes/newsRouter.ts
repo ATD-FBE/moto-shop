@@ -3,13 +3,13 @@ import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser
 } from '@server/middlewares/authMiddleware.js';
-import { validateInput } from '@server/middlewares/validatorMiddleware.js';
+import { validateInput } from '@server/middlewares/validationMiddleware.js';
 import {
     newsSchema,
     newsCreateSchema,
     newsUpdateSchema,
     newsDeleteSchema
-} from '@server/validation/news.schemas.js';
+} from '@server/validation/schemas/news.schemas.js';
 import {
     handleNewsListRequest,
     handleNewsRequest,

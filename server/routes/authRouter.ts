@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMiddleware.js';
+import { validateInput } from '@server/middlewares/validationMiddleware.js';
+import {
+    authRegistrationSchema,
+} from '@server/validation/schemas/auth.schemas.js';
 import {
     handleAuthCheckoutPrefsRequest,
     handleAuthRegistrationRequest,

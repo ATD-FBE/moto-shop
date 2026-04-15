@@ -8,7 +8,7 @@ import {
 } from '@a2seven/yoo-checkout';
 import ipRangeCheck from 'ip-range-check';
 import config from '@server/config/config.js';
-import { typeCheck } from '@server/utils/typeValidation.js';
+import { typeCheck } from '@server/validation/validationEngine.js';
 import log from '@server/utils/logger.js';
 import { toError } from '@shared/commonHelpers.js';
 import { TRANSACTION_TYPE, CARD_ONLINE_PROVIDER } from '@shared/constants.js';

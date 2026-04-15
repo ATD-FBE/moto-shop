@@ -1,43 +1,41 @@
 import { RequestHandler } from 'express';
-import { validateInputTypes } from '@server/utils/typeValidation.js';
+import { buildValidationFieldConfig, validateInputData } from '@server/validation/validationEngine.js';
 import { getValueByPath } from '@shared/commonHelpers.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import type { IValidateInputSchema, IInputTypeMapConfig, TInputTypeMap } from '@server/types/index.js';
+import type { IValidationInputSchema, IValidationConfig } from '@server/types/index.js';
 import type { TEntityType } from '@shared/types/index.js';
 
 export const validateInput = <E extends TEntityType = TEntityType>(
-    schema: IValidateInputSchema<E>
+    schema: IValidationInputSchema<E>
 ): RequestHandler => (req, res, next) => {
     const { entityType, params, body, query } = schema;
-    const tempInputTypeMap: Record<string, IInputTypeMapConfig> = {};
+    const validationConfigMap: Record<string, IValidationConfig> = {};
 
     if (params) {
         Object.entries(params).forEach(([paramName, type]) => {
             const paramValue = req.params[paramName];
-            tempInputTypeMap[paramName] = { value: paramValue, type };
+            validationConfigMap[paramName] = { value: paramValue, type };
         });
     }
     if (body) {
-        Object.entries(body).forEach(([path, config]) => {
+        Object.entries(body).forEach(([path, schema]) => {
             const fieldName = path.split('.').pop()!;
             const fieldValue = getValueByPath(path, req.body);
-            tempInputTypeMap[fieldName] = { ...config, value: fieldValue };
+            validationConfigMap[fieldName] = buildValidationFieldConfig(schema, fieldValue);
         });
     }
     if (query) {
-        Object.entries(query).forEach(([queryName, config]) => {
+        Object.entries(query).forEach(([queryName, schema]) => {
             const queryValue = req.query[queryName];
-            tempInputTypeMap[queryName] = { ...config, value: queryValue };
+            validationConfigMap[queryName] = buildValidationFieldConfig(schema, queryValue);
         });
     }
 
-    const inputTypeMap: TInputTypeMap<E> = tempInputTypeMap;
-
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, entityType);
+    const { invalidInputPaths, fieldErrors } = validateInputData<E>(validationConfigMap, entityType);
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

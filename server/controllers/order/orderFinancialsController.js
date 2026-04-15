@@ -21,7 +21,7 @@ import {
     normalizeWebhook
 } from '@server/services/online-transactions/onlineTransactionsService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
-import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -146,17 +146,17 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
     const eventId = req.params.eventId;
     const { voidedNote } = req.body ?? {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         eventId: { value: eventId, type: 'objectId', form: true }, // Значение из формы вынесено в параметр
         voidedNote: { value: voidedNote, type: 'string', optional: true, form: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'financials');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'financials');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -334,7 +334,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
         method, provider, amount, transactionId, markAsFailed, failureReason
     } = typeCheck.object(transaction) ? transaction : {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', form: true },
@@ -345,11 +345,11 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
         failureReason: { value: failureReason, type: 'string', optional: true, form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'payment');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'payment');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -512,7 +512,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
         method, provider, amount, transactionId, markAsFailed, failureReason, externalReference
     } = typeCheck.object(transaction) ? transaction : {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', form: true },
@@ -524,11 +524,11 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
         externalReference: { value: externalReference, type: 'string', optional: true, form: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'refund');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'refund');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -684,7 +684,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
     const { paymentToken, transaction } = req.body ?? {};
     const { provider, amount } = typeCheck.object(transaction) ? transaction : {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         paymentToken: { value: paymentToken, type: 'string' },
         transaction: { value: transaction, type: 'object' },
@@ -692,11 +692,11 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         amount: { value: amount, type: 'number', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'financials');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'financials');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });

@@ -1,7 +1,7 @@
 import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { prepareGuestCart, prepareCart, prepareFixedDbCart } from '../services/cartService.js';
-import { typeCheck, validateInputTypes } from '../utils/typeValidation.js';
+import { typeCheck, validateInputData } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
@@ -59,16 +59,16 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
     const productId = req.params.productId;
     const { quantity } = req.body ?? {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         productId: { value: productId, type: 'objectId' },
         quantity: { value: quantity, type: 'number' }
     };
 
-    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputData(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
 
     const quantityNum = Number(quantity);
@@ -127,17 +127,17 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
     const productId = req.params.productId;
     const { quantity, position } = req.body ?? {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         productId: { value: productId, type: 'objectId' },
         quantity: { value: quantity, type: 'number' },
         position: { value: position, type: 'number' }
     };
 
-    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputData(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
 
     const quantityNum = Number(quantity);

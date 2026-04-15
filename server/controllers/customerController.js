@@ -9,7 +9,7 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { validateInputTypes } from '@server/utils/typeValidation.js';
+import { validateInputData } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
@@ -103,16 +103,16 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
     const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
     const limit = Math.max(parseInt(req.query.limit, 10) || 0, 0);
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         customerId: { value: customerId, type: 'objectId' },
         firstOrderId: { value: firstOrderId, type: 'objectId', optional: true }
     };
 
-    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputData(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
 
     try {
@@ -171,16 +171,16 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
     const customerId = req.params.customerId;
     const { discount } = req.body ?? {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         customerId: { value: customerId, type: 'objectId' },
         discount: { value: discount, type: 'number', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'customer');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'customer');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -234,16 +234,16 @@ export const handleCustomerBanToggleRequest = async (req, res, next) => {
     const customerId = req.params.customerId;
     const { newBanStatus } = req.body ?? {};
 
-    const inputTypeMap = {
+    const validationConfigMap = {
         customerId: { value: customerId, type: 'objectId' },
         newBanStatus: { value: newBanStatus, type: 'boolean' }
     };
 
-    const { invalidInputPaths } = validateInputTypes(inputTypeMap);
+    const { invalidInputPaths } = validateInputData(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
 
     try {

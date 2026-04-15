@@ -16,7 +16,7 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { typeCheck, validateInputTypes } from '@server/utils/typeValidation.js';
+import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
@@ -209,7 +209,7 @@ export const handleProductCreateRequest = async (req, res, next) => {
     } = req.body ?? {};
     
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         images: { value: images, type: 'array', form: true },
         mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
         sku: { value: sku, type: 'string', optional: true, form: true },
@@ -225,11 +225,11 @@ export const handleProductCreateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -369,9 +369,9 @@ export const handleProductUpdateRequest = async (req, res, next) => {
     } = req.body ?? {};
     
     // Предварительная проверка формата данных
-    const inputTypeMap = {
+    const validationConfigMap = {
         productId: { value: productId, type: 'objectId' },
-        imageFilenamesToDelete: { value: imageFilenamesToDelete, type: 'arrayOf', elemType: 'string' },
+        imageFilenamesToDelete: { value: imageFilenamesToDelete, type: 'arrayOf', arrElemType: 'string' },
         images: { value: images, type: 'array', form: true },
         mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
         sku: { value: sku, type: 'string', optional: true, form: true },
@@ -387,11 +387,11 @@ export const handleProductUpdateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -609,8 +609,8 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     const { brand, unit, discount, category, tags, isActive } = formFields ?? {};
 
     // Предварительная проверка формата данных
-    const inputTypeMap = {
-        productIds: { value: productIds, type: 'arrayOf', elemType: 'objectId' },
+    const validationConfigMap = {
+        productIds: { value: productIds, type: 'arrayOf', arrElemType: 'objectId' },
         formFields: { value: formFields, type: 'object' },
         brand: { value: brand, type: 'string', optional: true, form: true },
         unit: { value: unit, type: 'string', optional: true, form: true },
@@ -620,11 +620,11 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
         isActive: { value: isActive, type: 'boolean', optional: true, form: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputTypes(inputTypeMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
-        const invalidKeysStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidKeysStr}` });
+        const invalidPathsStr = invalidInputPaths.join(', ');
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
@@ -642,7 +642,7 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     }
     
     // Проверка выбранных полей для апдейта
-    const noFormUpdates = Object.values(inputTypeMap)
+    const noFormUpdates = Object.values(validationConfigMap)
         .filter(({ form }) => form)
         .every(({ value }) => value === undefined);
 

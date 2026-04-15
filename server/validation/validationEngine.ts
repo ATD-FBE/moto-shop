@@ -6,9 +6,10 @@ import type {
     TCheckFn,
     TBaseTypeChecks,
     TTypeCheck,
-    TInputTypeMap,
-    IInputTypeMapConfig,
-    IValidateInputTypesResult
+    TValidationConfigMap,
+    IValidationConfig,
+    IValidationSchema,
+    IValidateInputDataResult
 } from '@server/types/index.js';
 import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 
@@ -19,6 +20,11 @@ export const baseTypeChecks: TBaseTypeChecks = {
         ['string', 'number'].includes(typeof val) &&
         val !== '' &&
         isFinite(Number(val)),
+
+    integer: (val: unknown): val is string | number =>
+        ['string', 'number'].includes(typeof val) &&
+        val !== '' &&
+        Number.isInteger(Number(val)),
 
     boolean: (val: unknown): val is string | boolean =>
         typeof val === 'boolean' ||
@@ -31,13 +37,34 @@ export const baseTypeChecks: TBaseTypeChecks = {
 
     array: (val: unknown): val is unknown[] => Array.isArray(val),
 
-    arrayOf: (arr: unknown, elemType?: TCheckType, check?: TTypeCheck): boolean => {
+    arrayOf: (
+        arr: unknown,
+        arrElemType?: TCheckType,
+        arrElemConfig?: Record<string, IValidationConfig>,
+        check?: TTypeCheck
+    ): boolean => {
         if (!Array.isArray(arr)) return false;
         if (!arr.length) return true;
-        if (!elemType) return false;
+        if (!arrElemType) return false;
 
-        const validator = check?.[elemType];
+        const validator = check?.[arrElemType];
         if (!validator) return false;
+
+        if (arrElemType === 'object' && arrElemConfig) {
+            return arr.every(obj => {
+                if (!validator(obj)) return false;
+
+                const validationConfigMap = Object.fromEntries(
+                    Object.entries(arrElemConfig).map(([key, cfg]) => [
+                        key,
+                        { ...cfg, value: obj[key] }
+                    ])
+                );
+    
+                const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap);
+                return invalidInputPaths.length === 0 && Object.keys(fieldErrors).length === 0;
+            });
+        }
 
         return arr.every(item => validator(item));
     },
@@ -77,22 +104,31 @@ const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
 
 export const typeCheck = makeTypeCheck(baseTypeChecks);
 
-export const validateInputTypes = <E extends TEntityType>(
-    inputTypeMap: TInputTypeMap<E>,
+export const validateInputData = <E extends TEntityType>(
+    validationConfigMap: TValidationConfigMap<E>,
     entityType?: E
-): IValidateInputTypesResult<E> => {
+): IValidateInputDataResult<E> => {
     const invalidInputPaths: string[] = [];
     const fieldErrors: TFieldErrors<E> = {};
 
-    for (const [path, config] of Object.entries(inputTypeMap) as [string, IInputTypeMapConfig][]) {
-        const { value, type, elemType, optional, form = false, enumValues } = config;
+    for (const [path, config] of Object.entries(validationConfigMap) as [string, IValidationConfig][]) {
+        const {
+            value, type, min, max, arrElemType, arrElemConfig, optional, form = false, enumValues
+        } = config;
 
         // Проверка типа значения
         const validator = optional ? typeCheck.optional[type] : typeCheck[type];
 
         let isValid = type === 'arrayOf'
-            ? validator?.(value, elemType, typeCheck) ?? false
+            ? validator?.(value, arrElemType, arrElemConfig, typeCheck) ?? false
             : validator?.(value) ?? false;
+
+        // Проверка границ значений дя числа
+        if (isValid && ['number', 'integer'].includes(type)) {
+            const numValue = Number(value);
+            if (min !== undefined && numValue < min) isValid = false;
+            if (max !== undefined && numValue > max) isValid = false;
+        }
 
         // Проверка значения среди разрешённых
         if (isValid && enumValues && enumValues.length > 0) {
@@ -117,4 +153,24 @@ export const validateInputTypes = <E extends TEntityType>(
     }
 
     return { invalidInputPaths, fieldErrors };
+};
+
+export const buildValidationFieldConfig = (
+    schema: IValidationSchema,
+    value: unknown
+): IValidationConfig => {
+    const { arrElemSchema, ...restConfig } = schema;
+
+    return {
+        ...restConfig,
+        value,
+        arrElemConfig: arrElemSchema
+            ? Object.fromEntries(
+                Object.entries(arrElemSchema).map(([key, elemSchema]) => [
+                    key,
+                    buildValidationFieldConfig(elemSchema, undefined)
+                ])
+            )
+            : undefined
+    };
 };
