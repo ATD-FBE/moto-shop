@@ -16,7 +16,7 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
@@ -210,22 +210,22 @@ export const handleProductCreateRequest = async (req, res, next) => {
     
     // Предварительная проверка формата данных
     const validationConfigMap = {
-        images: { value: images, type: 'array', form: true },
+        images: { value: images, type: 'array', formField: true },
         mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
-        sku: { value: sku, type: 'string', optional: true, form: true },
-        name: { value: name, type: 'string', form: true },
-        brand: { value: brand, type: 'string', optional: true, form: true },
-        description: { value: description, type: 'string', optional: true, form: true },
-        stock: { value: stock, type: 'number', form: true },
-        unit: { value: unit, type: 'string', form: true },
-        price: { value: price, type: 'number', form: true },
-        discount: { value: discount, type: 'number', form: true },
-        category: { value: category, type: 'objectId', form: true },
-        tags: { value: tags, type: 'string', optional: true, form: true },
-        isActive: { value: isActive, type: 'boolean', form: true }
+        sku: { value: sku, type: 'string', optional: true, formField: true },
+        name: { value: name, type: 'string', formField: true },
+        brand: { value: brand, type: 'string', optional: true, formField: true },
+        description: { value: description, type: 'string', optional: true, formField: true },
+        stock: { value: stock, type: 'number', formField: true },
+        unit: { value: unit, type: 'string', formField: true },
+        price: { value: price, type: 'number', formField: true },
+        discount: { value: discount, type: 'number', formField: true },
+        category: { value: category, type: 'objectId', formField: true },
+        tags: { value: tags, type: 'string', optional: true, formField: true },
+        isActive: { value: isActive, type: 'boolean', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -372,22 +372,22 @@ export const handleProductUpdateRequest = async (req, res, next) => {
     /*const validationConfigMap = {
         productId: { value: productId, type: 'objectId' },
         imageFilenamesToDelete: { value: imageFilenamesToDelete, type: 'arrayOf', arrElemType: 'string' },
-        images: { value: images, type: 'array', form: true },
+        images: { value: images, type: 'array', formField: true },
         mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
-        sku: { value: sku, type: 'string', optional: true, form: true },
-        name: { value: name, type: 'string', form: true },
-        brand: { value: brand, type: 'string', optional: true, form: true },
-        description: { value: description, type: 'string', optional: true, form: true },
-        stock: { value: stock, type: 'number', form: true },
-        unit: { value: unit, type: 'string', form: true },
-        price: { value: price, type: 'number', form: true },
-        discount: { value: discount, type: 'number', form: true },
-        category: { value: category, type: 'objectId', form: true },
-        tags: { value: tags, type: 'string', optional: true, form: true },
-        isActive: { value: isActive, type: 'boolean', form: true }
+        sku: { value: sku, type: 'string', optional: true, formField: true },
+        name: { value: name, type: 'string', formField: true },
+        brand: { value: brand, type: 'string', optional: true, formField: true },
+        description: { value: description, type: 'string', optional: true, formField: true },
+        stock: { value: stock, type: 'number', formField: true },
+        unit: { value: unit, type: 'string', formField: true },
+        price: { value: price, type: 'number', formField: true },
+        discount: { value: discount, type: 'number', formField: true },
+        category: { value: category, type: 'objectId', formField: true },
+        tags: { value: tags, type: 'string', optional: true, formField: true },
+        isActive: { value: isActive, type: 'boolean', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -612,15 +612,15 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     /*const validationConfigMap = {
         productIds: { value: productIds, type: 'arrayOf', arrElemType: 'objectId' },
         formFields: { value: formFields, type: 'object' },
-        brand: { value: brand, type: 'string', optional: true, form: true },
-        unit: { value: unit, type: 'string', optional: true, form: true },
-        discount: { value: discount, type: 'number', optional: true, form: true },
-        category: { value: category, type: 'objectId', optional: true, form: true },
-        tags: { value: tags, type: 'string', optional: true, form: true },
-        isActive: { value: isActive, type: 'boolean', optional: true, form: true }
+        brand: { value: brand, type: 'string', optional: true, formField: true },
+        unit: { value: unit, type: 'string', optional: true, formField: true },
+        discount: { value: discount, type: 'number', optional: true, formField: true },
+        category: { value: category, type: 'objectId', optional: true, formField: true },
+        tags: { value: tags, type: 'string', optional: true, formField: true },
+        isActive: { value: isActive, type: 'boolean', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'product');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

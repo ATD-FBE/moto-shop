@@ -5,7 +5,7 @@ import { prepareNotification } from '@server/services/notificationService.js';
 import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';
 import { parseSortParam } from '@server/utils/aggregationUtils.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -192,13 +192,13 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
 
     // Предварительная проверка формата данных
     /*const validationConfigMap = {
-        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
-        subject: { value: subject, type: 'string', form: true },
-        message: { value: message, type: 'string', form: true },
-        signature: { value: signature, type: 'string', form: true }
+        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', formField: true },
+        subject: { value: subject, type: 'string', formField: true },
+        message: { value: message, type: 'string', formField: true },
+        signature: { value: signature, type: 'string', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'notification');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -255,13 +255,13 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
     // Предварительная проверка формата данных
     /*const validationConfigMap = {
         notificationId: { value: notificationId, type: 'objectId' },
-        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
-        subject: { value: subject, type: 'string', form: true },
-        message: { value: message, type: 'string', form: true },
-        signature: { value: signature, type: 'string', form: true }
+        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', formField: true },
+        subject: { value: subject, type: 'string', formField: true },
+        message: { value: message, type: 'string', formField: true },
+        signature: { value: signature, type: 'string', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'notification');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'notification');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

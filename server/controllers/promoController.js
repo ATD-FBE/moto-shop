@@ -2,7 +2,7 @@ import Promo from '../db/models/Promo.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { preparePromo } from '../services/promoService.js';
 import { storageService } from '../services/storage/storageService.js';
-import { typeCheck, validateInputData } from '../validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
@@ -94,14 +94,14 @@ export const handlePromoCreateRequest = async (req, res, next) => {
 
     // Предварительная проверка формата данных
     const validationConfigMap = {
-        image: { value: image, type: 'object', optional: true, form: true },
-        title: { value: title, type: 'string', form: true },
-        description: { value: description, type: 'string', form: true },
-        startDate: { value: startDate, type: 'date', form: true },
-        endDate: { value: endDate, type: 'date', form: true }
+        image: { value: image, type: 'object', optional: true, formField: true },
+        title: { value: title, type: 'string', formField: true },
+        description: { value: description, type: 'string', formField: true },
+        startDate: { value: startDate, type: 'date', formField: true },
+        endDate: { value: endDate, type: 'date', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'promotion');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -198,15 +198,15 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
     // Предварительная проверка формата данных
     const validationConfigMap = {
         promoId: { value: promoId, type: 'objectId' },
-        image: { value: image, type: 'object', optional: true, form: true },
-        title: { value: title, type: 'string', form: true },
-        description: { value: description, type: 'string', form: true },
-        startDate: { value: startDate, type: 'date', form: true },
-        endDate: { value: endDate, type: 'date', form: true },
+        image: { value: image, type: 'object', optional: true, formField: true },
+        title: { value: title, type: 'string', formField: true },
+        description: { value: description, type: 'string', formField: true },
+        startDate: { value: startDate, type: 'date', formField: true },
+        endDate: { value: endDate, type: 'date', formField: true },
         removeImage: { value: removeImage, type: 'boolean', optional: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'promotion');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'promotion');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

@@ -9,7 +9,7 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { validateInputData } from '@server/validation/validationEngine.js';
+import { validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
@@ -108,7 +108,7 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
         firstOrderId: { value: firstOrderId, type: 'objectId', optional: true }
     };
 
-    const { invalidInputPaths } = validateInputData(validationConfigMap);
+    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -173,10 +173,10 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         customerId: { value: customerId, type: 'objectId' },
-        discount: { value: discount, type: 'number', form: true }
+        discount: { value: discount, type: 'number', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'customer');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'customer');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -239,7 +239,7 @@ export const handleCustomerBanToggleRequest = async (req, res, next) => {
         newBanStatus: { value: newBanStatus, type: 'boolean' }
     };
 
-    const { invalidInputPaths } = validateInputData(validationConfigMap);
+    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

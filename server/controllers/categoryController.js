@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import Category from '../db/models/Category.js';
 import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { typeCheck, validateInputData } from '../validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import { parseValidationErrors } from '../utils/errorUtils.js';
@@ -29,13 +29,13 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
 
     // Предварительная проверка формата данных
     const validationConfigMap = {
-        name: { value: name, type: 'string', form: true },
-        slug: { value: slug, type: 'string', form: true },
-        order: { value: order, type: 'number', form: true },
-        parent: { value: parent, type: 'nullableObjectId', form: true }
+        name: { value: name, type: 'string', formField: true },
+        slug: { value: slug, type: 'string', formField: true },
+        order: { value: order, type: 'number', formField: true },
+        parent: { value: parent, type: 'nullableObjectId', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'category');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'category');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -157,13 +157,13 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
     // Предварительная проверка формата данных
     const validationConfigMap = {
         categoryId: { value: categoryId, type: 'objectId' },
-        name: { value: name, type: 'string', form: true },
-        slug: { value: slug, type: 'string', form: true },
-        order: { value: order, type: 'number', form: true },
-        parent: { value: parent, type: 'nullableObjectId', form: true },
+        name: { value: name, type: 'string', formField: true },
+        slug: { value: slug, type: 'string', formField: true },
+        order: { value: order, type: 'number', formField: true },
+        parent: { value: parent, type: 'nullableObjectId', formField: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'category');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'category');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

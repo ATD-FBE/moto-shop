@@ -22,7 +22,7 @@ import {
     dotNotationToObject,
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -444,25 +444,25 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
-        firstName: { value: firstName, type: 'string', optional: true, form: true },
-        lastName: { value: lastName, type: 'string', optional: true, form: true },
-        middleName: { value: middleName, type: 'string', optional: true, form: true },
-        email: { value: email, type: 'string', optional: true, form: true },
-        phone: { value: phone, type: 'string', optional: true, form: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, form: true },
-        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, form: true },
-        region: { value: region, type: 'string', optional: true, form: true },
-        district: { value: district, type: 'string', optional: true, form: true },
-        city: { value: city, type: 'string', optional: true, form: true },
-        street: { value: street, type: 'string', optional: true, form: true },
-        house: { value: house, type: 'string', optional: true, form: true },
-        apartment: { value: apartment, type: 'string', optional: true, form: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, form: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, form: true },
-        customerComment: { value: customerComment, type: 'string', optional: true, form: true }
+        firstName: { value: firstName, type: 'string', optional: true, formField: true },
+        lastName: { value: lastName, type: 'string', optional: true, formField: true },
+        middleName: { value: middleName, type: 'string', optional: true, formField: true },
+        email: { value: email, type: 'string', optional: true, formField: true },
+        phone: { value: phone, type: 'string', optional: true, formField: true },
+        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, formField: true },
+        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, formField: true },
+        region: { value: region, type: 'string', optional: true, formField: true },
+        district: { value: district, type: 'string', optional: true, formField: true },
+        city: { value: city, type: 'string', optional: true, formField: true },
+        street: { value: street, type: 'string', optional: true, formField: true },
+        house: { value: house, type: 'string', optional: true, formField: true },
+        apartment: { value: apartment, type: 'string', optional: true, formField: true },
+        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
+        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, formField: true },
+        customerComment: { value: customerComment, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'checkout');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'checkout');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -542,25 +542,25 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
-        firstName: { value: firstName, type: 'string', form: true },
-        lastName: { value: lastName, type: 'string', form: true },
-        middleName: { value: middleName, type: 'string', optional: true, form: true },
-        email: { value: email, type: 'string', form: true },
-        phone: { value: phone, type: 'string', form: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', form: true },
-        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, form: true },
-        region: { value: region, type: 'string', optional: true, form: true },
-        district: { value: district, type: 'string', optional: true, form: true },
-        city: { value: city, type: 'string', optional: true, form: true },
-        street: { value: street, type: 'string', optional: true, form: true },
-        house: { value: house, type: 'string', optional: true, form: true },
-        apartment: { value: apartment, type: 'string', optional: true, form: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, form: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', form: true },
-        customerComment: { value: customerComment, type: 'string', optional: true, form: true }
+        firstName: { value: firstName, type: 'string', formField: true },
+        lastName: { value: lastName, type: 'string', formField: true },
+        middleName: { value: middleName, type: 'string', optional: true, formField: true },
+        email: { value: email, type: 'string', formField: true },
+        phone: { value: phone, type: 'string', formField: true },
+        deliveryMethod: { value: deliveryMethod, type: 'string', formField: true },
+        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, formField: true },
+        region: { value: region, type: 'string', optional: true, formField: true },
+        district: { value: district, type: 'string', optional: true, formField: true },
+        city: { value: city, type: 'string', optional: true, formField: true },
+        street: { value: street, type: 'string', optional: true, formField: true },
+        house: { value: house, type: 'string', optional: true, formField: true },
+        apartment: { value: apartment, type: 'string', optional: true, formField: true },
+        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
+        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', formField: true },
+        customerComment: { value: customerComment, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'checkout');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'checkout');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

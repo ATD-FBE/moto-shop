@@ -1,26 +1,23 @@
 import type { TEntityType, TEntityField } from '@shared/types/index.js';
 
-export type TBaseCheckType =
+export type TCheckType =
     | 'string' | 'number' | 'integer' | 'boolean' | 'emptyableBoolean'
-    | 'array' | 'object' | 'date' | 'objectId' | 'nullableObjectId';
-
-export type TCheckType = TBaseCheckType | 'arrayOf';
+    | 'date' | 'objectId' | 'nullableObjectId' | 'array' | 'object';
 
 export interface IValidationSchema {
-    type: TCheckType;
-    min?: number;
-    max?: number;
-    arrElemConfig?: IValidationSchema;
-    fieldConfigs?: Record<string, IValidationSchema>;
-    enumValues?: readonly any[];
-    optional?: boolean;
-    form?: boolean;
+    type: TCheckType;                           // Тип значения поля
+    fields?: Record<string, IValidationSchema>; // Для проверки содержимого объектов -> тип object
+    items?: IValidationSchema;                  // Для проверки содержимого массивов -> тип array
+    min?: number;                               // Для типов number и integer
+    max?: number;                               // Для типов number и integer
+    enumValues?: readonly any[];                // Для типов string, number и integer
+    optional?: boolean;                         // Для опционального поля -> значение undefined
+    formField?: boolean;                        // Для поля формы
 }
 
 export interface IValidationConfig extends IValidationSchema {
-    value: unknown;
-    arrElemConfig?: IValidationConfig;
-    fieldConfigs?: Record<string, IValidationConfig>;
+    value: unknown;                             // Заполнение конфига поля значением (кроме эл-в массива)
+    fields?: Record<string, IValidationConfig>; // Заполнение значениями конфига вложенного объекта
 }
 
 export interface IValidationInputSchema<E extends TEntityType = TEntityType> {

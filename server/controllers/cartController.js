@@ -1,7 +1,7 @@
 import Product from '../db/models/Product.js';
 import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
 import { prepareGuestCart, prepareCart, prepareFixedDbCart } from '../services/cartService.js';
-import { typeCheck, validateInputData } from '../validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '../validation/validationEngine.js';
 import { runInDbTransaction } from '../utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
 import safeSendResponse from '../utils/safeSendResponse.js';
@@ -64,7 +64,7 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
         quantity: { value: quantity, type: 'number' }
     };
 
-    const { invalidInputPaths } = validateInputData(validationConfigMap);
+    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -133,7 +133,7 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
         position: { value: position, type: 'number' }
     };
 
-    const { invalidInputPaths } = validateInputData(validationConfigMap);
+    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

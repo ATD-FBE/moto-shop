@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import type {
-    TBaseCheckType,
+    TCheckType,
     IValidationSchema,
     IValidationConfig,
     TValidationConfigMap
@@ -15,7 +15,7 @@ import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 
 export type TCheckFn = (val: unknown) => boolean;
 
-export type TBaseTypeChecks = Record<TBaseCheckType, TCheckFn>;
+export type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
 export type TTypeCheck = TBaseTypeChecks & {
     optional: TBaseTypeChecks;
 };
@@ -25,8 +25,6 @@ export interface IValidationResult<E extends TEntityType = TEntityType> {
     invalidInputPaths: string[];
     fieldErrors: TFieldErrors<E>;
 }
-export type IValidateArrayOfResult<E extends TEntityType = TEntityType> = IValidationResult<E>;
-export type IValidateInputDataResult<E extends TEntityType = TEntityType> = IValidationResult<E>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -54,13 +52,6 @@ const baseTypeChecks: TBaseTypeChecks = {
         typeof val === 'boolean' ||
         (typeof val === 'string' && (val === 'true' || val === 'false')),
 
-    array: (val: unknown): val is unknown[] => Array.isArray(val),
-
-    object: (val: unknown): val is Record<string | number, unknown> =>
-        typeof val === 'object' &&
-        val !== null &&
-        !Array.isArray(val),
-
     date: (val: unknown): val is Date =>
         (typeof val === 'string' || val instanceof Date) &&
         !isNaN(new Date(val).getTime()),
@@ -69,7 +60,14 @@ const baseTypeChecks: TBaseTypeChecks = {
         mongoose.Types.ObjectId.isValid(val as any),
 
     nullableObjectId: (val: unknown): val is null | string | mongoose.Types.ObjectId =>
-        val === null || mongoose.Types.ObjectId.isValid(val as any)
+        val === null || mongoose.Types.ObjectId.isValid(val as any),
+
+    array: (val: unknown): val is unknown[] => Array.isArray(val),
+
+    object: (val: unknown): val is Record<string | number, unknown> =>
+        typeof val === 'object' &&
+        val !== null &&
+        !Array.isArray(val)
 } as const;
 
 const makeOptionalCheck = (checkFn: TCheckFn): TCheckFn =>
@@ -78,7 +76,7 @@ const makeOptionalCheck = (checkFn: TCheckFn): TCheckFn =>
 const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
     const optionalChecks = {} as TBaseTypeChecks;
 
-    (Object.keys(checks) as TBaseCheckType[]).forEach(key => {
+    (Object.keys(checks) as TCheckType[]).forEach(key => {
         optionalChecks[key] = makeOptionalCheck(checks[key]);
     });
 
@@ -94,7 +92,6 @@ export const validateByType = (
     config: IValidationConfig
 ): boolean => {
     const { value, type, optional, min, max, enumValues } = config;
-    if (type === 'arrayOf') return false; // arrayOf проверен ДО валидации примитивов
 
     const validator = optional
         ? typeCheck.optional[type]
@@ -109,7 +106,7 @@ export const validateByType = (
         if (max !== undefined && num > max) isValid = false;
     }
 
-    // enum
+    // enumValues
     if (isValid && enumValues?.length) {
         const normalizedValue = type === 'number' ? Number(value) : value;
         isValid = enumValues.includes(normalizedValue);
@@ -118,66 +115,67 @@ export const validateByType = (
     return isValid;
 };
 
-export const validateArrayOf = <E extends TEntityType>(
+export const validateArrayItems = <E extends TEntityType>(
     config: IValidationConfig,
     entityType?: E,
     parentPath: string = ''
-): IValidateArrayOfResult<E> => {
-    const { value, optional, arrElemConfig } = config;
+): IValidationResult<E> => {
+    const { value: arr, items: arrSchema, optional } = config;
 
     const invalidInputPaths: string[] = [];
     let fieldErrors: TFieldErrors<E> = {};
 
-    if (value === undefined && optional) {
+    if (arr === undefined && optional) {
         return { isValid: true, invalidInputPaths, fieldErrors };
     }
-    if (!Array.isArray(value)) {
+    if (!Array.isArray(arr)) {
         return { isValid: false, invalidInputPaths: parentPath ? [parentPath] : [], fieldErrors };
     }
-    if (!arrElemConfig) {
+    if (!arrSchema) {
         return { isValid: false, invalidInputPaths: parentPath ? [parentPath] : [], fieldErrors };
     }
-
-    const arr = value as unknown[];
 
     for (let i = 0; i < arr.length; i++) {
         const item = arr[i];
         const currentPath = `${parentPath}[${i}]`;
 
-        // OBJECT
-        if (arrElemConfig.type === 'object' && arrElemConfig.fieldConfigs) {
+        // Предварительные проверки типа элемента массива для имеющихся подсхем объекта или массива
+        if (arrSchema.type === 'object' && arrSchema.fields) {
             if (!typeCheck.object(item)) {
                 invalidInputPaths.push(currentPath);
                 continue;
             }
+        }
+        if (arrSchema.type === 'array' && arrSchema.items) {
+            if (!typeCheck.array(item)) {
+                invalidInputPaths.push(currentPath);
+                continue;
+            }
+        }
 
-            const nestedConfigMap: Record<string, IValidationConfig> = Object.fromEntries(
-                Object.entries(arrElemConfig.fieldConfigs).map(([key, cfg]) => [
-                    key,
-                    buildValidationConfig(cfg, (item as any)?.[key])
-                ])
-            );
+        // Создание заполненного значениями конфига элемента массива с его потомками и валидация
+        const itemConfig = buildValidationConfig(arrSchema, item);
 
-            const validationResult = validateInputData<E>(nestedConfigMap, entityType, currentPath);
+        // OBJECT
+        if (itemConfig.type === 'object' && itemConfig.fields) {
+            const result = validateObjectFields<E>(itemConfig.fields, entityType, currentPath);
 
-            invalidInputPaths.push(...validationResult.invalidInputPaths);
-            fieldErrors = { ...fieldErrors, ...validationResult.fieldErrors };
+            invalidInputPaths.push(...result.invalidInputPaths);
+            fieldErrors = { ...fieldErrors, ...result.fieldErrors };
             continue;
         }
 
         // ARRAY (nested)
-        if (arrElemConfig.type === 'arrayOf') {
-            const fullConfig = buildValidationConfig(arrElemConfig, item);
-            const validationResult = validateArrayOf<E>(fullConfig, entityType, currentPath);
+        if (itemConfig.type === 'array' && itemConfig.items) {
+            const result = validateArrayItems<E>(itemConfig, entityType, currentPath);
 
-            invalidInputPaths.push(...validationResult.invalidInputPaths);
-            fieldErrors = { ...fieldErrors, ...validationResult.fieldErrors };
+            invalidInputPaths.push(...result.invalidInputPaths);
+            fieldErrors = { ...fieldErrors, ...result.fieldErrors };
             continue;
         }
 
         // BY TYPE
-        const fullConfig = buildValidationConfig(arrElemConfig, item);
-        const isValid = validateByType(fullConfig);
+        const isValid = validateByType(itemConfig);
 
         if (!isValid) {
             invalidInputPaths.push(currentPath);
@@ -191,38 +189,48 @@ export const validateArrayOf = <E extends TEntityType>(
     };
 };
 
-export const validateInputData = <E extends TEntityType>(
+export const validateObjectFields = <E extends TEntityType>(
     validationConfigMap: TValidationConfigMap<E>,
     entityType?: E,
     pathPrefix: string = ''
-): IValidateInputDataResult<E> => {
+): IValidationResult<E> => {
     const invalidInputPaths: string[] = [];
     let fieldErrors: TFieldErrors<E> = {};
     let isValid = true;
 
     for (const [fieldName, config] of Object.entries(validationConfigMap) as [string, IValidationConfig][]) {
-        const { value, type, fieldConfigs, form = false } = config;
+        const { value, type, fields, items, optional, formField = false } = config;
         const fullPath = pathPrefix ? `${pathPrefix}.${fieldName}` : fieldName;
 
         let isFieldValid = true;
 
         // Валидация данных
-        if (type === 'object' && fieldConfigs) { // OBJECT
+        if (type === 'object' && fields) { // OBJECT
+            if (value === undefined && optional) continue;
+
             if (!typeCheck.object(value)) {
                 invalidInputPaths.push(fullPath);
                 isValid = false;
                 continue;
             }
 
-            const result = validateInputData<E>(fieldConfigs, entityType, fullPath);
+            const result = validateObjectFields<E>(fields, entityType, fullPath);
 
             if (!result.isValid) {
                 invalidInputPaths.push(...result.invalidInputPaths);
                 fieldErrors = { ...fieldErrors, ...result.fieldErrors };
                 isFieldValid = false;
             }
-        } else if (type === 'arrayOf') { // ARRAY
-            const result = validateArrayOf(config, entityType, fullPath);
+        } else if (type === 'array' && items) { // ARRAY
+            if (value === undefined && optional) continue;
+
+            if (!typeCheck.array(value)) {
+                invalidInputPaths.push(fullPath);
+                isValid = false;
+                continue;
+            }
+
+            const result = validateArrayItems(config, entityType, fullPath);
 
             if (!result.isValid) {
                 invalidInputPaths.push(...result.invalidInputPaths);
@@ -241,7 +249,7 @@ export const validateInputData = <E extends TEntityType>(
             isValid = false;
 
             // Заполнение ошибок валидации полей формы
-            if (form && entityType && isValidEntityField(entityType, fieldName)) {
+            if (formField && entityType && isValidEntityField(entityType, fieldName)) {
                 const fieldMessages = fieldErrorMessages[entityType][fieldName];
 
                 fieldErrors[fieldName] =
@@ -260,7 +268,7 @@ export const buildValidationConfig = (
     schema: IValidationSchema,
     value: unknown
 ): IValidationConfig => {
-    const { type, arrElemConfig, fieldConfigs, ...restSchema } = schema;
+    const { type, fields, ...restSchema } = schema;
 
     const baseConfig: IValidationConfig = {
         type,
@@ -268,10 +276,9 @@ export const buildValidationConfig = (
         value
     };
 
-    // OBJECT -> В конфиги полей для объекта устанавливается значение для value
-    if (type === 'object' && fieldConfigs) {
-        baseConfig.fieldConfigs = Object.fromEntries(
-            Object.entries(fieldConfigs).map(([key, fieldSchema]) => [
+    if (type === 'object' && fields) {
+        baseConfig.fields = Object.fromEntries(
+            Object.entries(fields).map(([key, fieldSchema]) => [
                 key,
                 buildValidationConfig(
                     fieldSchema,
@@ -279,11 +286,6 @@ export const buildValidationConfig = (
                 )
             ])
         );
-    }
-
-    // ARRAY OF -> В конфиг для элемента массива устанавливается undefined для value
-    if (type === 'arrayOf' && arrElemConfig) {
-        baseConfig.arrElemConfig = buildValidationConfig(arrElemConfig, undefined);
     }
 
     return baseConfig;

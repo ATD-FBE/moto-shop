@@ -21,7 +21,7 @@ import {
     normalizeWebhook
 } from '@server/services/online-transactions/onlineTransactionsService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -148,11 +148,11 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
-        eventId: { value: eventId, type: 'objectId', form: true }, // Значение из формы вынесено в параметр
-        voidedNote: { value: voidedNote, type: 'string', optional: true, form: true },
+        eventId: { value: eventId, type: 'objectId', formField: true }, // Значение из формы вынесено в параметр
+        voidedNote: { value: voidedNote, type: 'string', optional: true, formField: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'financials');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'financials');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -337,15 +337,15 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         transaction: { value: transaction, type: 'object' },
-        method: { value: method, type: 'string', form: true },
-        provider: { value: provider, type: 'string', optional: true, form: true },
-        amount: { value: amount, type: 'number', form: true },
-        transactionId: { value: transactionId, type: 'string', optional: true, form: true },
-        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, form: true },
-        failureReason: { value: failureReason, type: 'string', optional: true, form: true }
+        method: { value: method, type: 'string', formField: true },
+        provider: { value: provider, type: 'string', optional: true, formField: true },
+        amount: { value: amount, type: 'number', formField: true },
+        transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
+        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
+        failureReason: { value: failureReason, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'payment');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'payment');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -515,16 +515,16 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         transaction: { value: transaction, type: 'object' },
-        method: { value: method, type: 'string', form: true },
-        provider: { value: provider, type: 'string', optional: true, form: true },
-        amount: { value: amount, type: 'number', form: true },
-        transactionId: { value: transactionId, type: 'string', optional: true, form: true },
-        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, form: true },
-        failureReason: { value: failureReason, type: 'string', optional: true, form: true },
-        externalReference: { value: externalReference, type: 'string', optional: true, form: true },
+        method: { value: method, type: 'string', formField: true },
+        provider: { value: provider, type: 'string', optional: true, formField: true },
+        amount: { value: amount, type: 'number', formField: true },
+        transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
+        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
+        failureReason: { value: failureReason, type: 'string', optional: true, formField: true },
+        externalReference: { value: externalReference, type: 'string', optional: true, formField: true },
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'refund');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'refund');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -688,11 +688,11 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         orderId: { value: orderId, type: 'objectId' },
         paymentToken: { value: paymentToken, type: 'string' },
         transaction: { value: transaction, type: 'object' },
-        provider: { value: provider, type: 'string', form: true },
-        amount: { value: amount, type: 'number', form: true }
+        provider: { value: provider, type: 'string', formField: true },
+        amount: { value: amount, type: 'number', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'financials');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'financials');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

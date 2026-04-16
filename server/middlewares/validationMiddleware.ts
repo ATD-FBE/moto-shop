@@ -1,6 +1,5 @@
 import { RequestHandler } from 'express';
-import { buildValidationConfig, validateInputData } from '@server/validation/validationEngine.js';
-import { getValueByPath } from '@shared/commonHelpers.js';
+import { buildValidationConfig, validateObjectFields } from '@server/validation/validationEngine.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import type { IValidationInputSchema, IValidationConfig } from '@server/types/index.js';
 import type { TEntityType } from '@shared/types/index.js';
@@ -19,7 +18,7 @@ export const validateInput = <E extends TEntityType = TEntityType>(
     }
     if (body) {
         Object.entries(body).forEach(([fieldName, schema]) => {
-            const fieldValue = getValueByPath(fieldName, req.body);
+            const fieldValue = req.body?.[fieldName];
             validationConfigMap[fieldName] = buildValidationConfig(schema, fieldValue);
         });
     }
@@ -30,7 +29,13 @@ export const validateInput = <E extends TEntityType = TEntityType>(
         });
     }
 
-    const { invalidInputPaths, fieldErrors } = validateInputData<E>(validationConfigMap, entityType);
+    const {
+        isValid,
+        invalidInputPaths,
+        fieldErrors
+    } = validateObjectFields<E>(validationConfigMap, entityType);
+
+    if (isValid) return next();
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

@@ -4,7 +4,7 @@ import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareUser, prepareSession } from '@server/services/authService.js';
 import { generateToken, getTokenExpiryFromCookie } from '@server/utils/tokenUtils.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import {
@@ -58,13 +58,13 @@ export const handleAuthRegistrationRequest: RequestHandler<
     /*const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
-        name: { value: name, type: 'string', form: true },
-        email: { value: email, type: 'string', form: true },
-        password: { value: password, type: 'string', form: true },
-        adminRegCode: { value: adminRegCode, type: 'string', optional: true, form: true }
+        name: { value: name, type: 'string', formField: true },
+        email: { value: email, type: 'string', formField: true },
+        password: { value: password, type: 'string', formField: true },
+        adminRegCode: { value: adminRegCode, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -154,12 +154,12 @@ export const handleAuthLoginRequest: RequestHandler<
     /*const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
-        name: { value: name, type: 'string', form: true },
-        password: { value: password, type: 'string', form: true },
+        name: { value: name, type: 'string', formField: true },
+        password: { value: password, type: 'string', formField: true },
         rememberMe: { value: rememberMe, type: 'boolean' }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -282,13 +282,13 @@ export const handleAuthUserUpdateRequest: RequestHandler<
     }
 
     /*const validationConfigMap: TValidationConfigMap<'auth'> = {
-        newName: { value: newName, type: 'string', optional: true, form: true },
-        newEmail: { value: newEmail, type: 'string', optional: true, form: true },
-        currentPassword: { value: currentPassword, type: 'string', optional: true, form: true },
-        newPassword: { value: newPassword, type: 'string', optional: true, form: true }
+        newName: { value: newName, type: 'string', optional: true, formField: true },
+        newEmail: { value: newEmail, type: 'string', optional: true, formField: true },
+        currentPassword: { value: currentPassword, type: 'string', optional: true, formField: true },
+        newPassword: { value: newPassword, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'auth');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'auth');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -582,24 +582,24 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
     } = req.body ?? {};
 
     /*const validationConfigMap: TValidationConfigMap<'checkout'> = {
-        firstName: { value: firstName, type: 'string', optional: true, form: true },
-        lastName: { value: lastName, type: 'string', optional: true, form: true },
-        middleName: { value: middleName, type: 'string', optional: true, form: true },
-        email: { value: email, type: 'string', optional: true, form: true },
-        phone: { value: phone, type: 'string', optional: true, form: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, form: true },
-        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, form: true },
-        region: { value: region, type: 'string', optional: true, form: true },
-        district: { value: district, type: 'string', optional: true, form: true },
-        city: { value: city, type: 'string', optional: true, form: true },
-        street: { value: street, type: 'string', optional: true, form: true },
-        house: { value: house, type: 'string', optional: true, form: true },
-        apartment: { value: apartment, type: 'string', optional: true, form: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, form: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, form: true }
+        firstName: { value: firstName, type: 'string', optional: true, formField: true },
+        lastName: { value: lastName, type: 'string', optional: true, formField: true },
+        middleName: { value: middleName, type: 'string', optional: true, formField: true },
+        email: { value: email, type: 'string', optional: true, formField: true },
+        phone: { value: phone, type: 'string', optional: true, formField: true },
+        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, formField: true },
+        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, formField: true },
+        region: { value: region, type: 'string', optional: true, formField: true },
+        district: { value: district, type: 'string', optional: true, formField: true },
+        city: { value: city, type: 'string', optional: true, formField: true },
+        street: { value: street, type: 'string', optional: true, formField: true },
+        house: { value: house, type: 'string', optional: true, formField: true },
+        apartment: { value: apartment, type: 'string', optional: true, formField: true },
+        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
+        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'checkout');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'checkout');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

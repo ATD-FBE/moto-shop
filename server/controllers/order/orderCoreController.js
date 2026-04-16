@@ -29,7 +29,7 @@ import {
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
 import { collectDbChanges } from '@server/utils/compareUtils.js';
-import { typeCheck, validateInputData } from '@server/validation/validationEngine.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -361,10 +361,10 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
-        internalNote: { value: internalNote, type: 'string', optional: true, form: true }
+        internalNote: { value: internalNote, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -444,26 +444,26 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
-        firstName: { value: firstName, type: 'string', optional: true, form: true },
-        lastName: { value: lastName, type: 'string', optional: true, form: true },
-        middleName: { value: middleName, type: 'string', optional: true, form: true },
-        email: { value: email, type: 'string', optional: true, form: true },
-        phone: { value: phone, type: 'string', optional: true, form: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, form: true },
+        firstName: { value: firstName, type: 'string', optional: true, formField: true },
+        lastName: { value: lastName, type: 'string', optional: true, formField: true },
+        middleName: { value: middleName, type: 'string', optional: true, formField: true },
+        email: { value: email, type: 'string', optional: true, formField: true },
+        phone: { value: phone, type: 'string', optional: true, formField: true },
+        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, formField: true },
         allowCourierExtra:
-            { value: allowCourierExtra, type: 'emptyableBoolean', optional: true, form: true },
-        region: { value: region, type: 'string', optional: true, form: true },
-        district: { value: district, type: 'string', optional: true, form: true },
-        city: { value: city, type: 'string', optional: true, form: true },
-        street: { value: street, type: 'string', optional: true, form: true },
-        house: { value: house, type: 'string', optional: true, form: true },
-        apartment: { value: apartment, type: 'string', optional: true, form: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, form: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, form: true },
-        editReason: { value: editReason, type: 'string', form: true }
+            { value: allowCourierExtra, type: 'emptyableBoolean', optional: true, formField: true },
+        region: { value: region, type: 'string', optional: true, formField: true },
+        district: { value: district, type: 'string', optional: true, formField: true },
+        city: { value: city, type: 'string', optional: true, formField: true },
+        street: { value: street, type: 'string', optional: true, formField: true },
+        house: { value: house, type: 'string', optional: true, formField: true },
+        apartment: { value: apartment, type: 'string', optional: true, formField: true },
+        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
+        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, formField: true },
+        editReason: { value: editReason, type: 'string', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -598,10 +598,10 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     /*const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         items: { value: items, type: 'arrayOf', arrElemType: 'object' },
-        editReason: { value: editReason, type: 'string', form: true }
+        editReason: { value: editReason, type: 'string', formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
@@ -887,11 +887,11 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
         orderId: { value: orderId, type: 'objectId' },
         action: { value: action, type: 'string' },
         formFields: { value: formFields, type: 'object', optional: true },
-        shippingCost: { value: shippingCost, type: 'number', optional: true, form: true },
-        cancellationReason: { value: cancellationReason, type: 'string', optional: true, form: true }
+        shippingCost: { value: shippingCost, type: 'number', optional: true, formField: true },
+        cancellationReason: { value: cancellationReason, type: 'string', optional: true, formField: true }
     };
 
-    const { invalidInputPaths, fieldErrors } = validateInputData(validationConfigMap, 'order');
+    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
 
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');

@@ -17,26 +17,21 @@ export const authRegistrationSchema: IValidationInputSchema<TAuthEntity> = {
     body: {
         formFields: {
             type: 'object',
-            fieldConfigs: {
-                name: { type: 'string', form: true },
-                email: { type: 'string', form: true },
-                password: { type: 'string', form: true },
-                adminRegCode: { type: 'string', optional: true, form: true }
+            fields: {
+                name: { type: 'string', formField: true },
+                email: { type: 'string', formField: true },
+                password: { type: 'string', formField: true },
+                adminRegCode: { type: 'string', optional: true, formField: true }
             }
         },
         guestCart: {
-            type: 'arrayOf',
-            arrElemConfig: {
+            type: 'array',
+            items: {
                 type: 'object',
-                fieldConfigs: {
-                    id: { type: 'objectId', form: true },
-                    quantity: { type: 'integer', min: 0 },
-                    ['meta.tags']: {
-                        type: 'arrayOf',
-                        arrElemConfig: { type: 'string' }
-                    }
-                },
-                optional: true
+                fields: {
+                    id: { type: 'objectId' },
+                    quantity: { type: 'integer', min: 0 }
+                }
             }
         }
     }
