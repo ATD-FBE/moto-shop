@@ -191,7 +191,7 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
     const { recipients, subject, message, signature } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const validationConfigMap = {
+    /*const validationConfigMap = {
         recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
         subject: { value: subject, type: 'string', form: true },
         message: { value: message, type: 'string', form: true },
@@ -206,7 +206,7 @@ export const handleNotificationCreateRequest = async (req, res, next) => {
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
 
     // Создание документа в базе MongoDB
     try {
@@ -253,7 +253,7 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
     const { recipients, subject, message, signature } = req.body ?? {};
 
     // Предварительная проверка формата данных
-    const validationConfigMap = {
+    /*const validationConfigMap = {
         notificationId: { value: notificationId, type: 'objectId' },
         recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', form: true },
         subject: { value: subject, type: 'string', form: true },
@@ -269,7 +269,7 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
 
     // Апдейт документа в базе MongoDB
     try {

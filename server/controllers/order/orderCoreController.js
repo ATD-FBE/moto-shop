@@ -595,7 +595,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     const orderId = req.params.orderId;
     const { items, editReason } = req.body ?? {};
 
-    const validationConfigMap = {
+    /*const validationConfigMap = {
         orderId: { value: orderId, type: 'objectId' },
         items: { value: items, type: 'arrayOf', arrElemType: 'object' },
         editReason: { value: editReason, type: 'string', form: true }
@@ -636,7 +636,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
             ...(hasFieldErrors && { fieldErrors }),
             ...(hasItemFieldErrors && { itemFieldErrors })
         });
-    }
+    }*/
 
     // Отсутствуют поля в массиве товаров
     if (!items.length) {

@@ -41,7 +41,8 @@ import type {
     IAuthCheckoutPrefsUpdateBody,
     TAuthCheckoutPrefsUpdateResponse,
     TAuthLogoutResponse,
-    TEntityField
+    TEntityField,
+    TFieldErrors
 } from '@shared/types/index.js';
 
 /// Регистрация ///
@@ -54,7 +55,7 @@ export const handleAuthRegistrationRequest: RequestHandler<
     const { formFields, guestCart } = req.body ?? {};
     const { name, email, password, adminRegCode } = formFields ?? {};
 
-    const validationConfigMap: TValidationConfigMap<'auth'> = {
+    /*const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
         name: { value: name, type: 'string', form: true },
@@ -77,7 +78,7 @@ export const handleAuthRegistrationRequest: RequestHandler<
         if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 0) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
-    }
+    }*/
 
     // Создание документа в базе MongoDB
     const isAdmin = !!adminRegCode && adminRegCode === config.adminRegCode;
@@ -150,7 +151,7 @@ export const handleAuthLoginRequest: RequestHandler<
     const { formFields, guestCart } = req.body ?? {};
     const { name, password, rememberMe } = formFields ?? {};
 
-    const validationConfigMap: TValidationConfigMap<'auth'> = {
+    /*const validationConfigMap: TValidationConfigMap<'auth'> = {
         formFields: { value: formFields, type: 'object' },
         guestCart: { value: guestCart, type: 'arrayOf', arrElemType: 'object' },
         name: { value: name, type: 'string', form: true },
@@ -172,7 +173,7 @@ export const handleAuthLoginRequest: RequestHandler<
         if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 0) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
-    }
+    }*/
 
     // Валидация полей
     const INVALID_AUTH_MSG = 'Некорректные данные при авторизации';
@@ -180,6 +181,7 @@ export const handleAuthLoginRequest: RequestHandler<
         name: name.trim(),
         password
     } as const;
+    const fieldErrors: TFieldErrors<'auth'> = {};
     
     (Object.entries(prepDbFields) as [
         keyof typeof prepDbFields,
@@ -279,7 +281,7 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         return safeSendResponse(res, 204);
     }
 
-    const validationConfigMap: TValidationConfigMap<'auth'> = {
+    /*const validationConfigMap: TValidationConfigMap<'auth'> = {
         newName: { value: newName, type: 'string', optional: true, form: true },
         newEmail: { value: newEmail, type: 'string', optional: true, form: true },
         currentPassword: { value: currentPassword, type: 'string', optional: true, form: true },
@@ -294,7 +296,7 @@ export const handleAuthUserUpdateRequest: RequestHandler<
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
     
     const dbUser = req.dbUser;
     const dbUserBackup: Pick<TDbUser, 'name' | 'email'> = {
@@ -308,6 +310,7 @@ export const handleAuthUserUpdateRequest: RequestHandler<
         newPassword
     };
     const updatedFormFields: Partial<TEntityField<'auth'>>[] = [];
+    const fieldErrors: TFieldErrors<'auth'> = {};
 
     // Апдейт документа в базе MongoDB
     try {
@@ -472,7 +475,7 @@ export const handleAuthSessionRequest: RequestHandler<
     const dbUser = req.dbUser;
     const { guestCart } = req.body ?? {};
 
-    if (!typeCheck.arrayOf(guestCart, 'object', typeCheck)) {
+    /*if (!typeCheck.arrayOf(guestCart, 'object', typeCheck)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: guestCart' });
     }
 
@@ -480,7 +483,7 @@ export const handleAuthSessionRequest: RequestHandler<
         if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 0) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
-    }
+    }*/
 
     try {
         const { sessionData } = await runInDbTransaction(async (session) => {
@@ -578,7 +581,7 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
         defaultPaymentMethod
     } = req.body ?? {};
 
-    const validationConfigMap: TValidationConfigMap<'checkout'> = {
+    /*const validationConfigMap: TValidationConfigMap<'checkout'> = {
         firstName: { value: firstName, type: 'string', optional: true, form: true },
         lastName: { value: lastName, type: 'string', optional: true, form: true },
         middleName: { value: middleName, type: 'string', optional: true, form: true },
@@ -604,7 +607,7 @@ export const handleAuthCheckoutPrefsUpdateRequest: RequestHandler<
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
 
     // Проверка на согласованность данных для метода курьерской доставки
     const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;

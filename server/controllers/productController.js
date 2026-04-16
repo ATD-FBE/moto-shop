@@ -369,7 +369,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
     } = req.body ?? {};
     
     // Предварительная проверка формата данных
-    const validationConfigMap = {
+    /*const validationConfigMap = {
         productId: { value: productId, type: 'objectId' },
         imageFilenamesToDelete: { value: imageFilenamesToDelete, type: 'arrayOf', arrElemType: 'string' },
         images: { value: images, type: 'array', form: true },
@@ -395,7 +395,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
 
     // Проверка индекса фотографий
     const mainImageIndexNum = Number(mainImageIndex);
@@ -609,7 +609,7 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     const { brand, unit, discount, category, tags, isActive } = formFields ?? {};
 
     // Предварительная проверка формата данных
-    const validationConfigMap = {
+    /*const validationConfigMap = {
         productIds: { value: productIds, type: 'arrayOf', arrElemType: 'objectId' },
         formFields: { value: formFields, type: 'object' },
         brand: { value: brand, type: 'string', optional: true, form: true },
@@ -628,7 +628,7 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     }
     if (Object.keys(fieldErrors).length > 0) {
         return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    }*/
 
     // Проверка выбранных товаров для апдейта
     const uniqueProductIds = [...new Set(productIds)];
@@ -811,9 +811,9 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
     // Предварительная проверка формата данных
     const { productIds } = req.body ?? {};
 
-    if (!typeCheck.arrayOf(productIds, 'objectId', typeCheck) ) {
+    /*if (!typeCheck.arrayOf(productIds, 'objectId', typeCheck) ) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: productIds' });
-    }
+    }*/
 
     const uniqueProductIds = [...new Set(productIds)];
     const total = uniqueProductIds.length;

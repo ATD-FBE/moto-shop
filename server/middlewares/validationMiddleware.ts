@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { buildValidationFieldConfig, validateInputData } from '@server/validation/validationEngine.js';
+import { buildValidationConfig, validateInputData } from '@server/validation/validationEngine.js';
 import { getValueByPath } from '@shared/commonHelpers.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import type { IValidationInputSchema, IValidationConfig } from '@server/types/index.js';
@@ -18,16 +18,15 @@ export const validateInput = <E extends TEntityType = TEntityType>(
         });
     }
     if (body) {
-        Object.entries(body).forEach(([path, schema]) => {
-            const fieldName = path.split('.').pop()!;
-            const fieldValue = getValueByPath(path, req.body);
-            validationConfigMap[fieldName] = buildValidationFieldConfig(schema, fieldValue);
+        Object.entries(body).forEach(([fieldName, schema]) => {
+            const fieldValue = getValueByPath(fieldName, req.body);
+            validationConfigMap[fieldName] = buildValidationConfig(schema, fieldValue);
         });
     }
     if (query) {
         Object.entries(query).forEach(([queryName, schema]) => {
             const queryValue = req.query[queryName];
-            validationConfigMap[queryName] = buildValidationFieldConfig(schema, queryValue);
+            validationConfigMap[queryName] = buildValidationConfig(schema, queryValue);
         });
     }
 

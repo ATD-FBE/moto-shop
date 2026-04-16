@@ -10,7 +10,7 @@ import safeSendResponse from '../utils/safeSendResponse.js';
 export const handleGuestCartItemListRequest = async (req, res, next) => {
     const { guestCart } = req.body ?? {};
 
-    if (!typeCheck.arrayOf(guestCart, 'object', typeCheck)) {
+    /*if (!typeCheck.arrayOf(guestCart, 'object', typeCheck)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: guestCart' });
     }
 
@@ -18,7 +18,7 @@ export const handleGuestCartItemListRequest = async (req, res, next) => {
         if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 0) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
-    }
+    }*/
 
     try {
         const { purchaseProductList, cartItemList } = await prepareGuestCart(guestCart);

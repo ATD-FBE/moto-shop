@@ -7,8 +7,7 @@ import type {
     TEntityType,
     TFieldErrors,
     TAllowedMimeType, 
-    TRegisteredUserRole,
-    TEntityField
+    TRegisteredUserRole
 } from '@shared/types/index.js';
 
 //////////////
@@ -67,56 +66,6 @@ export interface IAppErrorData {
 export interface IParseValidationErrorsResult<E extends TEntityType = TEntityType> {
     systemFieldError: Error | null;
     fieldErrors: TFieldErrors<E> | null;
-}
-
-///////////////////////
-/// TYPE VALIDATION ///
-///////////////////////
-
-export type TCheckType =
-    | 'string' | 'number' | 'integer' | 'boolean' | 'emptyableBoolean' | 'array'
-    | 'arrayOf' | 'object' | 'date' | 'objectId' | 'nullableObjectId';
-
-export type TCheckFn = (val: unknown, ...args: any[]) => boolean;
-
-export type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
-
-export type TTypeCheck = TBaseTypeChecks & {
-    optional: TBaseTypeChecks;
-};
-
-export interface IValidationSchema {
-    type: TCheckType;
-    min?: number;
-    max?: number;
-    arrElemType?: TCheckType;
-    arrElemSchema?: Record<string, IValidationSchema>;
-    enumValues?: readonly any[];
-    optional?: boolean;
-    form?: boolean;
-}
-
-export interface IValidationConfig extends Omit<IValidationSchema, 'arrElemSchema'> {
-    value: unknown;
-    arrElemConfig?: Record<string, IValidationConfig>;
-}
-
-export interface IValidationInputSchema<E extends TEntityType = TEntityType> {
-    entityType?: E;
-    params?: Record<string, TCheckType>;
-    body?: Record<string, IValidationSchema>;
-    query?: Record<string, IValidationSchema>;
-}
-
-export type TValidationConfigMap<E extends TEntityType = TEntityType> = {
-    [K in TEntityField<E>]?: IValidationConfig;
-} & {
-    [key: string]: IValidationConfig;
-};
-
-export interface IValidateInputDataResult<E extends TEntityType = TEntityType> {
-    invalidInputPaths: string[];
-    fieldErrors: TFieldErrors<E>;
 }
 
 /////////////////////
