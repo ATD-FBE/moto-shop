@@ -5,14 +5,16 @@ export type TCheckType =
     | 'date' | 'objectId' | 'nullableObjectId' | 'array' | 'object';
 
 export interface IValidationSchema {
-    type: TCheckType;                           // Тип значения поля
-    fields?: Record<string, IValidationSchema>; // Для проверки содержимого объектов -> тип object
-    items?: IValidationSchema;                  // Для проверки содержимого массивов -> тип array
-    min?: number;                               // Для типов number и integer
-    max?: number;                               // Для типов number и integer
-    enumValues?: readonly any[];                // Для типов string, number и integer
-    optional?: boolean;                         // Для опционального поля -> значение undefined
-    formField?: boolean;                        // Для поля формы
+    type: TCheckType;                              // Тип значения поля
+    fields?: Record<string, IValidationSchema>;    // Для проверки содержимого объектов -> тип object
+    items?: IValidationSchema;                     // Для проверки содержимого массивов -> тип array
+    optional?: boolean;                            // Для опционального поля -> значение undefined
+    match?: boolean | RegExp;                      // Для типа string
+    min?: number;                                  // Для типов number и integer
+    max?: number;                                  // Для типов number и integer
+    enum?: readonly (string | number | boolean)[]; // Для типов string, number и integer
+    formField?: boolean;                           // Для поля формы
+    errorType?: string;                            // Для поля формы
 }
 
 export interface IValidationConfig extends IValidationSchema {

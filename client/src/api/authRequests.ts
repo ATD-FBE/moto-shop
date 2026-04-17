@@ -132,7 +132,7 @@ export const sendAuthRefreshRequest = (): TAppThunk<Promise<TAuthRefreshResponse
 /// Загрузка настроек заказа ///
 export const sendAuthCheckoutPrefsRequest = (): TAppThunk<Promise<TAuthCheckoutPrefsResponse>> =>
     async (dispatch) => {
-        const url = '/api/auth/checkout-preferences';
+        const url = '/api/auth/checkout-prefs';
         const options: RequestInit = { method: 'GET' };
         const errorPrefix = 'Не удалось загрузить настройки заказа';
         const config = {
@@ -151,7 +151,7 @@ export const sendAuthCheckoutPrefsUpdateRequest = (
     objData: IAuthCheckoutPrefsUpdateBody
 ): TAppThunk<Promise<TAuthCheckoutPrefsUpdateResponse>> =>
     async (dispatch) => {
-        const url = '/api/auth/checkout-preferences';
+        const url = '/api/auth/checkout-prefs';
         const options: RequestInit = {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },

@@ -1,3 +1,4 @@
+// Public Pages
 import Home from '@/components/pages/public/Home.jsx';
 import AboutShop from '@/components/pages/public/AboutShop.jsx';
 import EventsMenu from '@/components/pages/public/EventsMenu.jsx';
@@ -12,11 +13,13 @@ import Insurance from '@/components/pages/public/documents-menu/Insurance.jsx';
 import Licenses from '@/components/pages/public/documents-menu/Licenses.jsx';
 import CompanyDetails from '@/components/pages/public/documents-menu/CompanyDetails.jsx';
 import Contacts from '@/components/pages/public/Contacts.jsx';
+
+// Auth Pages
 import LoginForm from '@/components/pages/auth/LoginForm.jsx';
 import RegistrationForm from '@/components/pages/auth/RegistrationForm.jsx';
-import Personal from '@/components/pages/shared/Personal.jsx';
-import Profile from '@/components/pages/shared/Profile.jsx';
-import ErrorLogs from '@/components/pages/admin/ErrorLogs.jsx';
+
+// Admin Pages
+import ErrorLogs from '@/components/pages/admin/personal-menu/ErrorLogs.jsx';
 import CatalogManagement from '@/components/pages/admin/CatalogManagement.jsx';
 import NotificationManagement from '@/components/pages/admin/NotificationManagement.jsx';
 import OrderManagement from '@/components/pages/admin/OrderManagement.jsx';
@@ -24,15 +27,24 @@ import OrderDetailsManagement from '@/components/pages/admin/OrderDetailsManagem
 import CustomerManagement from '@/components/pages/admin/CustomerManagement.jsx';
 import EventManagement from '@/components/pages/admin/EventManagement.jsx';
 import Statistics from '@/components/pages/admin/Statistics.jsx';
+
+// Customer Pages
 import Cart from '@/components/pages/customer/Cart.jsx';
 import Checkout from '@/components/pages/customer/Checkout.jsx';
-import CheckoutPreferences from '@/components/pages/customer/CheckoutPreferences.jsx';
+import CheckoutPreferences from '@/components/pages/customer/personal-menu/CheckoutPreferences.jsx';
 import CustomerNotifications from '@/components/pages/customer/CustomerNotifications.jsx';
 import CustomerOrders from '@/components/pages/customer/CustomerOrders.jsx';
-import CustomerOrderDetails from '@/components/pages/customer/CustomerOrderDetails.jsx';
+import CustomerOrderDetails from '@/components/pages/customer/personal-menu/CustomerOrderDetails.jsx';
 import CardOnlinePayment from '@/components/pages/customer/CardOnlinePayment.jsx';
+
+// Shared Pages
+import Personal from '@/components/pages/shared/Personal.jsx';
+import Profile from '@/components/pages/shared/personal-menu/Profile.jsx';
+
+// Not Found Page
 import NotFound from '@/components/pages/NotFound.jsx';
 
+// Helpers
 import { buildNavigationMap, buildBreadcrumbMap } from '@/helpers/routeHelpers.js';
 import { getCustomerOrderDetailsPath } from '@shared/commonHelpers.js';
 
@@ -270,7 +282,7 @@ export const routeConfig = {
     },
     customerCheckoutPrefs: {
         label: 'Настройки заказа',
-        paths: ['/customer/checkout-preferences'],
+        paths: ['/customer/checkout-prefs'],
         access: 'customer',
         parent: 'customerPersonal',
         component: CheckoutPreferences,

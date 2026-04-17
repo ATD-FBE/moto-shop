@@ -2,12 +2,10 @@ import { ParamsDictionary } from 'express-serve-static-core';
 import News from '@server/db/models/News.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
-import { requireDbUser, isAppError, isMongooseValidationError } from '@server/utils/typeGuards.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { TDbNews } from '@server/types/index.js';
@@ -55,7 +53,7 @@ export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = asyn
 
         safeSendResponse(res, 200, { message: 'Новости успешно загружены', newsList });
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };
 
@@ -76,7 +74,7 @@ export const handleNewsRequest: RequestHandler<INewsParams, TNewsResponse> = asy
             news: prepareNews(dbNews)
         });
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };
 
@@ -91,7 +89,6 @@ export const handleNewsCreateRequest: RequestHandler<
     const userId = req.dbUser._id;
     const { title, content } = req.body;
 
-    // Создание документа в базе MongoDB
     try {
         const { newsLbl } = await runInDbTransaction(async (session) => {
             const [newNews] = await News.create(
@@ -111,19 +108,7 @@ export const handleNewsCreateRequest: RequestHandler<
 
         safeSendResponse(res, 201, { message: `Новость "${newsLbl}" успешно создана` });
     } catch (err) {
-        const error = toError(err);
-
-        // Обработка ошибок валидации полей
-        if (isMongooseValidationError(error)) {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'news');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
-        next(error);
+        next(err);
     }
 };
 
@@ -139,10 +124,8 @@ export const handleNewsUpdateRequest: RequestHandler<
     const newsId = req.params.newsId;
     const { title, content } = req.body;
 
-    // Апдейт документа в базе MongoDB
     try {
         const { newsLbl } = await runInDbTransaction(async (session) => {
-            // Проверка на существование изменяемой новости
             const dbNews = await News.findById(newsId).session(session);
             checkTimeout(req);
 
@@ -152,7 +135,6 @@ export const handleNewsUpdateRequest: RequestHandler<
                 throw createAppError(404, `Новость ${newsLbl} не найдена`);
             }
 
-            // Установка новых данных и проверка их изменений
             dbNews.set({
                 title: title.trim(),
                 content: content.trim()
@@ -162,7 +144,6 @@ export const handleNewsUpdateRequest: RequestHandler<
                 throw createAppError(204);
             }
 
-            // Добавление лога редактирования и сохранение в базе MongoDB
             dbNews.updateHistory.push({ updatedBy: userId, updatedAt: new Date() });
             await dbNews.save({ session });
             checkTimeout(req);
@@ -172,24 +153,7 @@ export const handleNewsUpdateRequest: RequestHandler<
 
         safeSendResponse(res, 200, { message: `Новость "${newsLbl}" успешно изменена` });
     } catch (err) {
-        const error = toError(err);
-
-        // Обработка контролируемой ошибки
-        if (isAppError(error)) {
-            return safeSendResponse(res, error.statusCode, prepareAppErrorData(error));
-        }
-
-        // Обработка ошибок валидации полей
-        if (isMongooseValidationError(error)) {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(error, 'news');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
-        next(error);
+        next(err);
     }
 };
 
@@ -216,12 +180,6 @@ export const handleNewsDeleteRequest: RequestHandler<
 
         safeSendResponse(res, 200, { message: `Новость ${newsLbl} успешно удалена` });
     } catch (err) {
-        const error = toError(err);
-
-        if (isAppError(error)) {
-            return safeSendResponse(res, error.statusCode, prepareAppErrorData(error));
-        }
-
-        next(error);
+        next(err);
     }
 };

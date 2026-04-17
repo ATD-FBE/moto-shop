@@ -107,8 +107,11 @@ export default function Cart() {
                 : true;
     
             // Фильтрация по проблемным товарам
-            const isWarning = cartItem.deleted || cartItem.inactive ||
-                cartItem.outOfStock || cartItem.quantityReduced;
+            const isWarning =
+                cartItem.deleted ||
+                cartItem.inactive ||
+                cartItem.outOfStock ||
+                cartItem.quantityReduced;
             if (isWarning) warningCount++;
     
             const matchesFilter = filter === 'warnings' ? isWarning : true;
@@ -1028,13 +1031,13 @@ function CartItemCard({
     return (
         <article
             data-id={id}
+            data-message={removing ? '⏳ Удаление товара из корзины...' : ''}
             className={cn('cart-item-card', {
                 'unavailable': isUnavailable,
                 'quantity-reduced': quantityReduced,
                 'out-of-stock': outOfStock,
                 'inactive': inactive
             })}
-            data-message={removing ? '⏳ Удаление товара из корзины...' : ''}
         >
             <div className="product-thumb">
                 <BlockableLink to={productUrl}>

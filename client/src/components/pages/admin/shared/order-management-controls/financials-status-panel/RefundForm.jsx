@@ -11,7 +11,12 @@ import {
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import {
+    FORM_STATUS,
+    BASE_SUBMIT_STATES,
+    FIELD_UI_STATUS,
+    SUCCESS_DELAY
+} from '@/config/constants.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {

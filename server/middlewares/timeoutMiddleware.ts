@@ -16,7 +16,10 @@ export const requestTimeout = (duration: number): RequestHandler => (req, res, n
 export const checkTimeout = (req: Request<any, any, any, any>): void => {
     if (req.connectionTimeout) {
         const error = new Error(ERROR_SIGNALS.TIMEOUT_ABORT);
-        error.isTimeoutAbort = true; 
+        error.isTimeoutCheck = true; 
         throw error;
     }
 };
+
+// checkTimeout оборывает дальнейшее выполнение обработчика после выполнения таймера в requestTimeout
+// Глобальный обработчик ошибок не реагирует на ошибку checkTimeout благодаря флагу isTimeoutCheck

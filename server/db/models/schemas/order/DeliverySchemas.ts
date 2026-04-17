@@ -1,12 +1,11 @@
 import { Schema } from 'mongoose';
 import { validationRules } from '@shared/fieldRules.js';
-import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS } from '@shared/constants.js';
-import type { TDeliveryMethod } from '@shared/types/index.js';
+import { DELIVERY_METHOD } from '@shared/constants.js';
 
 const baseDeliveryFields = {
     deliveryMethod: {
         type: String,
-        enum: DELIVERY_METHOD_OPTIONS.map(opt => opt.value),
+        enum: Object.values(DELIVERY_METHOD),
         set: (val: null | string): string | undefined => val === null ? undefined : val
     },
     allowCourierExtra: {
@@ -68,18 +67,18 @@ export const FinalDeliverySchema = new Schema({
         },
         city: {
             ...baseDeliveryFields.shippingAddress.city,
-            required: true,
-            match: validationRules.checkout.city
+            match: validationRules.checkout.city,
+            required: true
         },
         street: {
             ...baseDeliveryFields.shippingAddress.street,
-            required: true,
-            match: validationRules.checkout.street
+            match: validationRules.checkout.street,
+            required: true
         },
         house: {
             ...baseDeliveryFields.shippingAddress.house,
-            required: true,
-            match: validationRules.checkout.house
+            match: validationRules.checkout.house,
+            required: true
         },
         apartment: { // Опционально для заказа
             ...baseDeliveryFields.shippingAddress.apartment,

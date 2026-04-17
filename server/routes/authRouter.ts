@@ -3,6 +3,10 @@ import { verifyAuth, verifyUser, verifyRole } from '@server/middlewares/authMidd
 import { validateInput } from '@server/middlewares/validationMiddleware.js';
 import {
     authRegistrationSchema,
+    authLoginSchema,
+    authUserUpdateSchema,
+    authSessionSchema,
+    authCheckoutPrefsUpdateSchema
 } from '@server/validation/schemas/auth.schemas.js';
 import {
     handleAuthCheckoutPrefsRequest,
@@ -19,13 +23,52 @@ import { USER_ROLE } from '@shared/constants.js';
 const router: Router = Router();
 const { CUSTOMER } = USER_ROLE;
 
-router.get('/checkout-preferences', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleAuthCheckoutPrefsRequest);
-router.post('/register', validateInput(authRegistrationSchema), handleAuthRegistrationRequest);
-router.post('/login', handleAuthLoginRequest);
-router.post('/session', verifyAuth, verifyUser, handleAuthSessionRequest);
-router.post('/refresh', handleAuthRefreshRequest);
-router.post('/logout', handleAuthLogoutRequest);
-router.patch('/user', verifyAuth, verifyUser, handleAuthUserUpdateRequest);
-router.patch('/checkout-preferences', verifyAuth, verifyUser, verifyRole(CUSTOMER), handleAuthCheckoutPrefsUpdateRequest);
+router.get(
+    '/checkout-prefs',
+    verifyAuth,
+    verifyUser,
+    verifyRole(CUSTOMER),
+    handleAuthCheckoutPrefsRequest
+);
+router.post(
+    '/register',
+    validateInput(authRegistrationSchema),
+    handleAuthRegistrationRequest
+);
+router.post(
+    '/login',
+    validateInput(authLoginSchema),
+    handleAuthLoginRequest
+);
+router.post(
+    '/session',
+    verifyAuth,
+    verifyUser,
+    validateInput(authSessionSchema),
+    handleAuthSessionRequest
+);
+router.post(
+    '/refresh',
+    handleAuthRefreshRequest
+);
+router.post(
+    '/logout',
+    handleAuthLogoutRequest
+);
+router.patch(
+    '/user',
+    verifyAuth,
+    verifyUser,
+    validateInput(authUserUpdateSchema),
+    handleAuthUserUpdateRequest
+);
+router.patch(
+    '/checkout-prefs',
+    verifyAuth,
+    verifyUser,
+    verifyRole(CUSTOMER),
+    validateInput(authCheckoutPrefsUpdateSchema),
+    handleAuthCheckoutPrefsUpdateRequest
+);
 
 export default router;

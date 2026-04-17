@@ -3,8 +3,25 @@ import { typeCheck } from '../validation/validationEngine.js';
 import { isValidEntityField } from './typeGuards.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { FILE_FIELD_MAP } from '@server/config/constants.js';
-import type { IAppErrorData, IParseValidationErrorsResult } from '@server/types/index.js';
 import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface IAppErrorData {
+    message: string;
+    [key: string]: unknown;
+}
+
+export interface IParseValidationErrorsResult<E extends TEntityType = TEntityType> {
+    fieldErrors: TFieldErrors<E>;
+    systemFieldErrors: string[];
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const isCriticalError = (error: Error): boolean => {
     return (
@@ -33,14 +50,15 @@ export const prepareAppErrorData = (err: Error): IAppErrorData => ({
 
 export const parseValidationErrors = <E extends TEntityType>(
     err: mongoose.Error.ValidationError, 
-    entityType: E
+    entityType?: E
 ): IParseValidationErrorsResult<E> => {
     const fieldErrors: TFieldErrors<E> = {};
+    const systemFieldErrors: string[] = [];
 
     for (const field in err.errors) {
         const error = err.errors[field]; // В валидаторе Mongoose используется полный путь поля
 
-        if (field === 'globalFiles' && entityType in FILE_FIELD_MAP) {
+        if (field === 'globalFiles' && entityType && entityType in FILE_FIELD_MAP) {
             const message = error.message || 'Неизвестная ошибка файлового поля';
             const fileFields = FILE_FIELD_MAP[entityType as keyof typeof FILE_FIELD_MAP];
             
@@ -52,32 +70,30 @@ export const parseValidationErrors = <E extends TEntityType>(
             continue;
         }
 
-        // Если поле вложено field будет иметь вид дот-нотации ('delivery.shippingAddress.city')
-        const fieldName = field.includes('.') ? (field.split('.').pop() as string) : field;
+        // Если поле вложено, field будет иметь вид дот-нотации ('delivery.shippingAddress.city')
+        const fieldName = field.includes('.') ? field.split('.').pop()! : field;
 
-        if (isValidEntityField(entityType, fieldName)) {
-            const messages = fieldErrorMessages[entityType][fieldName];
+        if (entityType && isValidEntityField(entityType, fieldName)) {
+            const messageTypes = fieldErrorMessages[entityType][fieldName];
             
             if (error.kind === 'unique') {
-                fieldErrors[fieldName] = messages.unique || DEFAULT_FIELD_ERROR_MESSAGE;
+                fieldErrors[fieldName] = messageTypes.unique || DEFAULT_FIELD_ERROR_MESSAGE;
             } else if (error.kind === 'user defined') {
                 const errorType = error.message; // Тип ошибки передаётся через сообщение
 
-                fieldErrors[fieldName] = (errorType && errorType in messages) 
-                    ? (messages as any)[errorType] 
-                    : (messages.default || DEFAULT_FIELD_ERROR_MESSAGE);
+                fieldErrors[fieldName] = (errorType && errorType in messageTypes) 
+                    ? messageTypes[errorType] 
+                    : (messageTypes.default || DEFAULT_FIELD_ERROR_MESSAGE);
             } else {
-                fieldErrors[fieldName] = messages.mismatch || messages.default || DEFAULT_FIELD_ERROR_MESSAGE;
+                fieldErrors[fieldName] =
+                    messageTypes.mismatch ||
+                    messageTypes.default ||
+                    DEFAULT_FIELD_ERROR_MESSAGE;
             }
         } else {
-            return {
-                systemFieldError: createAppError(400, `Ошибка системного поля ${fieldName}: ${error.message}`),
-                fieldErrors: null
-            };
+            systemFieldErrors.push(`${field}: ${error.message}`);
         }
     }
 
-    return Object.keys(fieldErrors).length > 0 
-        ? { systemFieldError: null, fieldErrors } 
-        : { systemFieldError: null, fieldErrors: null };
+    return { fieldErrors, systemFieldErrors };
 };

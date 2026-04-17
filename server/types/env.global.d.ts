@@ -2,6 +2,7 @@ import { TUserRole } from '@shared/constants.js';
 import type { TStorageType, TMongoMode, TBucketType } from './config.types.js';
 import type { TTokenDecodedUser } from './utils.types.js';
 import type { TDbUserDoc } from './db.types.js';
+import type { TEntityType } from '@shared/types/shared.types.js';
 
 declare global {
     namespace NodeJS {
@@ -33,7 +34,7 @@ declare global {
 
     interface Error {
         errors?: Record<string, unknown>;
-        isTimeoutAbort?: boolean;
+        isTimeoutCheck?: boolean;
         isAppError?: boolean;
         statusCode?: number;
         code?: string | number;
@@ -50,6 +51,7 @@ declare global {
             connectionTimeout?: boolean;
             user?: TTokenDecodedUser;
             dbUser?: TDbUserDoc;
+            entityType?: TEntityType;
             file?: Express.Multer.File;
             files?: Express.Multer.File[];
             fileUploadError?: {

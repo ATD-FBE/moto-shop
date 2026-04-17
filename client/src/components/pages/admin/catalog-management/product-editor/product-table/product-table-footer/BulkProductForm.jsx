@@ -8,7 +8,12 @@ import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { sendBulkProductUpdateRequest } from '@/api/productRequests.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import {
+    FORM_STATUS,
+    BASE_SUBMIT_STATES,
+    FIELD_UI_STATUS,
+    SUCCESS_DELAY
+} from '@/config/constants.js';
 import { PRODUCT_UNITS } from '@shared/constants.js';
 
 const getSubmitStates = () => {

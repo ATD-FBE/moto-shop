@@ -15,7 +15,7 @@ export const handleGuestCartItemListRequest = async (req, res, next) => {
     }
 
     for (const { id, quantity } of guestCart) {
-        if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 0) {
+        if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 1) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
     }*/

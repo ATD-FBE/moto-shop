@@ -6,7 +6,12 @@ import { sendOrderInternalNoteUpdateRequest } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import {
+    FORM_STATUS,
+    BASE_SUBMIT_STATES,
+    FIELD_UI_STATUS,
+    SUCCESS_DELAY
+} from '@/config/constants.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 
 const getSubmitStates = () => {

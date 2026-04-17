@@ -11,31 +11,31 @@ type TNewsEntity = typeof newsEntity;
 /////////////////////
 
 const newsEntity = 'news';
-const newsParams: IValidationInputSchema<TNewsEntity>['params'] = {
+const newsParamsSchema: IValidationInputSchema<TNewsEntity>['params'] = {
     newsId: 'objectId'
-};
-const newsBody: IValidationInputSchema<TNewsEntity>['body'] = {
+} as const;
+const newsBodySchema: IValidationInputSchema<TNewsEntity>['body'] = {
     title: { type: 'string', formField: true },
     content: { type: 'string', formField: true }
-};
+} as const;
 
 export const newsSchema: IValidationInputSchema<TNewsEntity> = {
     entityType: newsEntity,
-    params: newsParams
-};
+    params: newsParamsSchema
+} as const;
 
 export const newsCreateSchema: IValidationInputSchema<TNewsEntity> = {
     entityType: newsEntity,
-    body: newsBody
-};
+    body: newsBodySchema
+} as const;
 
 export const newsUpdateSchema: IValidationInputSchema<TNewsEntity> = {
     entityType: newsEntity,
-    params: newsParams,
-    body: newsBody
-};
+    params: newsParamsSchema,
+    body: newsBodySchema
+} as const;
 
 export const newsDeleteSchema: IValidationInputSchema<TNewsEntity> = {
     entityType: newsEntity,
-    params: newsParams
-};
+    params: newsParamsSchema
+} as const;

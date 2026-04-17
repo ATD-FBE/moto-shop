@@ -4,9 +4,9 @@ import {
     MAX_PRODUCT_IMAGE_SIZE_MB,
     PRODUCT_FILES_LIMIT,
     PRODUCT_UNITS,
-    DELIVERY_METHOD_OPTIONS,
-    PAYMENT_METHOD_OPTIONS,
-    REFUND_METHOD_OPTIONS,
+    DELIVERY_METHOD,
+    PAYMENT_METHOD,
+    REFUND_METHOD,
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER
 } from './constants.js';
@@ -63,13 +63,13 @@ export const discountValidation = (val: string | number): boolean => {
 };
 
 export const deliveryMethodValidation = (val: TDeliveryMethod): boolean =>
-    DELIVERY_METHOD_OPTIONS.some(opt => opt.value === val);
+    Object.values(DELIVERY_METHOD).includes(val);
 
 export const paymentMethodValidation = (val: TPaymentMethod): boolean =>
-    PAYMENT_METHOD_OPTIONS.some(opt => opt.value === val);
+    Object.values(PAYMENT_METHOD).includes(val);
 
 export const refundMethodValidation = (val: TRefundMethod): boolean =>
-    REFUND_METHOD_OPTIONS.some(opt => opt.value === val);
+    Object.values(REFUND_METHOD).includes(val);
 
 export const providerValidation = (val: TBankProvider): boolean =>
     [...Object.values(BANK_PROVIDER), ...Object.values(CARD_ONLINE_PROVIDER)].includes(val);

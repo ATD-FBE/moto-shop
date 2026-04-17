@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import { navigationMap } from '@/config/appRouting.js';

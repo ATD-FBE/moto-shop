@@ -7,7 +7,13 @@ import type {
 } from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
 import type { TPurchaseProduct } from './product.types.js';
-import type { TRegisteredUserRole, TFieldErrors, TEntityField } from './shared.types.js';
+import type {
+    TRegisteredUserRole,
+    TFieldErrors,
+    TEntityField,
+    TDeliveryMethod,
+    TPaymentMethod
+} from './shared.types.js';
 import type { TDbUser } from '@server/types/index.js';
 
 /// Общие типы ///
@@ -119,7 +125,7 @@ export interface IAuthCheckoutPrefsUpdateBody {
     middleName?: string;
     email?: string;
     phone?: string;
-    deliveryMethod?: string;
+    deliveryMethod?: TDeliveryMethod;
     allowCourierExtra?: boolean;
     region?: string;
     district?: string;
@@ -128,7 +134,7 @@ export interface IAuthCheckoutPrefsUpdateBody {
     house?: string;
     apartment?: string;
     postalCode?: string;
-    defaultPaymentMethod?: string;
+    defaultPaymentMethod?: TPaymentMethod;
 }
 
 export type TAuthCheckoutPrefsUpdateResponse =

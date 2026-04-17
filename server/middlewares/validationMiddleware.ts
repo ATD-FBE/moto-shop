@@ -8,6 +8,8 @@ export const validateInput = <E extends TEntityType = TEntityType>(
     schema: IValidationInputSchema<E>
 ): RequestHandler => (req, res, next) => {
     const { entityType, params, body, query } = schema;
+    req.entityType = entityType;
+    
     const validationConfigMap: Record<string, IValidationConfig> = {};
 
     if (params) {
@@ -31,18 +33,18 @@ export const validateInput = <E extends TEntityType = TEntityType>(
 
     const {
         isValid,
-        invalidInputPaths,
-        fieldErrors
+        fieldErrors,
+        invalidInputPaths
     } = validateObjectFields<E>(validationConfigMap, entityType);
 
     if (isValid) return next();
 
+    if (Object.keys(fieldErrors).length > 0) {
+        return safeSendResponse(res, 422, { message: 'Неверный формат полей формы', fieldErrors });
+    }
     if (invalidInputPaths.length > 0) {
         const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
+        return safeSendResponse(res, 400, { message: `Неверный формат данных: [${invalidPathsStr}]` });
     }
 
     next();

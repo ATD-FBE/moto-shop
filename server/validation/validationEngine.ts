@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
-import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
+import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import type {
     TCheckType,
     IValidationSchema,
@@ -89,27 +89,59 @@ const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
 export const typeCheck = makeTypeCheck(baseTypeChecks);
 
 export const validateByType = (
-    config: IValidationConfig
+    config: IValidationConfig, 
+    entityType?: TEntityType, 
+    fieldName?: string
 ): boolean => {
-    const { value, type, optional, min, max, enumValues } = config;
+    const { value, type, optional, match, min, max, enum: enumValues } = config;
+    if (optional && value === undefined) return true;
 
-    const validator = optional
-        ? typeCheck.optional[type]
-        : typeCheck[type];
-
+    const validator = typeCheck[type];
     let isValid = validator?.(value) ?? false;
 
+    // match для строки -> булево значение для поля формы, регулярное выражение - для любого поля
+    if (isValid && type === 'string' && typeof value === 'string' && match) {
+        let rule: RegExp | ((val: string) => boolean) | undefined;
+
+        if (
+            typeof match === 'boolean' &&
+            entityType &&
+            fieldName &&
+            isValidEntityField(entityType, fieldName)
+        ) {
+            rule = validationRules[entityType][fieldName];
+        } else if (match instanceof RegExp) {
+            rule = match;
+        }
+
+        if (rule) {
+            const trimmedValue = value.trim();
+
+            if (rule instanceof RegExp) {
+                isValid = rule.test(trimmedValue);
+            } else if (typeof rule === 'function') {
+                isValid = rule(trimmedValue);
+            }
+        }
+    }
+
     // min/max для чисел
-    if (isValid && (type === 'number' || type === 'integer')) {
+    if (isValid && ['number', 'integer'].includes(type)) {
         const num = Number(value);
         if (min !== undefined && num < min) isValid = false;
         if (max !== undefined && num > max) isValid = false;
     }
 
-    // enumValues
+    // enum для примитивов
     if (isValid && enumValues?.length) {
-        const normalizedValue = type === 'number' ? Number(value) : value;
-        isValid = enumValues.includes(normalizedValue);
+        const isEnumSupported = ['string', 'number', 'integer', 'boolean'].includes(type);
+    
+        if (isEnumSupported) {
+            const isNumeric = ['number', 'integer'].includes(type);
+            const normalizedValue = isNumeric ? Number(value) : value;
+
+            isValid = enumValues.includes(normalizedValue as any);
+        }
     }
 
     return isValid;
@@ -156,7 +188,7 @@ export const validateArrayItems = <E extends TEntityType>(
         // Создание заполненного значениями конфига элемента массива с его потомками и валидация
         const itemConfig = buildValidationConfig(arrSchema, item);
 
-        // OBJECT
+        // OBJECT + fields
         if (itemConfig.type === 'object' && itemConfig.fields) {
             const result = validateObjectFields<E>(itemConfig.fields, entityType, currentPath);
 
@@ -165,7 +197,7 @@ export const validateArrayItems = <E extends TEntityType>(
             continue;
         }
 
-        // ARRAY (nested)
+        // ARRAY + items
         if (itemConfig.type === 'array' && itemConfig.items) {
             const result = validateArrayItems<E>(itemConfig, entityType, currentPath);
 
@@ -176,10 +208,7 @@ export const validateArrayItems = <E extends TEntityType>(
 
         // BY TYPE
         const isValid = validateByType(itemConfig);
-
-        if (!isValid) {
-            invalidInputPaths.push(currentPath);
-        }
+        if (!isValid) invalidInputPaths.push(currentPath);
     }
 
     return {
@@ -190,7 +219,7 @@ export const validateArrayItems = <E extends TEntityType>(
 };
 
 export const validateObjectFields = <E extends TEntityType>(
-    validationConfigMap: TValidationConfigMap<E>,
+    configMap: TValidationConfigMap<E>,
     entityType?: E,
     pathPrefix: string = ''
 ): IValidationResult<E> => {
@@ -198,8 +227,8 @@ export const validateObjectFields = <E extends TEntityType>(
     let fieldErrors: TFieldErrors<E> = {};
     let isValid = true;
 
-    for (const [fieldName, config] of Object.entries(validationConfigMap) as [string, IValidationConfig][]) {
-        const { value, type, fields, items, optional, formField = false } = config;
+    for (const [fieldName, config] of Object.entries(configMap) as [string, IValidationConfig][]) {
+        const { value, type, fields, items, optional, formField = false, errorType } = config;
         const fullPath = pathPrefix ? `${pathPrefix}.${fieldName}` : fieldName;
 
         let isFieldValid = true;
@@ -238,7 +267,11 @@ export const validateObjectFields = <E extends TEntityType>(
                 isFieldValid = false;
             }
         } else { // BY TYPE
-            isFieldValid = validateByType(config);
+            if (formField && entityType) {
+                isFieldValid = validateByType(config, entityType, fieldName);
+            } else {
+                isFieldValid = validateByType(config);
+            }
 
             if (!isFieldValid) {
                 invalidInputPaths.push(fullPath);
@@ -250,11 +283,12 @@ export const validateObjectFields = <E extends TEntityType>(
 
             // Заполнение ошибок валидации полей формы
             if (formField && entityType && isValidEntityField(entityType, fieldName)) {
-                const fieldMessages = fieldErrorMessages[entityType][fieldName];
+                const errorMessageTypes = fieldErrorMessages[entityType][fieldName];
 
                 fieldErrors[fieldName] =
-                    fieldMessages?.mismatch ||
-                    fieldMessages?.default ||
+                    (errorType && errorMessageTypes?.[errorType]) ||
+                    errorMessageTypes?.mismatch ||
+                    errorMessageTypes?.default ||
                     DEFAULT_FIELD_ERROR_MESSAGE;
             }
         }

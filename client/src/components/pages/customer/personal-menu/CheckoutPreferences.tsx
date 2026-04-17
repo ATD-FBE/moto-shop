@@ -12,7 +12,12 @@ import {
     sendAuthCheckoutPrefsUpdateRequest
 } from '@/api/authRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
+import {
+    FORM_STATUS,
+    BASE_SUBMIT_STATES,
+    FIELD_UI_STATUS,
+    SUCCESS_DELAY
+} from '@/config/constants.js';
 import {
     getLockedStatuses,
     extractFieldConfigs,
@@ -25,8 +30,16 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
-import { DELIVERY_METHOD, DELIVERY_METHOD_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@shared/constants.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
+import {
+    DELIVERY_METHOD,
+    DELIVERY_METHOD_OPTIONS,
+    PAYMENT_METHOD_OPTIONS
+} from '@shared/constants.js';
 import type {
     IGetSubmitStatesResult,
     TFormStatus,
@@ -499,11 +512,12 @@ export default function CheckoutPreferences(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][]).forEach(([name, error]) => {
-                    if (name in fieldConfigMap) {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                    }
-                });
+                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                    .forEach(([name, error]) => {
+                        if (name in fieldConfigMap) {
+                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                        }
+                    });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
