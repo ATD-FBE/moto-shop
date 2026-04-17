@@ -209,7 +209,7 @@ export default function RegistrationForm(): JSX.Element {
                 const isConfirmPassword = name === 'confirmPassword';
                 
                 const isValid =
-                    typeof normalizedValue === 'string' 
+                    typeof normalizedValue === 'string'
                         ? validation.test(normalizedValue) &&
                             (!isConfirmPassword || normalizedValue === fieldsState.password.value)
                         : false;

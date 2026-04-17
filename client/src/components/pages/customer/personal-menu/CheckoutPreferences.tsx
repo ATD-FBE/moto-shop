@@ -432,7 +432,7 @@ export default function CheckoutPreferences(): JSX.Element {
 
                 const ruleCheck =
                     typeof validation === 'function'
-                        ? (validation as (val: typeof normalizedValue) => boolean)(normalizedValue)
+                        ? validation(normalizedValue)
                         : typeof normalizedValue === 'string' 
                             ? validation.test(normalizedValue) 
                             : false;

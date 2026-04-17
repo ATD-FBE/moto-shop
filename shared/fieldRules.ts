@@ -17,6 +17,8 @@ import type {
     TPaymentMethod,
     TRefundMethod,
     TBankProvider,
+    TEntityType,
+    TValidationRuleType,
     TFieldErrorMessages
 } from '@shared/types/index.js';
 
@@ -36,7 +38,7 @@ export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 export const phoneValidation = /^(\+7|8)\d{10}$/;
 export const cvcValidation = /^\d{3,4}$/;
 
-export const alwaysPassValidation = (): boolean => true;
+export const alwaysPassValidation = (_val: any): boolean => true;
 
 export const booleanRequiredValidation = (val: boolean): boolean => val === true;
 
@@ -223,7 +225,7 @@ export const validationRules = {
         failureReason: textValidation,
         externalReference: textValidation
     }
-} as const;
+} satisfies Record<TEntityType, Record<string, TValidationRuleType>>;
 
 /// Сообщения об ошибках полей формы ///
 export const fieldErrorMessages: TFieldErrorMessages = {

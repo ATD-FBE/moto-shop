@@ -197,7 +197,7 @@ export default function Profile(): JSX.Element | null {
                 const isConfirmNewPassword = name === 'confirmNewPassword';
 
                 const isValid =
-                    typeof normalizedValue === 'string' 
+                    typeof normalizedValue === 'string'
                         ? validation.test(normalizedValue) &&
                             (!isConfirmNewPassword || normalizedValue === fieldsState.newPassword.value)
                         : false;

@@ -124,16 +124,13 @@ export interface IFinancialsEventConfig {
 /// FIELD RULES ///
 ///////////////////
 
-/*export type TEntityType =
+export type TEntityType =
     'auth' | 'customer' | 'news' | 'promotion' | 'notification' | 'category' |
     'product' | 'checkout' | 'order' | 'financials' | 'payment' | 'refund';
 
-export type TValidationRules = {
-    [E in TEntityType]: Record<string, RegExp | ((val: any) => boolean)>;
-};*/
+export type TValidationRuleType = RegExp | ((...args: any[]) => boolean);
 
 export type TValidationRules = typeof validationRules;
-export type TEntityType = keyof TValidationRules;
 export type TEntityField<E extends TEntityType> = keyof TValidationRules[E];
 
 export type TFieldErrorMessages = {

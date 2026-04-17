@@ -213,7 +213,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
 
                 const isValid =
-                    typeof normalizedValue === 'string' 
+                    typeof normalizedValue === 'string'
                         ? validation.test(normalizedValue) 
                         : false;
 
