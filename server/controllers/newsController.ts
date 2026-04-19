@@ -1,4 +1,3 @@
-import { ParamsDictionary } from 'express-serve-static-core';
 import News from '@server/db/models/News.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
@@ -8,6 +7,7 @@ import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import type { TDbNews } from '@server/types/index.js';
 import type {
     INewsBody,

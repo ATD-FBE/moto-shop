@@ -1,4 +1,3 @@
-import { ParamsDictionary } from 'express-serve-static-core';
 import Promo from '@server/db/models/Promo.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { preparePromo } from '@server/services/promoService.js';
@@ -9,6 +8,7 @@ import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { USER_ROLE, PROMO_ANNOUNCE_OFFSET_DAYS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import type { SortOrder, FilterQuery } from 'mongoose';
 import type { TDbPromo } from '@server/types/index.js';
 import type {
