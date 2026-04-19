@@ -1,4 +1,5 @@
 /_logs/
+/.vscode/
 /node_modules/
 /client/build/
 /server/config/.env*

@@ -13,17 +13,23 @@ import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-export type TCheckFn = (val: unknown) => boolean;
+type TCheckFn = (val: unknown) => boolean;
 
-export type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
-export type TTypeCheck = TBaseTypeChecks & {
+type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
+type TTypeCheck = TBaseTypeChecks & {
     optional: TBaseTypeChecks;
 };
 
-export interface IValidationResult<E extends TEntityType = TEntityType> {
+interface IValidationResult<E extends TEntityType = TEntityType> {
     isValid: boolean;
     invalidInputPaths: string[];
     fieldErrors: TFieldErrors<E>;
+}
+
+interface IMulterContext {
+    fieldName: string;
+    file?: Express.Multer.File; // req.file
+    files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>; // req.files
 }
 
 /////////////////////
@@ -308,12 +314,6 @@ export const validateObjectFields = <E extends TEntityType>(
 };
 
 // Рекурсивное заполнение валидационных схем инпут-значениями от клиента
-interface IMulterContext {
-    fieldName: string;
-    file?: Express.Multer.File; // req.file
-    files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>; // req.files
-}
-
 export const buildValidationConfig = (
     schema: IValidationSchema,
     value: unknown,
@@ -326,20 +326,20 @@ export const buildValidationConfig = (
         const { fieldName, file, files } = multerContext;
 
         if (type === 'file') {
-            // Тип конфига multer 'single' -> Файл
+            // Тип конфига multer 'single' -> req.file = Файл
             if (file?.fieldname === fieldName) {
                 finalValue = file;
             } 
-            // Тип конфига multer 'fields' -> Объект с массивом из одного файла по ключу fieldName
+            // Тип конфига multer 'fields' -> req.file = Объект с массивом из одного файла по ключу fieldName
             else if (files && !Array.isArray(files) && files[fieldName]?.[0]) {
                 finalValue = files[fieldName][0];
             }
         } else if (type === 'files') {
-            // Тип конфига multer 'array' -> Массив файлов
+            // Тип конфига multer 'array' -> req.files = Массив файлов
             if (Array.isArray(files) && files[0]?.fieldname === fieldName) {
                 finalValue = files;
             }
-            // Тип конфига multer 'fields' -> Объект с массивами файлов по ключам fieldname
+            // Тип конфига multer 'fields' -> req.files = Объект с массивами файлов по ключам fieldname
             else if (files && !Array.isArray(files) && files[fieldName]) {
                 finalValue = files[fieldName];
             }

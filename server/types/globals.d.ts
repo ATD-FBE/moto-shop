@@ -1,7 +1,7 @@
 import { TUserRole } from '@shared/constants.js';
-import type { TStorageType, TMongoMode, TBucketType } from './config.types.js';
-import type { TTokenDecodedUser } from './utils.types.js';
-import type { TDbUserDoc } from './db.types.js';
+import type { TStorageType, TMongoMode, TBucketType } from './config.types.ts';
+import type { TTokenDecodedUser } from './utils.types.ts';
+import type { TDbUserDoc } from './db.types.ts';
 import type { TEntityType } from '@shared/types/shared.types.js';
 
 declare global {
@@ -52,8 +52,6 @@ declare global {
             user?: TTokenDecodedUser;
             dbUser?: TDbUserDoc;
             entityType?: TEntityType;
-            file?: Express.Multer.File;
-            files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
             fileUploadError?: {
                 field: string;
                 type: string | number;
