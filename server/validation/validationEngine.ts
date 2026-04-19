@@ -1,4 +1,3 @@
-import { Request } from 'express';
 import mongoose from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
