@@ -19,9 +19,15 @@ export const validateInput = <E extends TEntityType = TEntityType>(
         });
     }
     if (body) {
+        const filesContainer = { file: req.file, files: req.files };
+
         Object.entries(body).forEach(([fieldName, schema]) => {
             const fieldValue = req.body?.[fieldName];
-            validationConfigMap[fieldName] = buildValidationConfig(schema, fieldValue);
+            validationConfigMap[fieldName] = buildValidationConfig(
+                schema,
+                fieldValue,
+                { fieldName, ...filesContainer }
+            );
         });
     }
     if (query) {

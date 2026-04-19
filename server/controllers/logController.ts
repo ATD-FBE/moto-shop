@@ -1,6 +1,5 @@
 import { existsSync, createReadStream } from 'fs';
 import { LOG_ERROR_FILE_PATH } from '@server/config/paths.js';
-import { toError } from '@shared/commonHelpers.js';
 import type { RequestHandler } from 'express';
 
 export const handleErrorLogsRequest: RequestHandler = (_req, res, next) => {
@@ -24,6 +23,6 @@ export const handleErrorLogsRequest: RequestHandler = (_req, res, next) => {
     
         logStream.pipe(res);
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };

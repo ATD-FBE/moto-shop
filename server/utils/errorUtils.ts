@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { typeCheck } from '../validation/validationEngine.js';
 import { isValidEntityField } from './typeGuards.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
-import { FILE_FIELD_MAP } from '@server/config/constants.js';
+import { GENERIC_FILE_FIELD, ENTITY_FILE_FIELDS } from '@server/config/constants.js';
 import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
 
 //////////////////////////
@@ -58,9 +58,9 @@ export const parseValidationErrors = <E extends TEntityType>(
     for (const field in err.errors) {
         const error = err.errors[field]; // В валидаторе Mongoose используется полный путь поля
 
-        if (field === 'globalFiles' && entityType && entityType in FILE_FIELD_MAP) {
+        if (field === GENERIC_FILE_FIELD && entityType && entityType in ENTITY_FILE_FIELDS) {
             const message = error.message || 'Неизвестная ошибка файлового поля';
-            const fileFields = FILE_FIELD_MAP[entityType as keyof typeof FILE_FIELD_MAP];
+            const fileFields = ENTITY_FILE_FIELDS[entityType as keyof typeof ENTITY_FILE_FIELDS];
             
             fileFields.forEach(fieldName => {
                 if (fieldName in fieldErrorMessages[entityType]) {

@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import mongoose from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
@@ -67,7 +68,17 @@ const baseTypeChecks: TBaseTypeChecks = {
     object: (val: unknown): val is Record<string | number, unknown> =>
         typeof val === 'object' &&
         val !== null &&
-        !Array.isArray(val)
+        !Array.isArray(val),
+
+    file: (val: unknown): val is Express.Multer.File =>
+        typeof val === 'object' &&
+        val !== null &&
+        'fieldname' in val &&
+        'mimetype' in val &&
+        'size' in val,
+    
+    files: (val: unknown): val is Express.Multer.File[] =>
+        Array.isArray(val) && val.every(f => typeCheck.file(f))
 } as const;
 
 const makeOptionalCheck = (checkFn: TCheckFn): TCheckFn =>
@@ -298,16 +309,48 @@ export const validateObjectFields = <E extends TEntityType>(
 };
 
 // Рекурсивное заполнение валидационных схем инпут-значениями от клиента
+interface IMulterContext {
+    fieldName: string;
+    file?: Express.Multer.File; // req.file
+    files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>; // req.files
+}
+
 export const buildValidationConfig = (
     schema: IValidationSchema,
-    value: unknown
+    value: unknown,
+    multerContext?: IMulterContext
 ): IValidationConfig => {
     const { type, fields, ...restSchema } = schema;
+    let finalValue = value;
+
+    if (multerContext) {
+        const { fieldName, file, files } = multerContext;
+
+        if (type === 'file') {
+            // Тип конфига multer 'single' -> Файл
+            if (file?.fieldname === fieldName) {
+                finalValue = file;
+            } 
+            // Тип конфига multer 'fields' -> Объект с массивом из одного файла по ключу fieldName
+            else if (files && !Array.isArray(files) && files[fieldName]?.[0]) {
+                finalValue = files[fieldName][0];
+            }
+        } else if (type === 'files') {
+            // Тип конфига multer 'array' -> Массив файлов
+            if (Array.isArray(files) && files[0]?.fieldname === fieldName) {
+                finalValue = files;
+            }
+            // Тип конфига multer 'fields' -> Объект с массивами файлов по ключам fieldname
+            else if (files && !Array.isArray(files) && files[fieldName]) {
+                finalValue = files[fieldName];
+            }
+        }
+    }
 
     const baseConfig: IValidationConfig = {
         type,
         ...restSchema,
-        value
+        value: finalValue
     };
 
     if (type === 'object' && fields) {
@@ -315,8 +358,9 @@ export const buildValidationConfig = (
             Object.entries(fields).map(([key, fieldSchema]) => [
                 key,
                 buildValidationConfig(
-                    fieldSchema,
-                    (value as any)?.[key]
+                    fieldSchema, 
+                    (value as any)?.[key], 
+                    multerContext ? { ...multerContext, fieldName: key } : undefined
                 )
             ])
         );

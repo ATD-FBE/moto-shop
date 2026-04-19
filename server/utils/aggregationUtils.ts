@@ -1,4 +1,4 @@
-import mongoose, { type FilterQuery, type PipelineStage } from 'mongoose';
+import { Types, type FilterQuery, type PipelineStage } from 'mongoose';
 import log from './logger.js';
 import { SEARCH_TYPES, DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
 import { escapeRegExp } from '@shared/commonHelpers.js';
@@ -24,8 +24,8 @@ export const buildSearchMatch = <T>(
 
     if (!search) return searchMatch;
 
-    if (mongoose.Types.ObjectId.isValid(search)) {
-        searchMatch._id = mongoose.Types.ObjectId.createFromHexString(search);
+    if (Types.ObjectId.isValid(search)) {
+        searchMatch._id = Types.ObjectId.createFromHexString(search);
         return searchMatch;
     }
 

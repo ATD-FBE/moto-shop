@@ -33,7 +33,15 @@ interface INewsParams extends ParamsDictionary {
 /// Загрузка всех новостей ///
 export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
-    const selectedDbFields = '_id publishDate title content' + (isAdmin ? ' createdBy updateHistory' : '');
+    const selectedDbFields: Partial<Record<keyof TDbNews, number>> = {
+        _id: 1,
+        publishDate: 1,
+        content: 1,
+        ...(isAdmin && {
+            createdBy: 1,
+            updateHistory: 1
+        })
+    };
 
     try {
         let dbNewsQuery = News.find() // Поиск всех новостей
@@ -60,9 +68,13 @@ export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = asyn
 /// Загрузка отдельной новости для редактирования ///
 export const handleNewsRequest: RequestHandler<INewsParams, TNewsResponse> = async (req, res, next) => {
     const newsId = req.params.newsId;
+    const selectedDbFields: Partial<Record<keyof TDbNews, number>> = {
+        title: 1,
+        content: 1
+    };
 
     try {
-        const dbNews = await News.findById(newsId).lean<TDbNews>();
+        const dbNews = await News.findById(newsId).select(selectedDbFields).lean<TDbNews>();
         checkTimeout(req);
 
         if (!dbNews) {

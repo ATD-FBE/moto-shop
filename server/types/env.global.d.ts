@@ -53,10 +53,10 @@ declare global {
             dbUser?: TDbUserDoc;
             entityType?: TEntityType;
             file?: Express.Multer.File;
-            files?: Express.Multer.File[];
+            files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
             fileUploadError?: {
                 field: string;
-                type: string;
+                type: string | number;
                 message: string;
             };
         }

@@ -2,16 +2,48 @@ import { extname } from 'path';
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import { typeCheck } from '../validation/validationEngine.js';
-import { MULTER_MODE } from '@server/config/constants.js';
-import type {
-    IMulterErrorContext,
-    IMulterErrorSpec,
-    IMulterConfigArgs,
-    IMulterField
-} from '@server/types/index.js';
+import { typeCheck } from '@server/validation/validationEngine.js';
+import { MULTER_MODE, GENERIC_FILE_FIELD } from '@server/config/constants.js';
+import { toError } from '@shared/commonHelpers.js';
+import type { TMulterMode } from '@server/types/index.js';
+import type { TAllowedMimeType } from '@shared/types/index.js';
 
-export const allowedConfigTypes = ['single', 'array', 'fields', 'any'] as const;
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IMulterErrorContext {
+    field: string;
+    filesLimit: number;
+    maxSizeMB: number;
+    message: string;
+}
+
+interface IMulterErrorSpec {
+    type: string;
+    message: string;
+}
+
+interface IMulterField {
+    name: string;
+    maxCount?: number;
+}
+
+interface IMulterConfigParams {
+    type: typeof allowedConfigTypes[number];
+    fields: string | IMulterField | IMulterField[];
+    storageMode?: TMulterMode;
+    storagePath?: string | null;
+    allowedMimeTypes: readonly TAllowedMimeType[];
+    filesLimit?: number;
+    maxSizeMB: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const allowedConfigTypes = ['single', 'array', 'fields', 'any'] as const;
 
 const generateStorageFilename = (originalname: string) => `${randomUUID()}${extname(originalname)}`;
 
@@ -48,7 +80,7 @@ const createMulterConfig = ({
     allowedMimeTypes,
     filesLimit = 1,
     maxSizeMB
-}: IMulterConfigArgs) => {
+}: IMulterConfigParams) => {
     // Проверки параметров
     if (!allowedConfigTypes.includes(type)) {
         throw new TypeError(`type должен быть одним из: ${allowedConfigTypes.join(', ')}`);
@@ -81,8 +113,8 @@ const createMulterConfig = ({
     
         case 'fields':
             if (
-                !typeCheck.array(fields) ||
-                !(fields as IMulterField[]).every((field: IMulterField) =>
+                !typeCheck.array(fields as string) ||
+                !(fields as IMulterField[]).every(field =>
                     typeCheck.object(field) &&
                     typeCheck.string(field.name) &&
                     (
@@ -98,6 +130,7 @@ const createMulterConfig = ({
             break;
     
         case 'any':
+        default:
             break;
     }
 
@@ -132,16 +165,16 @@ const createMulterConfig = ({
     const storage = storageMode === MULTER_MODE.MEMORY
         ? multer.memoryStorage()
         : multer.diskStorage({
-            destination: (req, file, cb) => {
+            destination: (_req, _file, cb) => {
                 cb(null, storagePath!);
             },
-            filename: (req, file, cb) => {
+            filename: (_req, file, cb) => {
                 cb(null, generateStorageFilename(file.originalname));
             }
         });
 
     // Фильтрация файлов
-    const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
         // Проверка формата файла
         const mimeSet = new Set(allowedMimeTypes);
 
@@ -183,25 +216,24 @@ const createMulterConfig = ({
     return (req: Request, res: Response, next: NextFunction) => {
         multerUpload(req, res, (err) => {
             if (err) {
-                const isMulterError = err instanceof multer.MulterError || err.isMulterError;
-                if (!isMulterError) return next(err);
+                const error = toError(err);
+                const isMulterError = error instanceof multer.MulterError || error.isMulterError;
+                if (!isMulterError) return next(error);
 
-                const field = err.field || 'globalFiles';
+                const field = error.field || GENERIC_FILE_FIELD;
                 const multerErrorMap = getMulterErrorMap({
                     field,
                     filesLimit,
                     maxSizeMB,
-                    message: err.message
+                    message: error.message
                 });
-                const errorSpec = err.code && multerErrorMap[err.code];
-        
-                if (errorSpec) {
-                    req.fileUploadError = {
-                        field,
-                        type: errorSpec.type,
-                        message: errorSpec.message
-                    };
-                }
+                const errorSpec = error.code ? multerErrorMap[error.code] : null;
+
+                req.fileUploadError = {
+                    field,
+                    type: errorSpec?.type || error.code || 'uploadError',
+                    message: errorSpec?.message || error.message || 'Ошибка при загрузке файла'
+                };
         
                 return next();
             }
@@ -230,11 +262,11 @@ export default createMulterConfig;
 
 
 //Примеры конфигураций по типам:
-//type: 'single', fields: 'avatar'
-//type: 'array', fields: 'images'
-//type: 'array', fields: { name: 'photos', maxCount: 5 }
-//type: 'array', fields: { name: 'photos' } - Без ограничений на количество для поля
-//type: 'fields', fields: [{ name: 'passport', maxCount: 2 }, { name: 'images' }]
+//type: 'single',   fields: 'avatar'
+//type: 'array',    fields: 'images'
+//type: 'array',    fields: { name: 'photos', maxCount: 5 }
+//type: 'array',    fields: { name: 'photos' } - Без ограничений на количество для поля
+//type: 'fields',   fields: [{ name: 'passport', maxCount: 2 }, { name: 'images' }]
 
 //Тип загрузки:	    Где лежат файлы:
 //single	        req.file (сразу данные файла)

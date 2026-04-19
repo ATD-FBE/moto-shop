@@ -5,7 +5,7 @@ import type { IPromo } from '@shared/types/index.js';
 
 export const preparePromo = (
     dbPromo: TDbPromo,
-    { managed = false }: { managed?: boolean; } = {}
+    { managed = false }: { managed?: boolean } = {}
 ): IPromo => ({
     id: dbPromo._id.toString(),
     title: dbPromo.title,

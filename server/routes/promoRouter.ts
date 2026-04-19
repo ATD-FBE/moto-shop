@@ -6,6 +6,14 @@ import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser
 } from '@server/middlewares/authMiddleware.js';
+import { validateInput } from '@server/middlewares/validationMiddleware.js';
+import {
+    promoListSchema,
+    promoSchema,
+    promoCreateSchema,
+    promoUpdateSchema,
+    promoDeleteSchema
+} from '@server/validation/schemas/promo.schemas.js';
 import {
     handlePromoListRequest,
     handlePromoRequest,
@@ -32,10 +40,46 @@ const uploadImage = createMulterConfig({
 const router: Router = Router();
 const { ADMIN } = USER_ROLE;
 
-router.get('/', optionalAuth, optionalUser, handlePromoListRequest);
-router.get('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoRequest);
-router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoCreateRequest);
-router.put('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImage, handlePromoUpdateRequest);
-router.delete('/:promoId', verifyAuth, verifyUser, verifyRole(ADMIN), handlePromoDeleteRequest);
+router.get(
+    '/',
+    optionalAuth,
+    optionalUser,
+    validateInput(promoListSchema),
+    handlePromoListRequest
+);
+router.get(
+    '/:promoId',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    validateInput(promoSchema),
+    handlePromoRequest
+);
+router.post(
+    '/',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    uploadImage,
+    validateInput(promoCreateSchema),
+    handlePromoCreateRequest
+);
+router.put(
+    '/:promoId',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    uploadImage,
+    validateInput(promoUpdateSchema),
+    handlePromoUpdateRequest
+    );
+router.delete(
+    '/:promoId',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    validateInput(promoDeleteSchema),
+    handlePromoDeleteRequest
+);
 
 export default router;

@@ -1,5 +1,4 @@
 import { generateCompanyDetailsPdf } from '@server/services/companyService.js';
-import { toError } from '@shared/commonHelpers.js';
 import type { RequestHandler } from 'express';
 
 export const handleCompanyDetailsPdfRequest: RequestHandler = (_req, res, next) => {
@@ -19,8 +18,8 @@ export const handleCompanyDetailsPdfRequest: RequestHandler = (_req, res, next) 
         pdfDoc.pipe(res);
         pdfDoc.end();
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };
 
-// Декодировать имя файла на клиенте не нужно, браузер сам всё сделает
+// Декодировать имя файла на клиенте не нужно, это делает браузер

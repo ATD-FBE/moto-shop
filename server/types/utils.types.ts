@@ -1,14 +1,8 @@
 import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
 import winston from 'winston';
-import { allowedConfigTypes } from '@server/utils/multerConfig.js';
 import type { JwtPayload, SignOptions } from 'jsonwebtoken';
-import type { TMulterMode, TSearchTypes } from './config.types.js';
-import type {
-    TEntityType,
-    TFieldErrors,
-    TAllowedMimeType, 
-    TRegisteredUserRole
-} from '@shared/types/index.js';
+import type { TSearchTypes } from './config.types.js';
+import type { TRegisteredUserRole } from '@shared/types/index.js';
 
 //////////////
 /// LOGGER ///
@@ -53,40 +47,6 @@ export interface ITokenTypeConfig {
 export type TTransactionHandler<T> = (session: ClientSession) => Promise<T>;
 
 export type TTransactionOptions = Parameters<ClientSession['withTransaction']>[1];
-
-/////////////////////
-/// MULTER CONFIG ///
-/////////////////////
-
-export interface IMulterErrorContext {
-    field: string;
-    filesLimit: number;
-    maxSizeMB: number;
-    message: string;
-}
-
-export interface IMulterErrorSpec {
-    type: string;
-    message: string;
-}
-
-export interface IMulterField {
-    name: string;
-    maxCount?: number;
-}
-
-export interface IMulterConfigArgs {
-    type: typeof allowedConfigTypes[number];
-    fields: 
-        | string
-        | IMulterField
-        | IMulterField[];
-    storageMode?: TMulterMode;
-    storagePath?: string | null;
-    allowedMimeTypes: readonly TAllowedMimeType[];
-    filesLimit?: number;
-    maxSizeMB: number;
-}
 
 /////////////////////////
 /// AGGREGATION UTILS ///

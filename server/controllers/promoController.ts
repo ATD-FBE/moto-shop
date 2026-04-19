@@ -1,39 +1,91 @@
-import Promo from '../db/models/Promo.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { preparePromo } from '../services/promoService.js';
-import { storageService } from '../services/storage/storageService.js';
-import { typeCheck, validateObjectFields } from '../validation/validationEngine.js';
-import { runInDbTransaction } from '../utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { PROMO_ANNOUNCE_OFFSET_DAYS } from '../../shared/constants.js';
+import { ParamsDictionary } from 'express-serve-static-core';
+import Promo from '@server/db/models/Promo.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { preparePromo } from '@server/services/promoService.js';
+import { storageService } from '@server/services/storage/storageService.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
+import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { USER_ROLE, PROMO_ANNOUNCE_OFFSET_DAYS } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { SortOrder, FilterQuery } from 'mongoose';
+import type { TDbPromo } from '@server/types/index.js';
+import type {
+    IPromoListQuery,
+    TPromoListResponse,
+    TPromoResponse,
+    IPromoCreateBody,
+    TPromoCreateResponse,
+    IPromoUpdateBody,
+    TPromoUpdateResponse,
+    TPromoDeleteResponse,
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IPromoParams extends ParamsDictionary {
+    promoId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка всех акций ///
-export const handlePromoListRequest = async (req, res, next) => {
-    const isAdmin = req.dbUser?.role === 'admin';
-    const selectedDbFields = '_id title imageFilename description startDate endDate' +
-        (isAdmin ? ' createdBy createdAt updateHistory' : '');
-    const sortRules = isAdmin ? { createdAt: -1 } : { startDate: -1 };
+export const handlePromoListRequest: RequestHandler<
+    {},
+    TPromoListResponse,
+    {},
+    IPromoListQuery
+> = async (req, res, next) => {
+    const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
+    const selectedDbFields: Partial<Record<keyof TDbPromo, number>> = {
+        _id: 1,
+        title: 1,
+        imageFilename: 1,
+        description: 1,
+        startDate: 1,
+        endDate: 1,
+        ...(isAdmin && {
+            createdBy: 1,
+            createdAt: 1,
+            updateHistory: 1
+        })
+    };
+    const sortRules: Partial<Record<keyof TDbPromo, SortOrder>> = isAdmin
+        ? { createdAt: -1 }
+        : { startDate: -1 };
 
     try {
-        let findRules = {};
+        let findRules: FilterQuery<TDbPromo> = {};
 
         if (!isAdmin) {
-            const timestamp = Number(req.query.timestamp);
-            const timeZoneOffset = parseInt(req.query.timeZoneOffset, 10) || 0;
-            const clientDateTimeUTC = new Date(timestamp - timeZoneOffset * 60 * 1000);
+            const { timestamp, timeZoneOffset } = req.query;
+            const now = Date.now();
+            const DAY_IN_MS = 24 * 60 * 60 * 1000; // Сутки в миллисекундах
+            const MAX_TIMEZONE_OFFSET_MINUTES = 840; // UTC+14
 
-            if (isNaN(clientDateTimeUTC.getTime())) {
-                return safeSendResponse(res, 400, { message: 'Неверный формат даты' });
+            let tsNum = Number(timestamp);
+            if (isNaN(tsNum) || Math.abs(tsNum - now) > DAY_IN_MS) {
+                tsNum = now;
             }
 
+            let offsetNum = Number(timeZoneOffset);
+            if (isNaN(offsetNum) || Math.abs(offsetNum) > MAX_TIMEZONE_OFFSET_MINUTES) {
+                offsetNum = 0;
+            }
+
+            const clientDateTimeUTC = new Date(tsNum - offsetNum * 60 * 1000);
             const announceStart = new Date(clientDateTimeUTC);
             announceStart.setDate(announceStart.getDate() + PROMO_ANNOUNCE_OFFSET_DAYS);
 
             findRules = {
-                startDate: { $lte: announceStart },
-                endDate: { $gte: clientDateTimeUTC }
+                startDate: { $lte: announceStart }, // Дата анонса акции меньше текущего времени клиента
+                endDate: { $gte: clientDateTimeUTC } // Дата конца акции больше текущего времени клиента
             };
         }
 
@@ -47,7 +99,7 @@ export const handlePromoListRequest = async (req, res, next) => {
                 .populate('updateHistory.updatedBy', 'name');
         }
 
-        const dbPromoList = await dbPromoQuery.lean(); // Преобразование в обычный JS-объект
+        const dbPromoList = await dbPromoQuery.lean<TDbPromo[]>(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
         const promoList = dbPromoList.map(promo => preparePromo(promo, { managed: isAdmin }));
@@ -59,17 +111,18 @@ export const handlePromoListRequest = async (req, res, next) => {
 };
 
 /// Загрузка отдельной акции для редактирования ///
-export const handlePromoRequest = async (req, res, next) => {
+export const handlePromoRequest: RequestHandler<IPromoParams, TPromoResponse> = async (req, res, next) => {
     const promoId = req.params.promoId;
-
-    if (!typeCheck.objectId(promoId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: promoId' });
-    }
+    const selectedDbFields: Partial<Record<keyof TDbPromo, number>> = {
+        title: 1,
+        imageFilename: 1,
+        description: 1,
+        startDate: 1,
+        endDate: 1
+    };
 
     try {
-        const dbPromo = await Promo.findById(promoId)
-            .select('title imageFilename description startDate endDate')
-            .lean();
+        const dbPromo = await Promo.findById(promoId).select(selectedDbFields).lean<TDbPromo>();
         checkTimeout(req);
 
         if (!dbPromo) {
@@ -86,38 +139,27 @@ export const handlePromoRequest = async (req, res, next) => {
 };
 
 /// Создание акции ///
-export const handlePromoCreateRequest = async (req, res, next) => {
+export const handlePromoCreateRequest: RequestHandler<
+    {},
+    TPromoCreateResponse,
+    IPromoCreateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const { file: image, fileUploadError } = req; // Проверено в multer
-    const { title, description, startDate, endDate } = req.body ?? {};
+    const { title, description, startDate, endDate } = req.body;
 
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        image: { value: image, type: 'object', optional: true, formField: true },
-        title: { value: title, type: 'string', formField: true },
-        description: { value: description, type: 'string', formField: true },
-        startDate: { value: startDate, type: 'date', formField: true },
-        endDate: { value: endDate, type: 'date', formField: true }
-    };
+    console.log(image);
 
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'promotion');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    let newPromoId = null;
+    let newPromoId: string | null = null;
 
     // Создание документа в базе MongoDB
     try {
         const { promoLbl } = await runInDbTransaction(async (session) => {
             // Подготовка данных
-            const prepDbFields = {
+            const prepDbFields: Partial<TDbPromo> = {
                 title: title.trim(),
                 imageFilename: image?.filename,
                 description: description.trim()
@@ -136,7 +178,7 @@ export const handlePromoCreateRequest = async (req, res, next) => {
 
             // Отметка поля фотографий невалидным при ошибке в multer
             if (fileUploadError) {
-                const { field, type, message } = fileUploadError; // field = 'image' - поле из формы
+                const { field, message } = fileUploadError; // field = 'image' - поле из формы
                 newPromoDoc.invalidate(field, message);
             }
 
@@ -145,7 +187,8 @@ export const handlePromoCreateRequest = async (req, res, next) => {
                 newPromoDoc.invalidate('endDate', 'rangeError');
             }
 
-            // Предварительная валидация до работы с файловой системой
+            // Добавление лога создания и предварительная валидация до работы с файловой системой
+            newPromoDoc.createdBy = userId;
             await newPromoDoc.validate();
             checkTimeout(req);
 
@@ -156,8 +199,7 @@ export const handlePromoCreateRequest = async (req, res, next) => {
                 checkTimeout(req);
             }
 
-            // Добавление лога создания и сохранение в базе MongoDB
-            newPromoDoc.createdBy = userId;
+            // Сохранение в базе MongoDB
             const newDbPromo = await newPromoDoc.save({ session });
             checkTimeout(req);
 
@@ -167,20 +209,10 @@ export const handlePromoCreateRequest = async (req, res, next) => {
         // Отправка успешного ответа клиенту
         safeSendResponse(res, 201, { message: `Акция ${promoLbl} успешно создана` });
     } catch (err) {
-        // Очистка файла картинки акции в хранилище (безопасно)
+        // Очистка файла изображения акции в хранилище (безопасно)
         if (image) {
             storageService.deleteTempFiles(image, reqCtx);
             storageService.cleanupPromoFiles(newPromoId, reqCtx);
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'promotion');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
         }
 
         next(err);
@@ -188,36 +220,21 @@ export const handlePromoCreateRequest = async (req, res, next) => {
 };
 
 /// Изменение акции ///
-export const handlePromoUpdateRequest = async (req, res, next) => {
+export const handlePromoUpdateRequest: RequestHandler<
+    IPromoParams,
+    TPromoUpdateResponse,
+    IPromoUpdateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const promoId = req.params.promoId;
     const { file: image, fileUploadError } = req; // Проверено в multer
-    const { title, description, startDate, endDate, removeImage } = req.body ?? {};
-
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        promoId: { value: promoId, type: 'objectId' },
-        image: { value: image, type: 'object', optional: true, formField: true },
-        title: { value: title, type: 'string', formField: true },
-        description: { value: description, type: 'string', formField: true },
-        startDate: { value: startDate, type: 'date', formField: true },
-        endDate: { value: endDate, type: 'date', formField: true },
-        removeImage: { value: removeImage, type: 'boolean', optional: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'promotion');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    const { title, description, startDate, endDate, removeImage } = req.body;
 
     const shouldRemoveImage = removeImage === 'true';
-    const newImageFilename = image?.filename;
+    const newImageFilename = image?.filename ?? null;
     let rollbackCleanupFiles = false;
 
     // Апдейт документа в базе MongoDB
@@ -240,18 +257,18 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
             // Проверка на согласованность флага удаления старого файла картинки и нового файла
             if (
                 (hasImage && image && !shouldRemoveImage) ||
-                (shouldRemoveImage && !hasImage)
+                (!hasImage && shouldRemoveImage)
             ) {
                 throw createAppError(400, `Несогласованные данные для изображения акции ${promoLbl}`);
             }
 
             // Подготовка данных
-            const prepDbFields = {
+            const prepDbFields: Partial<TDbPromo> = {
                 title: title.trim(),
                 description: description.trim()
             };
 
-            dbPromo.imageFilename = hasImage
+            dbPromo.imageFilename = oldImageFilename
                 ? shouldRemoveImage ? newImageFilename : oldImageFilename
                 : newImageFilename;
 
@@ -265,11 +282,6 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
 
             // Установка новых данных и проверка их изменений
             dbPromo.set(prepDbFields);
-            
-            // isModified() проверяет только новые данные. При fileUploadError данные могут совпасть
-            if (!dbPromo.isModified() && !fileUploadError) {
-                throw createAppError(204);
-            }
 
             // Отметка поля фотографий невалидным при ошибке в multer
             if (fileUploadError) {
@@ -285,6 +297,11 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
             // Предварительная валидация до работы с файловой системой
             await dbPromo.validate();
             checkTimeout(req);
+            
+            // isModified() проверяет только новые данные. При fileUploadError данные могут совпасть
+            if (!dbPromo.isModified() && !fileUploadError) {
+                throw createAppError(204);
+            }
 
             // Сохранение нового файла картинки в хранилище файлов, если есть
             if (image) {
@@ -298,7 +315,7 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
             checkTimeout(req);
 
             // Подготовка данных для удаления файлов
-            const postUpdateFileCleanup = shouldRemoveImage
+            const postUpdateFileCleanup = shouldRemoveImage && oldImageFilename
                 ? {
                     filename: oldImageFilename,
                     fullCleanup: !image
@@ -320,7 +337,7 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
             }
         }
     } catch (err) {
-        // Очистка нового файла картинки акции (безопасно)
+        // Очистка нового файла изображения акции (безопасно)
         if (image) {
             storageService.deleteTempFiles(image, reqCtx);
 
@@ -331,57 +348,33 @@ export const handlePromoUpdateRequest = async (req, res, next) => {
             }
         }
 
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'promotion');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Удаление акции ///
-export const handlePromoDeleteRequest = async (req, res, next) => {
+export const handlePromoDeleteRequest: RequestHandler<
+    IPromoParams,
+    TPromoDeleteResponse
+> = async (req, res, next) => {
     const reqCtx = req.reqCtx;
     const promoId = req.params.promoId;
 
-    if (!typeCheck.objectId(promoId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: promoId' });
-    }
-
     try {
-        const { promoLbl } = await runInDbTransaction(async (session) => {
-            const dbPromo = await Promo.findByIdAndDelete(promoId).session(session);
-            checkTimeout(req);
+        const dbPromo = await Promo.findByIdAndDelete(promoId);
+        checkTimeout(req);
 
-            const promoLbl = dbPromo ? `"${dbPromo.title}"` : `(ID: ${promoId})`;
+        const promoLbl = dbPromo ? `"${dbPromo.title}"` : `(ID: ${promoId})`;
 
-            if (!dbPromo) {
-                throw createAppError(404, `Акция (ID: ${promoId}) не найдена`);
-            }
-
-            return { promoLbl };
-        });
-
-        safeSendResponse(res, 200, { message: `Акция ${promoLbl} успешно удалена` });
-        storageService.cleanupPromoFiles(promoId, reqCtx);
-    } catch (err) {
-        if (err.isAppError) {
-            safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-            if (err.statusCode === 404) storageService.cleanupPromoFiles(promoId, reqCtx);
-            return;
+        if (!dbPromo) {
+            safeSendResponse(res, 404, { message: `Акция ${promoLbl} не найдена` });
+        } else {
+            safeSendResponse(res, 200, { message: `Акция ${promoLbl} успешно удалена` });
         }
 
+        // Удаление файла изображения акции, если он есть (безопасно)
+        storageService.cleanupPromoFiles(promoId, reqCtx);
+    } catch (err) {
         next(err);
     }
 };

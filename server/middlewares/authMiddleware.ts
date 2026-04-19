@@ -68,7 +68,7 @@ export const verifyUser: RequestHandler = async (req, res, next) => {
         req.dbUser = dbUser;
         next();
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };
 
@@ -107,14 +107,14 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
     } catch (err) {
         const error = toError(err);
 
-        if (error instanceof jwt.TokenExpiredError) {
-            return safeSendResponse(res, 401, { message: 'Срок действия токена доступа истёк' });
-        }
-        if (error instanceof jwt.JsonWebTokenError) {
-            return safeSendResponse(res, 401, { message: 'Неверный токен доступа' });
-        }
-        if (error instanceof jwt.NotBeforeError) {
-            return safeSendResponse(res, 401, { message: 'Токен доступа ещё не активен' });
+        const jwtErrors: Record<string, string> = {
+            TokenExpiredError: 'Срок действия токена доступа истёк',
+            JsonWebTokenError: 'Неверный токен доступа',
+            NotBeforeError: 'Токен доступа ещё не активен',
+        };
+    
+        if (error.name in jwtErrors) {
+            return safeSendResponse(res, 401, { message: jwtErrors[error.name] });
         }
 
         next(error);
@@ -141,6 +141,6 @@ export const optionalUser: RequestHandler = async (req, res, next) => {
         req.dbUser = dbUser;
         next();
     } catch (err) {
-        next(toError(err));
+        next(err);
     }
 };

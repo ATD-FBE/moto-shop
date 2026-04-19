@@ -299,7 +299,7 @@ export const handleProductCreateRequest = async (req, res, next) => {
 
             // Инвалидация полей
             if (fileUploadError) {// Отметка поля фотографий невалидным при ошибке в multer
-                const { field, type, message } = fileUploadError; // field = 'images' - поле из формы
+                const { field, message } = fileUploadError; // field = 'images' - поле из формы
                 newProductDoc.invalidate(field, message);
             }
             if (!Number.isInteger(prepDbFields.stock)) {
@@ -512,7 +512,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 
             // Инвалидация полей
             if (fileUploadError) { // Отметка поля фотографий невалидным при ошибке в multer
-                const { field, type, message } = fileUploadError; // field = 'images' - поле из формы
+                const { field, message } = fileUploadError; // field = 'images' - поле из формы
                 dbProduct.invalidate(field, message);
             }
             if (preparedImgFilenames.length > PRODUCT_FILES_LIMIT) {
@@ -828,17 +828,20 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
     try {
         const { statusCode, responseData } = await runInDbTransaction(async (session) => {
             // Поиск и сбор ID удаляемых товаров
-            const existingProductDocs = await Product
+            const existingDbProducts = await Product
                 .find({ _id: { $in: uniqueProductIds } }, '_id')
                 .session(session);
             checkTimeout(req);
 
-            if (!existingProductDocs.length) {
-                throw createAppError(404, 'Ни один товар не найден');
+            if (!existingDbProducts.length) {
+                return {
+                    statusCode: 404,
+                    responseData: { message: 'Ни один товар не найден' }
+                };
             }
 
             // Поиск по ID и удаление документов в базе MongoDB
-            const existingProductIds = existingProductDocs.map(doc => doc._id.toString());
+            const existingProductIds = existingDbProducts.map(dbProd => dbProd._id.toString());
             const deletionResult = await Product
                 .deleteMany({ _id: { $in: existingProductIds } })
                 .session(session);
@@ -850,7 +853,9 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
             if (deletedCount < total) {
                 return {
                     statusCode: 207,
-                    responseData: { message: `Товары частично удалены: ${deletedCount} из ${total}` }
+                    responseData: {
+                        message: `Некоторые товары не найдены. Удалено: ${deletedCount} из ${total}`
+                    }
                 };
             }
 
@@ -862,19 +867,9 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
 
         safeSendResponse(res, statusCode, responseData);
 
-        // Удаление файлов фотографий товара, если они были (безопасно)
+        // Удаление файлов фотографий товара, если они есть (безопасно)
         cleanupBulkProductFiles(uniqueProductIds, reqCtx);
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-
-            // Удаление файлов фотографий товара, если они были (безопасно)
-            if (err.statusCode === 404) cleanupBulkProductFiles(uniqueProductIds, reqCtx);
-
-            return;
-        }
-
         next(err);
     }
 };

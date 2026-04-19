@@ -36,7 +36,8 @@ export const SEARCH_TYPES = {
 
 export const DEFAULT_SEARCH_TYPE = SEARCH_TYPES.REGEX;
 
-export const FILE_FIELD_MAP = {
+export const GENERIC_FILE_FIELD = 'genericFileField';
+export const ENTITY_FILE_FIELDS = {
     promotion: ['image'],
     product: ['images']
 } as const;

@@ -135,10 +135,13 @@ export interface IProductFilterQuery {
 
 export interface TStorageProvider {
     initStorage: () => Promise<void>;
-    deleteTempFiles: (tempFiles: Express.Multer.File[], reqCtx: string) => Promise<void>;
+    deleteTempFiles: (
+        tempFiles: Express.Multer.File | Express.Multer.File[],
+        reqCtx: string
+    ) => Promise<void>;
     savePromoImage: (promoId: string, tempFile: Express.Multer.File) => Promise<void>;
-    deletePromoImage: (promoId: string, filename: string, reqCtx: string) => Promise<void>;
-    cleanupPromoFiles: (promoId: string, reqCtx: string) => Promise<void>;
+    deletePromoImage: (promoId: string, filename: string | null, reqCtx: string) => Promise<void>;
+    cleanupPromoFiles: (promoId: string | null, reqCtx: string) => Promise<void>;
     saveProductImages: (productId: string, tempFiles: Express.Multer.File[]) => Promise<void>;
     deleteProductImages: (productId: string, filenames: string[], reqCtx: string) => Promise<void>;
     cleanupProductFiles: (productId: string, reqCtx: string) => Promise<void>;
