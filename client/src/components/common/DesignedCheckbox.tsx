@@ -1,5 +1,15 @@
 import { useRef } from 'react';
 import cn from 'classnames';
+import type { JSX, InputHTMLAttributes, FocusEvent, KeyboardEvent } from 'react';
+
+interface IDesignedCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onBlur'> {
+    label?: string;
+    labelSide?: 'left' | 'right';
+    showColon?: boolean;
+    checkIcon?: string;
+    checkIconColor?: 'blue' | 'red' | 'green';
+    onBlur?: (e: FocusEvent<HTMLSpanElement>) => void; // Переопределение blur для span
+}
 
 export default function DesignedCheckbox({
     id,
@@ -10,14 +20,16 @@ export default function DesignedCheckbox({
     checkIcon = '✓',
     checkIconColor = 'blue',
     checked = false,
-    onChange = (e) => {},
-    onBlur = () => {},
-    disabled = false
-}) {
-    const inputRef = useRef(null);
+    onChange,
+    onBlur,
+    disabled = false,
+    ...rest
+}: IDesignedCheckboxProps): JSX.Element {
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !disabled) {
+    const handleKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+            e.preventDefault(); // Чтобы пробел не скроллил страницу
             inputRef.current?.click();
         }
     };
@@ -31,6 +43,7 @@ export default function DesignedCheckbox({
 
             <input
                 ref={inputRef}
+                {...rest}
                 id={id}
                 name={name}
                 type="checkbox"
@@ -41,7 +54,7 @@ export default function DesignedCheckbox({
 
             <span
                 className="designed-checkbox"
-                tabIndex="0"
+                tabIndex={disabled ? -1 : 0}
                 onKeyDown={handleKeyDown}
                 onBlur={onBlur}
             >

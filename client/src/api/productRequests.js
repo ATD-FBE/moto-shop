@@ -40,7 +40,8 @@ export const sendProductCreateRequest = (formData) => async (dispatch) => {
     const url = '/api/catalog/products';
     const options = {
         method: 'POST',
-        body: formData // Заголовки для объекта FormData устанавливаются автоматически браузером
+        body: formData
+        // Заголовки для FormData устанавливаются браузером автоматически
     };
     const errorPrefix = 'Не удалось создать товар';
     const config = {
@@ -59,7 +60,8 @@ export const sendProductUpdateRequest = (productId, formData) => async (dispatch
     const url = `/api/catalog/products/${productId}`;
     const options = {
         method: 'PUT',
-        body: formData // Заголовки для объекта FormData устанавливаются автоматически браузером
+        body: formData
+        // Заголовки для FormData устанавливаются браузером автоматически
     };
     const errorPrefix = 'Не удалось изменить товар';
     const config = {

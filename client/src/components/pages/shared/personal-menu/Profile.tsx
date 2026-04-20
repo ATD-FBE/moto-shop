@@ -1,7 +1,4 @@
-import {
-    JSX, ChangeEvent, FocusEvent, SubmitEvent,
-    useReducer, useState, useRef, useEffect
-} from 'react';
+import { useReducer, useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
@@ -29,11 +26,13 @@ import {
     fieldErrorMessages,
     DEFAULT_FIELD_ERROR_MESSAGE
 } from '@shared/fieldRules.js';
+import type { JSX, ChangeEvent, FocusEvent, SubmitEvent } from 'react';
 import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
     IFieldState,
+    TFieldValue,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
@@ -52,6 +51,10 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
 
 // Вспомогательные типы
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+type TFormFields = {
+    [K in keyof IAuthUserUpdateBody]: TFieldValue;
+};
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -211,7 +214,7 @@ export default function Profile(): JSX.Element | null {
                 };
         
                 if (isValid && !isConfirmNewPassword) {
-                    acc.formFields[name] = normalizedValue;
+                    (acc.formFields as TFormFields)[name] = normalizedValue;
                 }
         
                 if (!isValid) acc.allValid = false;
@@ -221,7 +224,7 @@ export default function Profile(): JSX.Element | null {
             {
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
-                formFields: {} as IAuthUserUpdateBody & Record<TValidFieldName, any>
+                formFields: {} as IAuthUserUpdateBody
             }
         );
     

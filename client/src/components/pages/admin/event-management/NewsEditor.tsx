@@ -1,7 +1,4 @@
-import {
-    JSX, ChangeEvent, FocusEvent, SubmitEvent, createElement,
-    useMemo, useReducer, useState, useRef, useEffect
-} from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect, createElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
@@ -42,6 +39,14 @@ import type {
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes
+} from 'react';
 import type { TEntityField, INewsBody } from '@shared/types/index.js';
 
 //////////////////////////
@@ -57,12 +62,20 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'news'>>;
 
 // Вспомогательные типы
-type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 interface INewsEditorProps {
     newsId: string | null;
 }
+
+type TFormFields = {
+    [K in keyof INewsBody]: TFieldValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> & 
+    TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -140,7 +153,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         isEditMode ? FORM_STATUS.LOADING : FORM_STATUS.DEFAULT
     );
 
-    const initValuesRef = useRef<TFieldValuesMap>({} as TFieldValuesMap);
+    const initFieldValuesRef = useRef<TInitFieldValues>({} as TInitFieldValues);
     const isUnmountedRef = useRef(false);
 
     const dispatch = useAppDispatch();
@@ -163,7 +176,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         }
 
         const { title, content } = responseData.news;
-        initValuesRef.current = { title, content };
+        initFieldValuesRef.current = { title, content };
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -180,7 +193,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         if (isEditMode && newsId) loadNews(newsId);
     }
 
-    const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.target;
 
         dispatchFieldsState({
@@ -189,7 +202,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -226,9 +239,9 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                 };
         
                 if (isValid) {
-                    (acc.formFields as TFieldValuesMap)[name] = normalizedValue;
+                    (acc.formFields as TFormFields)[name] = normalizedValue;
 
-                    const initValue = initValuesRef.current[name];
+                    const initValue = initFieldValuesRef.current[name];
                     if (normalizedValue !== initValue) acc.changedFields.push(name);
                 } else {
                     acc.allValid = false;
@@ -288,7 +301,6 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
 
             case FORM_STATUS.INVALID: {
                 const { fieldErrors } = responseData;
-
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
@@ -368,7 +380,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                         const fieldId = `news-${toKebabCase(name)}`;
                         const fieldInfoClass = getFieldInfoClass(elem, type, name);
 
-                        const elemProps = {
+                        const elemProps: TFieldElemProps = {
                             id: fieldId,
                             name,
                             type,

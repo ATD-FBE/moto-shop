@@ -1,7 +1,7 @@
 import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import {
@@ -10,20 +10,100 @@ import {
     sendPromoUpdateRequest
 } from '@/api/promoRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { ALLOWED_IMAGE_MIME_TYPES, MAX_PROMO_IMAGE_SIZE_MB } from '@shared/constants.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue
+} from '@/helpers/formHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { logRequestStatus } from '@/helpers/requestLogger.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
+import { ALLOWED_IMAGE_MIME_TYPES, MAX_PROMO_IMAGE_SIZE_MB } from '@shared/constants.js';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldValue,
+    TFormDataFieldValue,
+    IFieldState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes
+} from 'react';
+import type {
+    TEntityField,
+    TValidationRuleType,
+    IPromoCreateBodyClient,
+    IPromoUpdateBodyClient
+} from '@shared/types/index.js';
 
-const getSubmitStates = (isEditMode) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'promotion'>>;
+
+// Вспомогательные типы
+type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+interface IPromoEditorProps {
+    promoId: string | null;
+}
+
+type TPromoBody = IPromoCreateBodyClient | IPromoUpdateBodyClient;
+type TPromoBodyAllKeys = keyof (IPromoCreateBodyClient & IPromoUpdateBodyClient);
+type TFieldEntries = [TPromoBodyAllKeys, TFormDataFieldValue][];
+
+interface IProcessFieldResult {
+    isValid: boolean;
+    fieldStateValue: {
+        files?: File[];
+        value?: TFieldValue;
+    };
+    fieldEntries: TFieldEntries;
+    isValueChanged: boolean;
+}
+
+type TFormFields = {
+    [K in TPromoBodyAllKeys]: TFormDataFieldValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> & 
+    TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND,
@@ -31,7 +111,7 @@ const getSubmitStates = (isEditMode) => {
     } = FORM_STATUS;
     const actionLabel = isEditMode ? 'Изменить' : 'Создать';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка акции...' },
@@ -51,16 +131,14 @@ const getSubmitStates = (isEditMode) => {
             addMessage: 'Вы будете перенаправлены на страницу акций магазина.',
             submitBtnLabel: 'Перенаправление...'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'title',
         label: 'Название акции',
@@ -76,7 +154,7 @@ const fieldConfigs = [
         elem: 'input',
         type: 'file',
         accept: ALLOWED_IMAGE_MIME_TYPES.join(', '),
-        allowedTypes: ALLOWED_IMAGE_MIME_TYPES,
+        allowedTypes: [...ALLOWED_IMAGE_MIME_TYPES],
         maxSizeMB: MAX_PROMO_IMAGE_SIZE_MB,
         optional: true
     },
@@ -100,60 +178,37 @@ const fieldConfigs = [
         elem: 'input',
         type: 'date'
     }
-];
+] as const);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name, type }) => {
-    acc[name] = {
-        ...(type === 'file' ? { files: [] } : { value: '' }),
-        uiStatus: '',
-        error: ''
-    };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
-
-export default function PromoEditor({ promoId }) {
+export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element {
     const isEditMode = Boolean(promoId);
 
     const { submitStates, lockedStatuses } = useMemo(() => getSubmitStates(isEditMode), [isEditMode]);
     
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS[isEditMode ? 'LOADING' : 'DEFAULT']);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(
+        isEditMode ? FORM_STATUS.LOADING : FORM_STATUS.DEFAULT
+    );
     const [shouldRemoveImage, setShouldRemoveImage] = useState(false);
-    const initValuesRef = useRef({});
+
+    const initFieldValuesRef = useRef<TInitFieldValues>({} as TInitFieldValues);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const loadPromo = async (promoId) => {
+    const loadPromo = async (promoId: string): Promise<void> => {
         setSubmitStatus(FORM_STATUS.LOADING);
 
-        const { status, message, promo } = await dispatch(sendPromoRequest(promoId));
+        const responseData = await dispatch(sendPromoRequest(promoId));
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'PROMO: LOAD SINGLE', status, message });
 
         if (status !== FORM_STATUS.SUCCESS) {
@@ -161,13 +216,13 @@ export default function PromoEditor({ promoId }) {
             return setSubmitStatus(finalStatus);
         }
 
-        const { title, image, description, startDate, endDate } = promo;
+        const { title, image, description, startDate, endDate } = responseData.promo;
         const formattedStartDate = startDate.split('T')[0];
         const formattedEndDate = endDate.split('T')[0];
 
-        initValuesRef.current = {
+        initFieldValuesRef.current = {
             title,
-            image, // URL или undefined
+            image: image ?? null, // URL или undefined
             description,
             startDate: formattedStartDate,
             endDate: formattedEndDate
@@ -186,10 +241,13 @@ export default function PromoEditor({ promoId }) {
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const reloadPromo = () => loadPromo(promoId);
+    const reloadPromo = (): void => {
+        if (isEditMode && promoId) loadPromo(promoId);
+    }
 
-    const handleFieldChange = (e) => {
-        const { name, type, files, value } = e.target;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+        const { name, type, value } = e.target;
+        const files = e.target instanceof HTMLInputElement ? Array.from(e.target.files || []) : [];
 
         const fieldsStateUpdates = {
             [name]: {
@@ -201,27 +259,21 @@ export default function PromoEditor({ promoId }) {
 
         // Настройка ограничения дат
         if (type === 'date' && value) {
-            if (name === 'startDate') {
-                const endDateValue = fieldsState.endDate.value;
-                const end = endDateValue ? new Date(endDateValue) : null;
-                const start = new Date(value);
+            const startDateVal = name === 'startDate' ? value : String(fieldsState.startDate.value);
+            const endDateVal = name === 'endDate' ? value : String(fieldsState.endDate.value);
 
-                if (end && end < start) {
-                    fieldsStateUpdates.endDate = {
-                        value,
-                        uiStatus: '',
-                        error: ''
-                    };
+            const startDate = startDateVal ? new Date(startDateVal) : null;
+            const endDate = endDateVal ? new Date(endDateVal) : null;
+
+            if (startDate && endDate) {
+                // Дата начала стала больше даты конца —> сброс начала на конец
+                if (name === 'startDate' && startDate > endDate) {
+                    fieldsStateUpdates.endDate = { value, uiStatus: '', error: '' };
                 }
-            }
 
-            if (name === 'endDate') {
-                const startDateValue = fieldsState.startDate.value;
-                const start = startDateValue ? new Date(startDateValue) : null;
-                const end = new Date(value);
-
-                if (start && end < start) {
-                    fieldsStateUpdates.endDate.value = startDateValue;
+                // Дата конца стала меньше даты начала —> сброс конца на начало
+                if (name === 'endDate' && endDate < startDate) {
+                    fieldsStateUpdates.endDate = { value: startDateVal, uiStatus: '', error: '' };
                 }
             }
         }
@@ -229,7 +281,7 @@ export default function PromoEditor({ promoId }) {
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.target;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -240,11 +292,17 @@ export default function PromoEditor({ promoId }) {
         });
     };
 
-    const processImageField = (config, validation, files, initValue, shouldRemoveImage) => {
+    const processImageField = (
+        config: TFieldConfig,
+        validation: TValidationRuleType,
+        files: File[] = [],
+        initValue: TFieldValue,
+        shouldRemoveImage: boolean
+    ): IProcessFieldResult => {
         const { name, optional, allowedTypes, maxSizeMB } = config;
         const imageFile = files[0];
         const fieldStateValue = { files };
-        const fieldEntries = [];
+        const fieldEntries: TFieldEntries = [];
         let isValueChanged = false;
     
         // Старая картинка есть и не удаляется — ничего не делается
@@ -254,15 +312,17 @@ export default function PromoEditor({ promoId }) {
     
         // Старая картинка есть и должна быть удалена — добавление флага удаления
         if (initValue && shouldRemoveImage) {
-            fieldEntries.push(['removeImage', true]);
+            fieldEntries.push(['removeImage', 'true']);
             isValueChanged = true;
         }
     
         // Загружен новый файл — валидация и добавление
         if (imageFile instanceof File) {
-            const ruleCheck = validation(imageFile, allowedTypes, maxSizeMB);
+            const ruleCheck = typeof validation === 'function'
+                ? validation(imageFile, allowedTypes, maxSizeMB)
+                : false;
             const isValid = ruleCheck;
-            if (!isValid) return { isValid: false, fieldStateValue };
+            if (!isValid) return { isValid: false, fieldStateValue, fieldEntries, isValueChanged };
     
             fieldEntries.push([name, imageFile]);
             if (!initValue) isValueChanged = true;
@@ -270,30 +330,38 @@ export default function PromoEditor({ promoId }) {
     
         // Если файл не загружен, то поле опционально, иначе всё валидно
         return {
-            isValid: imageFile ? true : optional,
+            isValid: imageFile ? true : optional ?? false,
             fieldStateValue,
             fieldEntries,
             isValueChanged
         };
     };
     
-    const processGenericField = (config, validation, value, initValue) => {
+    const processGenericField = (
+        config: TFieldConfig,
+        validation: TValidationRuleType,
+        value: TFieldValue,
+        initValue: TFieldValue
+    ): IProcessFieldResult => {
         const { name, trim, optional } = config;
-        const normalizedValue = trim ? value.trim() : value;
+        const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
         const fieldStateValue = { value: normalizedValue };
-        const ruleCheck = validation.test(normalizedValue);
+        const ruleCheck = validation instanceof RegExp && typeof normalizedValue === 'string'
+            ? validation.test(normalizedValue)
+            : false;
 
         const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
-        const fieldEntries = (isValid && (!optional || normalizedValue !== ''))
-            ? [[name, normalizedValue]]
-            : [];
+        const fieldEntries: TFieldEntries =
+            (isValid && (!optional || normalizedValue !== '') && typeof normalizedValue === 'string')
+                ? [[name, normalizedValue]]
+                : [];
         const isValueChanged = normalizedValue !== initValue;
     
         return { isValid, fieldStateValue, fieldEntries, isValueChanged };
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, TPromoBody> => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value, files }]) => {
                 const validation = validationRules.promotion[name];
                 if (!validation) {
@@ -301,11 +369,11 @@ export default function PromoEditor({ promoId }) {
                     return acc;
                 }
 
-                const config = fieldConfigMap[name];
-                const initValue = initValuesRef.current[name];
-                const isImage = name === 'image';
+                const config = fieldConfigMap[name] ?? {};
+                const initValue = initFieldValuesRef.current[name];
+                const isImageField = name === 'image';
         
-                let processFieldResult = isImage
+                let processFieldResult = isImageField
                     ? processImageField(config, validation, files, initValue, shouldRemoveImage)
                     : processGenericField(config, validation, value, initValue);
         
@@ -316,12 +384,12 @@ export default function PromoEditor({ promoId }) {
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.promotion[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.promotion[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid) {
                     fieldEntries.forEach(([key, val]) => {
-                        acc.formData.append(key, val);
+                        (acc.formFields as TFormFields)[key] = val;
                     });
 
                     if (isValueChanged) acc.changedFields.push(name);
@@ -331,19 +399,21 @@ export default function PromoEditor({ promoId }) {
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formData: new FormData(), changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as TPromoBody,
+                changedFields: [] as TValidFieldName[]
+            }
         );
     
-        return {
-            ...result,
-            formData: moveKeyToEndInFormData(result.formData, 'image'), // Размещение image в конце
-        };
+        return result;
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
-        const { allValid, fieldsStateUpdates, formData, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
@@ -356,12 +426,13 @@ export default function PromoEditor({ promoId }) {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isEditMode
-            ? sendPromoUpdateRequest(promoId, formData)
-            : sendPromoCreateRequest(formData);
-        const { status, fieldErrors, message } = await dispatch(requestThunk);
+        const requestThunk = isEditMode && promoId
+            ? sendPromoUpdateRequest(promoId, formFields)
+            : sendPromoCreateRequest(formFields);
+        const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         const LOG_CTX = `PROMO: ${isEditMode ? 'UPDATE' : 'CREATE'}`;
 
         switch (status) {
@@ -379,12 +450,16 @@ export default function PromoEditor({ promoId }) {
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
-                Object.entries(fieldErrors).forEach(([name, error]) => {
-                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                });
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
+                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                    .forEach(([name, error]) => {
+                        if (name in fieldConfigMap) {
+                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                        }
+                    });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -395,7 +470,7 @@ export default function PromoEditor({ promoId }) {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -420,7 +495,7 @@ export default function PromoEditor({ promoId }) {
 
     // Стартовая загрузка акции в режиме редактирования и очистка при размонтировании
     useEffect(() => {
-        if (isEditMode) loadPromo(promoId);
+        if (isEditMode && promoId) loadPromo(promoId);
 
         return () => {
             isUnmountedRef.current = true;
@@ -454,17 +529,17 @@ export default function PromoEditor({ promoId }) {
                         trim,
                         optional
                     }) => {
-                        const fieldInfoClass = getFieldInfoClass(elem, type, name);
                         const fieldId = `promo-${toKebabCase(name)}`;
-                        const hasPrevImage = name === 'image' && initValuesRef.current?.[name];
+                        const fieldInfoClass = getFieldInfoClass(elem, type, name);
+                        const hasPrevImage = name === 'image' && !!initFieldValuesRef.current[name];
 
-                        const elemProps = {
+                        const elemProps: TFieldElemProps = {
                             id: fieldId,
                             name,
                             type,
                             placeholder,
-                            value: fieldsState[name]?.value,
-                            min: name === 'endDate' ? fieldsState.startDate?.value : undefined,
+                            value: getStringValue(fieldsState[name]?.value),
+                            min: name === 'endDate' ? String(fieldsState.startDate.value) : undefined,
                             accept,
                             autoComplete,
                             onChange: handleFieldChange,
@@ -483,8 +558,9 @@ export default function PromoEditor({ promoId }) {
                                     {hasPrevImage && (
                                         <div className="promo-image-remove-box">
                                             <DesignedCheckbox
-                                                label="Удалить текущее"
+                                                id="remove-promo-image"
                                                 name="remove-promo-image"
+                                                label="Удалить текущее"
                                                 checked={shouldRemoveImage}
                                                 onChange={(e) => setShouldRemoveImage(e.target.checked)}
                                                 disabled={isFormLocked}

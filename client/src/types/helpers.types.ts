@@ -22,13 +22,17 @@ export interface IFormGroupConfig {
     readonly fieldConfigs?: readonly IFieldConfig[];
 }
 
-export type TFieldValue = string | number | boolean;
+export type TFieldValue = string | number | boolean | File | File[] | null;
+export type TFormDataFieldValue = string | File | File[];
 
 export interface IFieldConfig {
     readonly name: string;
     readonly label: string;
     readonly elem: string;
     readonly type?: string;
+    readonly accept?: string;
+    readonly allowedTypes?: string[];
+    readonly maxSizeMB?: number;
     readonly options?: readonly { value: string; label: string; }[]
     readonly defaultValue?: TFieldValue;
     readonly placeholder?: string;

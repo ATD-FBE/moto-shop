@@ -1,7 +1,4 @@
-import {
-    JSX, ChangeEvent, FocusEvent, SubmitEvent,
-    useReducer, useState, useRef, useMemo, useEffect
-} from 'react';
+import { useReducer, useState, useRef, useMemo, useEffect } from 'react';
 import cn from 'classnames';
 import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
@@ -41,6 +38,15 @@ import {
     PAYMENT_METHOD_OPTIONS
 } from '@shared/constants.js';
 import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes,
+    HTMLAttributes
+} from 'react';
+import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
@@ -68,8 +74,12 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
 
 // Вспомогательные типы
-type TFieldValuesMap = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+type TFormFields = {
+    [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldValue;
+};
 
 interface IFormGroupEntriesProps {
     fieldConfigs: TFieldConfigs;
@@ -80,6 +90,11 @@ interface IFormGroupEntriesProps {
     handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
     fillRegistrationEmail: () => void;
 }
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement> &
+    HTMLAttributes<HTMLSpanElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -308,7 +323,7 @@ export default function CheckoutPreferences(): JSX.Element {
     );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 
-    const initValuesRef = useRef<TFieldValuesMap>({} as TFieldValuesMap);
+    const initFieldValuesRef = useRef<TInitFieldValues>({} as TInitFieldValues);
     const isUnmountedRef = useRef(false);
 
     const dispatch = useAppDispatch();
@@ -348,7 +363,7 @@ export default function CheckoutPreferences(): JSX.Element {
         const { region, district, city, street, house, apartment, postalCode } = shippingAddress ?? {};
         const { defaultPaymentMethod } = financials ?? {};
 
-        initValuesRef.current = {
+        initFieldValuesRef.current = {
             firstName: firstName ?? '',
             lastName: lastName ?? '',
             middleName: middleName ?? '',
@@ -366,7 +381,7 @@ export default function CheckoutPreferences(): JSX.Element {
             defaultPaymentMethod: defaultPaymentMethod ?? ''
         };
 
-        const initValues = initValuesRef.current;
+        const initValues = initFieldValuesRef.current;
         const initValuesEntries = Object.entries(initValues) as [TValidFieldName, TFieldValue][];
 
         if (initValuesEntries.length > 0) {
@@ -450,10 +465,10 @@ export default function CheckoutPreferences(): JSX.Element {
         
                 if (isValid) {
                     if (normalizedValue !== '') {
-                        (acc.formFields as TFieldValuesMap)[name] = normalizedValue;
+                        (acc.formFields as TFormFields)[name] = normalizedValue;
                     }
 
-                    const initValue = initValuesRef.current[name];
+                    const initValue = initFieldValuesRef.current[name];
                     if (normalizedValue !== initValue) acc.changedFields.push(name);
                 } else {
                     acc.allValid = false;
@@ -529,7 +544,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
                 // Обновление начальных значений полей
-                initValuesRef.current = Object.fromEntries(
+                initFieldValuesRef.current = Object.fromEntries(
                     (Object.entries(fieldsState) as [TValidFieldName, IFieldState][])
                         .map(([key, { value }]) => ([key, value]))
                 ) as Record<TValidFieldName, TFieldValue>;
@@ -648,7 +663,7 @@ function FormGroupEntries({
                 const isApplicable = applicabilityMap[name];
                 const isCollapsible = !!canApply;
 
-                const baseProps = {
+                const baseElemProps: TFieldElemProps = {
                     id: fieldId,
                     name,
                     autoComplete: 'off',
@@ -659,7 +674,7 @@ function FormGroupEntries({
                 const fieldElem = (() => {
                     if (elem === 'select') return (
                         <select
-                            {...baseProps}
+                            {...baseElemProps}
                             value={getStringValue(fieldsState[name]?.value)}
                         >
                             {options.map((option, idx) => (
@@ -672,7 +687,7 @@ function FormGroupEntries({
                     
                     if (elem === 'checkbox') return (
                         <DesignedCheckbox
-                            {...baseProps}
+                            {...baseElemProps}
                             label={checkboxLabel}
                             checked={getBoolValue(fieldsState[name]?.value)}
                         />
@@ -680,7 +695,7 @@ function FormGroupEntries({
                 
                     return (
                         <input
-                            {...baseProps}
+                            {...baseElemProps}
                             type={type}
                             placeholder={placeholder}
                             value={getStringValue(fieldsState[name]?.value)}

@@ -1,4 +1,4 @@
-import { JSX, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendNewsListRequest, sendNewsDeleteRequest } from '@/api/newsRequests.js';
@@ -8,6 +8,7 @@ import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
 import type { TDataLoadStatus } from '@/types/index.js';
 import type { INews } from '@shared/types/index.js';
 

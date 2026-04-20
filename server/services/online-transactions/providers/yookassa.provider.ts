@@ -11,7 +11,7 @@ import config from '@server/config/config.js';
 import { typeCheck } from '@server/validation/validationEngine.js';
 import log from '@server/utils/logger.js';
 import { toError } from '@shared/commonHelpers.js';
-import { TRANSACTION_TYPE, CARD_ONLINE_PROVIDER } from '@shared/constants.js';
+import { MIN_IN_MS, TRANSACTION_TYPE, CARD_ONLINE_PROVIDER } from '@shared/constants.js';
 import type { Request } from 'express';
 import type {
     TDbOrderWithTx,
@@ -205,7 +205,7 @@ export const fetchYooKassaExternalTransactions = async (
     }, new Date());
     
     // Добавление небольшого люфта (1 минуту) назад на случай задержек записи в БД
-    const searchStartTimeISO = new Date(minStartedAt.getTime() - 60 * 1000).toISOString();
+    const searchStartTimeISO = new Date(minStartedAt.getTime() - MIN_IN_MS).toISOString();
 
     // Флаги наличия оплат и/или возвратов
     const hasPendingPayments = stuckDbOrders.some(

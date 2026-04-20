@@ -94,7 +94,7 @@ const fieldsStateReducer = (state, action) => {
 export default function InternalNoteForm({ orderId, internalNote }) {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
-    const initValuesRef = useRef({});
+    const initFieldValuesRef = useRef({});
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();
     
@@ -144,7 +144,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                 };
 
                 if (isValid) {
-                    const initValue = initValuesRef.current[name];
+                    const initValue = initFieldValuesRef.current[name];
 
                     if (normalizedValue !== initValue) {
                         acc.formFields[name] = normalizedValue;
@@ -257,9 +257,9 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         };
     }, []);
 
-    // Обновление начального значения полей через SSE
+    // Обновление начальных значений полей через SSE
     useEffect(() => {
-        initValuesRef.current.internalNote = internalNote ?? '';
+        initFieldValuesRef.current.internalNote = internalNote ?? '';
     }, [internalNote]);
 
     // Сброс статуса формы при отсутствии ошибок полей

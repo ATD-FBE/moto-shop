@@ -278,7 +278,7 @@ export default function SectionForm({
         initFieldsStateReducer
     );
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
-    const initValuesRef = useRef({});
+    const initFieldValuesRef = useRef({});
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();
 
@@ -351,7 +351,7 @@ export default function SectionForm({
                 };
 
                 if (isValid) {
-                    const initValue = initValuesRef.current[name];
+                    const initValue = initFieldValuesRef.current[name];
 
                     if (normalizedValue !== initValue) {
                         acc.formFields[name] = normalizedValue;
@@ -594,7 +594,7 @@ export default function SectionForm({
 
             const initValue = allFlatInitValues[cfg.name] ?? '';
 
-            initValuesRef.current[cfg.name] = initValue;
+            initFieldValuesRef.current[cfg.name] = initValue;
             fieldsStateUpdates[cfg.name] = { value: initValue };
         });
 

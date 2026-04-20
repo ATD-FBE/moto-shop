@@ -3,16 +3,30 @@ import { FadeLoader } from 'react-spinners';
 import cn from 'classnames';
 import useImageTracking from '@/hooks/useImageTracking.js';
 import { BLANK_IMAGE_SRC } from '@/config/constants.js';
+import type { JSX, ImgHTMLAttributes, SyntheticEvent } from 'react';
 
-const TrackedImage = forwardRef((props, ref) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ITrackedImageProps extends ImgHTMLAttributes<HTMLImageElement> {
+    className?: string;
+    src: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const TrackedImage = forwardRef<HTMLImageElement, ITrackedImageProps>((props, ref): JSX.Element => {
     const { className, src, onLoad, onError, ...restProps } = props;
 
     const [hasStarted, setHasStarted] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const imgRef = useRef(null);
+    const imgRef = useRef<HTMLImageElement | null>(null);
 
     // Объединение внешнего и внутреннего рефов
-    const setRefs = useCallback((node) => {
+    const setRefs = useCallback((node: HTMLImageElement | null) => {
         imgRef.current = node;
 
         if (typeof ref === 'function') ref(node)
@@ -41,7 +55,7 @@ const TrackedImage = forwardRef((props, ref) => {
         return () => observer.disconnect();
     }, [startTracking, hasStarted]);
 
-    const handleLoad = (e) => {
+    const handleLoad = (e: SyntheticEvent<HTMLImageElement, Event>) => {
         if (!hasStarted) return; // Срабатывает на заглушке
 
         setIsLoaded(true);
@@ -49,7 +63,7 @@ const TrackedImage = forwardRef((props, ref) => {
         onLoad?.(e); // Вызов передаваемой функции после загрузки
     };
 
-    const handleError = (e) => {
+    const handleError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
         if (!hasStarted) return; // Может сработать на заглушке
 
         setIsLoaded(true);
@@ -58,7 +72,7 @@ const TrackedImage = forwardRef((props, ref) => {
     };
 
     return (
-        <div className={cn('tracked-image-container', className)}>
+        <div className={cn('tracked-image-container', className ?? '')}>
             <FadeLoader
                 className={cn('tracked-image-loader-spinner', { 'visible': hasStarted && !isLoaded })}
                 color="rgba(115, 200, 248, 1)"
@@ -91,5 +105,7 @@ const TrackedImage = forwardRef((props, ref) => {
         </div>
     );
 });
+
+TrackedImage.displayName = 'TrackedImage'; // Название компонента при отладке вместо "ForwardRef"
 
 export default TrackedImage;

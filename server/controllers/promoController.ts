@@ -6,7 +6,13 @@ import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { USER_ROLE, PROMO_ANNOUNCE_OFFSET_DAYS } from '@shared/constants.js';
+import {
+    DAY_IN_MS,
+    MIN_IN_MS,
+    USER_ROLE,
+    MAX_TIMEZONE_OFFSET_MINUTES,
+    PROMO_ANNOUNCE_OFFSET_DAYS
+} from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { SortOrder, FilterQuery } from 'mongoose';
@@ -15,11 +21,11 @@ import type {
     IPromoListQuery,
     TPromoListResponse,
     TPromoResponse,
-    IPromoCreateBody,
+    IPromoCreateBodyServer,
     TPromoCreateResponse,
-    IPromoUpdateBody,
+    IPromoUpdateBodyClient,
     TPromoUpdateResponse,
-    TPromoDeleteResponse,
+    TPromoDeleteResponse
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -65,8 +71,6 @@ export const handlePromoListRequest: RequestHandler<
         if (!isAdmin) {
             const { timestamp, timeZoneOffset } = req.query;
             const now = Date.now();
-            const DAY_IN_MS = 24 * 60 * 60 * 1000; // Сутки в миллисекундах
-            const MAX_TIMEZONE_OFFSET_MINUTES = 840; // UTC+14
 
             let tsNum = Number(timestamp);
             if (isNaN(tsNum) || Math.abs(tsNum - now) > DAY_IN_MS) {
@@ -78,7 +82,7 @@ export const handlePromoListRequest: RequestHandler<
                 offsetNum = 0;
             }
 
-            const clientDateTimeUTC = new Date(tsNum - offsetNum * 60 * 1000);
+            const clientDateTimeUTC = new Date(tsNum - offsetNum * MIN_IN_MS);
             const announceStart = new Date(clientDateTimeUTC);
             announceStart.setDate(announceStart.getDate() + PROMO_ANNOUNCE_OFFSET_DAYS);
 
@@ -141,7 +145,7 @@ export const handlePromoRequest: RequestHandler<IPromoParams, TPromoResponse> = 
 export const handlePromoCreateRequest: RequestHandler<
     {},
     TPromoCreateResponse,
-    IPromoCreateBody
+    IPromoCreateBodyServer
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
@@ -222,7 +226,7 @@ export const handlePromoCreateRequest: RequestHandler<
 export const handlePromoUpdateRequest: RequestHandler<
     IPromoParams,
     TPromoUpdateResponse,
-    IPromoUpdateBody
+    IPromoUpdateBodyClient
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 

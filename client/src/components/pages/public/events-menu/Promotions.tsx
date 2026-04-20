@@ -1,34 +1,66 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import PromoTimer from './promotions/PromoTimer.jsx';
 import { sendPromoListRequest, sendPromoDeleteRequest } from '@/api/promoRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { DATA_LOAD_STATUS, NO_VALUE_LABEL } from '@/config/constants.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { USER_ROLE, DAY_IN_MS, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type { IPromo } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IDeletingPromo {
+    id: string;
+    title: string;
+}
+
+interface IPromotionsMainProps {
+    isPrivilegedUser: boolean;
+    loadStatus: TDataLoadStatus;
+    reloadPromos: () => void;
+    promoList: IPromo[];
+    editPromo: (promoId: string) => void;
+    confirmPromoDeletion: (promo: IDeletingPromo) => void;
+}
+
+interface IPromoCardProps {
+    promo: IPromo;
+    isPrivilegedUser: boolean;
+    editPromo: (promoId: string) => void;
+    confirmPromoDeletion: (promo: IDeletingPromo) => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
-export default function Promotions() {
-    const { isAuthenticated, user } = useSelector(state => state.auth);
+export default function Promotions(): JSX.Element {
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
 
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
-    const [promoList, setPromoList] = useState([]);
+    const [promoList, setPromoList] = useState<IPromo[]>([]);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
-    const location = useLocation();
 
-    const userRole = user?.role ?? 'guest';
-    const isPrivilegedUser = isAuthenticated && ['admin'].includes(userRole);
+    const userRole = user?.role ?? USER_ROLE.GUEST;
+    const isPrivilegedUser = isAuthenticated && userRole === USER_ROLE.ADMIN;
 
-    const loadStatus =
+    const promosLoadStatus =
         loading
             ? DATA_LOAD_STATUS.LOADING
             : loadError
@@ -37,16 +69,17 @@ export default function Promotions() {
                     ? DATA_LOAD_STATUS.NOT_FOUND
                     : DATA_LOAD_STATUS.READY;
 
-    const loadPromos = async () => {
+    const loadPromos = async (): Promise<void> => {
         setLoadError(false);
         setLoading(true);
 
-        const requestArgs = [isAuthenticated];
+        const requestArgs: [boolean, string?] = [isAuthenticated];
 
         if (!isPrivilegedUser) {
-            const timestamp = new Date().getTime();
-            const timeZoneOffset = new Date().getTimezoneOffset();
-            const params = new URLSearchParams({ timestamp, timeZoneOffset });
+            const params = new URLSearchParams({
+                timestamp: String(new Date().getTime()),
+                timeZoneOffset: String(new Date().getTimezoneOffset())
+            });
             const urlParams = params.toString();
 
             requestArgs.push(urlParams);
@@ -57,42 +90,43 @@ export default function Promotions() {
             }
         }
 
-        const { status, message, promoList } = await dispatch(sendPromoListRequest(...requestArgs));
+        const responseData = await dispatch(sendPromoListRequest(...requestArgs));
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'PROMO: LOAD LIST', status, message });
         
         if (status !== REQUEST_STATUS.SUCCESS) {
             setLoadError(true);
         } else {
-            setPromoList(promoList);
+            setPromoList(responseData.promoList);
         }
 
         setLoading(false);
     }
 
-    const reloadPromos = async () => {
-        await loadPromos();
+    const reloadPromos = (): void => {
+       loadPromos();
     };
 
-    const editPromo = (promoId) => {
+    const editPromo = (promoId: string): void => {
         navigate(routeConfig.adminEvents.paths[0], { state: { promoId } });
     };
 
-    const confirmPromoDeletion = (promo) => {
+    const confirmPromoDeletion = (promo: IDeletingPromo): void => {
         if (!promo) return;
 
-        const processPromoDeletion = async (promoId) => {
+        const processPromoDeletion = async (promoId: string): Promise<void> => {
             const { status, message } = await dispatch(sendPromoDeleteRequest(promoId));
             if (isUnmountedRef.current) return;
     
             logRequestStatus({ context: 'PROMO: DELETE', status, message });
     
-            const isAllowed = [REQUEST_STATUS.SUCCESS, REQUEST_STATUS.NOT_FOUND].includes(status);
+            const isAllowed = status === REQUEST_STATUS.SUCCESS || status === REQUEST_STATUS.NOT_FOUND;
             if (!isAllowed) throw new Error(message);
         };
     
-        const finalizePromoDeletion = (promoId) => {
+        const finalizePromoDeletion = (promoId: string): void => {
             setPromoList(prev => prev.filter(promo => promo.id !== promoId));
         }
 
@@ -123,7 +157,7 @@ export default function Promotions() {
 
             <PromotionsMain
                 isPrivilegedUser={isPrivilegedUser}
-                loadStatus={loadStatus}
+                loadStatus={promosLoadStatus}
                 reloadPromos={reloadPromos}
                 promoList={promoList}
                 editPromo={editPromo}
@@ -140,7 +174,7 @@ function PromotionsMain({
     promoList,
     editPromo,
     confirmPromoDeletion
-}) {
+}: IPromotionsMainProps): JSX.Element {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div className="promos-main">
@@ -199,7 +233,12 @@ function PromotionsMain({
     );
 }
 
-function PromoCard({ promo, isPrivilegedUser, editPromo, confirmPromoDeletion }) {
+function PromoCard({
+    promo,
+    isPrivilegedUser,
+    editPromo,
+    confirmPromoDeletion
+}: IPromoCardProps): JSX.Element {
     const {
         id, title, image, description, startDate, endDate, createdBy, createdAt, updateHistory
     } = promo;
@@ -211,10 +250,7 @@ function PromoCard({ promo, isPrivilegedUser, editPromo, confirmPromoDeletion })
     const end = new Date(endDateNoTZ);
 
     const promoActivity = now < start ? 'not-started' : now > end ? 'ended' : 'active';
-
-    const dayTimestamp = 24 * 60 * 60 * 1000;
-    const isOneDayAction = end.getTime() - start.getTime() <= dayTimestamp;
-    
+    const isOneDayAction = end.getTime() - start.getTime() <= DAY_IN_MS;
     const promoDatesFormatOpts = { day: '2-digit', month: '2-digit', year: 'numeric' };
 
     return (
@@ -249,11 +285,11 @@ function PromoCard({ promo, isPrivilegedUser, editPromo, confirmPromoDeletion })
             {isPrivilegedUser && (
                 <>
                     <div className="promo-meta">
-                        <p>Автор: {createdBy} ({formatLocalDate(createdAt)})</p>
-                        {updateHistory.length > 0 && (
+                        <p>Автор: {createdBy ?? NO_VALUE_LABEL} ({formatLocalDate(createdAt)})</p>
+                        {(updateHistory ?? []).length > 0 && (
                             <p>
                                 Редактор(ы): {' '}
-                                {updateHistory
+                                {(updateHistory ?? [])
                                     .map(upd => `${upd.updatedBy} (${formatLocalDate(upd.updatedAt)})`)
                                     .join(', ')}
                             </p>

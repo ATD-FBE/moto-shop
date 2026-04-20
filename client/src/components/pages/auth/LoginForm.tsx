@@ -1,7 +1,4 @@
-import {
-    JSX, ChangeEvent, FocusEvent, SubmitEvent,
-    useMemo, useReducer, useState, useRef, useEffect
-} from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
@@ -35,10 +32,12 @@ import {
     DEFAULT_FIELD_ERROR_MESSAGE
 } from '@shared/fieldRules.js';
 import { USER_ROLE } from '@shared/constants.js';
+import type {JSX, ChangeEvent, FocusEvent, SubmitEvent } from 'react';
 import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
+    TFieldValue,
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
@@ -58,6 +57,10 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
 
 // Вспомогательные типы
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+type TFormFields = {
+    [K in keyof IAuthLoginBody['formFields']]: TFieldValue;
+};
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -190,7 +193,7 @@ export default function LoginForm(): JSX.Element {
                 };
         
                 if (isValid) {
-                    acc.formFields[name] = normalizedValue;
+                    (acc.formFields as TFormFields)[name] = normalizedValue;
                 } else {
                     acc.allValid = false;
                 }
@@ -200,7 +203,7 @@ export default function LoginForm(): JSX.Element {
             {
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
-                formFields: {} as IAuthLoginBody['formFields'] & Record<TValidFieldName, any>
+                formFields: {} as IAuthLoginBody['formFields']
             }
         );
     

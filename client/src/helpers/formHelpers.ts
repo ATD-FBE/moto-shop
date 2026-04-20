@@ -161,6 +161,40 @@ export const getStringValue = (val?: TFieldValue): string =>
 export const getBoolValue = (val?: TFieldValue, fallback = false): boolean =>
     typeof val === 'boolean' ? val : fallback;
 
+export const createFormData = (data: any): FormData => {
+    const formData = new FormData();
+    if (!data || typeof data !== 'object') return formData;
+
+    // Сбор файловых полей в fileQueue и установка в formData любых других в первую очередь
+    const fileQueue: Array<{ key: string; value: File }> = [];
+    
+    Object.keys(data).forEach(key => {
+        const value = data[key];
+        if (value === undefined || value === null) return;
+
+        if (Array.isArray(value)) {
+            value.forEach(item => {
+                if (item instanceof File) {
+                    fileQueue.push({ key: String(key), value: item });
+                } else {
+                    formData.append(String(key), String(item));
+                }
+            });
+        } else if (value instanceof File) {
+            fileQueue.push({ key: String(key), value });
+        } else {
+            formData.append(String(key), String(value));
+        }
+    });
+
+    // Установка файловых полей в конце
+    fileQueue.forEach(({ key, value }) => {
+        formData.append(key, value);
+    });
+
+    return formData;
+};
+
 export const processFormattedFieldDeletion = (
     e: KeyboardEvent<HTMLInputElement>,
     context: IProcessFormattedFieldDeletionContext

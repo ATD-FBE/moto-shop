@@ -1,3 +1,5 @@
+import { MIN_IN_MS, HOUR_IN_MS, DAY_IN_MS } from '@shared/constants.js';
+
 export const MONGO_MODE = {
     LOCAL: 'local',
     ATLAS: 'atlas'
@@ -55,14 +57,14 @@ export const AGGREGATE_COLLATION_OPTIONS = {
     strength: 2   // Strength 2 означает игнорирование регистра при сравнении
 } as const;
 
-export const ACCESS_TOKEN_MAX_AGE = 1 * 60 * 60 * 1000; // 1 час
+export const ACCESS_TOKEN_MAX_AGE = 1 * HOUR_IN_MS; // 1 час
 //export const ACCESS_TOKEN_MAX_AGE = 10 * 1000;
 
-export const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 дней
+export const REFRESH_TOKEN_MAX_AGE = 7 * DAY_IN_MS; // 7 дней
 //export const REFRESH_TOKEN_MAX_AGE = 30 * 1000;
 
-export const ORDER_DRAFT_EXPIRATION = 15 * 60 * 1000; // 15 минут
+export const ORDER_DRAFT_EXPIRATION = 15 * MIN_IN_MS; // 15 минут
 //export const ORDER_DRAFT_EXPIRATION = 10 * 1000;
 
-export const ONLINE_TRANSACTION_INIT_EXPIRATION = 5 * 60 * 1000; // 5 минут
+export const ONLINE_TRANSACTION_INIT_EXPIRATION = 5 * MIN_IN_MS; // 5 минут
 export const ORDER_RESERVE_BATCH_SIZE = 10;

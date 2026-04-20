@@ -157,7 +157,7 @@ export default function NotificationEditor({
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS[isEditMode ? 'LOADING' : 'DEFAULT']);
     const [lockedRecipientNames, setLockedRecipientNames] = useState('');
 
-    const initValuesRef = useRef({});
+    const initFieldValuesRef = useRef({});
     const isUnmountedRef = useRef(false);
 
     const dispatch = useDispatch();
@@ -186,7 +186,7 @@ export default function NotificationEditor({
 
         const { recipients, subject, message, signature } = notification;
 
-        initValuesRef.current = {
+        initFieldValuesRef.current = {
             recipients, // Массив
             subject,
             message,
@@ -266,7 +266,7 @@ export default function NotificationEditor({
                 }
 
                 const config = fieldConfigMap[name];
-                const initValue = initValuesRef.current[name];
+                const initValue = initFieldValuesRef.current[name];
     
                 const processFieldResult = name === 'recipients'
                     ? processRecipientsField(config, validation, value, initValue)

@@ -1,7 +1,8 @@
-import { JSX, MouseEvent } from 'react';
-import { Link, LinkProps } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { setLockedRouteCancelPath } from '@/redux/slices/uiSlice.js';
+import type { JSX, MouseEvent } from 'react';
+import type { LinkProps } from 'react-router-dom';
 
 export default function BlockableLink(
     { to, children, onClick, ...props }: LinkProps

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 import config from '@server/config/config.js';
 import { toError } from '@shared/commonHelpers.js';
+import { SEC_IN_MS } from '@shared/constants.js';
 import type { ITokenUserPayload, TTokenType, ITokenTypeConfig } from '@server/types/index.js';
 
 const TOKEN_CONFIG: Record<TTokenType, ITokenTypeConfig> = {
@@ -45,7 +46,7 @@ export const getTokenExpiryFromCookie = (req: Request, type: TTokenType): number
     const decoded = jwt.decode(token);
     
     if (decoded && typeof decoded !== 'string' && decoded.exp) {
-        return decoded.exp * 1000; // exp в секундах, умножение на 1000 для мс
+        return decoded.exp * SEC_IN_MS; // exp в секундах, умножение на 1000 для мс
     }
 
     return 0;

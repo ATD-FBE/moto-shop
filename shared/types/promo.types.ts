@@ -19,13 +19,15 @@ export interface IPromo {
     updateHistory?: { updatedBy: string; updatedAt: string }[];
 }
 
-interface IPromoBodyBase {
-    image?: Express.Multer.File;
+interface IPromoBodyBase<TFile> {
+    image?: TFile;
     title: string;
     description: string;
     startDate: string;
     endDate: string;
 }
+type TPromoBodyBaseServer = IPromoBodyBase<Express.Multer.File>;
+type TPromoBodyBaseClient = IPromoBodyBase<File>;
 
 /// Загрузка всех акций ///
 export interface IPromoListQuery {
@@ -51,7 +53,8 @@ export type TPromoResponse =
     | TSuccessResponse<IPromoSuccessData>;
 
 /// Создание акции ///
-export interface IPromoCreateBody extends IPromoBodyBase {}
+export interface IPromoCreateBodyServer extends TPromoBodyBaseServer {}
+export interface IPromoCreateBodyClient extends TPromoBodyBaseClient {}
 
 export type TPromoCreateResponse =
     | TAuthErrorResponse
@@ -60,7 +63,10 @@ export type TPromoCreateResponse =
     | TSuccessResponse;
 
 /// Изменение акции ///
-export interface IPromoUpdateBody extends IPromoBodyBase {
+export interface IPromoUpdateBodyServer extends TPromoBodyBaseServer {
+    removeImage?: string;
+}
+export interface IPromoUpdateBodyClient extends TPromoBodyBaseClient {
     removeImage?: string;
 }
 

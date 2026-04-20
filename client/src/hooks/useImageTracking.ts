@@ -1,15 +1,28 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { incrementMediaRequests, decrementMediaRequests } from '@/redux/slices/loadingSlice';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
+import { incrementMediaRequests, decrementMediaRequests } from '@/redux/slices/loadingSlice.js';
 
-export default function useImageTracking() {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IUseImageTrackingReturn {
+    startTracking: () => void;
+    completeTracking: () => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function useImageTracking(): IUseImageTrackingReturn {
     const hasStartedRef = useRef(false);
     const hasCompletedRef = useRef(false);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const startTracking = useCallback(() => {
+    const startTracking = useCallback((): void => {
         if (isUnmountedRef.current) return;
         if (hasStartedRef.current && !hasCompletedRef.current) return; // Загрузка картинки в процессе
 
@@ -25,7 +38,7 @@ export default function useImageTracking() {
         dispatch(incrementMediaRequests());
     }, [dispatch]);
 
-    const completeTracking = useCallback(() => {
+    const completeTracking = useCallback((): void => {
         if (isUnmountedRef.current) return;
         if (hasCompletedRef.current) return; // Загрузка уже завершена (успешно или с ошибкой)
         hasCompletedRef.current = true;
