@@ -1,4 +1,5 @@
 import News from '@server/db/models/News.js';
+import { BASE_DB_NEWS_FIELDS, MANAGED_DB_NEWS_FIELDS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNews } from '@server/services/newsService.js';
 import { requireDbUser } from '@server/utils/typeGuards.js';
@@ -8,7 +9,7 @@ import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { TDbNews } from '@server/types/index.js';
+import type { TDbNews, TDbNewsBase, TDbNewsManaged } from '@server/types/index.js';
 import type {
     INewsBody,
     TNewsListResponse,
@@ -33,28 +34,23 @@ interface INewsParams extends ParamsDictionary {
 /// Загрузка всех новостей ///
 export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
-    const selectedDbFields: Partial<Record<keyof TDbNews, number>> = {
-        _id: 1,
-        publishDate: 1,
-        content: 1,
-        ...(isAdmin && {
-            createdBy: 1,
-            updateHistory: 1
-        })
-    };
+    const selectedDbFields = isAdmin ? MANAGED_DB_NEWS_FIELDS : BASE_DB_NEWS_FIELDS;
 
     try {
+        let dbNewsList: (TDbNewsBase | TDbNewsManaged)[] = [];
         let dbNewsQuery = News.find() // Поиск всех новостей
             .sort({ publishDate: -1 }) // Сортировка от новой новости к старой
             .select(selectedDbFields); // Выборка только нужных полей
 
         if (isAdmin) { // Заполнение полей с именами пользователей по ссылкам на их _id в коллекции users
-            dbNewsQuery = dbNewsQuery
+            dbNewsList = await dbNewsQuery
                 .populate('createdBy', 'name')
-                .populate('updateHistory.updatedBy', 'name');
+                .populate('updateHistory.updatedBy', 'name')
+                .lean<TDbNewsManaged[]>();
+        } else {
+            dbNewsList = await dbNewsQuery.lean<TDbNewsBase[]>();
         }
 
-        const dbNewsList = await dbNewsQuery.lean<TDbNews[]>(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
         const newsList = dbNewsList.map(news => prepareNews(news, { managed: isAdmin }));
@@ -68,13 +64,9 @@ export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = asyn
 /// Загрузка отдельной новости для редактирования ///
 export const handleNewsRequest: RequestHandler<INewsParams, TNewsResponse> = async (req, res, next) => {
     const newsId = req.params.newsId;
-    const selectedDbFields: Partial<Record<keyof TDbNews, number>> = {
-        title: 1,
-        content: 1
-    };
 
     try {
-        const dbNews = await News.findById(newsId).select(selectedDbFields).lean<TDbNews>();
+        const dbNews = await News.findById(newsId).select(BASE_DB_NEWS_FIELDS).lean<TDbNewsBase>();
         checkTimeout(req);
 
         if (!dbNews) {

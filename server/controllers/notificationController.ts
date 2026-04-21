@@ -1,39 +1,76 @@
+import { Types } from 'mongoose';
 import Notification from '@server/db/models/Notification.js';
 import User from '@server/db/models/User.js';
+import { BASE_DB_NOTIFICATION_FIELDS, MANAGED_DB_NOTIFICATION_FIELDS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareNotification } from '@server/services/notificationService.js';
 import * as sseNotifications from '@server/services/sse/sseNotificationsService.js';
 import { parseSortParam } from '@server/utils/aggregationUtils.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { notificationsSortOptions } from '@shared/sortOptions.js';
 import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { USER_ROLE, NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
-//import type { TDbNotification } from '@server/types/index.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { FilterQuery } from 'mongoose';
+import type { TDbNotification, TDbNotificationBase, TDbNotificationManaged } from '@server/types/index.js';
+import type {
+    INotification,
+    INotificationBody,
+    INotificationListQuery,
+    TNotificationListResponse,
+    TNotificationResponse,
+    TNotificationCreateResponse,
+    TNotificationUpdateResponse,
+    TNotificationSendingResponse,
+    TNotificationMarkAsReadResponse,
+    TNotificationDeleteResponse
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface INotificationParams extends ParamsDictionary {
+    notificationId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
-export const handleNotificationListRequest = async (req, res, next) => {
+export const handleNotificationListRequest: RequestHandler<
+    {},
+    TNotificationListResponse,
+    {},
+    INotificationListQuery
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
     
     const dbUser = req.dbUser;
-    const isAdmin = dbUser.role === USER_ROLE.ADMIN;
 
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 10) || notificationsPageLimitOptions[0], 1);
+    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+    const limit = Math.max(parseInt(req.query.limit || String(notificationsPageLimitOptions[0]), 10), 1);
     const skip = (page - 1) * limit;
 
     try {
-        let notificationsCount, dbPaginatedNotificationList;
+        let notificationsCount: number = 0;
+        let paginatedNotificationList: INotification[] = [];
 
         switch (dbUser.role) {
             case USER_ROLE.ADMIN: {
-                const draftsFilter = { status: NOTIFICATION_STATUS.DRAFT };
-                const nonDraftsFilter = { status: { $ne: NOTIFICATION_STATUS.DRAFT } };
+                // Подсчёт документов
+                const draftsFilter: FilterQuery<TDbNotificationManaged> = {
+                    status: NOTIFICATION_STATUS.DRAFT
+                };
+                const nonDraftsFilter: FilterQuery<TDbNotificationManaged> = {
+                    status: { $ne: NOTIFICATION_STATUS.DRAFT }
+                };
                 const [draftsCount, nonDraftsCount] = await Promise.all([
                     Notification.countDocuments(draftsFilter),
                     Notification.countDocuments(nonDraftsFilter)
@@ -42,97 +79,104 @@ export const handleNotificationListRequest = async (req, res, next) => {
 
                 notificationsCount = draftsCount + nonDraftsCount;
 
-                const selectedFields =
-                    '_id status recipients subject message signature createdBy ' +
-                    'updateHistory createdAt updatedAt sentAt sentBy';
-
-                let dbDraftNotifications = [], dbNonDraftNotifications = [];
+                // Поиск документов
+                let dbDraftNotifications: TDbNotificationManaged[] = [];
+                let dbNonDraftNotifications: TDbNotificationManaged[] = [];
 
                 if (skip < draftsCount) { // Если на странице попадают черновики
                     const draftsLimit = Math.min(limit, draftsCount - skip);
 
                     dbDraftNotifications = await Notification.find(draftsFilter)
-                        .select(selectedFields)
+                        .sort({ updatedAt: -1 })
+                        .skip(skip)
+                        .limit(draftsLimit)
+                        .select(MANAGED_DB_NOTIFICATION_FIELDS)
                         .populate('recipients', 'name')
                         .populate('createdBy', 'name')
                         .populate('updateHistory.updatedBy', 'name')
                         .populate('sentBy', 'name')
-                        .sort({ updatedAt: -1 })
-                        .skip(skip)
-                        .limit(draftsLimit)
-                        .lean();
+                        .lean<TDbNotificationManaged[]>();
                     checkTimeout(req);
 
                     const remaining = limit - dbDraftNotifications.length;
 
                     if (remaining > 0) {
                         dbNonDraftNotifications = await Notification.find(nonDraftsFilter)
-                            .select(selectedFields)
+                            .sort({ sentAt: -1 })
+                            .skip(0) // Нечерновики идут сразу после всех черновиков
+                            .limit(remaining)
+                            .select(MANAGED_DB_NOTIFICATION_FIELDS)
                             .populate('recipients', 'name')
                             .populate('createdBy', 'name')
                             .populate('updateHistory.updatedBy', 'name')
                             .populate('sentBy', 'name')
-                            .sort({ sentAt: -1 })
-                            .skip(0) // Нечерновики идут сразу после всех черновиков
-                            .limit(remaining)
-                            .lean();
+                            .lean<TDbNotificationManaged[]>();
                         checkTimeout(req);
                     }
                 } else { // Если все черновики уже пропущены — только нечерновики
                     const nonDraftsSkip = skip - draftsCount;
 
                     dbNonDraftNotifications = await Notification.find(nonDraftsFilter)
-                        .select(selectedFields)
+                        .sort({ sentAt: -1 })
+                        .skip(nonDraftsSkip)
+                        .limit(limit)
+                        .select(MANAGED_DB_NOTIFICATION_FIELDS)
                         .populate('recipients', 'name')
                         .populate('createdBy', 'name')
                         .populate('updateHistory.updatedBy', 'name')
                         .populate('sentBy', 'name')
-                        .sort({ sentAt: -1 })
-                        .skip(nonDraftsSkip)
-                        .limit(limit)
-                        .lean();
+                        .lean<TDbNotificationManaged[]>();
                     checkTimeout(req);
                 }
 
-                dbPaginatedNotificationList = [...dbDraftNotifications, ...dbNonDraftNotifications];
+                const dbPaginatedNotificationList = [...dbDraftNotifications, ...dbNonDraftNotifications];
+
+                // Подготовка данных
+                paginatedNotificationList = dbPaginatedNotificationList.map(notif =>
+                    prepareNotification(notif, { managed: true })
+                );
 
                 break;
             }
 
             case USER_ROLE.CUSTOMER: {
-                const { sortField, sortOrder } = parseSortParam/*<TDbNotification>*/(
-                    req.query.sort,
-                    notificationsSortOptions
-                );
-                const selectedFields = '_id sentAt subject message signature';
-
+                // Подсчёт документов
                 const notifications = dbUser.notifications;
                 const notificationIds = notifications.map(n => n.notificationId);
-
-                const notificationMap = notifications.reduce((acc, { notificationId, isRead, readAt }) => {
-                    acc[notificationId.toString()] = { isRead, readAt };
-                    return acc;
-                }, {});
 
                 notificationsCount = await Notification.countDocuments({ _id: { $in: notificationIds } });
                 checkTimeout(req);
 
-                dbPaginatedNotificationList = await Notification.find({ _id: { $in: notificationIds } })
-                    .select(selectedFields)
+                // Поиск документов
+                const { sortField, sortOrder } = parseSortParam<TDbNotificationBase>(
+                    req.query.sort,
+                    notificationsSortOptions
+                );
+
+                const dbPaginatedNotificationList = await Notification
+                    .find({ _id: { $in: notificationIds } })
                     .sort({ [sortField]: sortOrder })
                     .skip(skip)
                     .limit(limit)
-                    .lean();
+                    .select(BASE_DB_NOTIFICATION_FIELDS)
+                    .lean<TDbNotificationBase[]>();
                 checkTimeout(req);
 
-                dbPaginatedNotificationList = dbPaginatedNotificationList.map(notifItem => {
-                    const metadata = notificationMap[notifItem._id.toString()] || {};
+                // Подготовка данных
+                const notificationMap = notifications.reduce((acc, { notificationId, isRead, readAt }) => {
+                    acc[notificationId.toString()] = { isRead, readAt: readAt ?? null };
+                    return acc;
+                }, {} as Record<string, { isRead: boolean, readAt: Date | null }>);
 
-                    return {
-                        ...notifItem,
+                paginatedNotificationList = dbPaginatedNotificationList.map(notif => {
+                    const metadata = notificationMap[notif._id.toString()] || {};
+                    const extendedNotif = {
+                        ...notif,
                         isRead: metadata.isRead,
                         readAt: metadata.readAt
                     };
+
+                    return prepareNotification(extendedNotif, { managed: false });
                 });
 
                 break;
@@ -145,10 +189,6 @@ export const handleNotificationListRequest = async (req, res, next) => {
                 });
         }
 
-        const paginatedNotificationList = dbPaginatedNotificationList.map(notif =>
-            prepareNotification(notif, { managed: isAdmin })
-        );
-
         safeSendResponse(res, 200, {
             message: 'Уведомления успешно загружены',
             notificationsCount,
@@ -160,17 +200,16 @@ export const handleNotificationListRequest = async (req, res, next) => {
 };
 
 /// Загрузка черновика уведомления для редактирования ///
-export const handleNotificationRequest = async (req, res, next) => {
+export const handleNotificationRequest: RequestHandler<
+    INotificationParams,
+    TNotificationResponse
+> = async (req, res, next) => {
     const notificationId = req.params.notificationId;
-
-    if (!typeCheck.objectId(notificationId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: notificationId' });
-    }
 
     try {
         const dbNotification = await Notification.findById(notificationId)
-            .select('recipients subject message signature')
-            .lean();
+            .select(MANAGED_DB_NOTIFICATION_FIELDS)
+            .lean<TDbNotificationManaged>();
         checkTimeout(req);
 
         if (!dbNotification) {
@@ -189,92 +228,46 @@ export const handleNotificationRequest = async (req, res, next) => {
 };
 
 /// Создание черновика уведомления ///
-export const handleNotificationCreateRequest = async (req, res, next) => {
+export const handleNotificationCreateRequest: RequestHandler<
+    {},
+    TNotificationCreateResponse,
+    INotificationBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userId = req.dbUser._id;
-    const { recipients, subject, message, signature } = req.body ?? {};
+    const { recipients, subject, message, signature } = req.body;
 
-    // Предварительная проверка формата данных
-    /*const validationConfigMap = {
-        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', formField: true },
-        subject: { value: subject, type: 'string', formField: true },
-        message: { value: message, type: 'string', formField: true },
-        signature: { value: signature, type: 'string', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'notification');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }*/
-
-    // Создание документа в базе MongoDB
     try {
-        const { notifLbl } = await runInDbTransaction(async (session) => {
-            const [newNotification] = await Notification.create(
-                [
-                    {
-                        recipients,
-                        subject: subject.trim(),
-                        message: message.trim(),
-                        signature: signature.trim(),
-                        createdBy: userId
-                    }
-                ],
-                { session }
-            );
-            checkTimeout(req);
-
-            return { notifLbl: newNotification.subject };
+        const newNotification = await Notification.create({
+            recipients, // Mongoose сам превратит строки массива в ObjectId
+            subject: subject.trim(),
+            message: message.trim(),
+            signature: signature.trim(),
+            createdBy: userId
         });
+        checkTimeout(req);
 
         safeSendResponse(res, 201, {
-            message: `Уведомление "${notifLbl}" успешно создано`
+            message: `Уведомление "${newNotification.subject}" успешно создано`
         });
     } catch (err) {
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Изменение черновика уведомления ///
-export const handleNotificationUpdateRequest = async (req, res, next) => {
+export const handleNotificationUpdateRequest: RequestHandler<
+    INotificationParams,
+    TNotificationUpdateResponse,
+    INotificationBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userId = req.dbUser._id;
     const notificationId = req.params.notificationId;
-    const { recipients, subject, message, signature } = req.body ?? {};
+    const { recipients, subject, message, signature } = req.body;
 
-    // Предварительная проверка формата данных
-    /*const validationConfigMap = {
-        notificationId: { value: notificationId, type: 'objectId' },
-        recipients: { value: recipients, type: 'arrayOf', arrElemType: 'objectId', formField: true },
-        subject: { value: subject, type: 'string', formField: true },
-        message: { value: message, type: 'string', formField: true },
-        signature: { value: signature, type: 'string', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'notification');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }*/
-
-    // Апдейт документа в базе MongoDB
     try {
         const { notifLbl } = await runInDbTransaction(async (session) => {
             // Проверка существования и доступности изменяемого уведомления
@@ -296,8 +289,7 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
             const isRecipientsChanged = isArrayContentDifferent(currentRecipients, preparedRecipients);
             
             if (isRecipientsChanged) {
-                dbNotification.recipients = preparedRecipients;
-                dbNotification.markModified('recipients');
+                dbNotification.recipients = preparedRecipients.map(r => Types.ObjectId.createFromHexString(r));
             }
 
             dbNotification.set({
@@ -325,13 +317,14 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
 };
 
 /// Отправка уведомления ///
-export const handleNotificationSendingRequest = async (req, res, next) => {
+export const handleNotificationSendingRequest: RequestHandler<
+    INotificationParams,
+    TNotificationSendingResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const notificationId = req.params.notificationId;
-
-    if (!typeCheck.objectId(notificationId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: notificationId' });
-    }
 
     try {
         const transactionResult = await runInDbTransaction(async (session) => {
@@ -349,7 +342,7 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
                     `Уведомление ${notifLbl} уже отправлено, повторная отправка невозможна`
                 );
             }
-            if (!Array.isArray(dbNotification.recipients) || !dbNotification.recipients.length) {
+            if (!dbNotification.recipients?.length) {
                 throw createAppError(400, `Нет получателей для уведомления ${notifLbl}`);
             }
 
@@ -361,28 +354,31 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
             );
             checkTimeout(req);
 
-            const recipientsSentCount = updateResult.modifiedCount;
-
             // Отметка об отправке в уведомлении
+            const now = new Date();
+
             dbNotification.set({
                 status: NOTIFICATION_STATUS.SENT,
-                sentAt: new Date(),
+                sentAt: now,
                 sentBy: dbUser._id
             });
 
             const updatedDbNotification = await dbNotification.save({ session });
             checkTimeout(req);
 
-            return { recipientsSentCount, updatedDbNotification, notifLbl };
+            return {
+                recipientsSentCount: updateResult.modifiedCount,
+                recipients: updatedDbNotification.recipients,
+                notifLbl,
+                now
+            };
         });
 
-        const { recipientsSentCount, updatedDbNotification, notifLbl } = transactionResult;
+        const { recipientsSentCount, recipients, notifLbl, now } = transactionResult;
 
         // Отправка SSE-сообщения клиентам-получателям
         if (recipientsSentCount > 0) {
-            sseNotifications.sendToClients(updatedDbNotification.recipients, {
-                newUnreadNotificationsChange: 1
-            });
+            sseNotifications.sendToClients(recipients, { newUnreadNotificationsChange: 1 });
         }
 
         safeSendResponse(res, 200, {
@@ -391,8 +387,8 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
                     ' обновлён - возможно, оно уже есть у получателей, либо они были удалены'
                 : `Уведомление ${notifLbl} успешно отправлено`,
             updatedNotificationData: {
-                status: updatedDbNotification.status,
-                sentAt: updatedDbNotification.sentAt,
+                status: NOTIFICATION_STATUS.SENT,
+                sentAt: now.toISOString(),
                 sentBy: dbUser.name
             }
         });
@@ -402,28 +398,37 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
 };
 
 /// Отметка уведомления как прочитанного ///
-export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
-    const dbUser = req.dbUser;
+export const handleNotificationMarkAsReadRequest: RequestHandler<
+    INotificationParams,
+    TNotificationMarkAsReadResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
+    const userId = req.dbUser._id;
     const notificationId = req.params.notificationId;
 
-    if (!typeCheck.objectId(notificationId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: notificationId' });
-    }
-
-    const notification = dbUser.notifications.find(n => n.notificationId.toString() === notificationId);
-
-    if (!notification) {
-        return safeSendResponse(res, 404, {
-            message: `Уведомление (ID: ${notificationId}) не найдено у пользователя`
-        });
-    }
-    if (notification.isRead) {
-        return safeSendResponse(res, 204);
-    }
-
     try {
-        const { notifLbl } = await runInDbTransaction(async (session) => {
-            const dbNotification = await Notification.findById(notificationId).lean().session(session);
+        const { notifLbl, now } = await runInDbTransaction(async (session) => {
+            const dbUserInTransaction = await User.findById(userId).session(session);
+
+            if (!dbUserInTransaction) {
+                throw createAppError(404, `Пользователь (ID: ${userId}) не найден`);
+            }
+
+            const userNotification = dbUserInTransaction.notifications.find(
+                n => n.notificationId.toString() === notificationId
+            );
+        
+            if (!userNotification) {
+                throw createAppError(404, `Уведомление (ID: ${notificationId}) не найдено у пользователя`);
+            }
+            if (userNotification.isRead) {
+                throw createAppError(204);
+            }
+
+            const dbNotification = await Notification.findById(notificationId)
+                .lean<TDbNotification>()
+                .session(session);
             checkTimeout(req);
 
             const notifLbl = dbNotification ? `"${dbNotification.subject}"` : `(ID: ${notificationId})`;
@@ -431,24 +436,26 @@ export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
             if (!dbNotification) {
                 throw createAppError(404, `Уведомление ${notifLbl} не найдено`);
             }
+
+            const now = new Date();
             
-            notification.isRead = true;
-            notification.readAt = new Date();
+            userNotification.isRead = true;
+            userNotification.readAt = now;
         
-            await dbUser.save({ session });
+            await dbUserInTransaction.save({ session });
             checkTimeout(req);
 
-            return { notifLbl };
+            return { notifLbl, now };
         });
 
         // Отправка SSE-сообщения клиенту
-        sseNotifications.sendToClients([dbUser._id], { newUnreadNotificationsChange: -1 });
+        sseNotifications.sendToClients([userId], { newUnreadNotificationsChange: -1 });
 
         safeSendResponse(res, 200, {
             message: `Уведомление ${notifLbl} отмечено как прочитанное`,
             updatedNotificationData: {
-                isRead: notification.isRead,
-                readAt: notification.readAt
+                isRead: true,
+                readAt: now.toISOString()
             }
         });
     } catch (err) {
@@ -457,12 +464,11 @@ export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
 };
 
 /// Удаление черновика уведомления ///
-export const handleNotificationDeleteRequest = async (req, res, next) => {
+export const handleNotificationDeleteRequest: RequestHandler<
+    INotificationParams,
+    TNotificationDeleteResponse
+> = async (req, res, next) => {
     const notificationId = req.params.notificationId;
-
-    if (!typeCheck.objectId(notificationId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: notificationId' });
-    }
 
     try {
         const { notifLbl } = await runInDbTransaction(async (session) => {

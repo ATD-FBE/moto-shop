@@ -1,4 +1,5 @@
 import Promo from '@server/db/models/Promo.js';
+import { BASE_DB_PROMO_FIELDS, MANAGED_DB_PROMO_FIELDS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { preparePromo } from '@server/services/promoService.js';
 import { storageService } from '@server/services/storage/storageService.js';
@@ -15,8 +16,8 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { SortOrder, FilterQuery } from 'mongoose';
-import type { TDbPromo } from '@server/types/index.js';
+import type { FilterQuery } from 'mongoose';
+import type { TDbPromo, TDbPromoBase, TDbPromoManaged } from '@server/types/index.js';
 import type {
     IPromoListQuery,
     TPromoListResponse,
@@ -48,27 +49,18 @@ export const handlePromoListRequest: RequestHandler<
     IPromoListQuery
 > = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
-    const selectedDbFields: Partial<Record<keyof TDbPromo, number>> = {
-        _id: 1,
-        title: 1,
-        imageFilename: 1,
-        description: 1,
-        startDate: 1,
-        endDate: 1,
-        ...(isAdmin && {
-            createdBy: 1,
-            createdAt: 1,
-            updateHistory: 1
-        })
-    };
-    const sortRules: Partial<Record<keyof TDbPromo, SortOrder>> = isAdmin
-        ? { createdAt: -1 }
-        : { startDate: -1 };
 
     try {
-        let findRules: FilterQuery<TDbPromo> = {};
+        let dbPromoList: (TDbPromoBase | TDbPromoManaged)[] = [];
 
-        if (!isAdmin) {
+        if (isAdmin) {
+            dbPromoList = await Promo.find()
+                .sort({ createdAt: -1 })
+                .select(MANAGED_DB_PROMO_FIELDS)
+                .populate('createdBy', 'name')
+                .populate('updateHistory.updatedBy', 'name')
+                .lean<TDbPromoManaged[]>();
+        } else {
             const { timestamp, timeZoneOffset } = req.query;
             const now = Date.now();
 
@@ -86,23 +78,16 @@ export const handlePromoListRequest: RequestHandler<
             const announceStart = new Date(clientDateTimeUTC);
             announceStart.setDate(announceStart.getDate() + PROMO_ANNOUNCE_OFFSET_DAYS);
 
-            findRules = {
+            const findFilter: FilterQuery<TDbPromo> = {
                 startDate: { $lte: announceStart }, // Дата анонса акции меньше текущего времени клиента
                 endDate: { $gte: clientDateTimeUTC } // Дата конца акции больше текущего времени клиента
             };
+
+            dbPromoList = await Promo.find(findFilter)
+                .sort({ startDate: -1 })
+                .select(BASE_DB_PROMO_FIELDS)
+                .lean<TDbPromoBase[]>();
         }
-
-        let dbPromoQuery = Promo.find(findRules) // Поиск акций
-            .sort(sortRules) // Сортировка от новой акции к старой
-            .select(selectedDbFields); // Выборка только нужных полей
-
-        if (isAdmin) { // Заполнение полей с именами пользователей по ссылкам на их _id в коллекции users
-            dbPromoQuery = dbPromoQuery
-                .populate('createdBy', 'name')
-                .populate('updateHistory.updatedBy', 'name');
-        }
-
-        const dbPromoList = await dbPromoQuery.lean<TDbPromo[]>(); // Преобразование в обычный JS-объект
         checkTimeout(req);
 
         const promoList = dbPromoList.map(promo => preparePromo(promo, { managed: isAdmin }));
@@ -116,16 +101,9 @@ export const handlePromoListRequest: RequestHandler<
 /// Загрузка отдельной акции для редактирования ///
 export const handlePromoRequest: RequestHandler<IPromoParams, TPromoResponse> = async (req, res, next) => {
     const promoId = req.params.promoId;
-    const selectedDbFields: Partial<Record<keyof TDbPromo, number>> = {
-        title: 1,
-        imageFilename: 1,
-        description: 1,
-        startDate: 1,
-        endDate: 1
-    };
 
     try {
-        const dbPromo = await Promo.findById(promoId).select(selectedDbFields).lean<TDbPromo>();
+        const dbPromo = await Promo.findById(promoId).select(BASE_DB_PROMO_FIELDS).lean<TDbPromoBase>();
         checkTimeout(req);
 
         if (!dbPromo) {

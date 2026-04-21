@@ -175,7 +175,7 @@ export const buildFilterMatch = <T>(
 
 export const parseSortParam = <T>(
     sortParam: unknown,
-    sortOptions: ISortOptionsEntry<T>[]
+    sortOptions: readonly ISortOptionsEntry<T>[]
 ): IParseSortResult<T> => {
     const defaultOption = sortOptions[0];
     const defaultSortField = defaultOption.dbField;

@@ -68,3 +68,54 @@ export const ORDER_DRAFT_EXPIRATION = 15 * MIN_IN_MS; // 15 минут
 
 export const ONLINE_TRANSACTION_INIT_EXPIRATION = 5 * MIN_IN_MS; // 5 минут
 export const ORDER_RESERVE_BATCH_SIZE = 10;
+
+// Поля из БД для новостей
+export const BASE_DB_NEWS_FIELDS = {
+    _id: 1,
+    publishDate: 1,
+    title: 1,
+    content: 1
+} as const;
+
+export const MANAGED_DB_NEWS_FIELDS = {
+    ...BASE_DB_NEWS_FIELDS,
+    createdBy: 1,
+    updateHistory: 1
+} as const;
+
+// Поля из БД для акций
+export const BASE_DB_PROMO_FIELDS = {
+    _id: 1,
+    title: 1,
+    imageFilename: 1,
+    description: 1,
+    startDate: 1,
+    endDate: 1
+} as const;
+
+export const MANAGED_DB_PROMO_FIELDS = {
+    ...BASE_DB_PROMO_FIELDS,
+    createdBy: 1,
+    createdAt: 1,
+    updateHistory: 1
+} as const;
+
+// Поля из БД для уведомлений
+export const BASE_DB_NOTIFICATION_FIELDS = {
+    _id: 1,
+    subject: 1,
+    message: 1,
+    signature: 1,
+    sentAt: 1
+} as const;
+
+export const MANAGED_DB_NOTIFICATION_FIELDS = {
+    ...BASE_DB_NOTIFICATION_FIELDS,
+    status: 1,
+    recipients: 1,
+    createdBy: 1,
+    updateHistory: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    sentBy: 1
+} as const;

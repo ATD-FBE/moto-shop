@@ -35,6 +35,14 @@ import { ProductSchema } from '@server/db/models/Product.js';
 import { PromoSchema } from '@server/db/models/Promo.js';
 import { UserSchema } from '@server/db/models/User.js';
 import { BaseOrderSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
+import {
+    BASE_DB_NEWS_FIELDS,
+    MANAGED_DB_NEWS_FIELDS,
+    BASE_DB_PROMO_FIELDS,
+    MANAGED_DB_PROMO_FIELDS,
+    BASE_DB_NOTIFICATION_FIELDS,
+    MANAGED_DB_NOTIFICATION_FIELDS,
+} from '@server/config/constants.js';
 
 // Типизация подсхем моделей
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
@@ -81,17 +89,6 @@ export type TDbOrderDraft = TDbBaseOrder & InferSchemaType<typeof OrderDraftSche
 export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSchema>;
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
-// Расширения типов моделей
-export type TDbNotificationExtended = TDbNotification & {
-    isRead?: boolean;
-    readAt?: Date | null;
-};
-export type TDbOrderWithTx = TDbOrderFinal & {
-    financials: TDbOrderFinal['financials'] & {
-        currentOnlineTransaction: NonNullable<TDbOrderFinal['financials']['currentOnlineTransaction']>;
-    };
-};
-
 // Типизация схем моделей как документов (с методами и другими встроенными данными)
 export type TDbCriticalEventDoc = HydratedDocument<TDbCriticalEvent>;
 export type TDbCounterDoc = HydratedDocument<TDbCounter>;
@@ -99,10 +96,28 @@ export type TDbUserDoc = HydratedDocument<TDbUser>;
 export type TDbNewsDoc = HydratedDocument<TDbNews>;
 export type TDbPromoDoc = HydratedDocument<TDbPromo>;
 export type TDbNotificationDoc = HydratedDocument<TDbNotification>;
-export type TDbNotificationExtendedDoc = HydratedDocument<TDbNotificationExtended>;
 export type TDbCategoryDoc = HydratedDocument<TDbCategory>;
 export type TDbProductDoc = HydratedDocument<TDbProduct>;
 export type TDbOrderDraftDoc = HydratedDocument<TDbOrderDraft>;
 export type TDbOrderFinalDoc = HydratedDocument<TDbOrderFinal>;
 export type TDbOrderDoc = HydratedDocument<TDbOrder>;
-export type TDbOrderWithTxDoc = HydratedDocument<TDbOrderWithTx>;
+
+// Расширения типов моделей
+export type TDbNewsBase = Pick<TDbNews, keyof typeof BASE_DB_NEWS_FIELDS>;
+export type TDbNewsManaged = Pick<TDbNews, keyof typeof MANAGED_DB_NEWS_FIELDS>;
+
+export type TDbPromoBase = Pick<TDbPromo, keyof typeof BASE_DB_PROMO_FIELDS>;
+export type TDbPromoManaged = Pick<TDbPromo, keyof typeof MANAGED_DB_PROMO_FIELDS>;
+
+export type TDbNotificationBase = Pick<TDbNotification, keyof typeof BASE_DB_NOTIFICATION_FIELDS>;
+export type TDbNotificationManaged = Pick<TDbNotification, keyof typeof MANAGED_DB_NOTIFICATION_FIELDS>;
+export type TDbNotificationCustomer = TDbNotificationBase & {
+    isRead: boolean;
+    readAt: Date | null;
+};
+
+export type TDbOrderWithTx = TDbOrderFinal & {
+    financials: TDbOrderFinal['financials'] & {
+        currentOnlineTransaction: NonNullable<TDbOrderFinal['financials']['currentOnlineTransaction']>;
+    };
+};

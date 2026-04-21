@@ -15,8 +15,8 @@ const paramsBaseSchema: IValidationInputSchema<TNewsEntity>['params'] = {
     newsId: 'objectId'
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TNewsEntity>['body'] = {
-    title: { type: 'string', formField: true },
-    content: { type: 'string', formField: true }
+    title: { type: 'string', match: true, formField: true },
+    content: { type: 'string', match: true, formField: true }
 } as const;
 
 export const newsSchema: IValidationInputSchema<TNewsEntity> = {

@@ -16,10 +16,10 @@ const paramsBaseSchema: IValidationInputSchema<TPromoEntity>['params'] = {
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TPromoEntity>['body'] = {
     image: { type: 'file', optional: true, formField: true },
-    title: { type: 'string', formField: true },
-    description: { type: 'string', formField: true },
-    startDate: { type: 'date', formField: true },
-    endDate: { type: 'date', formField: true }
+    title: { type: 'string', match: true, formField: true },
+    description: { type: 'string', match: true, formField: true },
+    startDate: { type: 'date', match: true, formField: true },
+    endDate: { type: 'date', match: true, formField: true }
 } as const;
 
 export const promoListSchema: IValidationInputSchema<TPromoEntity> = {
