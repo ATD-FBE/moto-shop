@@ -19,15 +19,16 @@ export interface IPromo {
     updateHistory?: { updatedBy: string; updatedAt: string }[];
 }
 
-interface IPromoBodyBase<TFile> {
+interface IPromoCreateBodyBase<TFile> {
     image?: TFile;
     title: string;
     description: string;
     startDate: string;
     endDate: string;
 }
-type TPromoBodyBaseServer = IPromoBodyBase<Express.Multer.File>;
-type TPromoBodyBaseClient = IPromoBodyBase<File>;
+interface IPromoUpdateBodyBase<TFile> extends IPromoCreateBodyBase<TFile> {
+    removeImage?: string;
+}
 
 /// Загрузка всех акций ///
 export interface IPromoListQuery {
@@ -53,8 +54,8 @@ export type TPromoResponse =
     | TSuccessResponse<IPromoSuccessData>;
 
 /// Создание акции ///
-export interface IPromoCreateBodyServer extends TPromoBodyBaseServer {}
-export interface IPromoCreateBodyClient extends TPromoBodyBaseClient {}
+export type TPromoCreateBodyServer = IPromoCreateBodyBase<Express.Multer.File>;
+export type TPromoCreateBodyClient = IPromoCreateBodyBase<File>;
 
 export type TPromoCreateResponse =
     | TAuthErrorResponse
@@ -63,12 +64,8 @@ export type TPromoCreateResponse =
     | TSuccessResponse;
 
 /// Изменение акции ///
-export interface IPromoUpdateBodyServer extends TPromoBodyBaseServer {
-    removeImage?: string;
-}
-export interface IPromoUpdateBodyClient extends TPromoBodyBaseClient {
-    removeImage?: string;
-}
+export type TPromoUpdateBodyServer = IPromoUpdateBodyBase<Express.Multer.File>;
+export type TPromoUpdateBodyClient = IPromoUpdateBodyBase<File>;
 
 export type TPromoUpdateResponse =
     | TEmptyResponse

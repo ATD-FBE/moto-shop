@@ -6,6 +6,7 @@ import * as sseNotifications from '@server/services/sse/sseNotificationsService.
 import { parseSortParam } from '@server/utils/aggregationUtils.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
@@ -17,6 +18,8 @@ import { USER_ROLE, NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constant
 
 /// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
 export const handleNotificationListRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+    
     const dbUser = req.dbUser;
     const isAdmin = dbUser.role === USER_ROLE.ADMIN;
 
@@ -317,21 +320,6 @@ export const handleNotificationUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Уведомление ${notifLbl} успешно изменено` });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'notification');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
@@ -409,11 +397,6 @@ export const handleNotificationSendingRequest = async (req, res, next) => {
             }
         });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
@@ -469,10 +452,6 @@ export const handleNotificationMarkAsReadRequest = async (req, res, next) => {
             }
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-        
         next(err);
     }
 };
@@ -507,10 +486,6 @@ export const handleNotificationDeleteRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Уведомление ${notifLbl} успешно удалено` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

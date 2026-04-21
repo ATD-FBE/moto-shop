@@ -5,9 +5,9 @@ import type { TAppThunk } from '@/types/index.js';
 import type {
     TPromoListResponse,
     TPromoResponse,
-    IPromoCreateBodyClient,
+    TPromoCreateBodyClient,
     TPromoCreateResponse,
-    IPromoUpdateBodyClient,
+    TPromoUpdateBodyClient,
     TPromoUpdateResponse,
     TPromoDeleteResponse
 } from '@shared/types/index.js';
@@ -54,7 +54,7 @@ export const sendPromoRequest = (promoId: string): TAppThunk<Promise<TPromoRespo
 
 /// Создание акции ///
 export const sendPromoCreateRequest = (
-    objData: IPromoCreateBodyClient
+    objData: TPromoCreateBodyClient
 ): TAppThunk<Promise<TPromoCreateResponse>> =>
     async (dispatch) => {
         const url = '/api/promos';
@@ -78,7 +78,7 @@ export const sendPromoCreateRequest = (
 /// Изменение акции ///
 export const sendPromoUpdateRequest = (
     promoId: string,
-    objData: IPromoUpdateBodyClient
+    objData: TPromoUpdateBodyClient
 ): TAppThunk<Promise<TPromoUpdateResponse>> =>
     async (dispatch) => {
         const url = `/api/promos/${promoId}`;

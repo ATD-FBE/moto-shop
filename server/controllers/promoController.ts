@@ -21,9 +21,9 @@ import type {
     IPromoListQuery,
     TPromoListResponse,
     TPromoResponse,
-    IPromoCreateBodyServer,
+    TPromoCreateBodyServer,
     TPromoCreateResponse,
-    IPromoUpdateBodyClient,
+    TPromoUpdateBodyServer,
     TPromoUpdateResponse,
     TPromoDeleteResponse
 } from '@shared/types/index.js';
@@ -145,7 +145,7 @@ export const handlePromoRequest: RequestHandler<IPromoParams, TPromoResponse> = 
 export const handlePromoCreateRequest: RequestHandler<
     {},
     TPromoCreateResponse,
-    IPromoCreateBodyServer
+    TPromoCreateBodyServer
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
@@ -226,7 +226,7 @@ export const handlePromoCreateRequest: RequestHandler<
 export const handlePromoUpdateRequest: RequestHandler<
     IPromoParams,
     TPromoUpdateResponse,
-    IPromoUpdateBodyClient
+    TPromoUpdateBodyServer
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 

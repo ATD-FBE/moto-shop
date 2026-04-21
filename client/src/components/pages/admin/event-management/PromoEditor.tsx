@@ -53,8 +53,8 @@ import type {
 import type {
     TEntityField,
     TValidationRuleType,
-    IPromoCreateBodyClient,
-    IPromoUpdateBodyClient
+    TPromoCreateBodyClient,
+    TPromoUpdateBodyClient
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -77,8 +77,8 @@ interface IPromoEditorProps {
     promoId: string | null;
 }
 
-type TPromoBody = IPromoCreateBodyClient | IPromoUpdateBodyClient;
-type TPromoBodyAllKeys = keyof (IPromoCreateBodyClient & IPromoUpdateBodyClient);
+type TPromoBody = TPromoCreateBodyClient | TPromoUpdateBodyClient;
+type TPromoBodyAllKeys = keyof (TPromoCreateBodyClient & TPromoUpdateBodyClient);
 type TFieldEntries = [TPromoBodyAllKeys, TFormDataFieldValue][];
 
 interface IProcessFieldResult {

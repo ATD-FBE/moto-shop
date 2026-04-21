@@ -1,5 +1,13 @@
 import type { TNotification } from './shared.types.js';
+import type {
+    TEmptyResponse,
+    TAuthErrorResponse,
+    TValidationErrorResponse,
+    TGeneralErrorResponse,
+    TSuccessResponse
+} from './apiResponse.types.js';
 
+/// Общие типы ///
 export interface INotification {
     id: string;
     status?: TNotification;
