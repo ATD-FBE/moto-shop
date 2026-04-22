@@ -1,4 +1,4 @@
-import { escapeRegExp } from '@shared/commonHelpers.js';
+import { padTwoDigits, escapeRegExp } from '@shared/commonHelpers.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export const formatLocalDate = (
@@ -10,15 +10,6 @@ export const formatLocalDate = (
     const d = date instanceof Date ? date : new Date(date);
     if (isNaN(d.getTime())) return NO_VALUE_LABEL;
     return d.toLocaleString(undefined, format);
-};
-export const padTwoDigits = (n/*: number*/)/*: string*/ => String(n).padStart(2, '0');
-
-export const formatDateOnly = (date/*: Date | string | number | null | undefined*/)/*: string*/ => {
-    if (!date) return NO_VALUE_LABEL;
-    
-    const d = date instanceof Date ? date : new Date(date);
-    if (isNaN(d.getTime())) return NO_VALUE_LABEL;
-    return `${d.getFullYear()}-${padTwoDigits(d.getMonth() + 1)}-${padTwoDigits(d.getDate())}`;
 };
 
 export const formatDateToMoscowLog = (date/*: Date*/)/*: string*/ => {

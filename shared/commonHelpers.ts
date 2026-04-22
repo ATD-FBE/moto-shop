@@ -31,6 +31,16 @@ export const toError = (err: unknown): Error => {
     return new Error(message);
 };
 
+export const padTwoDigits = (n: number): string => String(n).padStart(2, '0');
+
+export const formatDateOnly = (date: Date | string | number | null | undefined): string => {
+    if (!date) return '';
+    
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${padTwoDigits(d.getMonth() + 1)}-${padTwoDigits(d.getDate())}`;
+};
+
 export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
     if (!obj || typeof obj !== 'object') return undefined;
     return path.split('.').reduce((acc, key) => acc?.[key], obj);

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Collapsible from '@/components/common/Collapsible.jsx';
-import NotificationEditor from './customer-management/NotificationEditor.js';
+import NotificationEditor from './customer-management/NotificationEditor.jsx';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import CustomerTable from './customer-management/CustomerTable.jsx';
 import {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import cn from 'classnames';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
-import { formatDateOnly } from '@/helpers/textHelpers.js';
+import { formatDateOnly } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
 import type { TFilterOption } from '@shared/types/index.js';
