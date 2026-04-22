@@ -1,10 +1,13 @@
-import React, { useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useRef, useEffect } from 'react';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendNotificationMarkAsReadRequest } from '@/api/notificationRequests.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
+import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { INotificationCardCustomerProps } from '@/types/index.js';
 
 export default function NotificationCardCustomer({
     notification,
@@ -13,25 +16,25 @@ export default function NotificationCardCustomer({
     addNotificationIdInProgress,
     removeNotificationIdInProgress,
     updateNotificationState
-}) {
+}: INotificationCardCustomerProps): JSX.Element {
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const { id, subject, message, signature, sentAt, isRead, readAt } = notification;
 
     const isUnread = !isRead;
-    const sentDateStr = sentAt ? new Date(sentAt).toLocaleString() : '';
-    const readDateStr = readAt ? new Date(readAt).toLocaleString() : '';
+    const sentDateStr = formatLocalDate(sentAt);
+    const readDateStr = formatLocalDate(readAt);
 
-    const markNotificationAsRead = async (eventType, notificationId) => {
-        if (eventType === 'click' && document.getSelection().toString().length) return;
+    const markNotificationAsRead = async (eventType: string, notificationId: string): Promise<void> => {
+        if (eventType === 'click' && document.getSelection()?.toString().length) return;
 
         addNotificationIdInProgress(notificationId);
 
         const responseData = await dispatch(sendNotificationMarkAsReadRequest(notificationId));
         if (isUnmountedRef.current) return;
 
-        const { status, message, updatedNotificationData} = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'NOTIFICATION: MARK AS READ', status, message });
         
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -42,7 +45,7 @@ export default function NotificationCardCustomer({
                 message: 'Ошибка при отметке уведомления.\nПодробности ошибки в консоли.'
             });
         } else {
-            updateNotificationState(notificationId, updatedNotificationData);
+            updateNotificationState(notificationId, responseData.notificationUpdateData);
     
             if (eventType === 'keydown') {
                 notificationArticleRefs.current[notificationId]?.blur();
@@ -62,7 +65,7 @@ export default function NotificationCardCustomer({
     return (
         <article
             data-id={id}
-            ref={(elem) => (notificationArticleRefs.current[id] = elem)}
+            ref={(elem) => { notificationArticleRefs.current[id] = elem; }}
             className={cn('notification-card', { 'unread': isUnread })}
             role="button"
             tabIndex={isUnread ? 0 : -1}

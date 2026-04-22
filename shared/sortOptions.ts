@@ -1,7 +1,7 @@
 export const productsSortOptions = [
-    { dbField: 'name', label: 'Наименование', defaultOrder: 'asc', caseInsensitive: true },
-    { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc', caseInsensitive: true },
-    { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc', caseInsensitive: true },
+    { dbField: 'name', label: 'Наименование', defaultOrder: 'asc' },
+    { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc' },
+    { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc' },
     { dbField: 'lastRestockAt', label: 'Дата пополнения', defaultOrder: 'desc' },
     { dbField: 'stock', label: 'Количество', defaultOrder: 'desc' },
     { dbField: 'price', label: 'Цена', defaultOrder: 'asc' },
@@ -9,9 +9,9 @@ export const productsSortOptions = [
 ] as const;
 
 export const productEditorSortOptions = [
-    { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc', caseInsensitive: true },
-    { dbField: 'name', label: 'Наименование', defaultOrder: 'asc', caseInsensitive: true },
-    { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc', caseInsensitive: true },
+    { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc' },
+    { dbField: 'name', label: 'Наименование', defaultOrder: 'asc' },
+    { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc' },
     { dbField: 'createdAt', label: 'Дата создания', defaultOrder: 'desc' },
     { dbField: 'lastRestockAt', label: 'Дата пополнения', defaultOrder: 'desc' },
     { dbField: 'stock', label: 'Количество', defaultOrder: 'asc' },
@@ -31,7 +31,7 @@ export const ordersSortOptions = [
 
 export const customersSortOptions = [
     { dbField: 'createdAt', label: 'Дата регистрации', defaultOrder: 'desc' },
-    { dbField: 'name', label: 'Имя клиента', defaultOrder: 'asc', caseInsensitive: true },
+    { dbField: 'name', label: 'Имя клиента', defaultOrder: 'asc' },
     { dbField: 'discount', label: 'Скидка', defaultOrder: 'desc' },
     { dbField: 'totalSpent', label: 'Сумма покупок', defaultOrder: 'desc' },
     { dbField: 'isBanned', label: 'Блокировка', defaultOrder: 'desc' }

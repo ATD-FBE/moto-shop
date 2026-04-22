@@ -52,8 +52,8 @@ export const handleCustomerListRequest = async (req, res, next) => {
             email: 1,
             discount: 1,
             totalSpent: 1,
-            isBanned: 1,
-            createdAt: 1
+            createdAt: 1,
+            isBanned: 1
         }
     });
 
@@ -218,7 +218,7 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: `Скидка клиента ${customerLbl} успешно изменена на ${discountNum}%`,
-            updatedFields: { discount: discountNum }
+            customerUpdateData: { discount: discountNum }
         });
     } catch (err) {
         if (err.isAppError) {
@@ -268,7 +268,7 @@ export const handleCustomerBanToggleRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, {
             message: `Статус блокировки клиента ${customerLbl}: ${banStatusText}`,
-            updatedFields: { isBanned: newBanStatus }
+            customerUpdateData: { isBanned: newBanStatus }
         });
     } catch (err) {
         if (err.isAppError) {

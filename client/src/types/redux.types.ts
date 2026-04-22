@@ -16,4 +16,6 @@ export interface TLocationState {
     from?: Location;
     newsId?: string;
     promoId?: string;
+    notificationId?: string;
+    isNotificationEditorExpanded?: boolean;
 }

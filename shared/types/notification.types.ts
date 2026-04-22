@@ -74,7 +74,7 @@ export type TNotificationUpdateResponse =
 
 /// Отправка уведомления ///
 interface INotificationSendingSuccessData {
-    updatedNotificationData: {
+    notificationUpdateData: {
         status: TNotificationStatus;
         sentAt: string;
         sentBy: string;
@@ -87,7 +87,7 @@ export type TNotificationSendingResponse =
 
 /// Отметка уведомления как прочитанного ///
 interface INotificationMarkAsReadSuccessData {
-    updatedNotificationData: {
+    notificationUpdateData: {
         isRead: boolean;
         readAt: string;
     }

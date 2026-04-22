@@ -1,34 +1,65 @@
 import { useState } from 'react';
 import cn from 'classnames';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
-import { formatDateToLocalString } from '@shared/commonHelpers.js';
+import { formatDateOnly } from '@/helpers/textHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
+import type { JSX, Dispatch, SetStateAction, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
+import type { TFilterOption } from '@shared/types/index.js';
 
-export default function FilterControls({ uiBlocked, options, filter, setFilter }) {
-    const [filterParams, setFilterParams] = useState(new URLSearchParams(filter));
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IFilterControlsProps {
+    uiBlocked?: boolean;
+    options?: readonly TFilterOption[];
+    filter?: URLSearchParams;
+    setFilter?: Dispatch<SetStateAction<URLSearchParams>>;
+}
+
+interface IHandleInputChangeParams {
+    type: TFilterOption['type'];
+    minValue?: string;
+    maxValue?: string;
+    paramName: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function FilterControls({
+    uiBlocked = false,
+    options,
+    filter,
+    setFilter
+}: IFilterControlsProps): JSX.Element | null {
+    if (!options || !filter || !setFilter) {
+        console.error('Отсутствуют критические свойства компонента фильтра!');
+        return null;
+    }
+
+    const [filterParams, setFilterParams] = useState(() => new URLSearchParams(filter));
     const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
-    const isFilterChanged = filterParams.toString() !== new URLSearchParams(filter).toString();
+    const isFilterChanged = filterParams.toString() !== filter.toString();
     const isFilterReseted = filterParams.toString() === getInitFilterParams(null, options).toString();
 
-    const calcInputWidth = (type, minLimit, maxLimit) => {
-        if (type !== 'number') return 'auto';
-        
-        const MAX_WIDTH = 120;
-        const CHAR_WIDTH = 8;
-        const PADDING = 30;
+    const calcNumberInputWidth = (minLimit: string, maxLimit: string): string => {
+        const MAX_WIDTH_CH = 12;
+        if (minLimit === '' || maxLimit === '') return MAX_WIDTH_CH + 'ch';
 
-        if (minLimit === '' || maxLimit === '') return MAX_WIDTH + 'px';
-
-        const minLimitLength = String(minLimit).length;
-        const maxLimitLength = String(maxLimit).length;
-        const numberInputWidth = Math.max(minLimitLength, maxLimitLength) * CHAR_WIDTH + PADDING;
-
-        return Math.min(numberInputWidth, MAX_WIDTH) + 'px';
+        const numberInputWidth = Math.max(minLimit.length, maxLimit.length) + 3;
+        return Math.min(numberInputWidth, MAX_WIDTH_CH) + 'ch';
     };
 
-    const handleInputChange = (e, { type, minValue, maxValue, paramName }) => {
-        const currentValue = e.target.value;
+    const handleInputChange = (
+        e: ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement> | KeyboardEvent<HTMLInputElement>,
+        params: IHandleInputChangeParams
+    ): void => {
+        const { type, minValue = '', maxValue = '', paramName } = params;
+
+        const currentValue = e.currentTarget.value;
         let newValue = currentValue;
 
         if (currentValue !== '') {
@@ -38,25 +69,25 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                 const maxValueNum = maxValue !== '' ? Number(maxValue) : Infinity;
     
                 if (num < minValueNum) {
-                    newValue = minValueNum;
+                    newValue = String(minValueNum);
                 } else if (num > maxValueNum) {
-                    newValue = maxValueNum;
+                    newValue = String(maxValueNum);
                 }
             } else if (type === 'date') {
                 const date = new Date(currentValue);
                 const minDate = minValue !== '' ? new Date(minValue) : new Date(-MAX_DATE_TS);
                 const maxDate = maxValue !== '' ? new Date(maxValue) : new Date(MAX_DATE_TS);
     
-                if (date < minDate) {
-                    newValue = formatDateToLocalString(minDate);
-                } else if (date > maxDate) {
-                    newValue = formatDateToLocalString(maxDate);
+                if (date.getTime() < minDate.getTime()) {
+                    newValue = formatDateOnly(minDate);
+                } else if (date.getTime() > maxDate.getTime()) {
+                    newValue = formatDateOnly(maxDate);
                 }
             }
         }
 
         setFilterParams(prevFilterParams => {
-            if (prevFilterParams.get(paramName) === String(newValue)) {
+            if (prevFilterParams.get(paramName) === newValue) {
                 return prevFilterParams; // Исключает ререндер, если состояние не изменилось
             }
 
@@ -66,23 +97,16 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
         });
     };
 
-    const renderOption = (option, idx) => {
-        const {
-            label,
-            type,
-            minLimit,
-            maxLimit,
-            minParamName,
-            maxParamName,
-            paramName,
-            valueOptions
-        } = option;
+    const renderOption = (option: TFilterOption, idx: number): JSX.Element => {
+        const { label: optionLabel, type } = option;
 
         switch (type) {
-            case 'number':
+            case 'number': {
+                const { minLimit, maxLimit, minParamName, maxParamName } = option;
+
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
-                        <label className="option-label">{label}:</label>
+                        <label className="option-label">{optionLabel}:</label>
 
                         <div className="option-values option-range">
                             <div className="range-field range-from">
@@ -91,7 +115,7 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                 <input
                                     id={`range-from-${idx}`}
                                     type={type}
-                                    style={{ width: calcInputWidth(type, minLimit, maxLimit) }}
+                                    style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
                                     value={filterParams.get(minParamName) ?? minLimit}
                                     min={minLimit}
                                     max={maxLimit}
@@ -122,7 +146,7 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                 <input
                                     id={`range-to-${idx}`}
                                     type={type}
-                                    style={{ width: calcInputWidth(type, minLimit, maxLimit) }}
+                                    style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
                                     value={filterParams.get(maxParamName) ?? maxLimit}
                                     min={minLimit}
                                     max={maxLimit}
@@ -147,11 +171,14 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                         </div>
                     </div>
                 );
+            }
 
-            case 'date':
+            case 'date': {
+                const { minLimit, maxLimit, minParamName, maxParamName } = option;
+                
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
-                        <label className="option-label">{label}:</label>
+                        <label className="option-label">{optionLabel}:</label>
 
                         <div className="option-values option-range">
                             <div className="range-field range-from">
@@ -160,7 +187,6 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                 <input
                                     id={`range-from-${idx}`}
                                     type={type}
-                                    style={{ width: calcInputWidth(type, minLimit, maxLimit) }}
                                     value={filterParams.get(minParamName) ?? minLimit}
                                     onChange={e => handleInputChange(e, {
                                         type,
@@ -179,7 +205,6 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                 <input
                                     id={`range-to-${idx}`}
                                     type={type}
-                                    style={{ width: calcInputWidth(type, minLimit, maxLimit) }}
                                     value={filterParams.get(maxParamName) ?? maxLimit}
                                     onChange={e => handleInputChange(e, {
                                         type,
@@ -192,20 +217,23 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                         </div>
                     </div>
                 );
+            }
 
             case 'boolean': {
-                const booleanLabelMap = {
-                    '': 'Не учитывать',
-                    'true': 'Включить',
-                    'false': 'Исключить'
-                };
+                const { paramName } = option;
+
+                const booleanValueLabelEntries = [
+                    ['', 'Не учитывать'],
+                    ['true', 'Включить'],
+                    ['false', 'Исключить']
+                ] as const;
 
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
-                        <label className="option-label">{label}:</label>
+                        <label className="option-label">{optionLabel}:</label>
 
                         <div className="option-values">
-                            {Object.keys(booleanLabelMap).map(value => (
+                            {booleanValueLabelEntries.map(([value, label]) => (
                                 <label key={`${paramName}-${value}`} className="label-radio-btn">
                                     <input
                                         type="radio"
@@ -215,7 +243,7 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                         onChange={e => handleInputChange(e, { type, paramName })}
                                     />
                                     <span className="designed-radio-btn"></span>
-                                    <span>{booleanLabelMap[value]}</span>
+                                    <span>{label}</span>
                                 </label>
                             ))}
                         </div>
@@ -224,13 +252,15 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
             }
 
             case 'string':
-            default:
+            default: {
+                const { paramName, valueOptions } = option;
+
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
-                        <label className="option-label">{label}:</label>
+                        <label className="option-label">{optionLabel}:</label>
 
                         <div className="option-values">
-                            {valueOptions.map(({ value, label: valueLabel }) => (
+                            {valueOptions.map(({ value, label }) => (
                                 <label key={`${paramName}-${value}`} className="label-radio-btn">
                                     <input
                                         type="radio"
@@ -240,12 +270,13 @@ export default function FilterControls({ uiBlocked, options, filter, setFilter }
                                         onChange={e => handleInputChange(e, { type, paramName })}
                                     />
                                     <span className="designed-radio-btn"></span>
-                                    <span>{valueLabel}</span>
+                                    <span>{label}</span>
                                 </label>
                             ))}
                         </div>
                     </div>
                 );
+            }
         }
     };
 

@@ -1,4 +1,4 @@
-import { formatDateToLocalString } from './commonHelpers.js';
+import { formatDateOnly } from '@/helpers/textHelpers.js';
 import {
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
@@ -137,30 +137,28 @@ export const customersFilterOptions = [
         dbField: 'createdAt',
         label: 'Дата регистрации',
         type: 'date',
-        minLimit: '',
-        minLimitUTC: '',
-        maxLimit: formatDateToLocalString(new Date()),
-        maxLimitUTC: new Date().toISOString().split('T')[0],
         minParamName: 'regDateStart',
-        maxParamName: 'regDateEnd'
+        maxParamName: 'regDateEnd',
+        minLimit: '',
+        maxLimit: formatDateOnly(new Date())
     },
     {
         dbField: 'discount',
         label: 'Скидка (%)',
         type: 'number',
-        minLimit: '0',
-        maxLimit: '100',
         minParamName: 'minDiscount',
-        maxParamName: 'maxDiscount'
+        maxParamName: 'maxDiscount',
+        minLimit: '0',
+        maxLimit: '100'
     },
     {
         dbField: 'totalSpent',
         label: 'Сумма покупок (руб.)',
         type: 'number',
-        minLimit: '0',
-        maxLimit: '',
         minParamName: 'minTotalSpent',
-        maxParamName: 'maxTotalSpent'
+        maxParamName: 'maxTotalSpent',
+        minLimit: '0',
+        maxLimit: ''
     },
     {
         dbField: 'isBanned',

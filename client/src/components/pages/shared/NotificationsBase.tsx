@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { ReactNode, useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import { getInitSortParam, getInitPageParam, getInitLimitParam } from '@/helpers/initParamsHelper.js';
 import { notificationsSortOptions } from '@shared/sortOptions.js';
@@ -9,31 +9,75 @@ import { sendNotificationListRequest } from '@/api/notificationRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';
+import type {
+    TDataLoadStatus,
+    TToolbarControls,
+    TRenderNotificationCardProps,
+    INewNotificationAlertProps
+} from '@/types/index.js';
+import type { INotification, TNotificationsSortOptions } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface INotificationsBaseProps {
+    showSort?: boolean;
+    headerContent: ReactNode;
+    renderNotificationCard: (props: TRenderNotificationCardProps) => JSX.Element;
+    renderNewNotificationsAlert?: (props: INewNotificationAlertProps) => JSX.Element;
+}
+
+interface INotificationsMainProps {
+    loadStatus: TDataLoadStatus;
+    reloadNotifications: () => Promise<boolean>;
+    paginatedNotificationList: INotification[];
+    notificationArticleRefs: RefObject<Record<string, HTMLElement | null>>;
+    notificationIdsInProgress: Set<string>;
+    addNotificationIdInProgress: (notificationId: string) => void;
+    removeNotificationIdInProgress: (notificationId: string) => void;
+    updateNotificationState: (
+        notificationId: string,
+        notificationUpdateData: Partial<INotification>
+    ) => void;
+    page: number;
+    limit: number;
+    totalNotifications: number;
+    setPage: Dispatch<SetStateAction<number>>;
+    renderNotificationCard: (props: TRenderNotificationCardProps) => JSX.Element;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
 export default function NotificationsBase({
     showSort = false,
     headerContent,
     renderNotificationCard,
     renderNewNotificationsAlert
-}) {
+}: INotificationsBaseProps): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
 
-    const [sort, setSort] = useState(notificationsSortOptions[0].dbField);
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(notificationsPageLimitOptions[0]);
+    const [sort, setSort] = useState<
+        TNotificationsSortOptions['dbField']
+    >(notificationsSortOptions[0].dbField);
+    const [page, setPage] = useState<number>(1);
+    const [limit, setLimit] = useState<number>(notificationsPageLimitOptions[0]);
 
     const [initNotificationsReady, setInitNotificationsReady] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
     const [notificationsLoadError, setNotificationsLoadError] = useState(false);
-    const [notificationIdsInProgress, setNotificationIdsInProgress] = useState(new Set());
+    const [notificationIdsInProgress, setNotificationIdsInProgress] = useState<Set<string>>(new Set());
     const [totalNotifications, setTotalNotifications] = useState(0);
-    const [paginatedNotificationList, setPaginatedNotificationList] = useState([]);
+    const [paginatedNotificationList, setPaginatedNotificationList] = useState<INotification[]>([]);
 
-    const notificationArticleRefs = useRef({});
+    const notificationArticleRefs = useRef<Record<string, HTMLElement | null>>({});
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
     
     const notificationsLoadStatus =
@@ -48,12 +92,12 @@ export default function NotificationsBase({
     const isNotificationUiBlocked =
         notificationsLoading ||
         notificationsLoadError ||
-        notificationIdsInProgress.size;
+        notificationIdsInProgress.size > 0;
 
-    const toolbarTopActiveControls = ['limit', 'pages'];
+    const toolbarTopActiveControls: TToolbarControls[] = ['limit', 'pages'];
     if (showSort) toolbarTopActiveControls.splice(1, 0, 'sort');
 
-    const addNotificationIdInProgress = (notificationId) => {
+    const addNotificationIdInProgress = (notificationId: string): void => {
         setNotificationIdsInProgress(prev => {
             const newSet = new Set(prev);
             newSet.add(notificationId);
@@ -61,7 +105,7 @@ export default function NotificationsBase({
         });
     };
 
-    const removeNotificationIdInProgress = (notificationId) => {
+    const removeNotificationIdInProgress = (notificationId: string): void => {
         setNotificationIdsInProgress(prev => {
             const newSet = new Set(prev);
             newSet.delete(notificationId);
@@ -69,19 +113,21 @@ export default function NotificationsBase({
         });
     };
 
-    const loadNotifications = async (urlParams) => {
+    const loadNotifications = async (urlParams: string): Promise<boolean> => {
         setNotificationsLoadError(false);
         setNotificationsLoading(true);
 
         const responseData = await dispatch(sendNotificationListRequest(urlParams));
-        if (isUnmountedRef.current) return;
+        if (isUnmountedRef.current) return false;
 
-        const { status, message, notificationsCount, paginatedNotificationList } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'NOTIFICATION: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setNotificationsLoadError(true);
         } else {
+            const { notificationsCount, paginatedNotificationList } = responseData;
+
             setTotalNotifications(notificationsCount);
             setPaginatedNotificationList(paginatedNotificationList);
             setInitNotificationsReady(true);
@@ -92,15 +138,18 @@ export default function NotificationsBase({
         return status === REQUEST_STATUS.SUCCESS; // Для NewNotificationsAlert
     };
 
-    const reloadNotifications = async () => {
+    const reloadNotifications = async (): Promise<boolean> => {
         const urlParams = location.search.slice(1);
         return await loadNotifications(urlParams);
     };
 
-    const updateNotificationState = (notificationId, updatedNotificationData) => {
+    const updateNotificationState = (
+        notificationId: string,
+        notificationUpdateData: Partial<INotification>
+    ): void => {
         setPaginatedNotificationList(prev => prev.map(notification =>
             notification.id === notificationId
-                ? { ...notification, ...updatedNotificationData }
+                ? { ...notification, ...notificationUpdateData }
                 : notification
         ));
     };
@@ -128,7 +177,11 @@ export default function NotificationsBase({
         if (!initialized) return;
 
         // Обновление параметров URL и загрузка уведомлений
-        const params = new URLSearchParams({ ...(showSort && { sort }), page, limit });
+        const params = new URLSearchParams({
+            ...(showSort && { sort: String(sort) }),
+            page: String(page),
+            limit: String(limit)
+        });
         const urlParams = params.toString();
 
         if (location.search !== `?${urlParams}`) {
@@ -218,9 +271,9 @@ function NotificationsMain({
     totalNotifications,
     setPage,
     renderNotificationCard
-}) {
+}: INotificationsMainProps): JSX.Element {
     const [notificationsMainHeight, setNotificationsMainHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
-    const notificationsMainRef = useRef(null);
+    const notificationsMainRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!notificationsMainRef.current) return;
@@ -285,18 +338,19 @@ function NotificationsMain({
             <ul className="notification-list">
                 {paginatedNotificationList.map(notification => (
                     <li key={notification.id} className="notification-item">
-                        {renderNotificationCard?.(notification, {
+                        {renderNotificationCard({
+                            notification,
                             notificationArticleRefs,
                             notificationIdsInProgress,
                             addNotificationIdInProgress,
                             removeNotificationIdInProgress,
                             updateNotificationState,
-                            reloadNotifications,
                             page,
                             limit,
                             totalNotifications,
                             paginatedNotificationsCount: paginatedNotificationList.length,
-                            setPage
+                            setPage,
+                            reloadNotifications
                         })}
                     </li>
                 ))}

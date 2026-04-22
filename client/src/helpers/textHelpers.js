@@ -2,12 +2,36 @@ import { escapeRegExp } from '@shared/commonHelpers.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export const formatLocalDate = (
-    date/*: string | number | Date*/,
+    date/*: Date | string | number | null | undefined*/,
     format/*: Intl.DateTimeFormatOptions*/ = {}
 )/*: string*/ => {
-    const d = new Date(date);
+    if (!date) return NO_VALUE_LABEL;
+
+    const d = date instanceof Date ? date : new Date(date);
     if (isNaN(d.getTime())) return NO_VALUE_LABEL;
     return d.toLocaleString(undefined, format);
+};
+export const padTwoDigits = (n/*: number*/)/*: string*/ => String(n).padStart(2, '0');
+
+export const formatDateOnly = (date/*: Date | string | number | null | undefined*/)/*: string*/ => {
+    if (!date) return NO_VALUE_LABEL;
+    
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return NO_VALUE_LABEL;
+    return `${d.getFullYear()}-${padTwoDigits(d.getMonth() + 1)}-${padTwoDigits(d.getDate())}`;
+};
+
+export const formatDateToMoscowLog = (date/*: Date*/)/*: string*/ => {
+    const moscowDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+
+    const year = moscowDate.getFullYear();
+    const month = padTwoDigits(moscowDate.getMonth() + 1);
+    const day = padTwoDigits(moscowDate.getDate());
+    const hours = padTwoDigits(moscowDate.getHours());
+    const minutes = padTwoDigits(moscowDate.getMinutes());
+    const seconds = padTwoDigits(moscowDate.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} MSK`;
 };
 
 export const capitalizeFirstLetter = (str) => str.charAt(0).toUpperCase() + str.slice(1);

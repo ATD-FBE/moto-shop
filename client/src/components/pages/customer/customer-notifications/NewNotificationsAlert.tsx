@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useState, useEffect } from 'react';
 import cn from 'classnames';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { resetNewNotifications } from '@/redux/slices/uiSlice.js';
+import type { JSX } from 'react';
+import type { INewNotificationAlertProps } from '@/types/index.js';
 
 export default function NewNotificationsAlert({
     sort,
@@ -10,12 +12,12 @@ export default function NewNotificationsAlert({
     totalNotifications,
     setPage,
     reloadNotifications
-}) {
-    const newNotificationsCount = useSelector(state => state.ui.newNotificationsCount);
+}: INewNotificationAlertProps): JSX.Element {
+    const newNotificationsCount = useAppSelector(state => state.ui.newNotificationsCount);
     const [newNotificationsAvailable, setNewNotificationsAvailable] = useState(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const getTargetPageForNewNotifications = () => {
+    const getTargetPageForNewNotifications = (): number => {
         if (sort.includes('sentAt')) {
             return sort.startsWith('-')
                 ? 1
@@ -24,7 +26,7 @@ export default function NewNotificationsAlert({
         return 1;
     };
 
-    const showNewNotifications = async () => {
+    const showNewNotifications = async (): Promise<void> => {
         const targetPage = getTargetPageForNewNotifications();
 
         if (page === targetPage) {

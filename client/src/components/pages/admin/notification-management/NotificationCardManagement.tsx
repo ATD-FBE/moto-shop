@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import {
     sendNotificationSendingRequest,
     sendNotificationDeleteRequest
@@ -12,6 +12,21 @@ import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { INotificationCardManagementProps } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IDeletingNotification {
+    id: string;
+    subject: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function NotificationCardManagement({
     notification,
@@ -26,10 +41,10 @@ export default function NotificationCardManagement({
     paginatedNotificationsCount,
     setPage,
     reloadNotifications
-}) {
+}: INotificationCardManagementProps): JSX.Element {
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const {
@@ -45,13 +60,13 @@ export default function NotificationCardManagement({
         status !== NOTIFICATION_STATUS.DRAFT ||
         notificationIdsInProgress.has(id);
 
-    const sendNotification = async (notificationId) => {
+    const sendNotification = async (notificationId: string): Promise<void> => {
         addNotificationIdInProgress(notificationId);
 
         const responseData = await dispatch(sendNotificationSendingRequest(notificationId));
         if (isUnmountedRef.current) return;
 
-        const { status, message, updatedNotificationData } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'NOTIFICATION: SEND', status, message });
         
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -62,20 +77,20 @@ export default function NotificationCardManagement({
                 message: 'Ошибка при отправке уведомления.\nПодробности ошибки в консоли.'
             });
         } else {
-            updateNotificationState(notificationId, updatedNotificationData);
+            updateNotificationState(notificationId, responseData.notificationUpdateData);
         }
 
         removeNotificationIdInProgress(notificationId);
     };
 
-    const editNotification = (notificationId) => {
+    const editNotification = (notificationId: string): void => {
         const url = routeConfig.adminCustomers.paths[0];
-        const options = { state: { isExpanded: true, notificationId } };
+        const options = { state: { notificationId, isNotificationEditorExpanded: true } };
         navigate(url, options);
     };
 
-    const confirmNotificationDeletion = (notification) => {
-        const processNotificationDeletion = async (notificationId) => {
+    const confirmNotificationDeletion = (notification: IDeletingNotification): void => {
+        const processNotificationDeletion = async (notificationId: string): Promise<void> => {
             addNotificationIdInProgress(notificationId);
     
             const { status, message } = await dispatch(sendNotificationDeleteRequest(notificationId));
@@ -83,14 +98,14 @@ export default function NotificationCardManagement({
     
             logRequestStatus({ context: 'NOTIFICATION: DELETE', status, message });
     
-            const isAllowed = [REQUEST_STATUS.SUCCESS, REQUEST_STATUS.NOT_FOUND].includes(status);
+            const isAllowed = status === REQUEST_STATUS.SUCCESS || status === REQUEST_STATUS.NOT_FOUND;
             if (!isAllowed) {
                 removeNotificationIdInProgress(notificationId);
                 throw new Error(message);
             }
         };
     
-        const finalizeNotificationDeletion = async (notificationId) => {
+        const finalizeNotificationDeletion = async (notificationId: string): Promise<void> => {
             // При удалении последнего уведомления на последней странице > 1 переход на предыдущую
             // Без проверки сработает хук в пагинации и произойдёт 2 запроса данных вместо 1
             const shouldGoBack =
@@ -125,13 +140,13 @@ export default function NotificationCardManagement({
     return (
         <article
             data-id={id}
-            ref={(elem) => (notificationArticleRefs.current[id] = elem)}
+            ref={(elem) => { notificationArticleRefs.current[id] = elem; }}
             className="notification-card"
         >
             <div className="notification-row">
                 <div className="notification-date">
                     {status === NOTIFICATION_STATUS.DRAFT
-                        ? !updateHistory.length
+                        ? !updateHistory?.length
                             ? `Дата создания: ${createdDateStr}`
                             : `Дата изменения: ${updatedDateStr}`
                         : `Дата отправки: ${sentDateStr}`}
@@ -173,10 +188,10 @@ export default function NotificationCardManagement({
             <div className="notification-meta">
                 <p>Автор: {`${createdBy} (${createdDateStr})`}</p>
 
-                {updateHistory.length > 0 &&
+                {(updateHistory ?? []).length > 0 &&
                     <p>
                         Редактор(ы):{' '}
-                        {updateHistory
+                        {(updateHistory ?? [])
                             .map(upd => `${upd.updatedBy} (${formatLocalDate(upd.updatedAt)})`)
                             .join(', ')}
                     </p>}

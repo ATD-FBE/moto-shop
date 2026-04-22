@@ -7,14 +7,14 @@ import type { TSearchTypes } from '@server/types/index.js';
 import type {
     ICommonFilterQuery,
     TFilterOption,
-    ISortOptionsEntry,
+    ISortOption,
     IParseSortResult,
     IPageLimitQuery,
-    TPageLimitOptionsEntry
+    TPageLimitOption
 } from '@shared/types/index.js';
 import type { IOrderedFiltersArgs } from '@server/types/index.js';
 
-export const buildSearchMatch = <T>(
+export const buildSearchMatch = <T extends object>(
     searchParam: unknown,
     allowedSearchFields: (keyof T)[],
     searchType: TSearchTypes
@@ -48,7 +48,7 @@ export const buildSearchMatch = <T>(
     return searchMatch;
 };
 
-export const buildFilterMatch = <T>(
+export const buildFilterMatch = <T extends object>(
     query: ICommonFilterQuery,
     filterOptions: TFilterOption<T>[]
 ): FilterQuery<T> => {
@@ -56,10 +56,11 @@ export const buildFilterMatch = <T>(
     const timeZoneOffset = parseInt(query.timeZoneOffset ?? '0', 10) || 0;
 
     // Сборка фильтра
-    const filterMatch: FilterQuery<T> = {};
+    const filterMatch = {} as Record<keyof T, any>;
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;
+        const typedDbField = dbField as keyof T;
 
         switch (type) {
             case 'number': {
@@ -73,56 +74,62 @@ export const buildFilterMatch = <T>(
                 const maxLimitNum = maxLimit !== '' ? Number(maxLimit) : Infinity;
 
                 if (!isNaN(minValueNum) && minValueNum > minLimitNum) {
-                    (filterMatch as any)[dbField] = { $gte: minValueNum };
+                    filterMatch[typedDbField] = { $gte: minValueNum };
                 }
 
                 if (!isNaN(maxValueNum) && maxValueNum < maxLimitNum) {
-                    (filterMatch as any)[dbField] = { ...filterMatch[dbField], $lte: maxValueNum };
+                    filterMatch[typedDbField] = {
+                        ...(filterMatch[typedDbField] ?? {}),
+                        $lte: maxValueNum
+                    };
                 }
 
                 if (
-                    filterMatch[dbField]?.$gte !== undefined &&
-                    filterMatch[dbField]?.$lte !== undefined &&
-                    filterMatch[dbField].$gte > filterMatch[dbField].$lte
+                    filterMatch[typedDbField]?.$gte !== undefined &&
+                    filterMatch[typedDbField]?.$lte !== undefined &&
+                    filterMatch[typedDbField].$gte > filterMatch[typedDbField].$lte
                 ) {
-                    delete filterMatch[dbField];
+                    delete filterMatch[typedDbField];
                 }
 
                 break;
             }
 
             case 'date': {
-                const { minParamName, maxParamName, minLimitUTC, maxLimitUTC } = option;
+                const { minParamName, maxParamName, minLimit, maxLimit } = option;
 
                 const minDate = new Date(query[minParamName] ?? '');
                 const maxDate = new Date(query[maxParamName] ?? '');
-                const minLimitDateUTC = minLimitUTC !== '' ? new Date(minLimitUTC) : new Date(-MAX_DATE_TS);
-                const maxLimitDateUTC = maxLimitUTC !== '' ? new Date(maxLimitUTC) : new Date(MAX_DATE_TS);
+                const minLimitDate = minLimit !== '' ? new Date(minLimit) : new Date(-MAX_DATE_TS);
+                const maxLimitDate = maxLimit !== '' ? new Date(maxLimit) : new Date(MAX_DATE_TS);
 
                 if (!isNaN(minDate.getTime())) {
                     minDate.setUTCHours(0, 0, 0, 0); // Установка начала дня для даты
-                    minDate.setMinutes(minDate.getMinutes() + timeZoneOffset); // Смещение времени даты
+                    minDate.setMinutes(minDate.getMinutes() - timeZoneOffset); // Смещение времени даты
 
-                    if (minDate > minLimitDateUTC) {
-                        (filterMatch as any)[dbField] = { $gte: minDate };
+                    if (minDate.getTime() > minLimitDate.getTime()) {
+                        filterMatch[typedDbField] = { $gte: minDate };
                     }
                 }
 
                 if (!isNaN(maxDate.getTime())) {
                     maxDate.setUTCHours(23, 59, 59, 999); // Установка конца дня для даты
-                    maxDate.setMinutes(maxDate.getMinutes() + timeZoneOffset); // Смещение времени даты
+                    maxDate.setMinutes(maxDate.getMinutes() - timeZoneOffset); // Смещение времени даты
 
-                    if (maxDate < maxLimitDateUTC) {
-                        (filterMatch as any)[dbField] = { ...(filterMatch[dbField] ?? {}), $lte: maxDate };
+                    if (maxDate.getTime() < maxLimitDate.getTime()) {
+                        filterMatch[typedDbField] = {
+                            ...(filterMatch[typedDbField] ?? {}),
+                            $lte: maxDate
+                        };
                     }
                 }
 
                 if (
-                    filterMatch[dbField]?.$gte !== undefined &&
-                    filterMatch[dbField]?.$lte !== undefined &&
-                    filterMatch[dbField].$gte > filterMatch[dbField].$lte
+                    filterMatch[typedDbField]?.$gte !== undefined &&
+                    filterMatch[typedDbField]?.$lte !== undefined &&
+                    filterMatch[typedDbField].$gte > filterMatch[typedDbField].$lte
                 ) {
-                    delete filterMatch[dbField];
+                    delete filterMatch[typedDbField];
                 }
 
                 break;
@@ -134,14 +141,14 @@ export const buildFilterMatch = <T>(
                 const value = query[paramName] ?? '';
 
                 if (value === 'true') {
-                    (filterMatch as any)[dbField] = true;
+                    filterMatch[typedDbField] = true;
                 } else if (value === 'false') {
-                    (filterMatch as any)[dbField] = { $ne: true };
+                    filterMatch[typedDbField] = { $ne: true };
                 } else if (value !== '') {
                     if (defaultValue === 'true') {
-                        (filterMatch as any)[dbField] = true;
+                        filterMatch[typedDbField] = true;
                     } else if (defaultValue === 'false') {
-                        (filterMatch as any)[dbField] = { $ne: true };
+                        filterMatch[typedDbField] = { $ne: true };
                     }
                 }
 
@@ -155,11 +162,11 @@ export const buildFilterMatch = <T>(
                 const valueOption = valueOptions.find(opt => opt.value === value);
 
                 if (valueOption?.matches) {
-                    (filterMatch as any)[dbField] = { $in: valueOption.matches };
+                    filterMatch[typedDbField] = { $in: valueOption.matches };
                 } else if (valueOption?.value) {
-                    (filterMatch as any)[dbField] = valueOption.value;
+                    filterMatch[typedDbField] = valueOption.value;
                 } else if (defaultValue) {
-                    (filterMatch as any)[dbField] = defaultValue;
+                    filterMatch[typedDbField] = defaultValue;
                 }
 
                 break;
@@ -170,15 +177,15 @@ export const buildFilterMatch = <T>(
         }
     });
 
-    return filterMatch;
+    return filterMatch as FilterQuery<T>;
 };
 
-export const parseSortParam = <T>(
+export const parseSortParam = <T extends object>(
     sortParam: unknown,
-    sortOptions: readonly ISortOptionsEntry<T>[]
+    sortOptions: readonly ISortOption<T>[]
 ): IParseSortResult<T> => {
     const defaultOption = sortOptions[0];
-    const defaultSortField = defaultOption.dbField;
+    const defaultSortField = defaultOption.dbField as keyof T;
     const defaultSortOrder = defaultOption.defaultOrder === 'asc' ? 1 : -1;
 
     const sort = typeof sortParam === 'string' ? sortParam.trim() : '';
@@ -187,26 +194,26 @@ export const parseSortParam = <T>(
     const isDescending = sort.startsWith('-');
     const sortOrder = isDescending ? -1 : 1;
     
-    const sortFieldCandidate = (isDescending ? sort.slice(1) : sort) as keyof T;
-    const isAllowed = sortOptions.some(opt => opt.dbField === sortFieldCandidate);
+    const sortFieldCandidate = isDescending ? sort.slice(1) : sort;
+    const matchedOption = sortOptions.find(opt => opt.dbField === sortFieldCandidate);
 
     return {
-        sortField: isAllowed ? sortFieldCandidate : defaultSortField,
-        sortOrder: isAllowed ? sortOrder : defaultSortOrder
+        sortField: matchedOption ? (matchedOption.dbField as keyof T) : defaultSortField,
+        sortOrder: matchedOption ? sortOrder : defaultSortOrder
     };
 };
 
-export const buildSortPipeline = <T>(
+export const buildSortPipeline = <T extends object>(
     sortField: keyof T,
     sortOrder: 1 | -1
 ): PipelineStage[] => [
     { $sort: { [sortField]: sortOrder } }
 ];
 
-export const buildPaginatedPipeline = <T>(
+export const buildPaginatedPipeline = <T extends object>(
     query: IPageLimitQuery,
-    sortOptions: ISortOptionsEntry<T>[],
-    pageLimitOptions: TPageLimitOptionsEntry[]
+    sortOptions: ISortOption<T>[],
+    pageLimitOptions: TPageLimitOption[]
 ): PipelineStage[] => {
     // Настройка сортировки
     const { sortField, sortOrder } = parseSortParam<T>(query.sort, sortOptions);

@@ -1,6 +1,7 @@
 export * from './shared.types.js';
 export * from './apiResponse.types.js';
 export * from './auth.types.js';
+export * from './customer.types.js';
 export * from './news.types.js';
 export * from './promo.types.js';
 export * from './notification.types.js';

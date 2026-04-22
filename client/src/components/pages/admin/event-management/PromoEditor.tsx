@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect, createElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
@@ -34,6 +34,14 @@ import {
 } from '@shared/fieldRules.js';
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_PROMO_IMAGE_SIZE_MB } from '@shared/constants.js';
 import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes
+} from 'react';
+import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
@@ -42,14 +50,6 @@ import type {
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
-import type {
-    JSX,
-    ChangeEvent,
-    FocusEvent,
-    SubmitEvent,
-    InputHTMLAttributes,
-    TextareaHTMLAttributes
-} from 'react';
 import type {
     TEntityField,
     TValidationRuleType,
@@ -371,9 +371,8 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
                 const config = fieldConfigMap[name] ?? {};
                 const initValue = initFieldValuesRef.current[name];
-                const isImageField = name === 'image';
         
-                let processFieldResult = isImageField
+                let processFieldResult = name === 'image'
                     ? processImageField(config, validation, files, initValue, shouldRemoveImage)
                     : processGenericField(config, validation, value, initValue);
         
@@ -568,7 +567,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                                         </div>
                                     )}
 
-                                    {React.createElement(elem, elemProps)}
+                                    {createElement(elem, elemProps)}
                                     
                                     {fieldsState[name]?.error && (
                                         <span className="invalid-message">

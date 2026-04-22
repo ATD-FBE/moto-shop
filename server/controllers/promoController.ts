@@ -132,8 +132,6 @@ export const handlePromoCreateRequest: RequestHandler<
     const { file: image, fileUploadError } = req; // Проверено в multer
     const { title, description, startDate, endDate } = req.body;
 
-    console.log(image);
-
     let newPromoId: string | null = null;
 
     // Создание документа в базе MongoDB
@@ -164,7 +162,7 @@ export const handlePromoCreateRequest: RequestHandler<
             }
 
             // Отметка поля даты окончания акции невалидным, если оно раньше даты старта
-            if (endDateUTC < startDateUTC) {
+            if (endDateUTC.getTime() < startDateUTC.getTime()) {
                 newPromoDoc.invalidate('endDate', 'rangeError');
             }
 
@@ -271,7 +269,7 @@ export const handlePromoUpdateRequest: RequestHandler<
             }
 
             // Отметка поля даты окончания акции невалидным, если оно раньше даты старта
-            if (endDateUTC < startDateUTC) {
+            if (endDateUTC.getTime() < startDateUTC.getTime()) {
                 dbPromo.invalidate('endDate', 'rangeError');
             }
 

@@ -386,7 +386,7 @@ export const handleNotificationSendingRequest: RequestHandler<
                 ? `Уведомление ${notifLbl} отправлено, но ни один пользователь не был` +
                     ' обновлён - возможно, оно уже есть у получателей, либо они были удалены'
                 : `Уведомление ${notifLbl} успешно отправлено`,
-            updatedNotificationData: {
+            notificationUpdateData: {
                 status: NOTIFICATION_STATUS.SENT,
                 sentAt: now.toISOString(),
                 sentBy: dbUser.name
@@ -453,7 +453,7 @@ export const handleNotificationMarkAsReadRequest: RequestHandler<
 
         safeSendResponse(res, 200, {
             message: `Уведомление ${notifLbl} отмечено как прочитанное`,
-            updatedNotificationData: {
+            notificationUpdateData: {
                 isRead: true,
                 readAt: now.toISOString()
             }

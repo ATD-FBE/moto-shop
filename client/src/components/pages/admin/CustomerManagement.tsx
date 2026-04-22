@@ -1,59 +1,77 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Collapsible from '@/components/common/Collapsible.jsx';
-import NotificationEditor from './customer-management/NotificationEditor.jsx';
+import NotificationEditor from './customer-management/NotificationEditor.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import CustomerTable from './customer-management/CustomerTable.jsx';
+import {
+    sendCustomerListRequest,
+    sendCustomerDiscountUpdateRequest,
+    sendCustomerBanToggleRequest
+} from '@/api/customerRequests.js';
+import { routeConfig } from '@/config/appRouting.js';
+import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { openAlertModal } from '@/services/modalAlertService.js';
 import {
     getInitFilterParams,
     getInitSortParam,
     getInitPageParam,
     getInitLimitParam
 } from '@/helpers/initParamsHelper.js';
+import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
-import {
-    sendCustomerListRequest,
-    sendCustomerDiscountUpdateRequest,
-    sendCustomerBanToggleRequest
-} from '@/api/customerRequests.js';
-import { openAlertModal } from '@/services/modalAlertService.js';
-import { routeConfig } from '@/config/appRouting.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
- 
-export default function CustomerManagement() {
+import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';
+import type { ICustomer } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IUpdateCustomerDiscountResult {
+    success: boolean;
+    fieldErrors?: Record<string, string>;
+    onComplete: () => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
     
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState<string>('');
     const [filter, setFilter] = useState(new URLSearchParams());
-    const [sort, setSort] = useState(customersSortOptions[0].dbField);
+    const [sort, setSort] = useState<
+        (typeof customersSortOptions[number])['dbField']
+    >(customersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(customersPageLimitOptions[0]);
+    const [limit, setLimit] = useState<number>(customersPageLimitOptions[0]);
 
     const [initCustomersReady, setInitCustomersReady] = useState(false);
     const [customersLoading, setCustomersLoading] = useState(true);
     const [customersLoadError, setCustomersLoadError] = useState(false);
     const [customerOperationBusy, setCustomerOperationBusy] = useState(false);
-    const [filteredCustomerNamesMap, setFilteredCustomerNamesMap] = useState({});
-    const [filteredCustomerIds, setFilteredCustomerIds] = useState(new Set());
-    const [paginatedCustomerList, setPaginatedCustomerList] = useState([]);
-    const [selectedCustomerIds, setSelectedCustomerIds] = useState(new Set());
-    const [expandedCustomerIds, setExpandedCustomerIds] = useState(new Set());
+    const [filteredCustomerNamesMap, setFilteredCustomerNamesMap] = useState<Record<string, string>>({});
+    const [filteredCustomerIds, setFilteredCustomerIds] = useState<Set<string>>(new Set());
+    const [paginatedCustomerList, setPaginatedCustomerList] = useState<ICustomer[]>([]);
+    const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
+    const [expandedCustomerIds, setExpandedCustomerIds] = useState<Set<string>>(new Set());
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const [locationState] = useState(location.state);
     const [isNotifEditorExpanded, setIsNotifEditorExpanded] = useState(
-        locationState?.isExpanded || false
+        locationState?.isNotificationEditorExpanded || false
     );
 
     const customersLoadStatus =
@@ -70,19 +88,21 @@ export default function CustomerManagement() {
         customersLoadError ||
         customerOperationBusy;
 
-    const loadCustomers = async (urlParams) => {
+    const loadCustomers = async (urlParams: string): Promise<void> => {
         setCustomersLoadError(false);
         setCustomersLoading(true);
 
         const responseData = await dispatch(sendCustomerListRequest(urlParams));
         if (isUnmountedRef.current) return;
         
-        const { status, message, filteredCustomerNamesMap, paginatedCustomerList } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CUSTOMER: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCustomersLoadError(true);
         } else {
+            const { filteredCustomerNamesMap, paginatedCustomerList } = responseData;
+
             setFilteredCustomerNamesMap(filteredCustomerNamesMap);
             setFilteredCustomerIds(new Set(Object.keys(filteredCustomerNamesMap)));
             setPaginatedCustomerList(paginatedCustomerList);
@@ -92,25 +112,33 @@ export default function CustomerManagement() {
         setCustomersLoading(false);
     }
 
-    const reloadCustomers = async () => {
+    const reloadCustomers = async (): Promise<void> => {
         const urlParams = location.search.slice(1);
         await loadCustomers(urlParams);
     };
 
-    const applyCustomerUpdates = (customerId, updatedFields) =>
+    const applyCustomerUpdates = (
+        customerId: string,
+        customerUpdateData: Partial<ICustomer>
+    ): void =>
         setPaginatedCustomerList(prev => prev.map(customer =>
             customer.id === customerId
-                ? { ...customer, ...updatedFields }
+                ? { ...customer, ...customerUpdateData }
                 : customer
         ));
 
-    const updateCustomerDiscount = async (customerId, discount) => {
+    const updateCustomerDiscount = async (
+        customerId: string,
+        discount: number
+    ): Promise<IUpdateCustomerDiscountResult | undefined> => {
         setCustomerOperationBusy(true);
 
         const responseData = await dispatch(sendCustomerDiscountUpdateRequest(customerId, discount));
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors, updatedFields } = responseData;
+        const { status, message } = responseData;
+        const fieldErrors = status === REQUEST_STATUS.INVALID ? responseData.fieldErrors : null;
+
         logRequestStatus({
             context: 'CUSTOMER: UPDATE DISCOUNT',
             status,
@@ -141,19 +169,22 @@ export default function CustomerManagement() {
         return {
             success: true,
             onComplete: function() {
-                applyCustomerUpdates(customerId, updatedFields);
+                applyCustomerUpdates(customerId, responseData.customerUpdateData);
                 setCustomerOperationBusy(false);
             }
         };
     };
 
-    const toggleCustomerBanStatus = async (customerId, newBanStatus) => {
+    const toggleCustomerBanStatus = async (
+        customerId: string,
+        newBanStatus: boolean
+    ): Promise<void> => {
         setCustomerOperationBusy(true);
 
         const responseData = await dispatch(sendCustomerBanToggleRequest(customerId, newBanStatus));
         if (isUnmountedRef.current) return;
 
-        const { status, message, updatedFields } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CUSTOMER: TOGGLE BAN', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -166,18 +197,18 @@ export default function CustomerManagement() {
                     'Подробности ошибки в консоли.'
             });
         } else {
-            applyCustomerUpdates(customerId, updatedFields);
+            applyCustomerUpdates(customerId, responseData.customerUpdateData);
         }
 
         setCustomerOperationBusy(false);
     };
 
-    const toggleAllCustomerSelection = async (areAllCustomersSelected) => {
+    const toggleAllCustomerSelection = (areAllCustomersSelected: boolean): void => {
         if (!filteredCustomerIds.size) return;
         setSelectedCustomerIds(new Set(areAllCustomersSelected ? [] : filteredCustomerIds));
     };
 
-    const toggleCustomerSelection = (customerId) => {
+    const toggleCustomerSelection = (customerId: string): void => {
         setSelectedCustomerIds(prev => {
             const newSelection = new Set(prev);
 
@@ -191,7 +222,7 @@ export default function CustomerManagement() {
         });
     };
 
-    const toggleCustomerExpansion = async (customerId) => {
+    const toggleCustomerExpansion = (customerId: string): void => {
         setExpandedCustomerIds(prev => {
             const newExpandedSet = new Set(prev);
 
@@ -229,8 +260,13 @@ export default function CustomerManagement() {
     useEffect(() => {
         if (!initialized) return;
 
-        const timeZoneOffset = new Date().getTimezoneOffset();
-        const params = new URLSearchParams({ page, limit, search, sort, timeZoneOffset });
+        const params = new URLSearchParams({
+            page: String(page),
+            limit: String(limit),
+            search,
+            sort,
+            timeZoneOffset: String(new Date().getTimezoneOffset())
+        });
         filter.forEach((value, key) => params.append(key, value));
         const urlParams = params.toString();
 
@@ -265,7 +301,7 @@ export default function CustomerManagement() {
             <div className="customers-notification">
                 <div className="customers-notification-controls">
                     <button
-                        className={isNotifEditorExpanded ? 'enabled' : null}
+                        className={isNotifEditorExpanded ? 'enabled' : undefined}
                         onClick={() => setIsNotifEditorExpanded(prev => !prev)}
                     >
                         <span className="icon">📝</span>

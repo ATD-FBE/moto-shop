@@ -31,24 +31,6 @@ export const toError = (err: unknown): Error => {
     return new Error(message);
 };
 
-export const padTwoDigits = (n: number): string => String(n).padStart(2, '0');
-
-export const formatDateToLocalString = (date: Date): string =>
-    `${date.getFullYear()}-${padTwoDigits(date.getMonth() + 1)}-${padTwoDigits(date.getDate())}`;
-
-export const formatDateToMoscowLog = (date: Date): string => {
-    const moscowDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-
-    const year = moscowDate.getFullYear();
-    const month = padTwoDigits(moscowDate.getMonth() + 1);
-    const day = padTwoDigits(moscowDate.getDate());
-    const hours = padTwoDigits(moscowDate.getHours());
-    const minutes = padTwoDigits(moscowDate.getMinutes());
-    const seconds = padTwoDigits(moscowDate.getSeconds());
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} MSK`;
-};
-
 export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
     if (!obj || typeof obj !== 'object') return undefined;
     return path.split('.').reduce((acc, key) => acc?.[key], obj);

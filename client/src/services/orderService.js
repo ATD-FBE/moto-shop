@@ -1,6 +1,5 @@
-import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
+import { formatDateToMoscowLog, formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
 import { TEXT_LOG_LINE_BREAK, NO_VALUE_LABEL } from '@/config/constants.js';
-import { formatDateToMoscowLog } from '@shared/commonHelpers.js';
 import {
     DELIVERY_METHOD,
     PAYMENT_METHOD_OPTIONS,

@@ -22,7 +22,7 @@ export interface IFormGroupConfig {
     readonly fieldConfigs?: readonly IFieldConfig[];
 }
 
-export type TFieldValue = string | number | boolean | File | File[] | null;
+export type TFieldValue = string | string[] | number | boolean | File | File[] | null;
 export type TFormDataFieldValue = string | File | File[];
 
 export interface IFieldConfig {

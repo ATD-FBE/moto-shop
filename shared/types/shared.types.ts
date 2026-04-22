@@ -21,6 +21,7 @@ import {
     REQUEST_STATUS,
 } from '@shared/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
+import { notificationsSortOptions } from '@shared/sortOptions.js';
 
 //////////////
 /// SHARED ///
@@ -200,14 +201,14 @@ export interface ICommonFilterQuery {
     [key: string]: string | undefined;
 }
 
-export type TFilterOption<T> = 
+export type TFilterOption<T = any> = 
     | INumberFilter<T> 
     | IDateFilter<T> 
     | IBooleanFilter<T> 
     | IStringFilter<T>;
 
 interface IBaseFilter<T> {
-    dbField: keyof T;
+    dbField: T extends object ? keyof T : T; // T - либо вся коллекция БД, либо поле коллекции
     label: string;
 }
 
@@ -223,8 +224,8 @@ interface IDateFilter<T> extends IBaseFilter<T> {
     type: 'date';
     minParamName: string;
     maxParamName: string;
-    minLimitUTC: string;
-    maxLimitUTC: string;
+    minLimit: string;
+    maxLimit: string;
 }
 
 interface IBooleanFilter<T> extends IBaseFilter<T> {
@@ -236,35 +237,20 @@ interface IBooleanFilter<T> extends IBaseFilter<T> {
 interface IStringFilter<T> extends IBaseFilter<T> {
     type: 'string';
     paramName: string;
-    valueOptions: IStringFilterValueOption[];
+    valueOptions: {
+        value: string;
+        label: string;
+        matches?: string[]
+    }[];
     defaultValue?: string;
-}
-
-interface IStringFilterValueOption {
-    value: string;
-    label: string;
-    matches?: string[]
-}
-
-//////////////////////////
-/// PAGE LIMIT OPTIONS ///
-//////////////////////////
-
-export type TPageLimitOptionsEntry = number;
-
-export interface IPageLimitQuery {
-    sort?: string;
-    page?: string;
-    limit?: string;
-    [key: string]: string | undefined;
 }
 
 ////////////////////
 /// SORT OPTIONS ///
 ////////////////////
 
-export interface ISortOptionsEntry<T> {
-    dbField: keyof T;
+export interface ISortOption<T = any> {
+    dbField: T extends object ? keyof T : T; // T - либо вся коллекция БД, либо поле коллекции
     label: string;
     defaultOrder: 'asc' | 'desc';
 }
@@ -272,4 +258,19 @@ export interface ISortOptionsEntry<T> {
 export interface IParseSortResult<T> {
     sortField: keyof T;
     sortOrder: 1 | -1;
+}
+
+export type TNotificationsSortOptions = typeof notificationsSortOptions[number];
+
+//////////////////////////
+/// PAGE LIMIT OPTIONS ///
+//////////////////////////
+
+export type TPageLimitOption<T = number> = T;
+
+export interface IPageLimitQuery {
+    sort?: string;
+    page?: string;
+    limit?: string;
+    [key: string]: string | undefined;
 }
