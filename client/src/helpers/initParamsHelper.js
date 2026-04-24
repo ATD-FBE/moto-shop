@@ -1,5 +1,5 @@
 export const getInitFilterParams = (searchParams, filterOptions) => {
-    const initFilterParams = new URLSearchParams();
+    const initFilterParams = {};
 
     const getValidValue = (type, param, fallback, valueOptions) => {
         const value = searchParams?.get(param);
@@ -32,15 +32,15 @@ export const getInitFilterParams = (searchParams, filterOptions) => {
     }) => {
         if (minParamName !== undefined) {
             const value = getValidValue(type, minParamName, minLimit);
-            initFilterParams.append(minParamName, value);
+            initFilterParams[minParamName] = value;
         }
         if (maxParamName !== undefined) {
             const value = getValidValue(type, maxParamName, maxLimit);
-            initFilterParams.append(maxParamName, value);
+            initFilterParams[maxParamName] = value;
         }
         if (paramName !== undefined) {
             const value = getValidValue(type, paramName, defaultValue, valueOptions);
-            initFilterParams.append(paramName, value);
+            initFilterParams[paramName] = value;
         }
     });
 

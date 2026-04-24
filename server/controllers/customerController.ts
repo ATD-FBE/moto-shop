@@ -1,6 +1,7 @@
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 import User from '@server/db/models/User.js';
 import Order from '@server/db/models/Order.js';
+import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareOrder } from '@server/services/orderService.js';
 import {
@@ -10,35 +11,80 @@ import {
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
 import { validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import { ORDER_STATUS } from '@shared/constants.js';
-//import type { TDbUser } from '@server/types/index.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { FilterQuery, PipelineStage } from 'mongoose';
+import type { TDbUser } from '@server/types/index.js';
+import type {
+    TCustomerListQuery,
+    TCustomerListResponse,
+    TCustomerListFilterQuery,
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICustomerListAggregateResult {
+    filteredCustomerIdList: {
+        _id: Types.ObjectId;
+        name: string;
+    }[];
+  
+    paginatedCustomerList: {
+        id: string;
+        name: string;
+        email: string;
+        discount: number;
+        totalSpent: number;
+        createdAt: Date;
+        isBanned: boolean;
+    }[];
+}
+
+interface ICustomerParams extends ParamsDictionary {
+    customerId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка ID всех отфильтрованных клиентов и их данных для одной страницы ///
-export const handleCustomerListRequest = async (req, res, next) => {
+export const handleCustomerListRequest: RequestHandler<
+    {},
+    TCustomerListResponse,
+    {},
+    TCustomerListQuery
+> = async (req, res, next) => {
     // Настройка фильтра поиска
-    const allowedSearchFields = ['name', 'email'];
-    const searchMatch = buildSearchMatch/*<TDbUser>*/(
+    const allowedSearchFields = ['name', 'email'] as const;
+    const searchMatch = buildSearchMatch<TDbUser>(
         req.query.search,
         allowedSearchFields,
         DEFAULT_SEARCH_TYPE
     );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch/*<TDbUser>*/(req.query, customersFilterOptions);
+    const filterMatch = buildFilterMatch<TDbUser, TCustomerListFilterQuery>(
+        req.query,
+        customersFilterOptions
+    );
     filterMatch.role = 'customer';
 
     // Пайплайн вывода ID всех отфильтрованных результатов
-    const filteredPipeline = [{ $project: { _id: 1, name: 1 } }];
+    const filteredPipeline: PipelineStage.FacetPipelineStage[] = [{ $project: { _id: 1, name: 1 } }];
 
     // Пайплайн вывода результатов на странице
-    const paginatedPipeline = buildPaginatedPipeline/*<TDbUser>*/(
+    const paginatedPipeline = buildPaginatedPipeline<TDbUser>(
         req.query,
         customersSortOptions,
         customersPageLimitOptions
@@ -77,13 +123,18 @@ export const handleCustomerListRequest = async (req, res, next) => {
         //console.dir(explainResult.stages[0].$cursor, { depth: null });
 
         // Агрегатный запрос
-        const aggregateResult = await User.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
+        const aggregateResult = await User
+            .aggregate<ICustomerListAggregateResult>(pipeline)
+            .collation(AGGREGATE_COLLATION_OPTIONS);
         checkTimeout(req);
         
         const filteredCustomerNamesMap = Object.fromEntries(
-            aggregateResult[0]?.filteredCustomerIdList.map(c => [c._id, c.name]) || []
+            aggregateResult[0]?.filteredCustomerIdList.map(c => [c._id.toString(), c.name]) || []
         );
-        const paginatedCustomerList = aggregateResult[0]?.paginatedCustomerList || [];
+        const paginatedCustomerList = aggregateResult[0]?.paginatedCustomerList.map(c => ({
+            ...c,
+            createdAt: c.createdAt.toISOString()
+        }));
 
         safeSendResponse(res, 200, {
             message: 'Данные клиентов успешно загружены',
@@ -117,7 +168,7 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
 
     try {
         const matchFilter = { 
-            customerId: mongoose.Types.ObjectId.createFromHexString(customerId), 
+            customerId: Types.ObjectId.createFromHexString(customerId), 
             currentStatus: { $ne: ORDER_STATUS.DRAFT }
         };
         let needFullReload = false;
@@ -221,10 +272,6 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
             customerUpdateData: { discount: discountNum }
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
@@ -271,10 +318,6 @@ export const handleCustomerBanToggleRequest = async (req, res, next) => {
             customerUpdateData: { isBanned: newBanStatus }
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

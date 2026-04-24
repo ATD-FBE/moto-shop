@@ -1,49 +1,50 @@
 import { useState } from 'react';
 import cn from 'classnames';
+import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
 import { formatDateOnly } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
-import type { TFilterOption } from '@shared/types/index.js';
+import type { TFilterQuery, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-interface IFilterControlsProps {
+interface IFilterControlsProps<TFilter extends TFilterQuery<TFilter>> {
     uiBlocked?: boolean;
-    options?: readonly TFilterOption[];
-    filter?: URLSearchParams;
-    setFilter?: Dispatch<SetStateAction<URLSearchParams>>;
+    options?: readonly TFilterOption<any, TFilter>[];
+    filter?: TFilter;
+    setFilter?: Dispatch<SetStateAction<TFilter>>;
 }
 
-interface IHandleInputChangeParams {
-    type: TFilterOption['type'];
+interface IHandleInputChangeParams<TFilter extends TFilterQuery<TFilter>> {
+    type: TFilterOption<any, TFilter>['type'];
     minValue?: string;
     maxValue?: string;
-    paramName: string;
+    paramName: keyof TFilter;
 }
 
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
 
-export default function FilterControls({
+export default function FilterControls<TFilter extends TFilterQuery<TFilter>>({
     uiBlocked = false,
     options,
     filter,
     setFilter
-}: IFilterControlsProps): JSX.Element | null {
+}: IFilterControlsProps<TFilter>): JSX.Element | null {
     if (!options || !filter || !setFilter) {
-        console.error('Отсутствуют критические свойства компонента фильтра!');
-        return null;
+        logToolbarMissingProps('FilterControls', { options, filter, setFilter });
+        return null; 
     }
 
-    const [filterParams, setFilterParams] = useState(() => new URLSearchParams(filter));
+    const [filterParams, setFilterParams] = useState<TFilter>(filter);
     const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
-    const isFilterChanged = filterParams.toString() !== filter.toString();
-    const isFilterReseted = filterParams.toString() === getInitFilterParams(null, options).toString();
+    const isFilterChanged = JSON.stringify(filterParams) !== JSON.stringify(filter);
+    const isFilterReseted = JSON.stringify(filterParams) === JSON.stringify(getInitFilterParams(null, options));
 
     const calcNumberInputWidth = (minLimit: string, maxLimit: string): string => {
         const MAX_WIDTH_CH = 12;
@@ -55,7 +56,7 @@ export default function FilterControls({
 
     const handleInputChange = (
         e: ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement> | KeyboardEvent<HTMLInputElement>,
-        params: IHandleInputChangeParams
+        params: IHandleInputChangeParams<TFilter>
     ): void => {
         const { type, minValue = '', maxValue = '', paramName } = params;
 
@@ -87,17 +88,16 @@ export default function FilterControls({
         }
 
         setFilterParams(prevFilterParams => {
-            if (prevFilterParams.get(paramName) === newValue) {
+            if (prevFilterParams[paramName] === newValue) {
                 return prevFilterParams; // Исключает ререндер, если состояние не изменилось
             }
 
-            const newFilterParams = new URLSearchParams(prevFilterParams);
-            newFilterParams.set(paramName, newValue);
-            return newFilterParams;
+            const nextFilterParams = { ...prevFilterParams, [paramName]: newValue };
+            return nextFilterParams;
         });
     };
 
-    const renderOption = (option: TFilterOption, idx: number): JSX.Element => {
+    const renderOption = (option: TFilterOption<any, TFilter>, idx: number): JSX.Element => {
         const { label: optionLabel, type } = option;
 
         switch (type) {
@@ -116,7 +116,7 @@ export default function FilterControls({
                                     id={`range-from-${idx}`}
                                     type={type}
                                     style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
-                                    value={filterParams.get(minParamName) ?? minLimit}
+                                    value={filterParams[minParamName] ?? minLimit}
                                     min={minLimit}
                                     max={maxLimit}
                                     onChange={e => handleInputChange(e, {
@@ -126,13 +126,13 @@ export default function FilterControls({
                                     onBlur={e => handleInputChange(e, {
                                         type,
                                         minValue: minLimit,
-                                        maxValue: filterParams.get(maxParamName) ?? maxLimit,
+                                        maxValue: filterParams[maxParamName] ?? maxLimit,
                                         paramName: minParamName
                                     })}
                                     onKeyDown={e => e.key === 'Enter' && handleInputChange(e, {
                                         type,
                                         minValue: minLimit,
-                                        maxValue: filterParams.get(maxParamName) ?? maxLimit,
+                                        maxValue: filterParams[maxParamName] ?? maxLimit,
                                         paramName: minParamName
                                     })}
                                 />
@@ -147,7 +147,7 @@ export default function FilterControls({
                                     id={`range-to-${idx}`}
                                     type={type}
                                     style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
-                                    value={filterParams.get(maxParamName) ?? maxLimit}
+                                    value={filterParams[maxParamName] ?? maxLimit}
                                     min={minLimit}
                                     max={maxLimit}
                                     onChange={e => handleInputChange(e, {
@@ -156,13 +156,13 @@ export default function FilterControls({
                                     })}
                                     onBlur={e => handleInputChange(e, {
                                         type,
-                                        minValue: filterParams.get(minParamName) ?? minLimit,
+                                        minValue: filterParams[minParamName] ?? minLimit,
                                         maxValue: maxLimit,
                                         paramName: maxParamName
                                     })}
                                     onKeyDown={e => e.key === 'Enter' && handleInputChange(e, {
                                         type,
-                                        minValue: filterParams.get(minParamName) ?? minLimit,
+                                        minValue: filterParams[minParamName] ?? minLimit,
                                         maxValue: maxLimit,
                                         paramName: maxParamName
                                     })}
@@ -187,11 +187,11 @@ export default function FilterControls({
                                 <input
                                     id={`range-from-${idx}`}
                                     type={type}
-                                    value={filterParams.get(minParamName) ?? minLimit}
+                                    value={filterParams[minParamName] ?? minLimit}
                                     onChange={e => handleInputChange(e, {
                                         type,
                                         minValue: minLimit,
-                                        maxValue: filterParams.get(maxParamName) ?? maxLimit,
+                                        maxValue: filterParams[maxParamName] ?? maxLimit,
                                         paramName: minParamName
                                     })}
                                 />
@@ -205,10 +205,10 @@ export default function FilterControls({
                                 <input
                                     id={`range-to-${idx}`}
                                     type={type}
-                                    value={filterParams.get(maxParamName) ?? maxLimit}
+                                    value={filterParams[maxParamName] ?? maxLimit}
                                     onChange={e => handleInputChange(e, {
                                         type,
-                                        minValue: filterParams.get(minParamName) ?? minLimit,
+                                        minValue: filterParams[minParamName] ?? minLimit,
                                         maxValue: maxLimit,
                                         paramName: maxParamName
                                     })}
@@ -239,7 +239,7 @@ export default function FilterControls({
                                         type="radio"
                                         name={paramName}
                                         value={value}
-                                        checked={filterParams.get(paramName) === value}
+                                        checked={filterParams[paramName] === value}
                                         onChange={e => handleInputChange(e, { type, paramName })}
                                     />
                                     <span className="designed-radio-btn"></span>
@@ -266,7 +266,7 @@ export default function FilterControls({
                                         type="radio"
                                         name={paramName}
                                         value={value}
-                                        checked={filterParams.get(paramName) === value}
+                                        checked={filterParams[paramName] === value}
                                         onChange={e => handleInputChange(e, { type, paramName })}
                                     />
                                     <span className="designed-radio-btn"></span>

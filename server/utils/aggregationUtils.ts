@@ -1,22 +1,42 @@
-import { Types, type FilterQuery, type PipelineStage } from 'mongoose';
+import { Types } from 'mongoose';
 import log from './logger.js';
 import { SEARCH_TYPES, DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
 import { escapeRegExp } from '@shared/commonHelpers.js';
-import { MAX_DATE_TS } from '@shared/constants.js';
+import { MAX_DATE_TS, MAX_TIMEZONE_OFFSET_MINUTES } from '@shared/constants.js';
+import type { FilterQuery, PipelineStage } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
-    ICommonFilterQuery,
     TFilterOption,
+    TFilterQuery,
     ISortOption,
-    IParseSortResult,
-    IPageLimitQuery,
+    TListQuery,
     TPageLimitOption
 } from '@shared/types/index.js';
-import type { IOrderedFiltersArgs } from '@server/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface IParseSortResult<T> {
+    sortField: keyof T;
+    sortOrder: 1 | -1;
+}
+
+export interface IOrderedFiltersArgs {
+    computedFields?: PipelineStage[];
+    searchMatch?: FilterQuery<any>;
+    filterMatch?: FilterQuery<any>;
+    extraFilters?: PipelineStage[];
+    searchType?: TSearchTypes;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const buildSearchMatch = <T extends object>(
     searchParam: unknown,
-    allowedSearchFields: (keyof T)[],
+    allowedSearchFields: readonly (keyof T)[],
     searchType: TSearchTypes
 ): FilterQuery<T> => {
     const search = typeof searchParam === 'string' ? searchParam.trim() : '';
@@ -48,19 +68,15 @@ export const buildSearchMatch = <T extends object>(
     return searchMatch;
 };
 
-export const buildFilterMatch = <T extends object>(
-    query: ICommonFilterQuery,
-    filterOptions: TFilterOption<T>[]
-): FilterQuery<T> => {
-    // Смещение времени в минутах
-    const timeZoneOffset = parseInt(query.timeZoneOffset ?? '0', 10) || 0;
-
-    // Сборка фильтра
-    const filterMatch = {} as Record<keyof T, any>;
+export const buildFilterMatch = <TModel extends object, TFilter extends TFilterQuery<TFilter>>(
+    query: TListQuery<TModel, TFilter>,
+    filterOptions: readonly TFilterOption<TModel, TFilter>[]
+): FilterQuery<TModel> => {
+    let filterMatch = {} as Record<keyof TModel, any>;
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;
-        const typedDbField = dbField as keyof T;
+        const typedDbField = dbField as keyof TModel;
 
         switch (type) {
             case 'number': {
@@ -103,9 +119,14 @@ export const buildFilterMatch = <T extends object>(
                 const minLimitDate = minLimit !== '' ? new Date(minLimit) : new Date(-MAX_DATE_TS);
                 const maxLimitDate = maxLimit !== '' ? new Date(maxLimit) : new Date(MAX_DATE_TS);
 
+                let offsetNum = Number(query.timeZoneOffset);
+                if (isNaN(offsetNum) || Math.abs(offsetNum) > MAX_TIMEZONE_OFFSET_MINUTES) {
+                    offsetNum = 0;
+                }
+
                 if (!isNaN(minDate.getTime())) {
                     minDate.setUTCHours(0, 0, 0, 0); // Установка начала дня для даты
-                    minDate.setMinutes(minDate.getMinutes() - timeZoneOffset); // Смещение времени даты
+                    minDate.setMinutes(minDate.getMinutes() - offsetNum); // Смещение времени даты
 
                     if (minDate.getTime() > minLimitDate.getTime()) {
                         filterMatch[typedDbField] = { $gte: minDate };
@@ -114,7 +135,7 @@ export const buildFilterMatch = <T extends object>(
 
                 if (!isNaN(maxDate.getTime())) {
                     maxDate.setUTCHours(23, 59, 59, 999); // Установка конца дня для даты
-                    maxDate.setMinutes(maxDate.getMinutes() - timeZoneOffset); // Смещение времени даты
+                    maxDate.setMinutes(maxDate.getMinutes() - offsetNum); // Смещение времени даты
 
                     if (maxDate.getTime() < maxLimitDate.getTime()) {
                         filterMatch[typedDbField] = {
@@ -177,7 +198,7 @@ export const buildFilterMatch = <T extends object>(
         }
     });
 
-    return filterMatch as FilterQuery<T>;
+    return filterMatch as FilterQuery<TModel>;
 };
 
 export const parseSortParam = <T extends object>(
@@ -206,15 +227,15 @@ export const parseSortParam = <T extends object>(
 export const buildSortPipeline = <T extends object>(
     sortField: keyof T,
     sortOrder: 1 | -1
-): PipelineStage[] => [
+): PipelineStage.FacetPipelineStage[] => [
     { $sort: { [sortField]: sortOrder } }
 ];
 
 export const buildPaginatedPipeline = <T extends object>(
-    query: IPageLimitQuery,
-    sortOptions: ISortOption<T>[],
-    pageLimitOptions: TPageLimitOption[]
-): PipelineStage[] => {
+    query: TListQuery<T>,
+    sortOptions: readonly ISortOption<T>[],
+    pageLimitOptions: readonly TPageLimitOption[]
+): PipelineStage.FacetPipelineStage[] => {
     // Настройка сортировки
     const { sortField, sortOrder } = parseSortParam<T>(query.sort, sortOptions);
     const pipeline = buildSortPipeline<T>(sortField, sortOrder);

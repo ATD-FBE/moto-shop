@@ -47,15 +47,3 @@ export interface ITokenTypeConfig {
 export type TTransactionHandler<T> = (session: ClientSession) => Promise<T>;
 
 export type TTransactionOptions = Parameters<ClientSession['withTransaction']>[1];
-
-/////////////////////////
-/// AGGREGATION UTILS ///
-/////////////////////////
-
-export interface IOrderedFiltersArgs {
-    computedFields: PipelineStage[];
-    searchMatch: FilterQuery<any>;
-    filterMatch: FilterQuery<any>;
-    extraFilters: PipelineStage[];
-    searchType: TSearchTypes;
-}

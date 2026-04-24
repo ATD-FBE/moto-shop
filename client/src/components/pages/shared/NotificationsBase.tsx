@@ -16,7 +16,7 @@ import type {
     TRenderNotificationCardProps,
     INewNotificationAlertProps
 } from '@/types/index.js';
-import type { INotification, TNotificationsSortOptions } from '@shared/types/index.js';
+import type { INotification, TNotificationsSortOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -61,7 +61,7 @@ export default function NotificationsBase({
     const [initialized, setInitialized] = useState(false);
 
     const [sort, setSort] = useState<
-        TNotificationsSortOptions['dbField']
+        TNotificationsSortOption['dbField']
     >(notificationsSortOptions[0].dbField);
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(notificationsPageLimitOptions[0]);

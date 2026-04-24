@@ -21,17 +21,67 @@ import {
     REQUEST_STATUS,
 } from '@shared/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
-import { notificationsSortOptions } from '@shared/sortOptions.js';
+import {
+    notificationsSortOptions,
+    customersSortOptions,
+    productsSortOptions,
+    productEditorSortOptions,
+    ordersSortOptions
+} from '@shared/sortOptions.js';
+import {
+    customersFilterOptions,
+    productsFilterOptions,
+    productEditorFilterOptions,
+    ordersFilterOptions
+} from '@shared/filterOptions.js';
 
-//////////////
-/// SHARED ///
-//////////////
+///////////////////
+/// DATA CHANGE ///
+///////////////////
 
 export interface IDataChange {
     field: string;
     oldValue?: unknown;
     newValue?: unknown;
 }
+
+/////////////
+/// QUERY ///
+/////////////
+
+export interface IBaseQuery<TSort = string> {
+    page?: string;
+    limit?: string;
+    sort?: TSort;
+    search?: string;
+    timestamp?: string;
+    timeZoneOffset?: string;
+}
+
+export type TFilterQuery<TField> = Partial<Record<keyof TField, string>>;
+
+export type TListQuery<TModel extends object = any, TField extends object = {}> =
+    IBaseQuery<Extract<keyof TModel, string>> &
+    TField;
+
+export type TInferFilterQuery<T extends TFilterOption> = {
+    [K in T as 
+        K extends { paramName: infer P }
+            ? (P extends string ? P : never)
+            : K extends {
+                minParamName: infer Min;
+                maxParamName: infer Max;
+            } ? (Min extends string ? Min : never) | (Max extends string ? Max : never)
+                : never
+    ]?: K extends { type: 'boolean' }
+        ? ('' | 'true' | 'false')
+        : K extends {
+            type: 'string';
+            valueOptions: readonly { value: infer V }[];
+        }
+            ? V
+            : string; // number || date
+};
 
 /////////////////
 /// CONSTANTS ///
@@ -196,47 +246,47 @@ export interface IWorkingHours {
 /// FILTER OPTIONS ///
 //////////////////////
 
-export interface ICommonFilterQuery {
-    timeZoneOffset?: string;
-    [key: string]: string | undefined;
-}
+export type TCustomersFilterOption = typeof customersFilterOptions[number];
+export type TProductsFilterOption = typeof productsFilterOptions[number];
+export type TProductEditorFilterOption = typeof productEditorFilterOptions[number];
+export type TOrdersFilterOption = typeof ordersFilterOptions[number];
 
-export type TFilterOption<T = any> = 
-    | INumberFilter<T> 
-    | IDateFilter<T> 
-    | IBooleanFilter<T> 
-    | IStringFilter<T>;
+export type TFilterOption<TModel extends object = any, TFilter extends object = any> = 
+    | INumberFilter<TModel, TFilter> 
+    | IDateFilter<TModel, TFilter> 
+    | IBooleanFilter<TModel, TFilter> 
+    | IStringFilter<TModel, TFilter>;
 
-interface IBaseFilter<T> {
-    dbField: T extends object ? keyof T : T; // T - либо вся коллекция БД, либо поле коллекции
+interface IBaseFilter<TModel> {
+    dbField: keyof TModel; 
     label: string;
 }
 
-interface INumberFilter<T> extends IBaseFilter<T> {
+interface INumberFilter<TModel, TFilter> extends IBaseFilter<TModel> {
     type: 'number';
-    minParamName: string;
-    maxParamName: string;
+    minParamName: Extract<keyof TFilter, string>;
+    maxParamName: Extract<keyof TFilter, string>;
     minLimit: string;
     maxLimit: string;
 }
 
-interface IDateFilter<T> extends IBaseFilter<T> {
+interface IDateFilter<TModel, TFilter> extends IBaseFilter<TModel> {
     type: 'date';
-    minParamName: string;
-    maxParamName: string;
+    minParamName: Extract<keyof TFilter, string>;
+    maxParamName: Extract<keyof TFilter, string>;
     minLimit: string;
     maxLimit: string;
 }
 
-interface IBooleanFilter<T> extends IBaseFilter<T> {
+interface IBooleanFilter<TModel, TFilter> extends IBaseFilter<TModel> {
     type: 'boolean';
-    paramName: string;
+    paramName: Extract<keyof TFilter, string>;
     defaultValue?: string;
 }
 
-interface IStringFilter<T> extends IBaseFilter<T> {
+interface IStringFilter<TModel, TFilter> extends IBaseFilter<TModel> {
     type: 'string';
-    paramName: string;
+    paramName: Extract<keyof TFilter, string>;
     valueOptions: {
         value: string;
         label: string;
@@ -249,28 +299,20 @@ interface IStringFilter<T> extends IBaseFilter<T> {
 /// SORT OPTIONS ///
 ////////////////////
 
+export type TNotificationsSortOption = typeof notificationsSortOptions[number];
+export type TCustomersSortOption = typeof customersSortOptions[number];
+export type TProductsSortOption = typeof productsSortOptions[number];
+export type TProductEditorSortOption = typeof productEditorSortOptions[number];
+export type TOrdersSortOption = typeof ordersSortOptions[number];
+
 export interface ISortOption<T = any> {
     dbField: T extends object ? keyof T : T; // T - либо вся коллекция БД, либо поле коллекции
     label: string;
     defaultOrder: 'asc' | 'desc';
 }
 
-export interface IParseSortResult<T> {
-    sortField: keyof T;
-    sortOrder: 1 | -1;
-}
-
-export type TNotificationsSortOptions = typeof notificationsSortOptions[number];
-
 //////////////////////////
 /// PAGE LIMIT OPTIONS ///
 //////////////////////////
 
 export type TPageLimitOption<T = number> = T;
-
-export interface IPageLimitQuery {
-    sort?: string;
-    page?: string;
-    limit?: string;
-    [key: string]: string | undefined;
-}

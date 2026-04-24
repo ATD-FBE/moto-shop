@@ -25,8 +25,8 @@ import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
-import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';
-import type { ICustomer } from '@shared/types/index.js';
+import type { JSX } from 'react';
+import type { ICustomer, TCustomerListFilterQuery, TCustomerListQuery } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -46,7 +46,7 @@ export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
     
     const [search, setSearch] = useState<string>('');
-    const [filter, setFilter] = useState(new URLSearchParams());
+    const [filter, setFilter] = useState<TCustomerListFilterQuery>({});
     const [sort, setSort] = useState<
         (typeof customersSortOptions[number])['dbField']
     >(customersSortOptions[0].dbField);
@@ -260,14 +260,21 @@ export default function CustomerManagement(): JSX.Element | null {
     useEffect(() => {
         if (!initialized) return;
 
-        const params = new URLSearchParams({
+        const hasDateFilter = customersFilterOptions.some(option =>
+            option.type === 'date' &&
+            (filter[option.minParamName] || filter[option.maxParamName])
+        );
+
+        const queryParams: TCustomerListQuery = {
             page: String(page),
             limit: String(limit),
             search,
             sort,
-            timeZoneOffset: String(new Date().getTimezoneOffset())
-        });
-        filter.forEach((value, key) => params.append(key, value));
+            ...filter,
+            ...(hasDateFilter && { timeZoneOffset: String(new Date().getTimezoneOffset()) })
+        };
+
+        const params = new URLSearchParams(queryParams as Record<string, string>);
         const urlParams = params.toString();
 
         if (location.search !== `?${urlParams}`) {

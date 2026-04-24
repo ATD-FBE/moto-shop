@@ -1,5 +1,5 @@
 import type { RefObject, Dispatch, SetStateAction } from 'react';
-import type { INotification, TNotificationsSortOptions } from '@shared/types/index.js';
+import type { INotification, TNotificationsSortOption } from '@shared/types/index.js';
 
 ///////////////
 /// TOOLBAR ///
@@ -39,7 +39,7 @@ export type TRenderNotificationCardProps =
     INotificationCardManagementProps;
 
 export interface INewNotificationAlertProps {
-    sort: TNotificationsSortOptions['dbField'];
+    sort: TNotificationsSortOption['dbField'];
     page: number;
     limit: number;
     totalNotifications: number;

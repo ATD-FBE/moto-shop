@@ -7,13 +7,14 @@ import PaginationPages from '@/components/common/toolbar/PaginationPages.jsx';
 import PaginationInfo from '@/components/common/toolbar/PaginationInfo.jsx';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type { TToolbarControls, TDataLoadStatus } from '@/types/index.js';
-import type { TFilterOption, ISortOption, TPageLimitOption } from '@shared/types/index.js';
+import type { TFilterQuery, TFilterOption, ISortOption, TPageLimitOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
 interface IToolbarProps<
+    TFilter extends TFilterQuery<TFilter>,
     TSort extends string = string,
     TLimit extends number = number
 > {
@@ -25,9 +26,9 @@ interface IToolbarProps<
     search?: string;
     setSearch?: Dispatch<SetStateAction<string>>;
     searchPlaceholder?: string;
-    filter?: URLSearchParams;
-    setFilter?: Dispatch<SetStateAction<URLSearchParams>>;
-    filterOptions?: readonly TFilterOption[];
+    filter?: TFilter;
+    setFilter?: Dispatch<SetStateAction<TFilter>>;
+    filterOptions?: readonly TFilterOption<any, TFilter>[];
     sort?: TSort;
     setSort?: Dispatch<SetStateAction<TSort>>;
     sortOptions?: readonly ISortOption<TSort>[];
@@ -45,6 +46,7 @@ interface IToolbarProps<
 /////////////////////
 
 export default function Toolbar<
+    TFilter extends TFilterQuery<TFilter>,
     TSort extends string,
     TLimit extends number
 >({
@@ -69,7 +71,7 @@ export default function Toolbar<
     limitOptions,
     totalItems,
     label
-}: IToolbarProps<TSort, TLimit>): JSX.Element {
+}: IToolbarProps<TFilter, TSort, TLimit>): JSX.Element {
     return (
         <div className={cn('toolbar', position ?? '')}>
             {activeControls.map((controls, idx): JSX.Element | null => {

@@ -7,7 +7,7 @@ import type {
     IValidationConfig,
     TValidationConfigMap
 } from '@server/types/index.js';
-import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
+import type { TEntityType, TFieldErrors, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -35,6 +35,15 @@ interface IMulterContext {
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
+
+const BASE_QUERY_VALIDATION_SCHEMA: Record<string, IValidationSchema> = {
+    page: { type: 'integer', optional: true },
+    limit: { type: 'integer', optional: true },
+    sort: { type: 'string', optional: true },
+    search: { type: 'string', optional: true },
+    timestamp: { type: 'integer', optional: true },
+    timeZoneOffset: { type: 'integer', optional: true }
+};
 
 const baseTypeChecks: TBaseTypeChecks = {
     string: (val: unknown): val is string => typeof val === 'string',
@@ -311,6 +320,37 @@ export const validateObjectFields = <E extends TEntityType>(
     }
 
     return { isValid, invalidInputPaths, fieldErrors };
+};
+
+// Функция автозаполнения схемы валидации query
+export const buildQueryValidationSchema = (
+    filterOptions: readonly TFilterOption[] = []
+): Record<string, IValidationSchema> => {
+    const querySchema: Record<string, IValidationSchema> = { ...BASE_QUERY_VALIDATION_SCHEMA };
+
+    filterOptions.forEach(option => {
+        switch (option.type) {
+            case 'number':
+                querySchema[option.minParamName] = { type: 'number', optional: true };
+                querySchema[option.maxParamName] = { type: 'number', optional: true };
+                break;
+
+            case 'date':
+                querySchema[option.minParamName] = { type: 'date', optional: true };
+                querySchema[option.maxParamName] = { type: 'date', optional: true };
+                break;
+
+            case 'boolean':
+                querySchema[option.paramName] = { type: 'emptyableBoolean', optional: true };
+                break;
+
+            case 'string':
+                querySchema[option.paramName] = { type: 'string', optional: true };
+                break;
+        }
+    });
+
+    return querySchema;
 };
 
 // Рекурсивное заполнение валидационных схем инпут-значениями от клиента

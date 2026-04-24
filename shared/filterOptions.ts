@@ -6,6 +6,43 @@ import {
     FINANCIALS_FINAL_STATES
 } from './constants.js';
 
+export const customersFilterOptions = [
+    {
+        dbField: 'createdAt',
+        label: 'Дата регистрации',
+        type: 'date',
+        minParamName: 'regDateStart',
+        maxParamName: 'regDateEnd',
+        minLimit: '',
+        maxLimit: formatDateOnly(new Date())
+    },
+    {
+        dbField: 'discount',
+        label: 'Скидка (%)',
+        type: 'number',
+        minParamName: 'minDiscount',
+        maxParamName: 'maxDiscount',
+        minLimit: '0',
+        maxLimit: '100'
+    },
+    {
+        dbField: 'totalSpent',
+        label: 'Сумма покупок (руб.)',
+        type: 'number',
+        minParamName: 'minTotalSpent',
+        maxParamName: 'maxTotalSpent',
+        minLimit: '0',
+        maxLimit: ''
+    },
+    {
+        dbField: 'isBanned',
+        label: 'Заблокированные',
+        type: 'boolean',
+        paramName: 'ban',
+        defaultValue: ''
+    }
+] as const;
+
 export const productsFilterOptions = [
     {
         dbField: 'price',
@@ -128,43 +165,6 @@ export const ordersFilterOptions = [
             { value: 'inProgress', label: 'Открытый', matches: FINANCIALS_ACTIVE_STATES },
             { value: 'final', label: 'Закрытый', matches: FINANCIALS_FINAL_STATES }
         ],
-        defaultValue: ''
-    }
-] as const;
-
-export const customersFilterOptions = [
-    {
-        dbField: 'createdAt',
-        label: 'Дата регистрации',
-        type: 'date',
-        minParamName: 'regDateStart',
-        maxParamName: 'regDateEnd',
-        minLimit: '',
-        maxLimit: formatDateOnly(new Date())
-    },
-    {
-        dbField: 'discount',
-        label: 'Скидка (%)',
-        type: 'number',
-        minParamName: 'minDiscount',
-        maxParamName: 'maxDiscount',
-        minLimit: '0',
-        maxLimit: '100'
-    },
-    {
-        dbField: 'totalSpent',
-        label: 'Сумма покупок (руб.)',
-        type: 'number',
-        minParamName: 'minTotalSpent',
-        maxParamName: 'maxTotalSpent',
-        minLimit: '0',
-        maxLimit: ''
-    },
-    {
-        dbField: 'isBanned',
-        label: 'Заблокированные',
-        type: 'boolean',
-        paramName: 'ban',
         defaultValue: ''
     }
 ] as const;

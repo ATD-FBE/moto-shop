@@ -1,4 +1,3 @@
-import type { TNotificationStatus } from './shared.types.js';
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
@@ -6,6 +5,7 @@ import type {
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
+import type { TNotificationStatus, TNotificationsSortOption } from './shared.types.js';
 
 /// Общие типы ///
 export interface INotification {
@@ -36,7 +36,7 @@ export interface INotificationBody {
 export interface INotificationListQuery {
     page?: string;
     limit?: string;
-    sort?: string;
+    sort?: TNotificationsSortOption['dbField'];
 }
 
 interface INotificationListSuccessData {
