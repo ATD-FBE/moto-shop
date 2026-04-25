@@ -14,10 +14,10 @@ import {
     handleNotificationListRequest,
     handleNotificationRequest,
     handleNotificationCreateRequest,
-    handleNotificationSendingRequest,
     handleNotificationUpdateRequest,
-    handleNotificationDeleteRequest,
-    handleNotificationMarkAsReadRequest
+    handleNotificationSendingRequest,
+    handleNotificationMarkAsReadRequest,
+    handleNotificationDeleteRequest
 } from '@server/controllers/notificationController.js';
 import { USER_ROLE } from '@shared/constants.js';
 

@@ -44,7 +44,7 @@ export type TGeneralErrorResponse = TBaseResponse & {
     status: TGeneralErrorStatus;
 };
 
-export type TValidationErrorResponse<E extends TEntityType> = TBaseResponse & {
+export type TFormFieldsErrorResponse<E extends TEntityType> = TBaseResponse & {
     status: typeof REQUEST_STATUS.INVALID;
     fieldErrors: TFieldErrors<E>;
 };

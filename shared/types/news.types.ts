@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TValidationErrorResponse,
+    TFormFieldsErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -42,7 +42,7 @@ export type TNewsResponse =
 /// Создание новости ///
 export type TNewsCreateResponse =
     | TAuthErrorResponse
-    | TValidationErrorResponse<'news'>
+    | TFormFieldsErrorResponse<'news'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 
@@ -50,7 +50,7 @@ export type TNewsCreateResponse =
 export type TNewsUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TValidationErrorResponse<'news'>
+    | TFormFieldsErrorResponse<'news'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

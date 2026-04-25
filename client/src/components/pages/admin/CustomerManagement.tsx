@@ -8,7 +8,7 @@ import CustomerTable from './customer-management/CustomerTable.jsx';
 import {
     sendCustomerListRequest,
     sendCustomerDiscountUpdateRequest,
-    sendCustomerBanToggleRequest
+    sendCustomerBanStatusUpdateRequest
 } from '@/api/customerRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
@@ -26,7 +26,7 @@ import { customersSortOptions } from '@shared/sortOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
-import type { ICustomer, TCustomerListFilterQuery, TCustomerListQuery } from '@shared/types/index.js';
+import type { ICustomer, TFilterParams } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -46,10 +46,8 @@ export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
     
     const [search, setSearch] = useState<string>('');
-    const [filter, setFilter] = useState<TCustomerListFilterQuery>({});
-    const [sort, setSort] = useState<
-        (typeof customersSortOptions[number])['dbField']
-    >(customersSortOptions[0].dbField);
+    const [filter, setFilter] = useState<TFilterParams>({});
+    const [sort, setSort] = useState<string>(customersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(customersPageLimitOptions[0]);
 
@@ -133,7 +131,9 @@ export default function CustomerManagement(): JSX.Element | null {
     ): Promise<IUpdateCustomerDiscountResult | undefined> => {
         setCustomerOperationBusy(true);
 
-        const responseData = await dispatch(sendCustomerDiscountUpdateRequest(customerId, discount));
+        const responseData = await dispatch(sendCustomerDiscountUpdateRequest(customerId, {
+            discount
+        }));
         if (isUnmountedRef.current) return;
 
         const { status, message } = responseData;
@@ -181,7 +181,9 @@ export default function CustomerManagement(): JSX.Element | null {
     ): Promise<void> => {
         setCustomerOperationBusy(true);
 
-        const responseData = await dispatch(sendCustomerBanToggleRequest(customerId, newBanStatus));
+        const responseData = await dispatch(sendCustomerBanStatusUpdateRequest(customerId, {
+            newBanStatus
+        }));
         if (isUnmountedRef.current) return;
 
         const { status, message } = responseData;
@@ -264,17 +266,14 @@ export default function CustomerManagement(): JSX.Element | null {
             option.type === 'date' &&
             (filter[option.minParamName] || filter[option.maxParamName])
         );
-
-        const queryParams: TCustomerListQuery = {
+        const params = new URLSearchParams({
             page: String(page),
             limit: String(limit),
             search,
             sort,
             ...filter,
             ...(hasDateFilter && { timeZoneOffset: String(new Date().getTimezoneOffset()) })
-        };
-
-        const params = new URLSearchParams(queryParams as Record<string, string>);
+        });
         const urlParams = params.toString();
 
         if (location.search !== `?${urlParams}`) {

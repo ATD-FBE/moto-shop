@@ -1,10 +1,11 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TValidationErrorResponse,
+    TFormFieldsErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
+import type { IBaseQuery } from './shared.types.js';
 
 /// Общие типы ///
 export interface IPromo {
@@ -31,10 +32,7 @@ interface IPromoUpdateBodyBase<TFile> extends IPromoCreateBodyBase<TFile> {
 }
 
 /// Загрузка всех акций ///
-export interface IPromoListQuery {
-    timestamp?: string;
-    timeZoneOffset?: string;
-}
+export type TPromoListQuery = IBaseQuery;
 
 interface IPromoListSuccessData {
     promoList: IPromo[];
@@ -59,7 +57,7 @@ export type TPromoCreateBodyClient = IPromoCreateBodyBase<File>;
 
 export type TPromoCreateResponse =
     | TAuthErrorResponse
-    | TValidationErrorResponse<'promotion'>
+    | TFormFieldsErrorResponse<'promotion'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 
@@ -70,7 +68,7 @@ export type TPromoUpdateBodyClient = IPromoUpdateBodyBase<File>;
 export type TPromoUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TValidationErrorResponse<'promotion'>
+    | TFormFieldsErrorResponse<'promotion'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

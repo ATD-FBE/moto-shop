@@ -1,50 +1,52 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import cn from 'classnames';
 import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
 import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
 import { formatDateOnly } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
-import type { TFilterQuery, TFilterOption } from '@shared/types/index.js';
+import type { TFilterParams, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-interface IFilterControlsProps<TFilter extends TFilterQuery<TFilter>> {
+interface IFilterControlsProps {
     uiBlocked?: boolean;
-    options?: readonly TFilterOption<any, TFilter>[];
-    filter?: TFilter;
-    setFilter?: Dispatch<SetStateAction<TFilter>>;
+    options?: readonly TFilterOption[];
+    filter?: TFilterParams;
+    setFilter?: Dispatch<SetStateAction<TFilterParams>>;
 }
 
-interface IHandleInputChangeParams<TFilter extends TFilterQuery<TFilter>> {
-    type: TFilterOption<any, TFilter>['type'];
+interface IHandleInputChangeParams {
+    type: TFilterOption['type'];
     minValue?: string;
     maxValue?: string;
-    paramName: keyof TFilter;
+    paramName: keyof TFilterParams;
 }
 
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
 
-export default function FilterControls<TFilter extends TFilterQuery<TFilter>>({
+export default function FilterControls({
     uiBlocked = false,
     options,
     filter,
     setFilter
-}: IFilterControlsProps<TFilter>): JSX.Element | null {
+}: IFilterControlsProps): JSX.Element | null {
     if (!options || !filter || !setFilter) {
         logToolbarMissingProps('FilterControls', { options, filter, setFilter });
         return null; 
     }
 
-    const [filterParams, setFilterParams] = useState<TFilter>(filter);
+    const initFilterParams = useMemo(() => getInitFilterParams(null, options), []);
+
+    const [filterParams, setFilterParams] = useState(filter);
     const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
     const isFilterChanged = JSON.stringify(filterParams) !== JSON.stringify(filter);
-    const isFilterReseted = JSON.stringify(filterParams) === JSON.stringify(getInitFilterParams(null, options));
+    const isFilterReseted = JSON.stringify(filterParams) === JSON.stringify(initFilterParams);
 
     const calcNumberInputWidth = (minLimit: string, maxLimit: string): string => {
         const MAX_WIDTH_CH = 12;
@@ -56,7 +58,7 @@ export default function FilterControls<TFilter extends TFilterQuery<TFilter>>({
 
     const handleInputChange = (
         e: ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement> | KeyboardEvent<HTMLInputElement>,
-        params: IHandleInputChangeParams<TFilter>
+        params: IHandleInputChangeParams
     ): void => {
         const { type, minValue = '', maxValue = '', paramName } = params;
 
@@ -97,7 +99,7 @@ export default function FilterControls<TFilter extends TFilterQuery<TFilter>>({
         });
     };
 
-    const renderOption = (option: TFilterOption<any, TFilter>, idx: number): JSX.Element => {
+    const renderOption = (option: TFilterOption, idx: number): JSX.Element => {
         const { label: optionLabel, type } = option;
 
         switch (type) {
@@ -303,7 +305,7 @@ export default function FilterControls<TFilter extends TFilterQuery<TFilter>>({
                     
                     <button
                         className="reset-filter-btn"
-                        onClick={() => setFilterParams(getInitFilterParams(null, options))}
+                        onClick={() => setFilterParams(initFilterParams)}
                         disabled={isFilterReseted}
                     >
                         Сбросить фильтр

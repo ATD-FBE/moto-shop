@@ -1,11 +1,15 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TValidationErrorResponse,
+    TFormFieldsErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
-import type { TNotificationStatus, TNotificationsSortOption } from './shared.types.js';
+import type {
+    TNotificationStatus,
+    IBaseQuery,
+    TNotificationsSortOption
+} from './shared.types.js';
 
 /// Общие типы ///
 export interface INotification {
@@ -33,11 +37,7 @@ export interface INotificationBody {
 }
 
 /// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
-export interface INotificationListQuery {
-    page?: string;
-    limit?: string;
-    sort?: TNotificationsSortOption['dbField'];
-}
+export type TNotificationListQuery = IBaseQuery<TNotificationsSortOption['dbField']>;
 
 interface INotificationListSuccessData {
     notificationsCount: number;
@@ -60,7 +60,7 @@ export type TNotificationResponse =
 /// Создание черновика уведомления ///
 export type TNotificationCreateResponse =
     | TAuthErrorResponse
-    | TValidationErrorResponse<'notification'>
+    | TFormFieldsErrorResponse<'notification'>
     | TGeneralErrorResponse
     | TSuccessResponse;
     
@@ -68,7 +68,7 @@ export type TNotificationCreateResponse =
 export type TNotificationUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TValidationErrorResponse<'notification'>
+    | TFormFieldsErrorResponse<'notification'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

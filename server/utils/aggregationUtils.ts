@@ -7,22 +7,21 @@ import type { FilterQuery, PipelineStage } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
     TFilterOption,
-    TFilterQuery,
+    TFilterParams,
     ISortOption,
-    TListQuery,
-    TPageLimitOption
+    TQuery
 } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-export interface IParseSortResult<T> {
-    sortField: keyof T;
+interface IParseSortResult<TModel extends object> {
+    sortField: keyof TModel;
     sortOrder: 1 | -1;
 }
 
-export interface IOrderedFiltersArgs {
+interface IOrderedFiltersArgs {
     computedFields?: PipelineStage[];
     searchMatch?: FilterQuery<any>;
     filterMatch?: FilterQuery<any>;
@@ -68,11 +67,11 @@ export const buildSearchMatch = <T extends object>(
     return searchMatch;
 };
 
-export const buildFilterMatch = <TModel extends object, TFilter extends TFilterQuery<TFilter>>(
-    query: TListQuery<TModel, TFilter>,
-    filterOptions: readonly TFilterOption<TModel, TFilter>[]
+export const buildFilterMatch = <TModel extends object, TFilter extends TFilterParams>(
+    query: TQuery<TModel, TFilter>,
+    filterOptions: readonly TFilterOption<TModel>[]
 ): FilterQuery<TModel> => {
-    let filterMatch = {} as Record<keyof TModel, any>;
+    const filterMatch = {} as Record<keyof TModel, any>;
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;
@@ -201,12 +200,12 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterQ
     return filterMatch as FilterQuery<TModel>;
 };
 
-export const parseSortParam = <T extends object>(
+export const parseSortParam = <TModel extends object>(
     sortParam: unknown,
-    sortOptions: readonly ISortOption<T>[]
-): IParseSortResult<T> => {
+    sortOptions: readonly ISortOption<TModel>[]
+): IParseSortResult<TModel> => {
     const defaultOption = sortOptions[0];
-    const defaultSortField = defaultOption.dbField as keyof T;
+    const defaultSortField = defaultOption.dbField as keyof TModel;
     const defaultSortOrder = defaultOption.defaultOrder === 'asc' ? 1 : -1;
 
     const sort = typeof sortParam === 'string' ? sortParam.trim() : '';
@@ -219,33 +218,33 @@ export const parseSortParam = <T extends object>(
     const matchedOption = sortOptions.find(opt => opt.dbField === sortFieldCandidate);
 
     return {
-        sortField: matchedOption ? (matchedOption.dbField as keyof T) : defaultSortField,
+        sortField: matchedOption ? (matchedOption.dbField as keyof TModel) : defaultSortField,
         sortOrder: matchedOption ? sortOrder : defaultSortOrder
     };
 };
 
-export const buildSortPipeline = <T extends object>(
-    sortField: keyof T,
+export const buildSortPipeline = <TModel extends object>(
+    sortField: keyof TModel,
     sortOrder: 1 | -1
 ): PipelineStage.FacetPipelineStage[] => [
     { $sort: { [sortField]: sortOrder } }
 ];
 
-export const buildPaginatedPipeline = <T extends object>(
-    query: TListQuery<T>,
-    sortOptions: readonly ISortOption<T>[],
-    pageLimitOptions: readonly TPageLimitOption[]
+export const buildPaginatedPipeline = <TModel extends object>(
+    query: TQuery<TModel>,
+    sortOptions: readonly ISortOption<TModel>[],
+    pageLimitOptions: readonly number[]
 ): PipelineStage.FacetPipelineStage[] => {
     // Настройка сортировки
-    const { sortField, sortOrder } = parseSortParam<T>(query.sort, sortOptions);
-    const pipeline = buildSortPipeline<T>(sortField, sortOrder);
+    const { sortField, sortOrder } = parseSortParam(query.sort, sortOptions);
+    const pipeline = buildSortPipeline(sortField, sortOrder);
 
     // Настройка пагинации
     const defaultPageLimit = pageLimitOptions[0] || 10;
     const maxPagelimit = pageLimitOptions.at(-1) || defaultPageLimit;
 
-    const page = Math.max(parseInt(query.page ?? '1', 10) || 1, 1);
-    const rawLimit = parseInt(query.limit ?? '', 10) || defaultPageLimit;
+    const page = Math.max(parseInt(query.page ?? '1', 10), 1); // Номер страницы для результатов
+    const rawLimit = parseInt(query.limit ?? String(defaultPageLimit), 10);
     const limit = Math.min(Math.max(rawLimit, 1), maxPagelimit); // Количество выводимых результатов
     const skip = (page - 1) * limit; // Количество пропускаемых результатов до выводимых
 

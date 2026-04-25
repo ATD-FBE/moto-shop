@@ -19,7 +19,7 @@ import type { ParamsDictionary } from 'express-serve-static-core';
 import type { FilterQuery } from 'mongoose';
 import type { TDbPromo, TDbPromoBase, TDbPromoManaged } from '@server/types/index.js';
 import type {
-    IPromoListQuery,
+    TPromoListQuery,
     TPromoListResponse,
     TPromoResponse,
     TPromoCreateBodyServer,
@@ -46,7 +46,7 @@ export const handlePromoListRequest: RequestHandler<
     {},
     TPromoListResponse,
     {},
-    IPromoListQuery
+    TPromoListQuery
 > = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
 

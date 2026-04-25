@@ -5,6 +5,7 @@ export * from './customer.types.js';
 export * from './news.types.js';
 export * from './promo.types.js';
 export * from './notification.types.js';
+export * from './category.types.js';
 export * from './product.types.js';
 export * from './cart.types.js';
 export * from './order.types.js';

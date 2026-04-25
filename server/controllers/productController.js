@@ -52,7 +52,7 @@ export const handleProductListRequest = async (req, res, next) => {
     );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch/*<TDbProduct>*/(req.query, filterOptions);
+    const filterMatch = buildFilterMatch/*<TDbProduct, TProductListFilterQuery>*/(req.query, filterOptions);
 
     // Настройка фильтра категорий
     const categoriesPipeline = await buildCategoriesPipeline(req.query.category);
@@ -111,66 +111,6 @@ export const handleProductListRequest = async (req, res, next) => {
         next(err);
     }
 };
-
-/// Загрузка данных товаров при поиске нужного товара ///
-/*export const handleProductListSearchRequest = async (req, res, next) => {
-    // Настройка фильтра поиска
-    const allowedSearchFields = ['sku', 'name', 'brand', 'tags'];
-    const searchMatch = buildSearchMatch<TDbProduct>(
-        req.query.search,
-        allowedSearchFields,
-        DEFAULT_SEARCH_TYPE
-    );
-
-    // Настройка сортировки
-    const sortField = productsSortOptions[0].dbField;
-    const sortOrder = productsSortOptions[0].defaultOrder === 'asc' ? 1 : -1;
-
-    // Пайплайн сортировки
-    const sortPipeline = buildSortPipeline<TDbProduct>(sortField, sortOrder);
-
-    // Пайплайн вывода ограниченных результатов
-    const limitedPipeline = [...sortPipeline];
-
-    limitedPipeline.push({ $limit: 15 }); // Количество выводимых результатов
-
-    // Сборка пайплайна для агрегатора
-    const pipeline = [
-        { $match: searchMatch }, // Поиск
-        {
-            $facet: { // Сбор результатов
-                totalCount: [{ $count: 'count' }],
-                limitedProductList: limitedPipeline
-            }
-        }
-    ];
-
-    try {
-        // Агрегатный запрос с информацией для отладки
-        //const explainResult = await Product.aggregate(pipeline).explain('executionStats');
-        //console.dir(explainResult.stages[0].$cursor, { depth: null });
-
-        // Агрегатный запрос
-        const aggregateResult = await Product.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
-        checkTimeout(req);
-        
-        const productCount = aggregateResult[0]?.totalCount[0]?.count || 0;
-        const dbLimitedProductList = aggregateResult[0]?.limitedProductList || [];
-
-        const limitedProductList = dbLimitedProductList.map(product => prepareProduct(product, {
-            managed: isAdmin,
-            now: Date.now()
-        }));
-
-        safeSendResponse(res, 200, {
-            message: 'Товары успешно загружены',
-            limitedProductList,
-            productCount
-        });
-    } catch (err) {
-        next(err);
-    }
-};*/
 
 /// Загрузка отдельного товара на его странице ///
 export const handleProductRequest = async (req, res, next) => {

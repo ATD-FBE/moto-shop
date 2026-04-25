@@ -6,12 +6,17 @@ import {
     CARD_ONLINE_PROVIDER
 } from './constants.js';
 import type {
-    IAppliedDiscount,
     IDotNotationPatch,
     IFinancialsEventEntry,
     IRefundablePayment,
     TCardOnlineProvider
 }  from './types/index.js';
+import type { TDiscountSource } from './types/shared.types.js';
+
+export interface IGetAppliedDiscountResult {
+    appliedDiscount: number;
+    appliedDiscountSource: TDiscountSource;
+}
 
 export const toError = (err: unknown): Error => {
     if (err instanceof Error) return err;
@@ -74,7 +79,7 @@ export const trimSetByFilter = (
 export const getAppliedDiscountData = (
     productDiscount: number,
     customerDiscount: number
-): IAppliedDiscount => {
+): IGetAppliedDiscountResult => {
     const effectiveDiscount = Math.max(productDiscount, customerDiscount);
     const discountSource = !effectiveDiscount
         ? DISCOUNT_SOURCE.NONE

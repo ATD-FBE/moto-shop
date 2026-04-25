@@ -3,6 +3,7 @@ import User from '@server/db/models/User.js';
 import Order from '@server/db/models/Order.js';
 import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import { prepareCustomer } from '@server/services/customerService.js';
 import { prepareOrder } from '@server/services/orderService.js';
 import {
     buildSearchMatch,
@@ -18,15 +19,21 @@ import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { ORDER_STATUS } from '@shared/constants.js';
+import { USER_ROLE, ORDER_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { FilterQuery, PipelineStage } from 'mongoose';
-import type { TDbUser } from '@server/types/index.js';
+import type { TDbUser, TDbOrderFinal } from '@server/types/index.js';
 import type {
     TCustomerListQuery,
     TCustomerListResponse,
-    TCustomerListFilterQuery,
+    TCustomerListFilterParams,
+    ICustomerOrderListQuery,
+    TCustomerOrderListResponse,
+    ICustomerDiscountUpdateBody,
+    TCustomerDiscountUpdateResponse,
+    ICustomerBanStatusUpdateBody,
+    TCustomerBanStatusUpdateResponse
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -38,16 +45,7 @@ interface ICustomerListAggregateResult {
         _id: Types.ObjectId;
         name: string;
     }[];
-  
-    paginatedCustomerList: {
-        id: string;
-        name: string;
-        email: string;
-        discount: number;
-        totalSpent: number;
-        createdAt: Date;
-        isBanned: boolean;
-    }[];
+    paginatedCustomerList: TDbUser[];
 }
 
 interface ICustomerParams extends ParamsDictionary {
@@ -74,11 +72,11 @@ export const handleCustomerListRequest: RequestHandler<
     );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch<TDbUser, TCustomerListFilterQuery>(
+    const filterMatch = buildFilterMatch<TDbUser, TCustomerListFilterParams>(
         req.query,
         customersFilterOptions
     );
-    filterMatch.role = 'customer';
+    filterMatch.role = USER_ROLE.CUSTOMER;
 
     // Пайплайн вывода ID всех отфильтрованных результатов
     const filteredPipeline: PipelineStage.FacetPipelineStage[] = [{ $project: { _id: 1, name: 1 } }];
@@ -89,19 +87,6 @@ export const handleCustomerListRequest: RequestHandler<
         customersSortOptions,
         customersPageLimitOptions
     );
-
-    paginatedPipeline.push({
-        $project: {
-            _id: 0, // Иначе добавляется автоматически
-            id: '$_id',
-            name: 1,
-            email: 1,
-            discount: 1,
-            totalSpent: 1,
-            createdAt: 1,
-            isBanned: 1
-        }
-    });
 
     // Установка порядка всех фильтров в зависимости от типа поиска
     const allFiltersPipeline = buildOrderedFiltersPipeline({ searchMatch, filterMatch });
@@ -131,10 +116,9 @@ export const handleCustomerListRequest: RequestHandler<
         const filteredCustomerNamesMap = Object.fromEntries(
             aggregateResult[0]?.filteredCustomerIdList.map(c => [c._id.toString(), c.name]) || []
         );
-        const paginatedCustomerList = aggregateResult[0]?.paginatedCustomerList.map(c => ({
-            ...c,
-            createdAt: c.createdAt.toISOString()
-        }));
+        const paginatedCustomerList = aggregateResult[0]?.paginatedCustomerList.map(c =>
+            prepareCustomer(c)
+        );
 
         safeSendResponse(res, 200, {
             message: 'Данные клиентов успешно загружены',
@@ -147,24 +131,19 @@ export const handleCustomerListRequest: RequestHandler<
 };
 
 /// Загрузка заказов клиента в таблице ///
-export const handleCustomerOrderListRequest = async (req, res, next) => {
+export const handleCustomerOrderListRequest: RequestHandler<
+    ICustomerParams,
+    TCustomerOrderListResponse,
+    {},
+    ICustomerOrderListQuery
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const customerId = req.params.customerId;
     const firstOrderId = req.query.firstOrderId;
-    const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
-    const limit = Math.max(parseInt(req.query.limit, 10) || 0, 0);
-
-    const validationConfigMap = {
-        customerId: { value: customerId, type: 'objectId' },
-        firstOrderId: { value: firstOrderId, type: 'objectId', optional: true }
-    };
-
-    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
+    const skip = Math.max(parseInt(req.query.skip ?? '0', 10), 0);
+    const limit = Math.max(parseInt(req.query.limit ?? '0', 10), 0);
 
     try {
         const matchFilter = { 
@@ -178,7 +157,7 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
             const firstOrder = await Order.findOne(matchFilter)
                 .select('_id')
                 .sort({ confirmedAt: -1 })
-                .lean();
+                .lean<TDbOrderFinal>();
             checkTimeout(req);
         
             if (!firstOrder || firstOrder._id.toString() !== firstOrderId) {
@@ -196,7 +175,7 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
             .sort({ confirmedAt: -1 })
             .skip(effectiveSkip)
             .limit(effectiveLimit)
-            .lean();
+            .lean<TDbOrderFinal[]>();
         checkTimeout(req);
 
         const customerOrderList = dbCustomerOrderList.map(dbOrder => prepareOrder(dbOrder, {
@@ -218,58 +197,31 @@ export const handleCustomerOrderListRequest = async (req, res, next) => {
 };
 
 /// Изменение скидки клиента ///
-export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
+export const handleCustomerDiscountUpdateRequest: RequestHandler<
+    ICustomerParams,
+    TCustomerDiscountUpdateResponse,
+    ICustomerDiscountUpdateBody
+> = async (req, res, next) => {
     const customerId = req.params.customerId;
-    const { discount } = req.body ?? {};
-
-    const validationConfigMap = {
-        customerId: { value: customerId, type: 'objectId' },
-        discount: { value: discount, type: 'number', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'customer');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    const discountNum = Number(discount);
-    const discountValidator = validationRules.customer.discount;
-
-    if (!discountValidator || !discountValidator(discountNum)) {
-        return safeSendResponse(res, 422, {
-            message: 'Некорректное значение поля',
-            fieldErrors: {
-                discount: fieldErrorMessages.customer.discount?.default || fieldErrorMessages.DEFAULT
-            }
-        });
-    }
+    const { discount } = req.body;
 
     try {
-        const { customerLbl } = await runInDbTransaction(async (session) => {
-            const dbCustomer = await User.findByIdAndUpdate(
-                customerId,
-                { discount: discountNum },
-                { new: true, session }
-            );
-            checkTimeout(req);
+        const dbCustomer = await User.findByIdAndUpdate(
+            customerId,
+            { discount },
+            { new: true }
+        );
+        checkTimeout(req);
 
-            const customerLbl = dbCustomer ? dbCustomer.name : `(ID: ${customerId})`;
-    
-            if (!dbCustomer) {
-                throw createAppError(404, `Клиент ${customerLbl} не найден`);
-            }
+        const customerLbl = dbCustomer ? dbCustomer.name : `(ID: ${customerId})`;
 
-            return { customerLbl };
-        });
+        if (!dbCustomer) {
+            return safeSendResponse(res, 404, { message: `Клиент ${customerLbl} не найден` });
+        }
 
         safeSendResponse(res, 200, {
-            message: `Скидка клиента ${customerLbl} успешно изменена на ${discountNum}%`,
-            customerUpdateData: { discount: discountNum }
+            message: `Скидка клиента ${customerLbl} успешно изменена на ${discount}%`,
+            customerUpdateData: { discount }
         });
     } catch (err) {
         next(err);
@@ -277,39 +229,27 @@ export const handleCustomerDiscountUpdateRequest = async (req, res, next) => {
 };
 
 /// Изменение статуса блокировки клиента ///
-export const handleCustomerBanToggleRequest = async (req, res, next) => {
+export const handleCustomerBanStatusUpdateRequest: RequestHandler<
+    ICustomerParams,
+    TCustomerBanStatusUpdateResponse,
+    ICustomerBanStatusUpdateBody
+> = async (req, res, next) => {
     const customerId = req.params.customerId;
-    const { newBanStatus } = req.body ?? {};
-
-    const validationConfigMap = {
-        customerId: { value: customerId, type: 'objectId' },
-        newBanStatus: { value: newBanStatus, type: 'boolean' }
-    };
-
-    const { invalidInputPaths } = validateObjectFields(validationConfigMap);
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
+    const { newBanStatus } = req.body;
 
     try {
-        const { customerLbl } = await runInDbTransaction(async (session) => {
-            const dbCustomer = await User.findByIdAndUpdate(
-                customerId,
-                { isBanned: newBanStatus },
-                { new: true, session }
-            );
-            checkTimeout(req);
-        
-            const customerLbl = dbCustomer ? dbCustomer.name : `(ID: ${customerId})`;
+        const dbCustomer = await User.findByIdAndUpdate(
+            customerId,
+            { isBanned: newBanStatus },
+            { new: true }
+        );
+        checkTimeout(req);
     
-            if (!dbCustomer) {
-                throw createAppError(404, `Клиент ${customerLbl} не найден`);
-            }
+        const customerLbl = dbCustomer ? dbCustomer.name : `(ID: ${customerId})`;
 
-            return { customerLbl };
-        });
+        if (!dbCustomer) {
+            return safeSendResponse(res, 404, { message: `Клиент ${customerLbl} не найден` });
+        }
 
         const banStatusText = newBanStatus ? 'заблокирован' : 'разблокирован';
 

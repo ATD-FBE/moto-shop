@@ -1,4 +1,5 @@
 import {
+    BOOL_FILTER_VALUES,
     ALLOWED_IMAGE_MIME_TYPES,
     PRODUCT_UNITS,
     USER_ROLE,
@@ -49,32 +50,32 @@ export interface IDataChange {
 /// QUERY ///
 /////////////
 
-export interface IBaseQuery<TSort = string> {
+export interface IBaseQuery<TSort extends string = string> {
     page?: string;
     limit?: string;
-    sort?: TSort;
+    sort?: TSort | `-${TSort}`;
     search?: string;
     timestamp?: string;
     timeZoneOffset?: string;
 }
 
-export type TFilterQuery<TField> = Partial<Record<keyof TField, string>>;
+export type TFilterParams = Record<string, string>;
 
-export type TListQuery<TModel extends object = any, TField extends object = {}> =
+export type TQuery<TModel extends object, TFilter extends TFilterParams = {}> =
     IBaseQuery<Extract<keyof TModel, string>> &
-    TField;
+    TFilter;
 
-export type TInferFilterQuery<T extends TFilterOption> = {
+export type TInferFilterParams<T extends TFilterOption> = {
     [K in T as 
         K extends { paramName: infer P }
             ? (P extends string ? P : never)
             : K extends {
-                minParamName: infer Min;
-                maxParamName: infer Max;
-            } ? (Min extends string ? Min : never) | (Max extends string ? Max : never)
+                minParamName: infer MinP;
+                maxParamName: infer MaxP;
+            } ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
                 : never
     ]?: K extends { type: 'boolean' }
-        ? ('' | 'true' | 'false')
+        ? TBoolFilterValue
         : K extends {
             type: 'string';
             valueOptions: readonly { value: infer V }[];
@@ -86,6 +87,8 @@ export type TInferFilterQuery<T extends TFilterOption> = {
 /////////////////
 /// CONSTANTS ///
 /////////////////
+
+export type TBoolFilterValue = typeof BOOL_FILTER_VALUES[number];
 
 export type TAllowedImageMimeType = typeof ALLOWED_IMAGE_MIME_TYPES[number];
 export type TAllowedMimeType = TAllowedImageMimeType;
@@ -200,46 +203,9 @@ export type TFieldErrors<E extends TEntityType = TEntityType> =
 /// COMMON HELPERS ///
 //////////////////////
 
-export interface IAppliedDiscount {
-    appliedDiscount: number;
-    appliedDiscountSource: TDiscountSource;
-}
-
 export interface IDotNotationPatch {
     path: string;
     value: any;
-}
-
-///////////////
-/// COMPANY ///
-///////////////
-
-export interface ICompanyDetails {
-    _id: string;
-    companyName: string;
-    shopName: string;
-    inn: string;
-    ogrn: string;
-    phone: string;
-    emails: {
-        info: string;
-        payments: string;
-        opt: string;
-    };
-    legalAddress: string;
-    displayAddress: string;
-    bank: {
-        name: string;
-        bik: string;
-        rs: string;
-        ks: string;
-    };
-}
-
-export interface IWorkingHours {
-    days: string;
-    time: string;
-    closed?: boolean;
 }
 
 //////////////////////
@@ -251,47 +217,49 @@ export type TProductsFilterOption = typeof productsFilterOptions[number];
 export type TProductEditorFilterOption = typeof productEditorFilterOptions[number];
 export type TOrdersFilterOption = typeof ordersFilterOptions[number];
 
-export type TFilterOption<TModel extends object = any, TFilter extends object = any> = 
-    | INumberFilter<TModel, TFilter> 
-    | IDateFilter<TModel, TFilter> 
-    | IBooleanFilter<TModel, TFilter> 
-    | IStringFilter<TModel, TFilter>;
+export type TFilterOption<TModel extends object = any> = 
+    | INumberFilter<TModel> 
+    | IDateFilter<TModel> 
+    | IBooleanFilter<TModel> 
+    | IStringFilter<TModel>;
+
+export interface IStringFilterValueOption {
+    value: string;
+    label: string;
+    matches?: string[]
+}
 
 interface IBaseFilter<TModel> {
-    dbField: keyof TModel; 
+    dbField: Extract<keyof TModel, string>; 
     label: string;
 }
 
-interface INumberFilter<TModel, TFilter> extends IBaseFilter<TModel> {
+interface INumberFilter<TModel> extends IBaseFilter<TModel> {
     type: 'number';
-    minParamName: Extract<keyof TFilter, string>;
-    maxParamName: Extract<keyof TFilter, string>;
+    minParamName: string;
+    maxParamName: string;
     minLimit: string;
     maxLimit: string;
 }
 
-interface IDateFilter<TModel, TFilter> extends IBaseFilter<TModel> {
+interface IDateFilter<TModel> extends IBaseFilter<TModel> {
     type: 'date';
-    minParamName: Extract<keyof TFilter, string>;
-    maxParamName: Extract<keyof TFilter, string>;
+    minParamName: string;
+    maxParamName: string;
     minLimit: string;
     maxLimit: string;
 }
 
-interface IBooleanFilter<TModel, TFilter> extends IBaseFilter<TModel> {
+interface IBooleanFilter<TModel> extends IBaseFilter<TModel> {
     type: 'boolean';
-    paramName: Extract<keyof TFilter, string>;
-    defaultValue?: string;
+    paramName: string;
+    defaultValue?: TBoolFilterValue;
 }
 
-interface IStringFilter<TModel, TFilter> extends IBaseFilter<TModel> {
+interface IStringFilter<TModel> extends IBaseFilter<TModel> {
     type: 'string';
-    paramName: Extract<keyof TFilter, string>;
-    valueOptions: {
-        value: string;
-        label: string;
-        matches?: string[]
-    }[];
+    paramName: string;
+    valueOptions: IStringFilterValueOption[];
     defaultValue?: string;
 }
 
@@ -305,14 +273,8 @@ export type TProductsSortOption = typeof productsSortOptions[number];
 export type TProductEditorSortOption = typeof productEditorSortOptions[number];
 export type TOrdersSortOption = typeof ordersSortOptions[number];
 
-export interface ISortOption<T = any> {
-    dbField: T extends object ? keyof T : T; // T - либо вся коллекция БД, либо поле коллекции
+export interface ISortOption<TModel = any> {
+    dbField: Extract<keyof TModel, string>;
     label: string;
     defaultOrder: 'asc' | 'desc';
 }
-
-//////////////////////////
-/// PAGE LIMIT OPTIONS ///
-//////////////////////////
-
-export type TPageLimitOption<T = number> = T;

@@ -60,10 +60,8 @@ export default function NotificationsBase({
 }: INotificationsBaseProps): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
 
-    const [sort, setSort] = useState<
-        TNotificationsSortOption['dbField']
-    >(notificationsSortOptions[0].dbField);
-    const [page, setPage] = useState<number>(1);
+    const [sort, setSort] = useState<string>(notificationsSortOptions[0].dbField);
+    const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(notificationsPageLimitOptions[0]);
 
     const [initNotificationsReady, setInitNotificationsReady] = useState(false);

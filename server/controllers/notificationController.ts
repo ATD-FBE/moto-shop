@@ -21,7 +21,7 @@ import type { TDbNotification, TDbNotificationBase, TDbNotificationManaged } fro
 import type {
     INotification,
     INotificationBody,
-    INotificationListQuery,
+    TNotificationListQuery,
     TNotificationListResponse,
     TNotificationResponse,
     TNotificationCreateResponse,
@@ -48,7 +48,7 @@ export const handleNotificationListRequest: RequestHandler<
     {},
     TNotificationListResponse,
     {},
-    INotificationListQuery
+    TNotificationListQuery
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
     

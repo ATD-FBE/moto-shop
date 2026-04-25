@@ -1,3 +1,4 @@
+import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 //////////////////////////
@@ -24,10 +25,7 @@ const bodyBaseSchema: IValidationInputSchema<TPromoEntity>['body'] = {
 
 export const promoListSchema: IValidationInputSchema<TPromoEntity> = {
     entityType: promoEntity,
-    query: {
-        timestamp: { type: 'integer', optional: true },
-        timeZoneOffset: { type: 'integer', optional: true }
-    }
+    query: buildQueryValidationSchema()
 } as const;
 
 export const promoSchema: IValidationInputSchema<TPromoEntity> = {

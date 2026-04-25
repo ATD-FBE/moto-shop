@@ -1,3 +1,4 @@
+import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 //////////////////////////
@@ -28,11 +29,7 @@ const bodyBaseSchema: IValidationInputSchema<TNotificationEntity>['body'] = {
 
 export const notificationListSchema: IValidationInputSchema<TNotificationEntity> = {
     entityType: notificationEntity,
-    query: {
-        page: { type: 'integer', optional: true },
-        limit: { type: 'integer', optional: true },
-        sort: { type: 'string', optional: true }
-    }
+    query: buildQueryValidationSchema()
 } as const;
 
 export const notificationSchema: IValidationInputSchema<TNotificationEntity> = {

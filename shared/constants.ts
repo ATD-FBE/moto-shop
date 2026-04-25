@@ -22,6 +22,7 @@ export const DAY_IN_MS = 24 * HOUR_IN_MS;
 export const MAX_DATE_TS = 8_640_000_000_000_000;
 export const MAX_TIMEZONE_OFFSET_MINUTES = 840; // UTC+14
 export const UNSORTED_CATEGORY_SLUG = 'unsorted';
+export const BOOL_FILTER_VALUES = ['', 'true', 'false'] as const;
 export const PROMO_ANNOUNCE_OFFSET_DAYS = 3;
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const MAX_PROMO_IMAGE_SIZE_MB = 0.5;
