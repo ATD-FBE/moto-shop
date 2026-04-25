@@ -7,6 +7,16 @@ import type { INotification } from '@shared/types/index.js';
 
 export type TToolbarControls = 'limit' | 'sort' | 'search' | 'filter' | 'pages' | 'info';
 
+////////////////
+/// CUSTOMER ///
+////////////////
+
+export interface IUpdateCustomerDiscountResult {
+    success: boolean;
+    fieldErrors?: Record<string, string>;
+    onComplete: () => void;
+}
+
 ////////////////////
 /// NOTIFICATION ///
 ////////////////////

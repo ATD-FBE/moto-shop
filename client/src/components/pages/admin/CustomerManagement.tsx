@@ -26,21 +26,8 @@ import { customersSortOptions } from '@shared/sortOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
+import type { IUpdateCustomerDiscountResult } from '@/types/index.js';
 import type { ICustomer, TFilterParams } from '@shared/types/index.js';
-
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-interface IUpdateCustomerDiscountResult {
-    success: boolean;
-    fieldErrors?: Record<string, string>;
-    onComplete: () => void;
-}
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
 
 export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
@@ -56,8 +43,8 @@ export default function CustomerManagement(): JSX.Element | null {
     const [customersLoadError, setCustomersLoadError] = useState(false);
     const [customerOperationBusy, setCustomerOperationBusy] = useState(false);
     const [filteredCustomerNamesMap, setFilteredCustomerNamesMap] = useState<Record<string, string>>({});
-    const [filteredCustomerIds, setFilteredCustomerIds] = useState<Set<string>>(new Set());
     const [paginatedCustomerList, setPaginatedCustomerList] = useState<ICustomer[]>([]);
+    const [filteredCustomerIds, setFilteredCustomerIds] = useState<Set<string>>(new Set());
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
     const [expandedCustomerIds, setExpandedCustomerIds] = useState<Set<string>>(new Set());
 
