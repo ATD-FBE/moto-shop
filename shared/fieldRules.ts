@@ -12,11 +12,6 @@ import {
 } from './constants.js';
 import type {
     TAllowedImageMimeType,
-    TProductUnit,
-    TDeliveryMethod,
-    TPaymentMethod,
-    TRefundMethod,
-    TBankProvider,
     TEntityType,
     TValidationRuleType,
     TFieldErrorMessages
@@ -38,7 +33,7 @@ export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 export const phoneValidation = /^(\+7|8)\d{10}$/;
 export const cvcValidation = /^\d{3,4}$/;
 
-export const alwaysPassValidation = (_val: any): boolean => true;
+export const alwaysPassValidation = (_val: unknown): boolean => true;
 
 export const booleanRequiredValidation = (val: unknown): boolean => val === true;
 
@@ -67,24 +62,26 @@ export const discountValidation = (val: unknown): boolean => {
     return val !== '' && Number.isInteger(num) && num >= 0 && num <= 100;
 };
 
-export const deliveryMethodValidation = (val: TDeliveryMethod): boolean =>
-    Object.values(DELIVERY_METHOD).includes(val);
+export const deliveryMethodValidation = (val: unknown): boolean =>
+    typeof val === 'string' && Object.values(DELIVERY_METHOD).some(m => m === val);
 
-export const paymentMethodValidation = (val: TPaymentMethod): boolean =>
-    Object.values(PAYMENT_METHOD).includes(val);
+export const paymentMethodValidation = (val: unknown): boolean =>
+    typeof val === 'string' && Object.values(PAYMENT_METHOD).some(m => m === val);
 
-export const refundMethodValidation = (val: TRefundMethod): boolean =>
-    Object.values(REFUND_METHOD).includes(val);
+export const refundMethodValidation = (val: unknown): boolean =>
+    typeof val === 'string' && Object.values(REFUND_METHOD).some(m => m === val);
 
-export const providerValidation = (val: TBankProvider): boolean =>
-    [...Object.values(BANK_PROVIDER), ...Object.values(CARD_ONLINE_PROVIDER)].includes(val);
+export const providerValidation = (val: unknown): boolean =>
+    typeof val === 'string' &&
+    [...Object.values(BANK_PROVIDER),...Object.values(CARD_ONLINE_PROVIDER)].some(p => p === val);
 
-export const cardNumberValidation = (val: string): boolean => /^\d{16}$/.test(val.replace(/\s/g, ''));
+export const cardNumberValidation = (val: unknown): boolean =>
+    typeof val === 'string' && /^\d{16}$/.test(val.replace(/\s/g, ''));
 
-export const expiryDateValidation = (val: string, context: { split: string }): boolean => {
-    if (!val) return false;
-
+export const expiryDateValidation = (val: unknown, context: { split: unknown }): boolean => {
     const { split } = context;
+    if (!val || typeof val !== 'string' || typeof split !== 'string') return false;
+
     const cleanedVal = val.replace(/\s/g, '');
     const parts = cleanedVal.split(split);
     if (parts.length !== 2) return false;
