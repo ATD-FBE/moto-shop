@@ -1,19 +1,38 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import CustomerTable from '../CustomerTable.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof CustomerTable>;
+
+type TCustomerTableHeaderProps = Pick<TParentProps,
+    | 'uiBlocked'
+    | 'filteredIds'
+    | 'selectedIds'
+    | 'onToggleAllSelection'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function CustomerTableHeader({
     uiBlocked,
-    filteredItems,
-    selectedItems,
-    toggleAllItemSelection
-}) {
+    filteredIds,
+    selectedIds,
+    onToggleAllSelection
+}: TCustomerTableHeaderProps): JSX.Element {
     const areAllItemsSelected = useMemo(
-        () => filteredItems.size > 0 && selectedItems.size === filteredItems.size,
-        [selectedItems, filteredItems]
+        () => filteredIds.size > 0 && selectedIds.size === filteredIds.size,
+        [selectedIds, filteredIds]
     );
     const areSomeItemsSelected = useMemo(
-        () => selectedItems.size > 0 && !areAllItemsSelected,
-        [selectedItems, areAllItemsSelected]
+        () => selectedIds.size > 0 && !areAllItemsSelected,
+        [selectedIds, areAllItemsSelected]
     );
 
     return (
@@ -25,7 +44,7 @@ export default function CustomerTableHeader({
                         <DesignedCheckbox
                             checkIcon={areAllItemsSelected ? '✅' : areSomeItemsSelected ? '⬛' : '⬜'}
                             checked={areAllItemsSelected || areSomeItemsSelected}
-                            onChange={() => toggleAllItemSelection(areAllItemsSelected)}
+                            onChange={() => onToggleAllSelection(areAllItemsSelected)}
                             disabled={uiBlocked}
                         />
                     </div>

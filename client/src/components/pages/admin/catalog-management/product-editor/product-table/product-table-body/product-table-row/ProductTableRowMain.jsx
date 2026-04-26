@@ -14,9 +14,9 @@ export default function ProductTableRowMain({
     isHovered,
     isSelected,
     isExpanded,
-    toggleItemSelection,
-    toggleItemExpansion,
-    confirmItemDeletion
+    onToggleSelection,
+    onToggleExpansion,
+    onConfirmDeletion
 }) {
     const {
         id, images, mainImageIndex, sku, name, brand, description, stock, reserved,
@@ -50,7 +50,7 @@ export default function ProductTableRowMain({
                 <div className="cell-content">
                     <DesignedCheckbox
                         checked={isSelected}
-                        onChange={() => toggleItemSelection(id)}
+                        onChange={() => onToggleSelection(id)}
                         disabled={uiBlocked}
                     />
                 </div>
@@ -114,7 +114,7 @@ export default function ProductTableRowMain({
                 <div className="cell-content button">
                     <button
                         className={cn('edit-product-btn', { 'enabled': isExpanded })}
-                        onClick={() => toggleItemExpansion(id)}
+                        onClick={() => onToggleExpansion(id)}
                     >
                         <span className="icon">{isExpanded ? '🔼' : '🖊'}</span>
                         {isExpanded ? 'Скрыть форму' : 'Редактировать'}
@@ -126,7 +126,7 @@ export default function ProductTableRowMain({
                 <div className="cell-content button">
                     <button
                         className="delete-product-btn"
-                        onClick={() => confirmItemDeletion(product)}
+                        onClick={() => onConfirmDeletion(product)}
                         disabled={uiBlocked}
                     >
                         <span className="icon">❌</span>

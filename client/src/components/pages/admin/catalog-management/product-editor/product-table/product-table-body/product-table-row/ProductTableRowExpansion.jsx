@@ -5,7 +5,7 @@ export default function ProductTableRowExpansion({
     uiBlocked,
     product,
     allowedCategories,
-    processItemForm
+    onProcessForm
 }) {
     return (
         <div className="table-row-expansion">
@@ -13,7 +13,7 @@ export default function ProductTableRowExpansion({
                 uiBlocked={uiBlocked}
                 product={product}
                 allowedCategories={allowedCategories}
-                onSubmit={processItemForm}
+                onSubmit={onProcessForm}
             />
         </div>
     );

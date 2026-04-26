@@ -40,7 +40,7 @@ export const cvcValidation = /^\d{3,4}$/;
 
 export const alwaysPassValidation = (_val: any): boolean => true;
 
-export const booleanRequiredValidation = (val: boolean): boolean => val === true;
+export const booleanRequiredValidation = (val: unknown): boolean => val === true;
 
 export const imageValidation = (
     file: File,
@@ -54,12 +54,15 @@ export const imageValidation = (
     return true;
 };
 
-export const recipientsValidation = (recipients: string[]): boolean =>
-    Array.isArray(recipients) && recipients.length > 0;
+export const recipientsValidation = (recipients: unknown): boolean =>
+    Array.isArray(recipients) && recipients.length > 0 && recipients.every(r => typeof r === 'string');
 
-export const productUnitValidation = (val: TProductUnit): boolean => PRODUCT_UNITS.includes(val);
+export const productUnitValidation = (val: unknown): boolean =>
+    typeof val === 'string' && PRODUCT_UNITS.some(unit => unit === val);
 
-export const discountValidation = (val: string | number): boolean => {
+export const discountValidation = (val: unknown): boolean => {
+    if (typeof val !== 'string' && typeof val !== 'number') return false;
+    
     const num = typeof val === 'string' ? Number(val) : val;
     return val !== '' && Number.isInteger(num) && num >= 0 && num <= 100;
 };

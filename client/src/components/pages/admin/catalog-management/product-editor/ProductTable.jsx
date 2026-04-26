@@ -6,49 +6,49 @@ import ProductTableFooter from './product-table/ProductTableFooter.jsx';
 export default function ProductTable({
     loadStatus,
     uiBlocked,
-    paginatedItems,
-    filteredItems,
-    selectedItems,
-    expandedItems,
-    toggleAllItemSelection,
-    toggleItemSelection,
-    toggleItemExpansion,
-    confirmItemDeletion,
-    confirmBulkItemDeletion,
-    reloadItems,
+    products,
+    filteredIds,
+    selectedIds,
+    expandedIds,
+    onToggleAllSelection,
+    onToggleSelection,
+    onToggleExpansion,
+    onConfirmDeletion,
+    onConfirmBulkDeletion,
+    onReload,
     allowedCategories,
-    processItemForm,
-    processBulkItemForm
+    onProcessForm,
+    onProcessBulkForm
 }) {
     return (
         <div role="table" className="entity-table product-table">
             <ProductTableHeader
                 uiBlocked={uiBlocked}
-                filteredItems={filteredItems}
-                selectedItems={selectedItems}
-                toggleAllItemSelection={toggleAllItemSelection}
+                filteredIds={filteredIds}
+                selectedIds={selectedIds}
+                onToggleAllSelection={onToggleAllSelection}
             />
 
             <ProductTableBody
                 loadStatus={loadStatus}
                 uiBlocked={uiBlocked}
-                paginatedItems={paginatedItems}
-                selectedItems={selectedItems}
-                expandedItems={expandedItems}
-                toggleItemSelection={toggleItemSelection}
-                toggleItemExpansion={toggleItemExpansion}
-                confirmItemDeletion={confirmItemDeletion}
-                reloadItems={reloadItems}
+                products={products}
+                selectedIds={selectedIds}
+                expandedIds={expandedIds}
+                onToggleSelection={onToggleSelection}
+                onToggleExpansion={onToggleExpansion}
+                onConfirmDeletion={onConfirmDeletion}
+                onReload={onReload}
                 allowedCategories={allowedCategories}
-                processItemForm={processItemForm}
+                onProcessForm={onProcessForm}
             />
 
             <ProductTableFooter
                 uiBlocked={uiBlocked}
-                selectedItems={selectedItems}
+                selectedIds={selectedIds}
                 allowedCategories={allowedCategories}
-                processBulkItemForm={processBulkItemForm}
-                confirmBulkItemDeletion={confirmBulkItemDeletion}
+                onProcessBulkForm={onProcessBulkForm}
+                onConfirmBulkDeletion={onConfirmBulkDeletion}
             />
         </div>
     );

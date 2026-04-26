@@ -141,8 +141,8 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     return { submitStates, lockedStatuses };
 };
 
-const getFieldConfigs = (totalSelectedCustomers: number) => {
-    return extendFieldConfigs([
+const getFieldConfigs = (totalSelectedCustomers: number) =>
+    extendFieldConfigs([
         {
             name: 'recipients',
             label: `Клиенты-получатели (${totalSelectedCustomers})`,
@@ -179,7 +179,6 @@ const getFieldConfigs = (totalSelectedCustomers: number) => {
             trim: true
         }
     ] as const);
-};
 
 export default function NotificationEditor({
     notificationId,

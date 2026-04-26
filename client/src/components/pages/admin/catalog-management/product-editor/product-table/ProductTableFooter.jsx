@@ -5,10 +5,10 @@ import BulkProductForm from './product-table-footer/BulkProductForm.jsx';
 
 export default function ProductTableFooter({
     uiBlocked,
-    selectedItems,
+    selectedIds,
     allowedCategories,
-    processBulkItemForm,
-    confirmBulkItemDeletion,
+    onProcessBulkForm,
+    onConfirmBulkDeletion
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -18,7 +18,7 @@ export default function ProductTableFooter({
                 <div role="row">
                     <div role="columnfooter" className="row-cell select-label">
                         <div className="cell-label visible">Выбранные товары:</div>
-                        <div className="cell-content">{selectedItems.size}</div>
+                        <div className="cell-content">{selectedIds.size}</div>
                     </div>
                     <div role="columnfooter" className="row-cell edit-bulk-product">
                         <div className="cell-label">Редактирование группы:</div>
@@ -37,8 +37,8 @@ export default function ProductTableFooter({
                         <div className="cell-content">
                             <button
                                 className="delete-bulk-product-btn"
-                                onClick={() => confirmBulkItemDeletion([...selectedItems])}
-                                disabled={uiBlocked || !selectedItems.size}
+                                onClick={() => onConfirmBulkDeletion([...selectedIds])}
+                                disabled={uiBlocked || !selectedIds.size}
                             >
                                 <span className="icon">❌</span>
                                 Удалить группу
@@ -51,9 +51,9 @@ export default function ProductTableFooter({
             <Collapsible isExpanded={isExpanded} className="bulk-product-form-collapsible">
                 <BulkProductForm
                     uiBlocked={uiBlocked}
-                    productIds={[...selectedItems]}
+                    productIds={[...selectedIds]}
                     allowedCategories={allowedCategories}
-                    onSubmit={processBulkItemForm}
+                    onSubmit={onProcessBulkForm}
                 />
             </Collapsible>
         </div>

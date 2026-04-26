@@ -27,7 +27,12 @@ import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { IUpdateCustomerDiscountResult } from '@/types/index.js';
-import type { ICustomer, TFilterParams } from '@shared/types/index.js';
+import type {
+    TFilterParams,
+    ICustomer,
+    ICustomerDiscountUpdateBody,
+    ICustomerBanStatusUpdateBody
+} from '@shared/types/index.js';
 
 export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
@@ -114,13 +119,11 @@ export default function CustomerManagement(): JSX.Element | null {
 
     const updateCustomerDiscount = async (
         customerId: string,
-        discount: number
+        objData: ICustomerDiscountUpdateBody
     ): Promise<IUpdateCustomerDiscountResult | undefined> => {
         setCustomerOperationBusy(true);
 
-        const responseData = await dispatch(sendCustomerDiscountUpdateRequest(customerId, {
-            discount
-        }));
+        const responseData = await dispatch(sendCustomerDiscountUpdateRequest(customerId, objData));
         if (isUnmountedRef.current) return;
 
         const { status, message } = responseData;
@@ -162,15 +165,13 @@ export default function CustomerManagement(): JSX.Element | null {
         };
     };
 
-    const toggleCustomerBanStatus = async (
+    const updateCustomerBanStatus = async (
         customerId: string,
-        newBanStatus: boolean
+        objData: ICustomerBanStatusUpdateBody
     ): Promise<void> => {
         setCustomerOperationBusy(true);
 
-        const responseData = await dispatch(sendCustomerBanStatusUpdateRequest(customerId, {
-            newBanStatus
-        }));
+        const responseData = await dispatch(sendCustomerBanStatusUpdateRequest(customerId, objData));
         if (isUnmountedRef.current) return;
 
         const { status, message } = responseData;
@@ -347,16 +348,16 @@ export default function CustomerManagement(): JSX.Element | null {
             <CustomerTable
                 loadStatus={customersLoadStatus}
                 uiBlocked={isCustomerUiBlocked}
-                paginatedItems={paginatedCustomerList}
-                filteredItems={filteredCustomerIds}
-                selectedItems={selectedCustomerIds}
-                expandedItems={expandedCustomerIds}
-                toggleAllItemSelection={toggleAllCustomerSelection}
-                toggleItemSelection={toggleCustomerSelection}
-                toggleItemExpansion={toggleCustomerExpansion}
-                updateItemDiscount={updateCustomerDiscount}
-                toggleItemBanStatus={toggleCustomerBanStatus}
-                reloadItems={reloadCustomers}
+                customers={paginatedCustomerList}
+                filteredIds={filteredCustomerIds}
+                selectedIds={selectedCustomerIds}
+                expandedIds={expandedCustomerIds}
+                onToggleAllSelection={toggleAllCustomerSelection}
+                onToggleSelection={toggleCustomerSelection}
+                onToggleExpansion={toggleCustomerExpansion}
+                onUpdateDiscount={updateCustomerDiscount}
+                onUpdateBanStatus={updateCustomerBanStatus}
+                onReload={reloadCustomers}
             />
 
             <Toolbar

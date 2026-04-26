@@ -3,17 +3,17 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 
 export default function ProductTableHeader({
     uiBlocked,
-    filteredItems,
-    selectedItems,
-    toggleAllItemSelection
+    filteredIds,
+    selectedIds,
+    onToggleAllSelection
 }) {
     const areAllItemsSelected = useMemo(
-        () => filteredItems.size > 0 && selectedItems.size === filteredItems.size,
-        [filteredItems, selectedItems]
+        () => filteredIds.size > 0 && selectedIds.size === filteredIds.size,
+        [filteredIds, selectedIds]
     );
     const areSomeItemsSelected = useMemo(
-        () => selectedItems.size > 0 && !areAllItemsSelected,
-        [selectedItems, areAllItemsSelected]
+        () => selectedIds.size > 0 && !areAllItemsSelected,
+        [selectedIds, areAllItemsSelected]
     );
 
     return (
@@ -25,7 +25,7 @@ export default function ProductTableHeader({
                         <DesignedCheckbox
                             checkIcon={areAllItemsSelected ? '✅' : areSomeItemsSelected ? '⬛' : '⬜'}
                             checked={areAllItemsSelected || areSomeItemsSelected}
-                            onChange={() => toggleAllItemSelection(areAllItemsSelected)}
+                            onChange={() => onToggleAllSelection(areAllItemsSelected)}
                             disabled={uiBlocked}
                         />
                     </div>

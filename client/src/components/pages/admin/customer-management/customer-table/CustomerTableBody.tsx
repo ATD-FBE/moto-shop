@@ -1,21 +1,46 @@
 import { useState, useRef, useEffect } from 'react';
+import CustomerTable from '../CustomerTable.jsx';
 import CustomerTableRow from './customer-table-body/CustomerTableRow.jsx';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof CustomerTable>;
+
+type TCustomerTableBodyProps = Pick<TParentProps,
+    | 'loadStatus'
+    | 'uiBlocked'
+    | 'customers'
+    | 'selectedIds'
+    | 'expandedIds'
+    | 'onToggleSelection'
+    | 'onToggleExpansion'
+    | 'onUpdateDiscount'
+    | 'onUpdateBanStatus'
+    | 'onReload'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function CustomerTableBody({
     loadStatus,
     uiBlocked,
-    paginatedItems,
-    selectedItems,
-    expandedItems,
-    toggleItemSelection,
-    toggleItemExpansion,
-    updateItemDiscount,
-    toggleItemBanStatus,
-    reloadItems
-}) {
+    customers,
+    selectedIds,
+    expandedIds,
+    onToggleSelection,
+    onToggleExpansion,
+    onUpdateDiscount,
+    onUpdateBanStatus,
+    onReload
+}: TCustomerTableBodyProps): JSX.Element {
     const [tableBodyHeight, setTableBodyHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
-    const tableBodyRef = useRef(null);
+    const tableBodyRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!tableBodyRef.current) return;
@@ -48,7 +73,7 @@ export default function CustomerTableBody({
                         <span className="icon error">❌</span>
                         Ошибка сервера. Данные клиентов не доступны.
                     </p>
-                    <button className="reload-btn" onClick={reloadItems}>Повторить</button>
+                    <button className="reload-btn" onClick={onReload}>Повторить</button>
                 </div>
             </div>
         );
@@ -69,17 +94,17 @@ export default function CustomerTableBody({
 
     return (
         <div ref={tableBodyRef} role="rowgroup" className="table-body">
-            {paginatedItems.map(customer => (
+            {customers.map(customer => (
                 <CustomerTableRow
                     key={customer.id}
                     customer={customer}
                     uiBlocked={uiBlocked}
-                    selectedItems={selectedItems}
-                    expandedItems={expandedItems}
-                    toggleItemSelection={toggleItemSelection}
-                    toggleItemExpansion={toggleItemExpansion}
-                    updateItemDiscount={updateItemDiscount}
-                    toggleItemBanStatus={toggleItemBanStatus}
+                    selectedIds={selectedIds}
+                    expandedIds={expandedIds}
+                    onToggleSelection={onToggleSelection}
+                    onToggleExpansion={onToggleExpansion}
+                    onUpdateDiscount={onUpdateDiscount}
+                    onUpdateBanStatus={onUpdateBanStatus}
                 />
             ))}
         </div>

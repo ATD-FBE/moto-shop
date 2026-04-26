@@ -179,19 +179,19 @@ export default function ProductEditor({
                 <ProductTable
                     loadStatus={loadStatus}
                     uiBlocked={uiBlocked}
-                    paginatedItems={paginatedProductList}
-                    filteredItems={filteredProductIds}
-                    selectedItems={selectedProductIds}
-                    expandedItems={expandedProductIds}
-                    toggleAllItemSelection={toggleAllProductSelection}
-                    toggleItemSelection={toggleProductSelection}
-                    toggleItemExpansion={toggleProductExpansion}
-                    confirmItemDeletion={confirmProductDeletion}
-                    confirmBulkItemDeletion={confirmBulkProductDeletion}
-                    reloadItems={reloadProducts}
+                    products={paginatedProductList}
+                    filteredIds={filteredProductIds}
+                    selectedIds={selectedProductIds}
+                    expandedIds={expandedProductIds}
+                    onToggleAllSelection={toggleAllProductSelection}
+                    onToggleSelection={toggleProductSelection}
+                    onToggleExpansion={toggleProductExpansion}
+                    onConfirmDeletion={confirmProductDeletion}
+                    onConfirmBulkDeletion={confirmBulkProductDeletion}
+                    onReload={reloadProducts}
                     allowedCategories={productLeafCategories}
-                    processItemForm={processProductForm}
-                    processBulkItemForm={processProductForm}
+                    onProcessForm={processProductForm}
+                    onProcessBulkForm={processProductForm}
                 />
                 
                 <Toolbar

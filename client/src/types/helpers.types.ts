@@ -27,9 +27,12 @@ export type TFormDataFieldValue = string | File | File[];
 
 export interface IFieldConfig {
     readonly name: string;
-    readonly label: string;
+    readonly label?: string;
     readonly elem: string;
     readonly type?: string;
+    readonly step?: number;
+    readonly min?: number;
+    readonly max?: number;
     readonly accept?: string;
     readonly allowedTypes?: string[];
     readonly maxSizeMB?: number;
@@ -77,6 +80,12 @@ export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> 
     fieldsStateUpdates: Partial<Record<TFieldName, Partial<IFieldState>>>;
     formFields: TFormBody;
     changedFields?: TFieldName[];
+}
+
+export interface IProcessSingleFormFieldResult<TFieldName extends string, TFormBody> {
+    allValid: boolean;
+    fieldsStateUpdates: Partial<Record<TFieldName, Partial<IFieldState>>>;
+    formFields: TFormBody;
 }
 
 export interface IProcessFormattedFieldDeletionContext {

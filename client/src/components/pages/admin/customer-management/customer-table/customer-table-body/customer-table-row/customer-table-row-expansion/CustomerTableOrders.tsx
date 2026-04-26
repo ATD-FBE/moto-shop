@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
+import CustomerTableRowExpansion from '../CustomerTableRowExpansion.jsx';
 import {
     OrderCardOverview,
     OrderCardInfoGrid,
@@ -18,19 +19,67 @@ import {
     ORDER_ACTIVE_STATUSES,
     REQUEST_STATUS
 } from '@shared/constants.js';
+import type { JSX, ComponentProps } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type { IOrder } from '@shared/types/index.js';
 
-export default function CustomerTableOrders({ customerId, customerName, isExpanded }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TCustomerTableRowExpansionProps = ComponentProps<typeof CustomerTableRowExpansion>;
+
+interface ICustomerTableOrdersMainProps {
+    loadStatus: TDataLoadStatus;
+    reloadOrders: () => void;
+    totalOrders: number;
+    loadedOrderList: IOrder[];
+    loadOrders: (limit: number) => void;
+    uiBlocked: boolean;
+    refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+}
+
+type TOrdersLoadStatusProps = Pick<ICustomerTableOrdersMainProps,
+    | 'loadStatus'
+    | 'reloadOrders'
+    | 'totalOrders'
+> & {
+    loadedOrdersCount: number;
+};
+
+type TOrdersLoadControlsProps = Pick<ICustomerTableOrdersMainProps,
+    | 'totalOrders'
+    | 'loadOrders'
+    | 'uiBlocked'
+> & {
+    loadedOrdersCount: number;
+};
+
+type TOrderCardProps = Pick<ICustomerTableOrdersMainProps,
+    | 'uiBlocked'
+    | 'refreshOrderState'
+> & {
+    order: IOrder;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function CustomerTableOrders(
+    { customerId, customerName, isExpanded }: TCustomerTableRowExpansionProps
+): JSX.Element {
     const [lastUsedLimit, setLastUsedLimit] = useState(CUSTOMER_TABLE_ORDERS_LOAD_STEP);
     
     const [initOrdersReady, setinitOrdersReady] = useState(false);
     const [totalOrders, setTotalOrders] = useState(0);
-    const [loadedOrderList, setLoadedOrderList] = useState([]);
+    const [loadedOrderList, setLoadedOrderList] = useState<IOrder[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
     const [ordersLoadError, setOrdersLoadError] = useState(false);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const ordersLoadStatus =
         ordersLoading
@@ -43,7 +92,7 @@ export default function CustomerTableOrders({ customerId, customerName, isExpand
 
     const isOrderUiBlocked = ordersLoading || ordersLoadError;
 
-    const loadOrders = async (limit) => {
+    const loadOrders = async (limit: number): Promise<void> => {
         setLastUsedLimit(limit);
         setOrdersLoadError(false);
         setOrdersLoading(true);
@@ -51,22 +100,22 @@ export default function CustomerTableOrders({ customerId, customerName, isExpand
         const lastLoadedOrder = loadedOrderList[0];
         const params = new URLSearchParams({
             ...(lastLoadedOrder ? { firstOrderId: loadedOrderList[0].id } : {}),
-            skip: loadedOrderList.length,
-            limit
+            skip: String(loadedOrderList.length),
+            limit: String(limit)
         });
         const urlParams = params.toString();
 
         const responseData = await dispatch(sendCustomerOrderListRequest(customerId, urlParams));
         if (isUnmountedRef.current) return;
 
-        const {
-            status, message, totalCustomerOrders, customerOrderList, needFullReload
-        } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CUSTOMER: LOAD ORDER LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setOrdersLoadError(true);
         } else {
+            const { totalCustomerOrders, customerOrderList, needFullReload } = responseData;
+
             setTotalOrders(totalCustomerOrders);
             setLoadedOrderList(
                 prev => needFullReload
@@ -79,7 +128,7 @@ export default function CustomerTableOrders({ customerId, customerName, isExpand
         setOrdersLoading(false);
     };
 
-    const refreshOrderState = (orderId, refreshedOrder) => {
+    const refreshOrderState = (orderId: string, refreshedOrder: IOrder): void => {
         setLoadedOrderList(prev => prev.map(order => order.id === orderId ? refreshedOrder : order));
     };
 
@@ -123,7 +172,7 @@ function CustomerTableOrdersMain({
     loadOrders,
     uiBlocked,
     refreshOrderState
-}) {
+}: ICustomerTableOrdersMainProps): JSX.Element {
     return (
         <div className="customer-table-orders-main">
             <ul className="order-list">
@@ -155,7 +204,9 @@ function CustomerTableOrdersMain({
     );
 }
 
-function OrdersLoadStatus({ loadStatus, reloadOrders, totalOrders, loadedOrdersCount }) {
+function OrdersLoadStatus(
+    { loadStatus, reloadOrders, totalOrders, loadedOrdersCount }: TOrdersLoadStatusProps
+): JSX.Element | null {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div
@@ -206,7 +257,9 @@ function OrdersLoadStatus({ loadStatus, reloadOrders, totalOrders, loadedOrdersC
     return null;
 }
 
-function OrdersLoadControls({ totalOrders, loadedOrdersCount, loadOrders, uiBlocked }) {
+function OrdersLoadControls(
+    { totalOrders, loadedOrdersCount, loadOrders, uiBlocked }: TOrdersLoadControlsProps
+): JSX.Element | null {
     if (loadedOrdersCount === 0 || loadedOrdersCount === totalOrders) return null;
 
     const ORDERS_LOAD_ALL_LIMIT = 0;
@@ -253,13 +306,19 @@ function OrdersLoadControls({ totalOrders, loadedOrdersCount, loadOrders, uiBloc
     );
 }
 
-function OrderCard({ order, uiBlocked, refreshOrderState }) {
+function OrderCard(
+    { order, uiBlocked, refreshOrderState }: TOrderCardProps
+): JSX.Element | null {
     const {
         id, orderNumber, statusHistory: orderStatusHistory, confirmedAt,
         lastActivityAt, totals, totalItems, delivery, financials
     } = order;
 
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
+    if (!currentOrderStatusEntry) {
+        console.error('Записи в истории статуса отсутствуют');
+        return null;
+    }
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
     const isCompletedOrder = currentOrderStatusEntry.status === ORDER_STATUS.COMPLETED;
@@ -293,6 +352,7 @@ function OrderCard({ order, uiBlocked, refreshOrderState }) {
                 deliveryMethod={delivery.deliveryMethod}
                 allowCourierExtra={delivery.allowCourierExtra}
                 currentOnlineTransaction={financials.currentOnlineTransaction}
+                renderCardOnlinePaymentLink={null}
             />
 
             <div className="order-meta mobile-stack">

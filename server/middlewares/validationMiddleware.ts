@@ -32,7 +32,8 @@ export const validateInput = <E extends TEntityType = TEntityType>(
     }
     if (query) {
         Object.entries(query).forEach(([queryName, schema]) => {
-            const queryValue = req.query[queryName];
+            const rawQueryValue = req.query[queryName];
+            const queryValue = rawQueryValue === '' ? undefined : rawQueryValue;
             validationConfigMap[queryName] = buildValidationConfig(schema, queryValue);
         });
     }

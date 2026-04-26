@@ -7,19 +7,19 @@ import ProductTableRowExpansion from './product-table-row/ProductTableRowExpansi
 export default function ProductTableRow({
     product,
     uiBlocked,
-    selectedItems,
-    expandedItems,
-    toggleItemSelection,
-    toggleItemExpansion,
-    confirmItemDeletion,
+    selectedIds,
+    expandedIds,
+    onToggleSelection,
+    onToggleExpansion,
+    onConfirmDeletion,
     allowedCategories,
-    processItemForm
+    onProcessForm
 }) {
     const [hoveredItem, setHoveredItem] = useState(null);
 
     const isHovered = hoveredItem === product.id;
-    const isSelected = selectedItems.has(product.id);
-    const isExpanded = expandedItems.has(product.id);
+    const isSelected = selectedIds.has(product.id);
+    const isExpanded = expandedIds.has(product.id);
 
     return (
         <div
@@ -34,9 +34,9 @@ export default function ProductTableRow({
                 isHovered={isHovered}
                 isSelected={isSelected}
                 isExpanded={isExpanded}
-                toggleItemSelection={toggleItemSelection}
-                toggleItemExpansion={toggleItemExpansion}
-                confirmItemDeletion={confirmItemDeletion}
+                onToggleSelection={onToggleSelection}
+                onToggleExpansion={onToggleExpansion}
+                onConfirmDeletion={onConfirmDeletion}
             />
 
             <Collapsible isExpanded={isExpanded} className="table-row-expansion-collapsible">
@@ -44,7 +44,7 @@ export default function ProductTableRow({
                     uiBlocked={uiBlocked}
                     product={product}
                     allowedCategories={allowedCategories}
-                    processItemForm={processItemForm}
+                    onProcessForm={onProcessForm}
                 />
             </Collapsible>
         </div>

@@ -164,7 +164,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                     filterMatch[typedDbField] = true;
                 } else if (value === 'false') {
                     filterMatch[typedDbField] = { $ne: true };
-                } else if (value !== '') {
+                } else if (value && defaultValue) {
                     if (defaultValue === 'true') {
                         filterMatch[typedDbField] = true;
                     } else if (defaultValue === 'false') {

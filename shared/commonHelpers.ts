@@ -8,10 +8,12 @@ import {
 import type {
     IDotNotationPatch,
     IFinancialsEventEntry,
+    IFinancialsEventEntrySummary,
     IRefundablePayment,
     TCardOnlineProvider
 }  from './types/index.js';
 import type { TDiscountSource } from './types/shared.types.js';
+import type { TDbOrderFinancialsEventEntry } from '@server/types/db.types.js';
 
 export interface IGetAppliedDiscountResult {
     appliedDiscount: number;
@@ -206,12 +208,14 @@ export const getOrderCardRefundStats = (
     };
 };
 
-export const getLastFinancialsEventEntry = <T extends { voided?: { flag: boolean } | null }>(
-    history: T[]
+export const getLastFinancialsEventEntry = <T extends object>(
+    history: (T & { voided?: { flag: boolean } | null })[]
 ): T | null => {
     for (let i = history.length - 1; i >= 0; i--) {
-        if (!history[i].voided?.flag) {
-            return history[i];
+        const entry = history[i];
+
+        if (!entry.voided?.flag) {
+            return entry;
         }
     }
 

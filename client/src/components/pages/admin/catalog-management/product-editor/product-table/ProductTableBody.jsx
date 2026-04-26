@@ -5,15 +5,15 @@ import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js'
 export default function ProductTableBody({
     loadStatus,
     uiBlocked,
-    paginatedItems,
-    selectedItems,
-    expandedItems,
-    toggleItemSelection,
-    toggleItemExpansion,
-    confirmItemDeletion,
-    reloadItems,
+    products,
+    selectedIds,
+    expandedIds,
+    onToggleSelection,
+    onToggleExpansion,
+    onConfirmDeletion,
+    onReload,
     allowedCategories,
-    processItemForm
+    onProcessForm
 }) {
     const [tableBodyHeight, setTableBodyHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
     const tableBodyRef = useRef(null);
@@ -49,7 +49,7 @@ export default function ProductTableBody({
                         <span className="icon error">❌</span>
                         Ошибка сервера. Данные товаров не доступны.
                     </p>
-                    <button className="reload-btn" onClick={reloadItems}>Повторить</button>
+                    <button className="reload-btn" onClick={onReload}>Повторить</button>
                 </div>
             </div>
         );
@@ -70,17 +70,17 @@ export default function ProductTableBody({
 
     return (
         <div ref={tableBodyRef} role="rowgroup" className="table-body">
-            {paginatedItems.map(product => (
+            {products.map(product => (
                 <ProductTableRow
                     key={product.id}
                     product={product}
                     uiBlocked={uiBlocked}
-                    selectedItems={selectedItems}
-                    expandedItems={expandedItems}
-                    toggleItemSelection={toggleItemSelection}
-                    toggleItemExpansion={toggleItemExpansion}
-                    confirmItemDeletion={confirmItemDeletion}
-                    processItemForm={processItemForm}
+                    selectedIds={selectedIds}
+                    expandedIds={expandedIds}
+                    onToggleSelection={onToggleSelection}
+                    onToggleExpansion={onToggleExpansion}
+                    onConfirmDeletion={onConfirmDeletion}
+                    onProcessForm={onProcessForm}
                     allowedCategories={allowedCategories}
                 />
             ))}
