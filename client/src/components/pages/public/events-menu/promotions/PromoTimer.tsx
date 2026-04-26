@@ -1,7 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { JSX } from 'react';
 
-export default function PromoTimer({ startDate, endDate }) {
-    const calculateTimerData = () => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IPromoTimerProps {
+    startDate: string;
+    endDate: string;
+}
+
+interface ICalculateTimerDataResult {
+    isExpired: boolean;
+    isPromoStarted: boolean;
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function PromoTimer({ startDate, endDate }: IPromoTimerProps): JSX.Element {
+    const calculateTimerData = (): ICalculateTimerDataResult => {
         const now = new Date();
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -12,7 +35,7 @@ export default function PromoTimer({ startDate, endDate }) {
 
         const isPromoStarted = now >= start;
         const targetDate = isPromoStarted ? end : start;
-        const timeDifference = targetDate - now;
+        const timeDifference = targetDate.getTime() - now.getTime();
         
         return {
             isExpired: false,
