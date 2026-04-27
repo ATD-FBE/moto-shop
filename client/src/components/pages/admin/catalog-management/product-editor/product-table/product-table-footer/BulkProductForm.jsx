@@ -196,7 +196,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
     };
 
     const handleFieldChange = (e) => {
-        const { name, type, value, checked } = e.target;
+        const { name, type, value, checked } = e.currentTarget;
         let processedValue;
         
         if (type === 'number' && value !== '') {
@@ -214,7 +214,7 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

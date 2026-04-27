@@ -11,18 +11,15 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { validateObjectFields } from '@server/validation/validationEngine.js';
 import { requireDbUser } from '@server/utils/typeGuards.js';
-import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import { USER_ROLE, ORDER_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery, PipelineStage } from 'mongoose';
+import type { PipelineStage } from 'mongoose';
 import type { TDbUser, TDbOrderFinal } from '@server/types/index.js';
 import type {
     TCustomerListQuery,

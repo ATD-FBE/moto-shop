@@ -68,7 +68,7 @@ export default function Home() {
                         title="По артикулу, наименованию, бренду или тегам товара"
                         value={search}
                         autoComplete="off"
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.currentTarget.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     />
 

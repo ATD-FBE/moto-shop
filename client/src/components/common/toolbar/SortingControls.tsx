@@ -1,11 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
+import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import type { JSX, Dispatch, SetStateAction } from 'react';
+import type { ISortOption } from '@shared/types/index.js';
 
-export default function SortingControls({ uiBlocked, options, sort, setSort }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface TSortingControlsProps {
+    sort?: string;
+    setSort?: Dispatch<SetStateAction<string>>;
+    options?: readonly ISortOption[];
+    uiBlocked?: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function SortingControls({
+    sort,
+    setSort,
+    options,
+    uiBlocked = false
+}: TSortingControlsProps): JSX.Element | null {
+    if (sort == null || setSort == null || options == null) {
+        logToolbarMissingProps('SortingControls', { sort, setSort, options });
+        return null; 
+    }
+
     const [sortField, setSortField] = useState(sort.startsWith('-') ? sort.slice(1) : sort);
     const [isDescending, setIsDescending] = useState(sort.startsWith('-'));
 
-    const handleSortFieldChange = (field) => {
+    const handleSortFieldChange = (field: string): void => {
         const option = options.find(opt => opt.dbField === field);
         const isDesc = option ? option.defaultOrder === 'desc' : isDescending;
     
@@ -27,7 +55,7 @@ export default function SortingControls({ uiBlocked, options, sort, setSort }) {
                 <select
                     id="sort"
                     value={sortField}
-                    onChange={(e) => handleSortFieldChange(e.target.value)}
+                    onChange={(e) => handleSortFieldChange(e.currentTarget.value)}
                     disabled={uiBlocked}
                 >
                     {options.map(({ dbField, label }, idx) => (
@@ -42,7 +70,7 @@ export default function SortingControls({ uiBlocked, options, sort, setSort }) {
                 <DesignedCheckbox
                     label="По убыванию"
                     checked={isDescending}
-                    onChange={(e) => setIsDescending(e.target.checked)}
+                    onChange={(e) => setIsDescending(e.currentTarget.checked)}
                     disabled={uiBlocked}
                 />
             </div>

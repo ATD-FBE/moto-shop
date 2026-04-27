@@ -246,8 +246,9 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, type, value } = e.target;
-        const files = e.target instanceof HTMLInputElement ? Array.from(e.target.files || []) : [];
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
 
         const fieldsStateUpdates = {
             [name]: {
@@ -282,7 +283,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -344,15 +345,15 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         initValue: TFieldValue
     ): IProcessFieldResult => {
         const { name, trim, optional } = config;
-        const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+        const normalizedValue = typeof value === 'string' && trim ? value.trim() : String(value);
         const fieldStateValue = { value: normalizedValue };
-        const ruleCheck = validation instanceof RegExp && typeof normalizedValue === 'string'
+        const ruleCheck = validation instanceof RegExp
             ? validation.test(normalizedValue)
             : false;
 
         const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
         const fieldEntries: TFieldEntries =
-            (isValid && (!optional || normalizedValue !== '') && typeof normalizedValue === 'string')
+            (isValid && (!optional || normalizedValue !== ''))
                 ? [[name, normalizedValue]]
                 : [];
         const isValueChanged = normalizedValue !== initValue;
@@ -561,7 +562,9 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                                                 name="remove-promo-image"
                                                 label="Удалить текущее"
                                                 checked={shouldRemoveImage}
-                                                onChange={(e) => setShouldRemoveImage(e.target.checked)}
+                                                onChange={(e) =>
+                                                    setShouldRemoveImage(e.currentTarget.checked)
+                                                }
                                                 disabled={isFormLocked}
                                             />
                                         </div>

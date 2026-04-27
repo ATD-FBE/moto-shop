@@ -201,8 +201,6 @@ export default function NotificationsBase({
             <Toolbar
                 position="top"
                 activeControls={toolbarTopActiveControls}
-                uiBlocked={isNotificationUiBlocked}
-                initDataReady={initNotificationsReady}
                 sort={sort}
                 setSort={setSort}
                 sortOptions={notificationsSortOptions}
@@ -211,7 +209,9 @@ export default function NotificationsBase({
                 limit={limit}
                 setLimit={setLimit}
                 limitOptions={notificationsPageLimitOptions}
+                initDataReady={initNotificationsReady}
                 totalItems={totalNotifications}
+                uiBlocked={isNotificationUiBlocked}
             />
 
             <NotificationsMain
@@ -233,14 +233,14 @@ export default function NotificationsBase({
             <Toolbar
                 position="bottom"
                 activeControls={['info', 'pages']}
-                loadStatus={notificationsLoadStatus}
-                uiBlocked={isNotificationUiBlocked}
-                initDataReady={initNotificationsReady}
                 page={page}
                 setPage={setPage}
                 limit={limit}
+                loadStatus={notificationsLoadStatus}
+                initDataReady={initNotificationsReady}
                 totalItems={totalNotifications}
                 label="Уведомления"
+                uiBlocked={isNotificationUiBlocked}
             />
 
             {renderNewNotificationsAlert?.({

@@ -30,8 +30,8 @@ import type { TEntityField, ICustomerDiscountUpdateBody } from '@shared/types/in
 type TParentProps = ComponentProps<typeof CustomerTableRowMain>;
 
 type TCustomerDiscountFormProps = Pick<TParentProps,
-    | 'uiBlocked'
     | 'onUpdateDiscount'
+    | 'uiBlocked'
 > & {
     customerId: string;
     customerDiscount: number;
@@ -101,7 +101,7 @@ export default function CustomerDiscountForm({
     };
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        const { name, type, value } = e.target;
+        const { name, type, value } = e.currentTarget;
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
         dispatchFieldsState({

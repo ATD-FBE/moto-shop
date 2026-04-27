@@ -39,7 +39,7 @@ export default function ProductQuantitySelector({
     });
 
     const handleQuantityChange = (e) => {
-        setQuantity(e.target.value);
+        setQuantity(e.currentTarget.value);
     };
     const handleQuantityBlur = () => {
         setQuantity(String(validQty))

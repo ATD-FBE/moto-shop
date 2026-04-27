@@ -12,7 +12,6 @@ type TParentProps = ComponentProps<typeof CustomerTable>;
 
 type TCustomerTableBodyProps = Pick<TParentProps,
     | 'loadStatus'
-    | 'uiBlocked'
     | 'customers'
     | 'selectedIds'
     | 'expandedIds'
@@ -21,6 +20,7 @@ type TCustomerTableBodyProps = Pick<TParentProps,
     | 'onUpdateDiscount'
     | 'onUpdateBanStatus'
     | 'onReload'
+    | 'uiBlocked'
 >;
 
 /////////////////////
@@ -29,7 +29,6 @@ type TCustomerTableBodyProps = Pick<TParentProps,
 
 export default function CustomerTableBody({
     loadStatus,
-    uiBlocked,
     customers,
     selectedIds,
     expandedIds,
@@ -37,7 +36,8 @@ export default function CustomerTableBody({
     onToggleExpansion,
     onUpdateDiscount,
     onUpdateBanStatus,
-    onReload
+    onReload,
+    uiBlocked
 }: TCustomerTableBodyProps): JSX.Element {
     const [tableBodyHeight, setTableBodyHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
     const tableBodyRef = useRef<HTMLDivElement | null>(null);
@@ -98,13 +98,13 @@ export default function CustomerTableBody({
                 <CustomerTableRow
                     key={customer.id}
                     customer={customer}
-                    uiBlocked={uiBlocked}
                     selectedIds={selectedIds}
                     expandedIds={expandedIds}
                     onToggleSelection={onToggleSelection}
                     onToggleExpansion={onToggleExpansion}
                     onUpdateDiscount={onUpdateDiscount}
                     onUpdateBanStatus={onUpdateBanStatus}
+                    uiBlocked={uiBlocked}
                 />
             ))}
         </div>

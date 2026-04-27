@@ -111,7 +111,7 @@ export default function OrderDetailsItems({
     };
 
     const handleFieldChange = (e) => {
-        const { type, name, value } = e.target;
+        const { type, name, value } = e.currentTarget;
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
         dispatchFieldsState({

@@ -298,7 +298,7 @@ export default function SectionForm({
     const isItemsSection = section === 'itemsSection';
 
     const handleFieldChange = (e) => {
-        const { type, name, value, checked } = e.target;
+        const { type, name, value, checked } = e.currentTarget;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -308,7 +308,7 @@ export default function SectionForm({
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

@@ -16,9 +16,6 @@ import type { TFilterParams, TFilterOption, ISortOption } from '@shared/types/in
 interface IToolbarProps {
     position?: 'top' | 'bottom';
     activeControls?: TToolbarControls[];
-    uiBlocked?: boolean;
-    initDataReady?: boolean;
-    loadStatus?: TDataLoadStatus;
     search?: string;
     setSearch?: Dispatch<SetStateAction<string>>;
     searchPlaceholder?: string;
@@ -33,8 +30,11 @@ interface IToolbarProps {
     limit?: number;
     setLimit?: Dispatch<SetStateAction<number>>;
     limitOptions?: readonly number[];
+    initDataReady?: boolean;
+    loadStatus?: TDataLoadStatus;
     totalItems?: number;
     label?: string;
+    uiBlocked?: boolean;
 }
 
 /////////////////////
@@ -44,9 +44,6 @@ interface IToolbarProps {
 export default function Toolbar({
     position,
     activeControls = [],
-    uiBlocked,
-    initDataReady,
-    loadStatus,
     search,
     setSearch,
     searchPlaceholder,
@@ -61,8 +58,11 @@ export default function Toolbar({
     limit,
     setLimit,
     limitOptions,
+    initDataReady,
+    loadStatus,
     totalItems,
-    label
+    label,
+    uiBlocked
 }: IToolbarProps): JSX.Element {
     return (
         <div className={cn('toolbar', position ?? '')}>
@@ -72,13 +72,13 @@ export default function Toolbar({
                         return (
                             <PageLimitSelector
                                 key={`${idx}-${controls}`}
-                                uiBlocked={uiBlocked}
-                                options={limitOptions}
                                 limit={limit}
                                 setLimit={setLimit}
                                 page={page}
                                 setPage={setPage}
                                 totalItems={totalItems}
+                                options={limitOptions}
+                                uiBlocked={uiBlocked}
                             />
                         );
 
@@ -86,10 +86,10 @@ export default function Toolbar({
                         return (
                             <SortingControls
                                 key={`${idx}-${controls}`}
-                                uiBlocked={uiBlocked}
-                                options={sortOptions}
                                 sort={sort}
                                 setSort={setSort}
+                                options={sortOptions}
+                                uiBlocked={uiBlocked}
                             />
                         );
 
@@ -97,10 +97,10 @@ export default function Toolbar({
                         return (
                             <SearchControls
                                 key={`${idx}-${controls}`}
-                                placeholder={searchPlaceholder}
-                                uiBlocked={uiBlocked}
                                 search={search}
                                 setSearch={setSearch}
+                                placeholder={searchPlaceholder}
+                                uiBlocked={uiBlocked}
                             />
                         );
 
@@ -108,10 +108,10 @@ export default function Toolbar({
                         return (
                             <FilterControls
                                 key={`${idx}-${controls}`}
-                                uiBlocked={uiBlocked}
-                                options={filterOptions}
                                 filter={filter}
                                 setFilter={setFilter}
+                                options={filterOptions}
+                                uiBlocked={uiBlocked}
                             />
                         );
 
@@ -119,12 +119,12 @@ export default function Toolbar({
                         return (
                             <PaginationPages
                                 key={`${idx}-${controls}`}
-                                uiBlocked={uiBlocked}
-                                initDataReady={initDataReady}
                                 currentPage={page}
                                 totalItems={totalItems}
                                 limit={limit}
                                 setPage={setPage}
+                                initDataReady={initDataReady}
+                                uiBlocked={uiBlocked}
                             />
                         );
 

@@ -35,8 +35,8 @@ interface ICustomerTableOrdersMainProps {
     totalOrders: number;
     loadedOrderList: IOrder[];
     loadOrders: (limit: number) => void;
-    uiBlocked: boolean;
     refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+    uiBlocked: boolean;
 }
 
 type TOrdersLoadStatusProps = Pick<ICustomerTableOrdersMainProps,
@@ -56,8 +56,8 @@ type TOrdersLoadControlsProps = Pick<ICustomerTableOrdersMainProps,
 };
 
 type TOrderCardProps = Pick<ICustomerTableOrdersMainProps,
-    | 'uiBlocked'
     | 'refreshOrderState'
+    | 'uiBlocked'
 > & {
     order: IOrder;
 };
@@ -157,8 +157,8 @@ export default function CustomerTableOrders(
                 totalOrders={totalOrders}
                 loadedOrderList={loadedOrderList}
                 loadOrders={loadOrders}
-                uiBlocked={isOrderUiBlocked}
                 refreshOrderState={refreshOrderState}
+                uiBlocked={isOrderUiBlocked}
             />
         </div>
     );
@@ -180,8 +180,8 @@ function CustomerTableOrdersMain({
                     <li key={order.id} className="order-item">
                         <OrderCard
                             order={order}
-                            uiBlocked={uiBlocked}
                             refreshOrderState={refreshOrderState}
+                            uiBlocked={uiBlocked}
                         />
                     </li>
                 ))}
@@ -307,7 +307,7 @@ function OrdersLoadControls(
 }
 
 function OrderCard(
-    { order, uiBlocked, refreshOrderState }: TOrderCardProps
+    { order, refreshOrderState, uiBlocked }: TOrderCardProps
 ): JSX.Element | null {
     const {
         id, orderNumber, statusHistory: orderStatusHistory, confirmedAt,

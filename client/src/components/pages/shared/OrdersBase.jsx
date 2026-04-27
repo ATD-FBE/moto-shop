@@ -237,8 +237,6 @@ export default function OrdersBase({
             <Toolbar
                 position="top"
                 activeControls={toolbarTopActiveControls}
-                uiBlocked={isOrderUiBlocked}
-                initDataReady={initOrdersReady}
                 search={search}
                 setSearch={setSearch}
                 searchPlaceholder="По номеру заказа"
@@ -253,7 +251,9 @@ export default function OrdersBase({
                 limit={limit}
                 setLimit={setLimit}
                 limitOptions={ordersPageLimitOptions}
+                initDataReady={initOrdersReady}
                 totalItems={filteredOrderIds.size}
+                uiBlocked={isOrderUiBlocked}
             />
 
             <OrdersMain
@@ -262,7 +262,6 @@ export default function OrdersBase({
                 paginatedOrderList={paginatedOrderList}
                 expandedOrderIds={expandedOrderIds}
                 toggleOrderExpansion={toggleOrderExpansion}
-                uiBlocked={isOrderUiBlocked}
                 setOrderRepeatLoading={setOrderRepeatLoading}
                 isMetaMobileStacked={isMetaMobileStacked}
                 refreshOrderState={refreshOrderState}
@@ -272,19 +271,20 @@ export default function OrdersBase({
                 renderStatusSummary={renderStatusSummary}
                 renderOrderRefreshButton={renderOrderRefreshButton}
                 renderOrderRepeatButton={renderOrderRepeatButton}
+                uiBlocked={isOrderUiBlocked}
             />
 
             <Toolbar
                 position="bottom"
                 activeControls={['info', 'pages']}
-                loadStatus={ordersLoadStatus}
-                uiBlocked={isOrderUiBlocked}
-                initDataReady={initOrdersReady}
                 page={page}
                 setPage={setPage}
                 limit={limit}
+                loadStatus={ordersLoadStatus}
+                initDataReady={initOrdersReady}
                 totalItems={filteredOrderIds.size}
                 label="Заказы"
+                uiBlocked={isOrderUiBlocked}
             />
 
             {renderNewManagedActiveOrdersAlert?.({

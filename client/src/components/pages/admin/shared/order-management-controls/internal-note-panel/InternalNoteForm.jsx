@@ -101,7 +101,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
     const isFormLocked = lockedStatuses.has(submitStatus);
 
     const handleFieldChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -110,7 +110,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

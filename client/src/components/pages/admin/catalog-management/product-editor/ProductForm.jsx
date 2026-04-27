@@ -384,7 +384,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
     };
 
     const handleFieldChange = (e) => {
-        const { name, type, files, value, checked } = e.target;
+        const { name, type, files, value, checked } = e.currentTarget;
         let processedValue;
         
         if (type === 'number' && value !== '') {
@@ -409,7 +409,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

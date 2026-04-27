@@ -435,10 +435,10 @@ export default function Cart() {
                 <header className="cart-main-header">
                     <Toolbar
                         activeControls={['search']}
-                        uiBlocked={isCartUiBlocked}
                         search={search}
                         setSearch={setSearch}
                         searchPlaceholder="По наименованию или артикулу товара"
+                        uiBlocked={isCartUiBlocked}
                     />
 
                     <div className="cart-main-controls">

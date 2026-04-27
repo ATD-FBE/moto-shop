@@ -1,5 +1,17 @@
 import { Types, startSession } from 'mongoose';
-import type { TTransactionHandler, TTransactionOptions } from '@server/types/index.js';
+import type { ClientSession } from 'mongoose';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TTransactionHandler<T> = (session: ClientSession) => Promise<T>;
+
+type TTransactionOptions = Parameters<ClientSession['withTransaction']>[1];
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const runInDbTransaction = async <T>(
     handler: TTransactionHandler<T>,

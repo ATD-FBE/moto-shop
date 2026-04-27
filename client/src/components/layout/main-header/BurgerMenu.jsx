@@ -29,7 +29,6 @@ export default function BurgerMenu({
         };
     
         document.addEventListener('mousedown', handleClickOutside);
-        
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isMenuOpen]);
 

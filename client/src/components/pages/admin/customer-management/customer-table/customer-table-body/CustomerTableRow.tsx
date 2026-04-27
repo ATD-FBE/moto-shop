@@ -13,13 +13,13 @@ import type { ICustomer } from '@shared/types/index.js';
 type TParentProps = ComponentProps<typeof CustomerTableBody>;
 
 type TCustomerTableRowProps = Pick<TParentProps,
-    | 'uiBlocked'
     | 'selectedIds'
     | 'expandedIds'
     | 'onToggleSelection'
     | 'onToggleExpansion'
     | 'onUpdateDiscount'
     | 'onUpdateBanStatus'
+    | 'uiBlocked'
 > & {
     customer: ICustomer
 };
@@ -30,13 +30,13 @@ type TCustomerTableRowProps = Pick<TParentProps,
 
 export default function CustomerTableRow({
     customer,
-    uiBlocked,
     selectedIds,
     expandedIds,
     onToggleSelection,
     onToggleExpansion,
     onUpdateDiscount,
-    onUpdateBanStatus
+    onUpdateBanStatus,
+    uiBlocked
 }: TCustomerTableRowProps): JSX.Element {
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
@@ -52,7 +52,6 @@ export default function CustomerTableRow({
         >
             <CustomerTableRowMain
                 customer={customer}
-                uiBlocked={uiBlocked}
                 isHovered={isHovered}
                 isSelected={isSelected}
                 isExpanded={isExpanded}
@@ -60,6 +59,7 @@ export default function CustomerTableRow({
                 onToggleExpansion={onToggleExpansion}
                 onUpdateDiscount={onUpdateDiscount}
                 onUpdateBanStatus={onUpdateBanStatus}
+                uiBlocked={uiBlocked}
             />
 
             <Collapsible isExpanded={isExpanded} className="table-row-expansion-collapsible">

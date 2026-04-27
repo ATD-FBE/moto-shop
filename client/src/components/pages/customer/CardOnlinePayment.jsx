@@ -242,7 +242,7 @@ export default function CardOnlinePayment() {
     };
 
     const handleFieldChange = (e) => {
-        const { name, type, value, selectionStart } = e.target;
+        const { name, type, value, selectionStart } = e.currentTarget;
         const { format, hasFormatSeparators, charRegex = /\d/ } = fieldConfigMap[name] ?? {};
         let processedValue;
 
@@ -268,13 +268,13 @@ export default function CardOnlinePayment() {
                     processedValue,
                     charRegex
                 );
-                e.target.setSelectionRange(newCursorPos, newCursorPos);
+                e.currentTarget.setSelectionRange(newCursorPos, newCursorPos);
             });
         }
     };
 
     const handleFieldKeyDown = (e) => {
-        const { name, value, selectionStart, selectionEnd } = e.target;
+        const { name, value, selectionStart, selectionEnd } = e.currentTarget;
         const config = fieldConfigMap[name];
         if (!config?.hasFormatSeparators) return;
     
@@ -298,12 +298,12 @@ export default function CardOnlinePayment() {
     
         // Установка позиции курсора после ререндера
         requestAnimationFrame(() => {
-            e.target.setSelectionRange(result.nextCursorPos, result.nextCursorPos);
+            e.currentTarget.setSelectionRange(result.nextCursorPos, result.nextCursorPos);
         });
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

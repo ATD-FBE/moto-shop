@@ -13,11 +13,11 @@ type TParentProps = ComponentProps<typeof CustomerTableRow>;
 
 type TCustomerTableRowMainProps = Pick<TParentProps,
     | 'customer'
-    | 'uiBlocked'
     | 'onToggleSelection'
     | 'onToggleExpansion'
     | 'onUpdateDiscount'
     | 'onUpdateBanStatus'
+    | 'uiBlocked'
 > & {
     isHovered: boolean;
     isSelected: boolean;
@@ -30,14 +30,14 @@ type TCustomerTableRowMainProps = Pick<TParentProps,
 
 export default function CustomerTableRowMain({
     customer,
-    uiBlocked,
     isHovered,
     isSelected,
     isExpanded,
     onToggleSelection,
     onToggleExpansion,
     onUpdateDiscount,
-    onUpdateBanStatus
+    onUpdateBanStatus,
+    uiBlocked
 }: TCustomerTableRowMainProps): JSX.Element {
     const [isEditingDiscount, setIsEditingDiscount] = useState(false);
     const isUnmountedRef = useRef(false);

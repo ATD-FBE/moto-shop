@@ -140,12 +140,12 @@ export default function LoginForm(): JSX.Element {
     const isFormLocked = lockedStatuses.has(submitStatus);
 
     const handleRememberMe = (e: ChangeEvent<HTMLInputElement>): void => {
-        setRememberMe(e.target.checked);
-        localStorage.setItem('rememberMe', String(e.target.checked));
+        setRememberMe(e.currentTarget.checked);
+        localStorage.setItem('rememberMe', String(e.currentTarget.checked));
     };
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -154,7 +154,7 @@ export default function LoginForm(): JSX.Element {
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

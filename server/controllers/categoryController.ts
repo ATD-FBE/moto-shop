@@ -1,21 +1,49 @@
-import mongoose from 'mongoose';
-import Category from '../db/models/Category.js';
-import Product from '../db/models/Product.js';
-import { checkTimeout } from '../middlewares/timeoutMiddleware.js';
-import { typeCheck, validateObjectFields } from '../validation/validationEngine.js';
-import { runInDbTransaction } from '../utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '../utils/errorUtils.js';
-import { parseValidationErrors } from '../utils/errorUtils.js';
-import safeSendResponse from '../utils/safeSendResponse.js';
-import { UNSORTED_CATEGORY_SLUG } from '../../shared/constants.js';
+import { Types } from 'mongoose';
+import Category from '@server/db/models/Category.js';
+import Product from '@server/db/models/Product.js';
+import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import {
+    prepareCategory,
+    checkCategoryCircularDependency,
+    getCategoryWithDescendants
+} from '@server/services/categoryService.js';
+import { runInDbTransaction } from '@server/utils/dbUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
+import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { UNSORTED_CATEGORY_SLUG } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { TDbCategory } from '@server/types/index.js';
+import type {
+    ICategoryBody,
+    TCategoryListResponse,
+    TCategoryCreateResponse,
+    TCategoryUpdateResponse,
+    TCategoryDeleteResponse
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICategoryParams extends ParamsDictionary {
+    categoryId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка всех категорий ///
-export const handleCategoryListRequest = async (req, res, next) => {
+export const handleCategoryListRequest: RequestHandler<
+    {},
+    TCategoryListResponse
+> = async (req, res, next) => {
     try {
-        const dbCategoryList = await Category.find().select('-__v').lean();
+        const dbCategoryList = await Category.find().lean<TDbCategory[]>();
         checkTimeout(req);
 
-        const categoryList = dbCategoryList.map(({ _id, ...rest }) => ({ id: _id, ...rest }));
+        const categoryList = dbCategoryList.map(cat => prepareCategory(cat));
 
         safeSendResponse(res, 200, { message: 'Категории товаров успешно загружены', categoryList });
     } catch (err) {
@@ -24,39 +52,19 @@ export const handleCategoryListRequest = async (req, res, next) => {
 };
 
 /// Создание категории ///
-export const handleCategoryCreateRequest = async (req, res, next) => {
-    const { name, slug, order, parent } = req.body ?? {};
-
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        name: { value: name, type: 'string', formField: true },
-        slug: { value: slug, type: 'string', formField: true },
-        order: { value: order, type: 'number', formField: true },
-        parent: { value: parent, type: 'nullableObjectId', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'category');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    // Проверка числовых полей
+export const handleCategoryCreateRequest: RequestHandler<
+    {},
+    TCategoryCreateResponse,
+    ICategoryBody
+> = async (req, res, next) => {
+    const { name, slug, order, parent } = req.body;
     const orderNum = Number(order);
-
-    if (!Number.isInteger(orderNum) || orderNum < 0) {
-        return safeSendResponse(res, 400, { message: 'Некорректное значение поля: order' });
-    }
 
     try {
         const { newCategory, movedProductCount } = await runInDbTransaction(async (session) => {
             // Проверка родительской категории
             if (parent !== null) {
-                const dbParentCategory = await Category.findById(parent).session(session);
+                const dbParentCategory = await Category.findById(parent).lean<TDbCategory>().session(session);
                 checkTimeout(req);
 
                 if (!dbParentCategory) {
@@ -100,7 +108,9 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
             checkTimeout(req);
 
             // Перемещение товаров родительской категории, если она была листовой
-            const unsortedCategory = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG }).session(session);
+            const unsortedCategory = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG })
+                .lean<TDbCategory>()
+                .session(session);
             checkTimeout(req);
 
             if (!unsortedCategory) {
@@ -126,59 +136,23 @@ export const handleCategoryCreateRequest = async (req, res, next) => {
         // Транзакция успешно завершена - ответ клиенту об успехе
         safeSendResponse(res, 201, {
             message: `Категория товаров "${newCategory.name}" успешно создана`,
-            newCategoryId: newCategory._id,
+            newCategoryId: newCategory._id.toString(),
             movedProductCount
         });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'category');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Изменение категории ///
-export const handleCategoryUpdateRequest = async (req, res, next) => {
+export const handleCategoryUpdateRequest: RequestHandler<
+    ICategoryParams,
+    TCategoryUpdateResponse,
+    ICategoryBody
+> = async (req, res, next) => {
     const categoryId = req.params.categoryId;
-    const { name, slug, order, parent } = req.body ?? {};
-
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        categoryId: { value: categoryId, type: 'objectId' },
-        name: { value: name, type: 'string', formField: true },
-        slug: { value: slug, type: 'string', formField: true },
-        order: { value: order, type: 'number', formField: true },
-        parent: { value: parent, type: 'nullableObjectId', formField: true },
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'category');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    // Проверка числовых полей
+    const { name, slug, order, parent } = req.body;
     const orderNum = Number(order);
-
-    if (!Number.isInteger(orderNum) || orderNum < 0) {
-        return safeSendResponse(res, 400, { message: 'Некорректное значение поля: order' });
-    }
 
     // Проверка отличия родителя от самой категории
     if (parent === categoryId) {
@@ -188,7 +162,7 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
     }
 
     try {
-        const { dbCategory, movedProductCount } = await runInDbTransaction(async (session) => {
+        const { categoryName, movedProductCount } = await runInDbTransaction(async (session) => {
             // Проверка существования изменяемой категории
             const dbCategory = await Category.findById(categoryId).session(session);
             checkTimeout(req);
@@ -203,7 +177,7 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
 
             // Проверка родительской категории, если это не корень
             if (parent !== null) {
-                const dbParentCategory = await Category.findById(parent).session(session);
+                const dbParentCategory = await Category.findById(parent).lean<TDbCategory>().session(session);
                 checkTimeout(req);
 
                 if (!dbParentCategory) {
@@ -221,27 +195,10 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
                     }
                     
                     // Поиск новой родительской категории среди потомков изменяемой
-                    const isDescendant = await Category.aggregate([
-                        // Нахождение нового родителя (один документ в результате агрегатного запроса)
-                        { $match: { _id: mongoose.Types.ObjectId.createFromHexString(parent) } },
-
-                        // Поиск вверх по дереву от нового родителя по id и сбор всех его предков в массив
-                        {
-                            $graphLookup: {
-                                from: 'categories', // Имя коллекции, где осуществляется поиск
-                                startWith: '$parent', // Начало поиска со значения поля parent нового родителя
-                                connectFromField: 'parent', // Продолжение с поля parent найденных категорий
-                                connectToField: '_id', // Поле parent сопоставляется с _id других категорий
-                                as: 'ancestors' // Документы найденных предков помещаются в массив ancestors,
-                            }                   // который создаётся в документе результата агрегаии
-                        },
-
-                        // Фильтрация массива результатов агрегатного запроса (содержит только нового родителя)
-                        { $match: { 'ancestors._id': mongoose.Types.ObjectId.createFromHexString(categoryId) } }
-                    ]).session(session);
+                    const isRecursive = await checkCategoryCircularDependency(categoryId, parent, session);
                     checkTimeout(req);
                       
-                    if (isDescendant.length) {
+                    if (isRecursive) {
                         throw createAppError(400, 'Категория товаров не может быть вложена в своего потомка');
                     }
                 }
@@ -315,7 +272,9 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
             let movedProductCount = 0;
 
             if (parent !== currentParent) {
-                const unsortedCategory = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG }).session(session);
+                const unsortedCategory = await Category
+                    .findOne({ slug: UNSORTED_CATEGORY_SLUG })
+                    .session(session);
                 checkTimeout(req);
 
                 if (!unsortedCategory) {
@@ -335,41 +294,25 @@ export const handleCategoryUpdateRequest = async (req, res, next) => {
                 movedProductCount = productsMovedResult.modifiedCount;
             }
 
-            return { dbCategory, movedProductCount };
+            return { categoryName: dbCategory.name, movedProductCount };
         });
 
         // Транзакция успешно завершена - ответ клиенту об успехе
         safeSendResponse(res, 200, {
-            message: `Категория товаров "${dbCategory.name}" успешно изменена`,
+            message: `Категория товаров "${categoryName}" успешно изменена`,
             movedProductCount
         });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-        
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'category');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Удаление категории ///
-export const handleCategoryDeleteRequest = async (req, res, next) => {
+export const handleCategoryDeleteRequest: RequestHandler<
+    ICategoryParams,
+    TCategoryDeleteResponse
+> = async (req, res, next) => {
     const categoryId = req.params.categoryId;
-
-    if (!typeCheck.objectId(categoryId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: categoryId' });
-    }
 
     // Удаление документа в базе MongoDB с использованием транзакции
     // (удаляются все дочерние подкатегории, задеваются номера соседних с удаляемой категорий,
@@ -377,29 +320,11 @@ export const handleCategoryDeleteRequest = async (req, res, next) => {
     try {
         const transactionResult = await runInDbTransaction(async (session) => {
             // Поиск удаляемой категории и всех её потомков
-            const categoryObjectId = mongoose.Types.ObjectId.createFromHexString(categoryId);
-
-            const aggregateResult = await Category.aggregate([
-                // Нахождение удаляемой категории (один документ в результате агрегатного запроса)
-                { $match: { _id: categoryObjectId } },
-
-                // Поиск вниз по дереву от удаляемой категории по id и сбор всех её потомков в массив
-                {
-                    $graphLookup: {
-                        from: 'categories', // Имя коллекции, где осуществляется поиск
-                        startWith: '$_id', // Начало поиска со значения поля _id удаляемой категории
-                        connectFromField: '_id', // Продолжение с поля _id найденных категорий
-                        connectToField: 'parent', // Поле _id сопоставляется с полем parent других категорий
-                        as: 'descendants' // Документы найденных потомков помещаются в массив descendants,
-                    }                     // который создаётся в документе результата агрегатного запроса
-                }
-            ]).session(session);
+            const categoryObjectId = Types.ObjectId.createFromHexString(categoryId);
+            const dbCategory = await getCategoryWithDescendants(categoryObjectId, session);
             checkTimeout(req);
 
             // Проверка существования изменяемой категории
-            const dbCategory = aggregateResult[0];
-            const descendantCategories = dbCategory?.descendants || [];
-
             if (!dbCategory) {
                 throw createAppError(404, `Категория товаров (ID: ${categoryId}) не найдена`);
             }
@@ -419,15 +344,16 @@ export const handleCategoryDeleteRequest = async (req, res, next) => {
             checkTimeout(req);
 
             // Удаление категории и всех её потомков
-            const deletingCategoryIds = [categoryObjectId, ...descendantCategories.map(d => d._id)];
+            const descendantCategories = dbCategory.descendants;
+            const deletingCategoryObjIds = [categoryObjectId, ...descendantCategories.map(d => d._id)];
 
             const deleteResult = await Category.deleteMany(
-                { _id: { $in: deletingCategoryIds } },
+                { _id: { $in: deletingCategoryObjIds } },
                 { session }
             );
             checkTimeout(req);
 
-            if (deleteResult.deletedCount !== deletingCategoryIds.length) {
+            if (deleteResult.deletedCount !== deletingCategoryObjIds.length) {
                 throw createAppError(
                     500,
                     'Удалено не всё дерево категорий. Возможна рассинхронизация данных.'
@@ -435,7 +361,9 @@ export const handleCategoryDeleteRequest = async (req, res, next) => {
             }
 
             // Перемещение товаров удалённых категорий в категорию неотсортированных товаров
-            const unsortedCategory = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG }).session(session);
+            const unsortedCategory = await Category
+                .findOne({ slug: UNSORTED_CATEGORY_SLUG })
+                .session(session);
             checkTimeout(req);
 
             if (!unsortedCategory) {
@@ -446,35 +374,29 @@ export const handleCategoryDeleteRequest = async (req, res, next) => {
             }
 
             const productsMovedResult = await Product.updateMany(
-                { category: { $in: deletingCategoryIds } },
+                { category: { $in: deletingCategoryObjIds } },
                 { category: unsortedCategory._id },
                 { session }
             );
             checkTimeout(req);
 
             return {
-                dbCategory,
-                descendantCategories,
+                categoryName: dbCategory.name,
+                descendantCatNames: descendantCategories.map(d => d.name),
                 movedProductCount: productsMovedResult.modifiedCount
             };
         });
 
-        const { dbCategory, descendantCategories, movedProductCount } = transactionResult;
+        const { categoryName, descendantCatNames, movedProductCount } = transactionResult;
 
-        // Транзакция успешно завершена - ответ клиенту об успехе
-        const message = `Категория товаров "${dbCategory.name}" успешно удалена` +
-            (descendantCategories.length
-                ? ` вместе со всеми её подкатегориями (${descendantCategories.length}): "` +
-                    descendantCategories.map(d => d.name).join('", "') + '"'
+        const message = `Категория товаров "${categoryName}" успешно удалена` +
+            (descendantCatNames.length
+                ? ` вместе со всеми её подкатегориями (${descendantCatNames.length}): "` +
+                descendantCatNames.join('", "') + '"'
                 : '');
 
         safeSendResponse(res, 200, { message, movedProductCount });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

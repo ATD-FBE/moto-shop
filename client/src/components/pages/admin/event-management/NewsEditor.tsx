@@ -194,7 +194,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -203,7 +203,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

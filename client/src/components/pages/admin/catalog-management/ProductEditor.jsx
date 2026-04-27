@@ -157,8 +157,6 @@ export default function ProductEditor({
                 <Toolbar
                     position="top"
                     activeControls={['limit', 'sort', 'search', 'filter', 'pages']}
-                    uiBlocked={uiBlocked}
-                    initDataReady={initDataReady}
                     search={search}
                     setSearch={setSearch}
                     searchPlaceholder="По ID, артикулу, наименованию, бренду или тегам товара"
@@ -173,7 +171,9 @@ export default function ProductEditor({
                     limit={limit}
                     setLimit={setLimit}
                     limitOptions={limitOptions}
+                    initDataReady={initDataReady}
                     totalItems={filteredProductIds.size}
+                    uiBlocked={uiBlocked}
                 />
 
                 <ProductTable
@@ -197,14 +197,14 @@ export default function ProductEditor({
                 <Toolbar
                     position="bottom"
                     activeControls={['info', 'pages']}
-                    loadStatus={loadStatus}
-                    uiBlocked={uiBlocked}
-                    initDataReady={initDataReady}
                     page={page}
                     setPage={setPage}
                     limit={limit}
+                    loadStatus={loadStatus}
+                    initDataReady={initDataReady}
                     totalItems={filteredProductIds.size}
                     label="Товары"
+                    uiBlocked={uiBlocked}
                 />
             </div>
         </div>

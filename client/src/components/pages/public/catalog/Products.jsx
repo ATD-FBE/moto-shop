@@ -47,8 +47,6 @@ export default function Products({
             <Toolbar
                 position="top"
                 activeControls={['limit', 'sort', 'search', 'filter', 'pages']}
-                uiBlocked={uiBlocked}
-                initDataReady={initDataReady}
                 search={search}
                 setSearch={setSearch}
                 searchPlaceholder="По артикулу, наименованию, бренду или тегам товара"
@@ -63,7 +61,9 @@ export default function Products({
                 limit={limit}
                 setLimit={setLimit}
                 limitOptions={limitOptions}
+                initDataReady={initDataReady}
                 totalItems={totalProducts}
+                uiBlocked={uiBlocked}
             />
 
             <ProductsMain
@@ -80,14 +80,14 @@ export default function Products({
             <Toolbar
                 position="bottom"
                 activeControls={['info', 'pages']}
-                loadStatus={loadStatus}
-                uiBlocked={uiBlocked}
-                initDataReady={initDataReady}
                 page={page}
                 setPage={setPage}
                 limit={limit}
+                loadStatus={loadStatus}
+                initDataReady={initDataReady}
                 totalItems={totalProducts}
                 label="Товары"
+                uiBlocked={uiBlocked}
             />
         </div>
     );

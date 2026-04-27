@@ -28,7 +28,7 @@ export default function CatalogManagement() {
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState(new URLSearchParams());
+    const [filter, setFilter] = useState({});
     const [sort, setSort] = useState(productEditorSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(productEditorPageLimitOptions[0]);
@@ -220,9 +220,15 @@ export default function CatalogManagement() {
             : '';
         const products = shouldProductsLoad;
 
-        const params = new URLSearchParams({ category, products, search, sort, page, limit });
-        filter.forEach((value, key) => params.append(key, value));
-
+        const params = new URLSearchParams({
+            category,
+            products,
+            search,
+            sort,
+            page: String(page),
+            limit: String(limit),
+            ...filter
+        });
         const urlParams = params.toString();
 
         if (location.search !== `?${urlParams}`) {

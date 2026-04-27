@@ -103,7 +103,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
     const isFormLocked = lockedStatuses.has(submitStatus) || !hasFinancialsEvents;
 
     const handleFieldChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -112,7 +112,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

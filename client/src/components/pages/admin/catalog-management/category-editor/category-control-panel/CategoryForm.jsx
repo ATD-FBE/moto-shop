@@ -147,7 +147,7 @@ export default function CategoryForm({
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
     const handleFieldChange = (e) => {
-        const { name, type, value } = e.target;
+        const { name, type, value } = e.currentTarget;
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
         dispatchFieldsState({
@@ -157,7 +157,7 @@ export default function CategoryForm({
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

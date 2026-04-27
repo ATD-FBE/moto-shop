@@ -1,22 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import cn from 'classnames';
+import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import type { JSX, Dispatch, SetStateAction } from 'react';
+import type {  } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface TPaginationPagesProps {
+    currentPage?: number;
+    totalItems?: number;
+    limit?: number;
+    setPage?: Dispatch<SetStateAction<number>>;
+    initDataReady?: boolean;
+    uiBlocked?: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const NEIGHBOR_PAGES = 2; // Количество соседних страниц слева и справа от текущей
+const EDGE_PAGES = 2; // Количество страниц по краям
+const ELLIPSIS = '...'; // Элемент для пропуска страницы
 
 export default function PaginationPages({
-    uiBlocked,
-    initDataReady,
     currentPage,
     totalItems,
     limit,
-    setPage
-}) {
+    setPage,
+    initDataReady = false,
+    uiBlocked = false
+}: TPaginationPagesProps): JSX.Element | null {
+    if (currentPage == null || totalItems == null || limit == null || setPage == null) {
+        logToolbarMissingProps('SortingControls', { currentPage, totalItems, limit, setPage });
+        return null; 
+    }
+
     const [selectedPage, setSelectedPage] = useState(currentPage);
 
     // Генерация диапазона для пагинации
     const totalPages = Math.ceil(totalItems / limit) || 1;
-    const NEIGHBOR_PAGES = 2; // Количество соседних страниц слева и справа от текущей
-    const EDGE_PAGES = 2; // Количество страниц по краям
-    const ELLIPSIS = '...'; // Элемент для пропуска страницы
-    const pageNumbers = [];
+    const pageNumbers: (number | typeof ELLIPSIS)[] = [];
 
     for (let i = 1; i <= totalPages; i++) {
         if (
@@ -98,14 +124,14 @@ export default function PaginationPages({
                         value={selectedPage}
                         min="1"
                         max={totalPages}
-                        onChange={(e) => setSelectedPage(Number(e.target.value))}
+                        onChange={(e) => setSelectedPage(Number(e.currentTarget.value))}
                         onBlur={() => {
                             if (selectedPage < 1) setSelectedPage(1);
                             if (selectedPage > totalPages) setSelectedPage(totalPages);
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                                const newSelectedPage = Number(e.target.value);
+                                const newSelectedPage = Number(e.currentTarget.value);
 
                                 if (
                                     newSelectedPage !== currentPage &&

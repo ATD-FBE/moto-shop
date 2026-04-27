@@ -10,10 +10,10 @@ import type { JSX, ComponentProps } from 'react';
 type TParentProps = ComponentProps<typeof CustomerTable>;
 
 type TCustomerTableHeaderProps = Pick<TParentProps,
-    | 'uiBlocked'
     | 'filteredIds'
     | 'selectedIds'
     | 'onToggleAllSelection'
+    | 'uiBlocked'
 >;
 
 /////////////////////
@@ -21,10 +21,10 @@ type TCustomerTableHeaderProps = Pick<TParentProps,
 /////////////////////
 
 export default function CustomerTableHeader({
-    uiBlocked,
     filteredIds,
     selectedIds,
-    onToggleAllSelection
+    onToggleAllSelection,
+    uiBlocked
 }: TCustomerTableHeaderProps): JSX.Element {
     const areAllItemsSelected = useMemo(
         () => filteredIds.size > 0 && selectedIds.size === filteredIds.size,

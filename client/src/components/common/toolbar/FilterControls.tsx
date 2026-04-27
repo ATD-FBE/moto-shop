@@ -12,10 +12,10 @@ import type { TFilterParams, TFilterOption } from '@shared/types/index.js';
 //////////////////////////
 
 interface IFilterControlsProps {
-    uiBlocked?: boolean;
-    options?: readonly TFilterOption[];
     filter?: TFilterParams;
     setFilter?: Dispatch<SetStateAction<TFilterParams>>;
+    options?: readonly TFilterOption[];
+    uiBlocked?: boolean;
 }
 
 interface IHandleInputChangeParams {
@@ -30,13 +30,13 @@ interface IHandleInputChangeParams {
 /////////////////////
 
 export default function FilterControls({
-    uiBlocked = false,
-    options,
     filter,
-    setFilter
+    setFilter,
+    options,
+    uiBlocked = false
 }: IFilterControlsProps): JSX.Element | null {
-    if (!options || !filter || !setFilter) {
-        logToolbarMissingProps('FilterControls', { options, filter, setFilter });
+    if (filter == null || setFilter == null || options == null) {
+        logToolbarMissingProps('FilterControls', { filter, setFilter, options });
         return null; 
     }
 

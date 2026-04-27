@@ -37,7 +37,7 @@ import type {
 export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
     
-    const [search, setSearch] = useState<string>('');
+    const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<TFilterParams>({});
     const [sort, setSort] = useState<string>(customersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
@@ -326,8 +326,6 @@ export default function CustomerManagement(): JSX.Element | null {
             <Toolbar
                 position="top"
                 activeControls={['limit', 'sort', 'search', 'filter', 'pages']}
-                uiBlocked={isCustomerUiBlocked}
-                initDataReady={initCustomersReady}
                 search={search}
                 setSearch={setSearch}
                 searchPlaceholder="По ID, логину или email клиента"
@@ -342,12 +340,13 @@ export default function CustomerManagement(): JSX.Element | null {
                 limit={limit}
                 setLimit={setLimit}
                 limitOptions={customersPageLimitOptions}
+                initDataReady={initCustomersReady}
                 totalItems={filteredCustomerIds.size}
+                uiBlocked={isCustomerUiBlocked}
             />
 
             <CustomerTable
                 loadStatus={customersLoadStatus}
-                uiBlocked={isCustomerUiBlocked}
                 customers={paginatedCustomerList}
                 filteredIds={filteredCustomerIds}
                 selectedIds={selectedCustomerIds}
@@ -358,19 +357,20 @@ export default function CustomerManagement(): JSX.Element | null {
                 onUpdateDiscount={updateCustomerDiscount}
                 onUpdateBanStatus={updateCustomerBanStatus}
                 onReload={reloadCustomers}
+                uiBlocked={isCustomerUiBlocked}
             />
 
             <Toolbar
                 position="bottom"
                 activeControls={['info', 'pages']}
-                loadStatus={customersLoadStatus}
-                uiBlocked={isCustomerUiBlocked}
-                initDataReady={initCustomersReady}
                 page={page}
                 setPage={setPage}
                 limit={limit}
+                loadStatus={customersLoadStatus}
+                initDataReady={initCustomersReady}
                 totalItems={filteredCustomerIds.size}
                 label="Клиенты"
+                uiBlocked={isCustomerUiBlocked}
             />
         </div>
     );

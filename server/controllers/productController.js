@@ -582,13 +582,13 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     }
     
     // Проверка выбранных полей для апдейта
-    const noFormUpdates = Object.values(validationConfigMap)
+    /*const noFormUpdates = Object.values(validationConfigMap)
         .filter(({ form }) => form)
         .every(({ value }) => value === undefined);
 
     if (noFormUpdates) {
         return safeSendResponse(res, 204);
-    }
+    }*/
 
     try {
         const { statusCode, responseData } = await runInDbTransaction(async (session) => {

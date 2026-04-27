@@ -172,7 +172,7 @@ export default function OrderStatusSteps({
     };
 
     const handleFieldChange = (e) => {
-        const { type, name, value } = e.target;
+        const { type, name, value } = e.currentTarget;
         const processedValue = type === 'number' && value !== ''
             ? Number(value.replace(',', '.'))
             : value;
@@ -184,7 +184,7 @@ export default function OrderStatusSteps({
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

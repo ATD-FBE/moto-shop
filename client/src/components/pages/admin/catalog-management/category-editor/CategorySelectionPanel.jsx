@@ -77,7 +77,7 @@ export default function CategorySelectionPanel({
                         <select
                             id={`category-select-${id}`}
                             value={pathArr[pathIdx + 1]}
-                            onChange={(e) => setSelectedCategoryId(e.target.value)}
+                            onChange={(e) => setSelectedCategoryId(e.currentTarget.value)}
                             disabled={uiBlocked}
                         >
                             <option value={id}>{`--- ${selectPrompt} ---`}</option>

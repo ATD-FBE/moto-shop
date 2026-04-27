@@ -431,7 +431,7 @@ export default function CheckoutForm({
     const handleFieldChange = (e) => {
         clearTimeout(updateDebounceTimerRef.current);
 
-        const { type, name, value, checked } = e.target;
+        const { type, name, value, checked } = e.currentTarget;
         const fieldValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -451,7 +451,7 @@ export default function CheckoutForm({
         clearTimeout(updateDebounceTimerRef.current);
         updateDebounceTimerRef.current = null;
 
-        const { type, name, value, checked } = e.target;
+        const { type, name, value, checked } = e.currentTarget;
         const fieldValue = type === 'checkbox' ? checked : value;
         const normalizedValue = fieldConfigMap[name]?.trim ? fieldValue.trim() : fieldValue;
 

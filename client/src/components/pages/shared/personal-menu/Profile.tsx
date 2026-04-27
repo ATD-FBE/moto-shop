@@ -150,7 +150,7 @@ export default function Profile(): JSX.Element | null {
     const isFormLocked = lockedStatuses.has(submitStatus);
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         
         dispatchFieldsState({
             type: 'UPDATE',
@@ -159,7 +159,7 @@ export default function Profile(): JSX.Element | null {
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

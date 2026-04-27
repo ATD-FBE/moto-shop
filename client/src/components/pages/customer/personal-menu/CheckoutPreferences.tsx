@@ -397,8 +397,8 @@ export default function CheckoutPreferences(): JSX.Element {
     };
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-        const { type, name, value } = e.target;
-        const checked = e.target instanceof HTMLInputElement && e.target.checked;
+        const { type, name, value } = e.currentTarget;
+        const checked = e.currentTarget instanceof HTMLInputElement && e.currentTarget.checked;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -408,7 +408,7 @@ export default function CheckoutPreferences(): JSX.Element {
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

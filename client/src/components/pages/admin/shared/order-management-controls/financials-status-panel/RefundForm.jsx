@@ -231,7 +231,7 @@ export default function RefundForm({
     };
 
     const handleFieldChange = (e) => {
-        const { type, name, value, checked } = e.target;
+        const { type, name, value, checked } = e.currentTarget;
         let processedValue;
 
         if (type === 'number' && value !== '') {
@@ -249,7 +249,7 @@ export default function RefundForm({
     };
 
     const handleTrimmedFieldBlur = (e) => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

@@ -262,7 +262,7 @@ export default function NotificationEditor({
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         if (name === 'recipients') return; // Блокировка поля получателей от изменения вручную
 
         dispatchFieldsState({
@@ -272,7 +272,7 @@ export default function NotificationEditor({
     };
 
     const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-        const { name, value } = e.target;
+        const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 

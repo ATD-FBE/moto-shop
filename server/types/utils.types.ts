@@ -1,7 +1,6 @@
-import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
+import { Types } from 'mongoose';
 import winston from 'winston';
 import type { JwtPayload, SignOptions } from 'jsonwebtoken';
-import type { TSearchTypes } from './config.types.js';
 import type { TRegisteredUserRole } from '@shared/types/index.js';
 
 //////////////
@@ -40,10 +39,3 @@ export interface ITokenTypeConfig {
     time: SignOptions['expiresIn'];
 }
 
-/////////////////////////
-/// TRANSACTION UTILS ///
-/////////////////////////
-
-export type TTransactionHandler<T> = (session: ClientSession) => Promise<T>;
-
-export type TTransactionOptions = Parameters<ClientSession['withTransaction']>[1];

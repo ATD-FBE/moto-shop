@@ -1,9 +1,36 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import type { JSX, Dispatch, SetStateAction } from 'react';
 
-export default function SearchControls({ placeholder = '', uiBlocked, search, setSearch }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface TSearchControlsProps {
+    search?: string;
+    setSearch?: Dispatch<SetStateAction<string>>;
+    placeholder?: string;
+    uiBlocked?: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function SearchControls({
+    search,
+    setSearch,
+    placeholder = '',
+    uiBlocked = false
+}: TSearchControlsProps): JSX.Element | null {
+    if (search == null || setSearch == null) {
+        logToolbarMissingProps('SearchControls', { search, setSearch });
+        return null; 
+    }
+
     const [currentSearch, setCurrentSearch] = useState(search);
 
-    const handleSearch = () => {
+    const handleSearch = (): void => {
         const normalizedSearch = currentSearch.trim();
 
         if (normalizedSearch !== search) {
@@ -22,7 +49,7 @@ export default function SearchControls({ placeholder = '', uiBlocked, search, se
                 title={placeholder}
                 value={currentSearch}
                 autoComplete="off"
-                onChange={(e) => setCurrentSearch(e.target.value)}
+                onChange={(e) => setCurrentSearch(e.currentTarget.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 disabled={uiBlocked}
             />
