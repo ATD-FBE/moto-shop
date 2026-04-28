@@ -1,6 +1,6 @@
 import { join } from 'path';
-import PdfPrinter from 'pdfmake';
 import { Types, type ClientSession } from 'mongoose';
+import PdfPrinter from 'pdfmake';
 import numberToWordsRuPkg from 'number-to-words-ru';
 import User from '@server/db/models/User.js';
 import Order from '@server/db/models/Order.js';

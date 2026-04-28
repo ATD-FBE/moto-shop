@@ -69,5 +69,6 @@ export type TFileResponse = TBaseResponse & {
 };
 
 export type TTextResponse = TBaseResponse & {
+    status: typeof REQUEST_STATUS.SUCCESS;
     text: string;
 };

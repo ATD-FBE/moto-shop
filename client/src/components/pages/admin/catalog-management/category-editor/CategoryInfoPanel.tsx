@@ -1,7 +1,24 @@
 import { CATEGORY_ROOT_LABEL, NO_VALUE_LABEL } from '@/config/constants.js';
+import type { JSX } from 'react';
+import type { TCategoryMap, ICategoryNode } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICategoryEditorProps {
+    categoryMap: TCategoryMap;
+    selectedCategoryId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
-export default function CategoryInfoPanel({ categoryMap, selectedCategoryId }) {
-    const selectedCategory = categoryMap[selectedCategoryId];
+export default function CategoryInfoPanel(
+    { categoryMap, selectedCategoryId }: ICategoryEditorProps
+): JSX.Element {
+    const selectedCategory: ICategoryNode | undefined = categoryMap[selectedCategoryId];
 
     return (
         <div className="category-info-panel">

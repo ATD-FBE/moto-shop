@@ -67,7 +67,13 @@ export default function safeSendResponse(
     statusCode: number,
     data: Record<string, any> = {}
 ): void {
-    if (res.writableEnded || res.destroyed || res.headersSent) return;
+    if (res.writableEnded || res.destroyed) return;
+
+    // Заголовки уже ушли (может быть отдача бинарных данных) => закрытие потока и выход
+    if (res.headersSent) {
+        res.end(); 
+        return;
+    }
 
     if (NO_BODY_STATUSES.has(statusCode as TNoBodyStatus)) {
         res.status(statusCode).end();

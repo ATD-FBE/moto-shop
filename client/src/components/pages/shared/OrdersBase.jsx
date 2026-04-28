@@ -53,7 +53,7 @@ export default function OrdersBase({
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState(new URLSearchParams());
+    const [filter, setFilter] = useState({});
     const [sort, setSort] = useState(ordersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(ordersPageLimitOptions[0]);
@@ -207,8 +207,13 @@ export default function OrdersBase({
     useEffect(() => {
         if (!initialized) return;
 
-        const params = new URLSearchParams({ search, ...(showSort && { sort }), page, limit });
-        filter.forEach((value, key) => params.append(key, value));
+        const params = new URLSearchParams({
+            search,
+            ...(showSort && { sort }),
+            page: String(page),
+            limit: String(limit),
+            ...filter
+        });
 
         const urlParams = params.toString();
 

@@ -1,18 +1,34 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendErrorLogsRequest } from '@/api/logRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IErrorLogsMainProps {
+    loadStatus: TDataLoadStatus;
+    reloadErrorLogs: () => void;
+    errorLogs: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
-export default function ErrorLogs() {
+export default function ErrorLogs(): JSX.Element {
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [errorLogs, setErrorLogs] = useState('');
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const errorLogsLoadStatus =
         loading
@@ -27,22 +43,23 @@ export default function ErrorLogs() {
         setLoadError(false);
         setLoading(true);
 
-        const { status, message, text } = await dispatch(sendErrorLogsRequest());
+        const responseData = await dispatch(sendErrorLogsRequest());
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'LOG: LOAD ERRORS', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setLoadError(true);
         } else {
-            setErrorLogs(text);
+            setErrorLogs(responseData.text);
         }
         
         setLoading(false);
     };
 
-    const reloadErrorLogs = async () => {
-        await loadErrorLogs();
+    const reloadErrorLogs = (): void => {
+        loadErrorLogs();
     };
 
     // Очистка при размонтировании
@@ -86,7 +103,7 @@ function ErrorLogsMain({
     loadStatus,
     reloadErrorLogs,
     errorLogs
-}) {
+}: IErrorLogsMainProps): JSX.Element {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div className="error-logs-main">

@@ -1,15 +1,47 @@
+import type { ICategory, ICategoryNode, TCategoryTree, TCategoryMap } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IBuildCategoryTreeAndMapResult {
+    categoryTree: TCategoryTree;
+    categoryMap: TCategoryMap;
+}
+
+type TGetLeafCategoriesResult = {
+    id: string;
+    name: string;
+    slug: string;
+}[];
+
+interface ISafeParentCategoryOption {
+    id: string;
+    label: string;
+    subcategoryCount: number;
+}
+
+type ISafeParentCategory = Record<string, number>;
+
+type IBuildSafeParentCategoryMapResult = Record<string, {
+    selectOptions: ISafeParentCategoryOption[];
+    subcatCounts: ISafeParentCategory;
+}>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 // Функция создания карты категорий и полноценного дерева из прямых данных
-export const buildCategoryTreeAndMap = (flatCategoryList) => {
-    const categoryMap = {};
-    const categoryTree = [];
+export const buildCategoryTreeAndMap = (
+    flatCategoryList: ICategory[]
+): IBuildCategoryTreeAndMapResult => {
+    const categoryTree: TCategoryTree = [];
+    const categoryMap: TCategoryMap = {};
 
     // Создание карты категорий по ключу id
     flatCategoryList.forEach(({ id, ...rest }) => {
-        categoryMap[id] = {
-            id,
-            ...rest,
-            subcategories: []
-        };
+        categoryMap[id] = { id, ...rest, subcategories: [] };
     });
 
     // Заполнение подкатегорий карты и сборка дерева
@@ -17,56 +49,68 @@ export const buildCategoryTreeAndMap = (flatCategoryList) => {
         const node = categoryMap[cat.id];
 
         if (cat.parent) {
-            categoryMap[cat.parent]?.subcategories.push(node);
+            const parentNode = categoryMap[cat.parent];
+
+            if (parentNode) {
+                parentNode.subcategories.push(node);
+            } else {
+                console.error(`Категория ${cat.id} ссылается на отсутствующего родителя ${cat.parent}`);
+            }
         } else {
             categoryTree.push(node);
         }
     });
 
     // Рекурсивная сортировка подкатегорий
-    const sortSubcategoriesByOrder = (cat) => {
-        cat.subcategories.sort((a, b) => a.order - b.order);
-        cat.subcategories.forEach(sortSubcategoriesByOrder);
+    const sortNodesByOrder = (nodes: TCategoryTree) => {
+        nodes.sort((a, b) => a.order - b.order);    // Сортировка корневых категорий
+        nodes.forEach(node => {                     // Сортировка вложенных подкатегорий
+            if (node.subcategories.length > 0) {
+                sortNodesByOrder(node.subcategories);
+            }
+        });
     };
-    
-    categoryTree.sort((a, b) => a.order - b.order); // Сортировка корневых категорий
-    categoryTree.forEach(sortSubcategoriesByOrder); // Сортировка всех вложенных подкатегорий
+
+    sortNodesByOrder(categoryTree);
 
     return { categoryTree, categoryMap };
 };
 
 // Рекурсивная функция создания цепочки имён (пути) от корня к выбранной категории
-export const findCategoryPath = (categoryTree, selectedCategoryId) => {
+export const findCategoryPath = (
+    categoryTree: TCategoryTree,
+    selectedCategoryId: string
+): string[] => {
     if (!selectedCategoryId) return [''];
 
-    const findPath = (tree) => {
+    const findPath = (tree: TCategoryTree): string[] => {
         for (const category of tree) {
             if (category.id === selectedCategoryId) return [category.id];
 
             const path = findPath(category.subcategories);
-            if (path.length) return [category.id, ...path];
+            if (path.length > 0) return [category.id, ...path];
         }
         return [];
     };
 
     const path = findPath(categoryTree);
-    return path.length ? ['', ...path] : [];
+    return path.length > 0 ? ['', ...path] : [];
 };
 
 // Рекурсивная функция получения ID всех категорий, имеющих подкатегории
-export const getAllExpandableCategoryIds = (categoryTree) => {
-    const openableCategories = [];
+export const getAllExpandableCategoryIds = (categoryTree: TCategoryTree): string[] => {
+    const openableCategories: string[] = [];
 
-    for (const category of categoryTree) {
-        if (!category.subcategories.length) continue;
-        openableCategories.push(category.id, ...getAllExpandableCategoryIds(category.subcategories));
+    for (const cat of categoryTree) {
+        if (!cat.subcategories.length) continue;
+        openableCategories.push(cat.id, ...getAllExpandableCategoryIds(cat.subcategories));
     }
 
     return openableCategories;
 };
 
 // Получение всех конечных категорий - рекурсивный вариант по дереву
-export const getLeafCategories = (categoryTree) =>
+export const getLeafCategories = (categoryTree: TCategoryTree): TGetLeafCategoriesResult =>
     categoryTree.flatMap(cat =>
         !cat.subcategories.length
             ? [{ id: cat.id, name: cat.name, slug: cat.slug }]
@@ -74,45 +118,45 @@ export const getLeafCategories = (categoryTree) =>
     );
 
 // Получение всех конечных категорий - вариант с фильтрацией карты
-/*export const getLeafCategories = (categoryMap) =>
+/*export const getLeafCategories = (categoryMap: TCategoryMap): TGetLeafCategoriesResult =>
     Object.values(categoryMap)
         .filter(cat => !cat.subcategories.length)
-        .map(cat => { id: cat.id, name: cat.name, slug: cat.slug });*/
+        .map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }));*/
 
 // Рекурсивная функция получения всех потомков выбранной категории
-export const getDescendantCategoryIds = (selectedCategory) => {
-    const descendants = [];
+export const getDescendantCategoryIds = (selectedCategory?: ICategoryNode): string[] => {
+    const descendants: string[] = [];
 
-    const getDescendants = (tree) => {
+    const getDescendants = (tree: TCategoryTree): void => {
         for (const category of tree) {
             descendants.push(category.id);
-
-            if (category.subcategories.length) {
-                getDescendants(category.subcategories);
-            }
+            getDescendants(category.subcategories);
         }
     };
 
-    if (selectedCategory?.subcategories.length) {
+    if (selectedCategory) {
         getDescendants(selectedCategory.subcategories);
     }
     return descendants;
 };
 
 // Рекурсивная функция создания карты всех валидных родителей для категории
-export const buildSafeParentCategoryMap = (categoryMap, categoryTree, rootLabel = '(корень)') => {
+export const buildSafeParentCategoryMap = (
+    categoryMap: TCategoryMap,
+    categoryTree: TCategoryTree,
+    rootLabel: string = '(корень)'
+): IBuildSafeParentCategoryMapResult => {
     const allCategories = Object.values(categoryMap);
 
     // Создание карты потомков для их кэширования
-    const descendantsCache = new Map();
+    const descendantsCache = new Map<string, Set<string>>();
 
-    const getDescendants = (cat) => {
+    const getDescendants = (cat: ICategoryNode): Set<string> => {
         // Поиск потомков в кэше
-        if (descendantsCache.has(cat.id)) {
-            return descendantsCache.get(cat.id);
-        }
+        const descendants = descendantsCache.get(cat.id);
+        if (descendants) return descendants;
 
-        const descendantSet = new Set(); // Собирать потомков в Set для быстрого доступа
+        const descendantSet = new Set<string>(); // Собирать потомков в Set для быстрого доступа
 
         for (const subcat of cat.subcategories) {
             descendantSet.add(subcat.id);
@@ -128,7 +172,7 @@ export const buildSafeParentCategoryMap = (categoryMap, categoryTree, rootLabel 
     allCategories.forEach(cat => getDescendants(cat));
 
     // Сбор select-опций для выбора родителя категорий
-    const rootOption = {
+    const rootOption: ISafeParentCategoryOption = {
         id: '',
         label: `${rootLabel} (${categoryTree.length || 'нет'} кат.)`,
         subcategoryCount: categoryTree.length
@@ -137,7 +181,12 @@ export const buildSafeParentCategoryMap = (categoryMap, categoryTree, rootLabel 
     const dataMap = allCategories.reduce((map, currentCat) => {
         const descendants = descendantsCache.get(currentCat.id); // Set
 
-        const options = allCategories
+        if (!descendants) {
+            console.warn(`Missing cache for ${currentCat.id}`);
+            return map;
+        }
+
+        const options: ISafeParentCategoryOption[] = allCategories
             .filter(cat =>
                 cat.id !== currentCat.id &&
                 !descendants.has(cat.id) &&
@@ -153,15 +202,16 @@ export const buildSafeParentCategoryMap = (categoryMap, categoryTree, rootLabel 
         const subcatCounts = options.reduce((acc, { id, subcategoryCount }) => {
             acc[id] = subcategoryCount;
             return acc;
-        }, {});
+        }, {} as ISafeParentCategory);
         subcatCounts[rootOption.id] = rootOption.subcategoryCount;
 
         map[currentCat.id] = {
             selectOptions: [rootOption, ...options],
             subcatCounts
         };
+
         return map;
-    }, {});
+    }, {} as IBuildSafeParentCategoryMapResult);
 
     return dataMap;
 };

@@ -1,9 +1,24 @@
 import { resolveRequestStatus } from '@shared/statusResolver.js';
+import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { IApiResponseExtraConfig } from '@/types/index.js';
 import type { TRequestStatus, TBaseResponse } from '@shared/types/index.js';
 
-const apiResponse = async <T extends TBaseResponse>(
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParsedResponse = TBaseResponse & {
+    blob?: Blob | null;
+    filename?: string;
+    text?: string | null;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const apiResponse = async <T extends TParsedResponse >(
     response: Response,
     extra: IApiResponseExtraConfig = {}
 ): Promise<T> => {
@@ -28,7 +43,7 @@ const apiResponse = async <T extends TBaseResponse>(
         try { 
             data = await response.json(); 
         } catch (err) {
-            console.error('Ошибка парсинга JSON:', err);
+            console.error('Ошибка парсинга JSON:', toError(err));
         }
 
         const { status, message, reason, ...dataRest }: {
@@ -51,30 +66,54 @@ const apiResponse = async <T extends TBaseResponse>(
 
     // Бинарные данные в ответе
     if (asFile) {
-        const blob = await response.blob();
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            const errorMessage = errorText || 'Ошибка загрузки файла';
 
+            return {
+                status: resolveRequestStatus(response.status),
+                message: errorPrefix ? `${errorPrefix}: ${errorMessage}` : errorMessage,
+                ...extraRest
+            } as T;
+        }
+        
         const contentDisposition = response.headers.get('Content-Disposition') || '';
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         const filename = filenameMatch ? filenameMatch[1] : 'file';
+        let blob: Blob | null = null;
+
+        try {
+            blob = await response.blob();
+        } catch (err) {
+            console.error('Ошибка парсинга файла:', toError(err));
+        }
 
         return {
-            status: REQUEST_STATUS.SUCCESS,
-            message: 'Файл успешно загружен',
+            status: blob ? REQUEST_STATUS.SUCCESS : REQUEST_STATUS.ERROR,
+            message: blob ? 'Файл успешно загружен' : 'Ошибка парсинга файла',
             blob,
             filename,
             ...extraRest
-        } as unknown as T;
+        } as T;
     }
 
     // Текстовый ответ
-    const text = await response.text();
+    let text: string | null = null;
+
+    try {
+        text = await response.text();
+    } catch (err) {
+        console.error('Ошибка парсинга текста:', toError(err));
+    }
+
+    const safeMessage = response.ok ? 'OK' : text != null ? (text || 'Error') : 'Ошибка парсинга текста';
     
     return {
-        status: resolveRequestStatus(response.status),
-        message: response.ok ? 'OK' : 'Error',
+        status: text != null ? resolveRequestStatus(response.status) : REQUEST_STATUS.ERROR,
+        message: !response.ok && errorPrefix ? `${errorPrefix}: ${safeMessage}` : safeMessage,
         text,
         ...extraRest
-    } as unknown as T;
+    } as T;
 };
 
 export default apiResponse;

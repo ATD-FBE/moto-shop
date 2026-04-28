@@ -5,6 +5,9 @@ import {
 
 const router: Router = Router();
 
-router.get('/details/pdf', handleCompanyDetailsPdfRequest);
+router.get(
+    '/details/pdf',
+    handleCompanyDetailsPdfRequest
+);
 
 export default router;

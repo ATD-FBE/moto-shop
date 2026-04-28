@@ -1,20 +1,21 @@
 import { useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendCompanyDetailsPdfRequest } from '@/api/companyRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import triggerFileDownload from '@/services/triggerFileDownload.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
  
-export default function CompanyDetails() {
+export default function CompanyDetails(): JSX.Element {
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const downloadCompanyDetails = async () => {
-        const fileData = await dispatch(sendCompanyDetailsPdfRequest());
+        const responseData = await dispatch(sendCompanyDetailsPdfRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, blob, filename } = fileData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'COMPANY: LOAD DETAILS', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -25,6 +26,7 @@ export default function CompanyDetails() {
                 message: 'Ошибка при скачивании реквизитов магазина.\nПодробности ошибки в консоли.'
             });
         } else {
+            const { blob, filename } = responseData;
             triggerFileDownload(blob, filename);
         }
     };

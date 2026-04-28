@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import CategoryEditor from './catalog-management/CategoryEditor.jsx';
 import ProductEditor from './catalog-management/ProductEditor.jsx';
 import { sendCategoryListRequest } from '@/api/categoryRequests.js';
@@ -21,23 +21,25 @@ import { productEditorSortOptions } from '@shared/sortOptions.js';
 import { productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { TFilterParams, ICategory, IProduct } from '@shared/types/index.js';
 
-export default function CatalogManagement() {
-    const isAuthenticated = useSelector(state => state.auth.isAuthenticated);
+export default function CatalogManagement(): JSX.Element {
+    const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
 
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState({});
-    const [sort, setSort] = useState(productEditorSortOptions[0].dbField);
+    const [filter, setFilter] = useState<TFilterParams>({});
+    const [sort, setSort] = useState<string>(productEditorSortOptions[0].dbField);
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(productEditorPageLimitOptions[0]);
+    const [limit, setLimit] = useState<number>(productEditorPageLimitOptions[0]);
 
     const [initCategoriesReady, setInitCategoriesReady] = useState(false);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [categoriesLoadError, setCategoriesLoadError] = useState(false);
     const [categoryOperationBusy, setCategoryOperationBusy] = useState(false);
-    const [flatCategoryList, setFlatCategoryList] = useState([]);
+    const [flatCategoryList, setFlatCategoryList] = useState<ICategory[]>([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
     const [initProductsReady, setInitProductsReady] = useState(false);
@@ -45,15 +47,15 @@ export default function CatalogManagement() {
     const [productsLoading, setProductsLoading] = useState(false);
     const [productsLoadError, setProductsLoadError] = useState(false);
     const [productOperationBusy, setProductOperationBusy] = useState(false);
-    const [filteredProductIds, setFilteredProductIds] = useState(new Set());
-    const [paginatedProductList, setPaginatedProductList] = useState([]);
-    const [selectedProductIds, setSelectedProductIds] = useState(new Set());
-    const [expandedProductIds, setExpandedProductIds] = useState(new Set());
+    const [paginatedProductList, setPaginatedProductList] = useState<IProduct[]>([]);
+    const [filteredProductIds, setFilteredProductIds] = useState<Set<string>>(new Set());
+    const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+    const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const { categoryTree, categoryMap } = useMemo(
@@ -91,26 +93,27 @@ export default function CatalogManagement() {
         productOperationBusy ||
         categoryOperationBusy;
 
-    const loadCategories = async () => {
+    const loadCategories = async (): Promise<void> => {
         setCategoriesLoadError(false);
         setCategoriesLoading(true);
 
-        const { status, message, categoryList } = await dispatch(sendCategoryListRequest());
+        const responseData = await dispatch(sendCategoryListRequest());
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CATEGORY: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCategoriesLoadError(true);
         } else {
-            setFlatCategoryList(categoryList);
+            setFlatCategoryList(responseData.categoryList);
             setInitCategoriesReady(true);
         }
 
         setCategoriesLoading(false);
     };
 
-    const loadProducts = async (urlParams) => {
+    const loadProducts = async (urlParams: string): Promise<void> => {
         setProductsLoadError(false);
         setProductsLoading(true);
 
@@ -120,13 +123,15 @@ export default function CatalogManagement() {
         );
         if (isUnmountedRef.current) return;
 
-        const { status, message, filteredProductIdList, paginatedProductList } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'PRODUCT: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             unloadProducts();
             setProductsLoadError(true);
         } else {
+            const { filteredProductIdList, paginatedProductList } = responseData;
+
             setFilteredProductIds(new Set(filteredProductIdList));
             setPaginatedProductList(paginatedProductList);
             setInitProductsReady(true);
@@ -136,26 +141,26 @@ export default function CatalogManagement() {
         setProductsLoading(false);
     };
 
-    const reloadProducts = async () => {
+    const reloadProducts = async (): Promise<void> => {
         const urlParams = location.search.slice(1);
         const fetchParams = new URLSearchParams(urlParams);
-        
         fetchParams.delete('products');
+
         await loadProducts(fetchParams.toString());
     };
 
-    const unloadProducts = ({ resetPage } = {}) => {
+    const unloadProducts = ({ resetPage }: { resetPage?: boolean } = {}): void => {
         setFilteredProductIds(new Set());
         setPaginatedProductList([]);
         if (resetPage) setPage(1);
     };
 
-    const toggleAllProductSelection = async (areAllProductsSelected) => {
+    const toggleAllProductSelection = (areAllProductsSelected: boolean): void => {
         if (!filteredProductIds.size) return;
         setSelectedProductIds(new Set(areAllProductsSelected ? [] : filteredProductIds));
     };
 
-    const toggleProductSelection = (id) => {
+    const toggleProductSelection = (id: string): void => {
         setSelectedProductIds(prev => {
             const newSelection = new Set(prev);
 
@@ -169,7 +174,7 @@ export default function CatalogManagement() {
         });
     };
 
-    const toggleProductExpansion = (id) => {
+    const toggleProductExpansion = (id: string): void => {
         setExpandedProductIds(prev => {
             const newExpandedSet = new Set(prev);
 
@@ -197,17 +202,17 @@ export default function CatalogManagement() {
         if (initialized || !initCategoriesReady) return;
     
         const params = new URLSearchParams(location.search);
-        const shouldProductsLoad = params.get('products') === 'true';
+        const hasProducts = params.get('products') === 'true';
 
         setSelectedCategoryId(getInitCategoryParams(params, categoryMap));
-        setShouldProductsLoad(shouldProductsLoad);
         setSearch(params.get('search') || '');
         setFilter(getInitFilterParams(params, productEditorFilterOptions));
         setSort(getInitSortParam(params, productEditorSortOptions));
         setPage(getInitPageParam(params));
         setLimit(getInitLimitParam(params, productEditorPageLimitOptions));
 
-        if (shouldProductsLoad) setProductsLoading(true);
+        setShouldProductsLoad(hasProducts);
+        if (hasProducts) setProductsLoading(true);
         setInitialized(true);
     }, [initCategoriesReady, categoryMap]);
 
@@ -215,14 +220,13 @@ export default function CatalogManagement() {
     useEffect(() => {
         if (!initialized) return;
 
-        const category = selectedCategoryId && categoryMap[selectedCategoryId]
+        const categoryParam = selectedCategoryId && categoryMap[selectedCategoryId]
             ? `${categoryMap[selectedCategoryId].slug}~${selectedCategoryId}`
             : '';
-        const products = shouldProductsLoad;
 
         const params = new URLSearchParams({
-            category,
-            products,
+            category: categoryParam,
+            products: String(shouldProductsLoad),
             search,
             sort,
             page: String(page),
@@ -274,23 +278,21 @@ export default function CatalogManagement() {
             </header>
 
             <CategoryEditor
-                loadStatus={categoriesLoadStatus}
-                uiBlocked={isCategoryUiBlocked}
                 setOperationBusy={setCategoryOperationBusy}
-                setFlatCategoryList={setFlatCategoryList}
                 categoryMap={categoryMap}
                 categoryTree={categoryTree}
                 selectedCategoryId={selectedCategoryId}
                 setSelectedCategoryId={setSelectedCategoryId}
+                loadStatus={categoriesLoadStatus}
                 loadCategories={loadCategories}
                 shouldProductsLoad={shouldProductsLoad}
                 setShouldProductsLoad={setShouldProductsLoad}
+                uiBlocked={isCategoryUiBlocked}
             />
 
             {initialized && (
                 <ProductEditor
                     loadStatus={productsLoadStatus}
-                    uiBlocked={isProductUiBlocked}
                     categoryTree={categoryTree}
                     initDataReady={initProductsReady}
                     search={search}
@@ -316,6 +318,7 @@ export default function CatalogManagement() {
                     setOperationBusy={setProductOperationBusy}
                     shouldProductsLoad={shouldProductsLoad}
                     reloadProducts={reloadProducts}
+                    uiBlocked={isProductUiBlocked}
                 />
             )}
         </div>

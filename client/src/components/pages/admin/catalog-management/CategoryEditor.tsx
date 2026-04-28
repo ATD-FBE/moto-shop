@@ -1,5 +1,5 @@
 import { useRef, useMemo, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import CategorySelection from './category-editor/CategorySelectionPanel.jsx';
 import CategoryInfoPanel from './category-editor/CategoryInfoPanel.jsx';
 import CategoryControlPanel from './category-editor/CategoryControlPanel.jsx';
@@ -11,22 +11,64 @@ import { pluralize } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { UNSORTED_CATEGORY_SLUG, REQUEST_STATUS } from '@shared/constants.js';
- 
+import type { JSX, Dispatch, SetStateAction } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type {
+    TCategoryTree,
+    TCategoryMap,
+    TAuthErrorStatus,
+    TGeneralErrorStatus
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICategoryEditorProps {
+    setOperationBusy: Dispatch<SetStateAction<boolean>>;
+    categoryTree: TCategoryTree;
+    categoryMap: TCategoryMap;
+    selectedCategoryId: string;
+    setSelectedCategoryId: Dispatch<SetStateAction<string>>;
+    loadStatus: TDataLoadStatus;
+    loadCategories: () => Promise<void>;
+    shouldProductsLoad: boolean;
+    setShouldProductsLoad: Dispatch<SetStateAction<boolean>>;
+    uiBlocked: boolean;
+}
+
+interface IPerformFormSubmissionErrorResult {
+    status: typeof REQUEST_STATUS.UNCHANGED | TAuthErrorStatus | TGeneralErrorStatus;
+}
+interface IPerformFormSubmissionSuccessResult {
+    status: typeof REQUEST_STATUS.SUCCESS;
+    finalizeSuccessHandling: () => void;
+    newCategoryId?: string;
+    movedProductCount: number;
+}
+type TPerformFormSubmissionResult =
+    | IPerformFormSubmissionErrorResult
+    | IPerformFormSubmissionSuccessResult;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 export default function CategoryEditor({
-    loadStatus,
-    uiBlocked,
     setOperationBusy,
     categoryTree,
     categoryMap,
     selectedCategoryId,
     setSelectedCategoryId,
+    loadStatus,
     loadCategories,
     shouldProductsLoad,
-    setShouldProductsLoad
-}) {
+    setShouldProductsLoad,
+    uiBlocked
+}: ICategoryEditorProps): JSX.Element {
     const movedProductCountOnCategoryDeletionRef = useRef(0);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const selectedCategory = categoryMap[selectedCategoryId];
 
@@ -39,15 +81,19 @@ export default function CategoryEditor({
         [categoryTree]
     );
 
-    const processCategoryForm = async (performFormSubmission) => {
+    const processCategoryForm = async (
+        performFormSubmission: () => Promise<TPerformFormSubmissionResult | undefined>
+    ): Promise<void> => {
         setOperationBusy(true);
 
         const responseData = await performFormSubmission();
-        if (isUnmountedRef.current) return;
+        if (isUnmountedRef.current || !responseData) return;
 
-        const { status, finalizeSuccessHandling, newCategoryId, movedProductCount } = responseData;
+        const { status } = responseData;
 
         if (status === REQUEST_STATUS.SUCCESS) {
+            const { finalizeSuccessHandling, newCategoryId, movedProductCount } = responseData;
+
             await loadCategories();
             if (isUnmountedRef.current) return;
 
@@ -78,7 +124,7 @@ export default function CategoryEditor({
         setOperationBusy(false);
     };
 
-    const confirmCategoryDeletion = () => {
+    const confirmCategoryDeletion = (): void => {
         const categoryDeletionPrompt =
             `Категория товаров «${selectedCategory?.name || NO_VALUE_LABEL}» будет удалена` +
             (descendantCategoryIds.length
@@ -92,26 +138,28 @@ export default function CategoryEditor({
             `будут перемещены в корневую категорию «${unsortedCategory?.name || NO_VALUE_LABEL}».\n\n` +
             'Подтвердить выполнение?'; 
 
-        const processCategoryDeletion = async (categoryId) => {
+        const processCategoryDeletion = async (categoryId: string): Promise<void> => {
             setOperationBusy(true);
 
             const responseData = await dispatch(sendCategoryDeleteRequest(categoryId));
             if (isUnmountedRef.current) return;
 
-            const { status, message, movedProductCount } = responseData;
+            const { status, message } = responseData;
 
             logRequestStatus({ context: 'CATEGORY: DELETE', status, message });
     
-            const isAllowed = [REQUEST_STATUS.SUCCESS, REQUEST_STATUS.NOT_FOUND].includes(status);
+            const isAllowed = status === REQUEST_STATUS.SUCCESS || status === REQUEST_STATUS.NOT_FOUND;
             if (!isAllowed) {
                 setOperationBusy(false);
                 throw new Error(message);
             }
     
-            movedProductCountOnCategoryDeletionRef.current = movedProductCount;
+            if (status === REQUEST_STATUS.SUCCESS) {
+                movedProductCountOnCategoryDeletionRef.current = responseData.movedProductCount;
+            }
         };
     
-        const finalizeCategoryDeletion = async (categoryId) => {
+        const finalizeCategoryDeletion = async (categoryId: string): Promise<void> => {
             const parentCategory = categoryMap[categoryId]?.parent || '';
 
             await loadCategories();
@@ -162,7 +210,6 @@ export default function CategoryEditor({
         <div className="category-editor">
             <CategorySelection
                 loadStatus={loadStatus}
-                uiBlocked={uiBlocked}
                 categoryTree={categoryTree}
                 categoryMap={categoryMap}
                 selectedCategoryId={selectedCategoryId}
@@ -170,6 +217,7 @@ export default function CategoryEditor({
                 loadCategories={loadCategories}
                 shouldProductsLoad={shouldProductsLoad}
                 setShouldProductsLoad={setShouldProductsLoad}
+                uiBlocked={uiBlocked}
             />
 
             <CategoryInfoPanel
@@ -178,15 +226,12 @@ export default function CategoryEditor({
             />
 
             <CategoryControlPanel
-                uiBlocked={uiBlocked}
-                setOperationBusy={setOperationBusy}
                 categoryTree={categoryTree}
                 categoryMap={categoryMap}
                 selectedCategoryId={selectedCategoryId}
-                setSelectedCategoryId={setSelectedCategoryId}
-                loadCategories={loadCategories}
                 processCategoryForm={processCategoryForm}
                 confirmCategoryDeletion={confirmCategoryDeletion}
+                uiBlocked={uiBlocked}
             />
         </div>
     );

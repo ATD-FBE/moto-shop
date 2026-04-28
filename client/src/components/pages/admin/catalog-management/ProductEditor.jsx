@@ -11,10 +11,7 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
  
 export default function ProductEditor({
-    loadStatus,
-    uiBlocked,
     categoryTree,
-    initDataReady,
     search,
     setSearch,
     filter,
@@ -28,6 +25,8 @@ export default function ProductEditor({
     limit,
     setLimit,
     limitOptions,
+    initDataReady,
+    loadStatus,
     paginatedProductList,
     filteredProductIds,
     selectedProductIds,
@@ -37,7 +36,8 @@ export default function ProductEditor({
     toggleProductExpansion,
     setOperationBusy,
     shouldProductsLoad,
-    reloadProducts
+    reloadProducts,
+    uiBlocked
 }) {
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();
@@ -178,7 +178,6 @@ export default function ProductEditor({
 
                 <ProductTable
                     loadStatus={loadStatus}
-                    uiBlocked={uiBlocked}
                     products={paginatedProductList}
                     filteredIds={filteredProductIds}
                     selectedIds={selectedProductIds}
@@ -192,6 +191,7 @@ export default function ProductEditor({
                     allowedCategories={productLeafCategories}
                     onProcessForm={processProductForm}
                     onProcessBulkForm={processProductForm}
+                    uiBlocked={uiBlocked}
                 />
                 
                 <Toolbar

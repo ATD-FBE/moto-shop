@@ -23,11 +23,11 @@ export interface ICategoryBody {
     parent: string | null;
 }
 
-export type TCategoryMap = Record<string, ICategory & {
-    parent?: string | null;
-    subcategories: ICategory[];
-    [key: string]: any;
-}>;
+export interface ICategoryNode extends ICategory {
+    subcategories: ICategoryNode[];
+}
+export type TCategoryTree = ICategoryNode[];
+export type TCategoryMap = Record<string, ICategoryNode>;
 
 interface ICategoryBaseSuccessData {
     movedProductCount: number;

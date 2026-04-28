@@ -9,12 +9,12 @@ const FORM_CREATE = 'create';
 const FORM_EDIT = 'edit';
  
 export default function CategoryControlPanel({
-    uiBlocked,
     categoryTree,
     categoryMap,
     selectedCategoryId,
     processCategoryForm,
-    confirmCategoryDeletion
+    confirmCategoryDeletion,
+    uiBlocked,
 }) {
     const [activeForm, setActiveForm] = useState(null);
 

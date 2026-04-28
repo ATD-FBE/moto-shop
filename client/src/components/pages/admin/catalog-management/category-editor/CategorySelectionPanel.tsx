@@ -1,10 +1,41 @@
 import { useMemo } from 'react';
 import cn from 'classnames';
+import CategoryEditor from '../CategoryEditor.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import { findCategoryPath } from '@/helpers/categoryHelpers.js';
-import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import { NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/config/constants.js';
+import type { JSX, ComponentProps } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
 
-const loadStatusMap = {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof CategoryEditor>;
+
+type TCategorySelectionPanelProps = Pick<TParentProps,
+    | 'loadStatus'
+    | 'categoryTree'
+    | 'categoryMap'
+    | 'selectedCategoryId'
+    | 'setSelectedCategoryId'
+    | 'loadCategories'
+    | 'shouldProductsLoad'
+    | 'setShouldProductsLoad'
+    | 'uiBlocked'
+>;
+
+interface ICategoriesLoadStatusData {
+    icon: string;
+    iconClass: string;
+    text: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const CATEGORIES_LOAD_STATUS_MAP: Partial<Record<TDataLoadStatus, ICategoriesLoadStatusData>> = {
     [DATA_LOAD_STATUS.LOADING]: {
         icon: '⏳',
         iconClass: 'load',
@@ -20,27 +51,27 @@ const loadStatusMap = {
         iconClass: 'ready',
         text: 'Категории товаров загружены.'
     }
-};
+} as const;
  
 export default function CategorySelectionPanel({
     loadStatus,
-    uiBlocked,
     categoryTree,
     categoryMap,
     selectedCategoryId,
     setSelectedCategoryId,
     loadCategories,
     shouldProductsLoad,
-    setShouldProductsLoad
-}) {
+    setShouldProductsLoad,
+    uiBlocked,
+}: TCategorySelectionPanelProps): JSX.Element {
     const selectedCategoryPath = useMemo(
         () => findCategoryPath(categoryTree, selectedCategoryId),
         [categoryTree, selectedCategoryId]
     );
 
-    const loadStatusData = loadStatusMap[loadStatus];
+    const loadStatusData = CATEGORIES_LOAD_STATUS_MAP[loadStatus];
 
-    const getSelectPrompt = (id, selectedCategoryId, isRoot) => {
+    const getSelectPrompt = (id: string, selectedCategoryId: string, isRoot: boolean): string => {
         return id === selectedCategoryId
             ? isRoot ? 'Выбрать категорию' : 'Выбрать подкатегорию'
             : isRoot ? 'Очистить выбор категорий' : '⬑ К родительской категории';
@@ -49,15 +80,15 @@ export default function CategorySelectionPanel({
     return (
         <div className="category-selection-panel">
             <div className="categories-load-status">
-                <span className={cn('icon', loadStatusData.iconClass)}>
-                    {loadStatusData.icon}
+                <span className={cn('icon', loadStatusData?.iconClass || '')}>
+                    {loadStatusData?.icon || ''}
                 </span>
-                {loadStatusData.text}
+                {loadStatusData?.text || NO_VALUE_LABEL}
             </div>
 
-            {selectedCategoryPath.map((id, pathIdx, pathArr) => {
+            {selectedCategoryPath.map((id, pathIdx, pathArr): JSX.Element | null => {
                 const isRoot = pathIdx === 0;
-                const subcategories = isRoot ? categoryTree : categoryMap[id]?.subcategories;
+                const subcategories = isRoot ? categoryTree : categoryMap[id]?.subcategories ?? [];
                 if (!isRoot && !subcategories.length) return null;
 
                 const isLevelActive = subcategories.some(cat => cat.id === selectedCategoryId);
@@ -110,7 +141,7 @@ export default function CategorySelectionPanel({
                 <button
                     className="reload-categories-btn"
                     onClick={loadCategories}
-                    disabled={loadStatus === 'error' ? false : uiBlocked}
+                    disabled={loadStatus === DATA_LOAD_STATUS.ERROR ? false : uiBlocked}
                 >
                     <span className="icon">🔄</span>
                     Перезагрузить
