@@ -39,8 +39,9 @@ export default function SseNotifications(): null {
             dispatch(login({ user: updatedUser, accessTokenExp, refreshTokenExp }));
             saveUserToLocalStorage(updatedUser);
 
-            const locationPath = locationPathRef.current;
-            const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
+            const isNotificationsPage = routeConfig.customerNotifications.paths.some(
+                path => path === locationPathRef.current
+            );
 
             const oldUnreadNotifsCount = unreadNotificationsCountRef.current;
             const newUnreadNotifsCount = updatedUser.unreadNotificationsCount;
@@ -72,8 +73,9 @@ export default function SseNotifications(): null {
             dispatch(adjustAndSyncUnreadNotifications(newUnreadNotificationsChange));
 
             // Увеличение счётчика новых уведомлений для страницы списка всех уведомлений покупателя
-            const locationPath = locationPathRef.current;
-            const isNotificationsPage = routeConfig.customerNotifications.paths.includes(locationPath);
+            const isNotificationsPage = routeConfig.customerNotifications.paths.some(
+                path => path === locationPathRef.current
+            );
 
             if (newUnreadNotificationsChange > 0 && isNotificationsPage) {
                 dispatch(incrementNewNotifications(newUnreadNotificationsChange));

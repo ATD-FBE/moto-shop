@@ -667,8 +667,8 @@ function FormGroupEntries({
                     id: fieldId,
                     name,
                     autoComplete: 'off',
-                    disabled: isFormLocked || !isApplicable,
                     onChange: handleFieldChange,
+                    disabled: isFormLocked || !isApplicable,
                 };
 
                 const fieldElem = (() => {

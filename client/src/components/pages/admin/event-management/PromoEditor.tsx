@@ -217,8 +217,8 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         }
 
         const { title, image, description, startDate, endDate } = responseData.promo;
-        const formattedStartDate = startDate.split('T')[0];
-        const formattedEndDate = endDate.split('T')[0];
+        const formattedStartDate = startDate.split('T')[0] ?? '';
+        const formattedEndDate = endDate.split('T')[0] ?? '';
 
         initFieldValuesRef.current = {
             title,

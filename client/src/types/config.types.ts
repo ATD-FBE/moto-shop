@@ -1,5 +1,6 @@
 import {
     SCREEN_SIZE,
+    CATEGORY_FORM_MODE,
     DATA_LOAD_STATUS,
     FORM_STATUS,
     FIELD_UI_STATUS,
@@ -12,6 +13,8 @@ import type { TIntent } from '@shared/types/index.js';
 /////////////////
 
 export type TScreenSize = typeof SCREEN_SIZE[keyof typeof SCREEN_SIZE];
+
+export type TCategoryFormMode = typeof CATEGORY_FORM_MODE[keyof typeof CATEGORY_FORM_MODE];
 
 export type TDataLoadStatus = typeof DATA_LOAD_STATUS[keyof typeof DATA_LOAD_STATUS];
 

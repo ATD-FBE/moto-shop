@@ -12,13 +12,8 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { UNSORTED_CATEGORY_SLUG, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
-import type { TDataLoadStatus } from '@/types/index.js';
-import type {
-    TCategoryTree,
-    TCategoryMap,
-    TAuthErrorStatus,
-    TGeneralErrorStatus
-} from '@shared/types/index.js';
+import type { TDataLoadStatus, TCategoryPerformFormSubmissionResult } from '@/types/index.js';
+import type { TCategoryTree, TCategoryMap } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -36,19 +31,6 @@ interface ICategoryEditorProps {
     setShouldProductsLoad: Dispatch<SetStateAction<boolean>>;
     uiBlocked: boolean;
 }
-
-interface IPerformFormSubmissionErrorResult {
-    status: typeof REQUEST_STATUS.UNCHANGED | TAuthErrorStatus | TGeneralErrorStatus;
-}
-interface IPerformFormSubmissionSuccessResult {
-    status: typeof REQUEST_STATUS.SUCCESS;
-    finalizeSuccessHandling: () => void;
-    newCategoryId?: string;
-    movedProductCount: number;
-}
-type TPerformFormSubmissionResult =
-    | IPerformFormSubmissionErrorResult
-    | IPerformFormSubmissionSuccessResult;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -82,16 +64,14 @@ export default function CategoryEditor({
     );
 
     const processCategoryForm = async (
-        performFormSubmission: () => Promise<TPerformFormSubmissionResult | undefined>
+        performFormSubmission: () => Promise<TCategoryPerformFormSubmissionResult | undefined>
     ): Promise<void> => {
         setOperationBusy(true);
 
         const responseData = await performFormSubmission();
         if (isUnmountedRef.current || !responseData) return;
 
-        const { status } = responseData;
-
-        if (status === REQUEST_STATUS.SUCCESS) {
+        if (responseData.status === REQUEST_STATUS.SUCCESS) {
             const { finalizeSuccessHandling, newCategoryId, movedProductCount } = responseData;
 
             await loadCategories();

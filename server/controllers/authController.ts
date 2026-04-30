@@ -264,7 +264,7 @@ export const handleAuthUserUpdateRequest: RequestHandler<
                             const safeDbField = dbField as keyof typeof dbFieldToFormFieldMap;
                             const formField = dbFieldToFormFieldMap[safeDbField];
                             
-                            const errorMessageType = error.errors[safeDbField].kind === 'unique'
+                            const errorMessageType = error.errors[safeDbField]?.kind === 'unique'
                                 ? 'unique'
                                 : 'default';
                             fieldErrors[formField] =
@@ -404,7 +404,7 @@ export const handleAuthRefreshRequest: RequestHandler<{}, TAuthRefreshResponse> 
         };
     
         if (error.name in jwtErrors) {
-            return safeSendResponse(res, 401, { message: jwtErrors[error.name] });
+            return safeSendResponse(res, 401, { message: jwtErrors[error.name] ?? 'JWT Error' });
         }
 
         next(error);

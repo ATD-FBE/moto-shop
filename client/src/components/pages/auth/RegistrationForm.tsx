@@ -319,7 +319,7 @@ export default function RegistrationForm(): JSX.Element {
                         refreshTokenExp
                     }));
 
-                    let targetPath = routeConfig.home.paths[0];
+                    let targetPath: string = routeConfig.home.paths[0];
 
                     if (user.role === USER_ROLE.CUSTOMER) {
                         const { redirectTo } = dispatch(initCustomerSession({

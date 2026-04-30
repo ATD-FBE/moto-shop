@@ -14,10 +14,7 @@ import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } f
 export default function Products({
     loadStatus,
     reloadProducts,
-    paginatedProductList,
-    totalProducts,
-    uiBlocked,
-    initDataReady,
+    products,
     search,
     setSearch,
     filter,
@@ -30,7 +27,10 @@ export default function Products({
     setPage,
     limit,
     setLimit,
-    limitOptions
+    limitOptions,
+    initDataReady,
+    totalProducts,
+    uiBlocked,
 }) {
     const isTouchDevice = useSelector(state => state.ui.isTouchDevice);
     const { isAuthenticated, user } = useSelector(state => state.auth);
@@ -69,7 +69,7 @@ export default function Products({
             <ProductsMain
                 loadStatus={loadStatus}
                 reloadProducts={reloadProducts}
-                paginatedProductList={paginatedProductList}
+                products={products}
                 isTouchDevice={isTouchDevice}
                 isAuthenticated={isAuthenticated}
                 userRole={userRole}
@@ -96,7 +96,7 @@ export default function Products({
 function ProductsMain({
     loadStatus,
     reloadProducts,
-    paginatedProductList,
+    products,
     isTouchDevice,
     isAuthenticated,
     userRole,
@@ -167,10 +167,10 @@ function ProductsMain({
     return (
         <div ref={listMainRef} className="products-main">
             <ul className="product-list">
-                {paginatedProductList.map(product => (
-                    <li key={product.id} className="product-item">
+                {products.map(prod => (
+                    <li key={prod.id} className="product-item">
                         <ProductCard
-                            product={product}
+                            product={prod}
                             isTouchDevice={isTouchDevice}
                             isAuthenticated={isAuthenticated}
                             userRole={userRole}

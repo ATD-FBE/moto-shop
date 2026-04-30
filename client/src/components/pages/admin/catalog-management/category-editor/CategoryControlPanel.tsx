@@ -1,12 +1,40 @@
 import { useState, useMemo } from 'react';
 import cn from 'classnames';
-import Collapsible from '@/components/common/Collapsible.jsx';
+import CategoryEditor from '../CategoryEditor.js';
 import CategoryForm from './category-control-panel/CategoryForm.jsx';
+import Collapsible from '@/components/common/Collapsible.jsx';
 import { buildSafeParentCategoryMap } from '@/helpers/categoryHelpers.js';
-import { CATEGORY_ROOT_LABEL } from '@/config/constants.js';
+import { CATEGORY_ROOT_LABEL, CATEGORY_FORM_MODE } from '@/config/constants.js';
+import type { JSX, ComponentProps } from 'react';
+import type {
+    TCategoryPerformFormSubmissionResult,
+    TCategoryFormMode,
+    ICategoryCreateFormData,
+    ICategoryEditFormData
+} from '@/types/index.js';
+import type { TCategoryTree } from '@shared/types/index.js';
 
-const FORM_CREATE = 'create';
-const FORM_EDIT = 'edit';
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof CategoryEditor>;
+
+type TCategoryControlPanelProps = Pick<TParentProps,
+    | 'categoryTree'
+    | 'categoryMap'
+    | 'selectedCategoryId'
+    | 'uiBlocked'
+> & {
+    processCategoryForm: (
+        performFormSubmission: () => Promise<TCategoryPerformFormSubmissionResult | undefined>
+    ) => Promise<void>;
+    confirmCategoryDeletion: () => void;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
 export default function CategoryControlPanel({
     categoryTree,
@@ -15,8 +43,8 @@ export default function CategoryControlPanel({
     processCategoryForm,
     confirmCategoryDeletion,
     uiBlocked,
-}) {
-    const [activeForm, setActiveForm] = useState(null);
+}: TCategoryControlPanelProps): JSX.Element {
+    const [activeForm, setActiveForm] = useState<TCategoryFormMode | null>(null);
 
     const selectedCategory = categoryMap[selectedCategoryId];
 
@@ -25,10 +53,15 @@ export default function CategoryControlPanel({
         [categoryMap, categoryTree]
     );
 
-    const toggleForm = (form) => setActiveForm(prev => prev === form ? null : form);
-    const getSubcategories = (id) => id ? categoryMap[id]?.subcategories || [] : categoryTree;
+    const toggleForm = (formMode: TCategoryFormMode): void =>
+        setActiveForm(prev => prev === formMode ? null : formMode);
+
+    const getSubcategories = (id: string | null | undefined): TCategoryTree =>
+        id ? categoryMap[id]?.subcategories || [] : categoryTree;
       
-    const createFormProps = useMemo(() => ({
+    const createFormData = useMemo<ICategoryCreateFormData>(() => ({
+        mode: CATEGORY_FORM_MODE.CREATE,
+        categoryId: null,
         initValues: {
             name: '',
             slug: '',
@@ -37,12 +70,13 @@ export default function CategoryControlPanel({
         },
         defaultOrder: getSubcategories(selectedCategoryId).length,
         maxOrder: getSubcategories(selectedCategoryId).length,
-        isRestricted: selectedCategory?.restricted,
+        isRestricted: selectedCategory?.restricted ?? false,
         parentName: selectedCategory?.name ?? CATEGORY_ROOT_LABEL
     }), [selectedCategoryId, categoryMap]);
 
-    const editFormProps = useMemo(() => ({
-        categoryId: selectedCategoryId || '',
+    const editFormData = useMemo<ICategoryEditFormData>(() => ({
+        mode: CATEGORY_FORM_MODE.EDIT,
+        categoryId: selectedCategoryId,
         initValues: {
             name: selectedCategory?.name ?? '',
             slug: selectedCategory?.slug ?? '',
@@ -50,7 +84,7 @@ export default function CategoryControlPanel({
             parent: selectedCategory?.parent ?? null
         },
         maxOrder: getSubcategories(selectedCategory?.parent).length - 1,
-        isRestricted: selectedCategory?.restricted,
+        isRestricted: selectedCategory?.restricted ?? false,
         safeParentData: parentCategoryMap[selectedCategoryId] ?? {
             selectOptions: [],
             subcatCounts: {}
@@ -67,9 +101,9 @@ export default function CategoryControlPanel({
                 <button
                     className={cn(
                         'category-form-toggle-btn--create',
-                        { 'enabled': activeForm === FORM_CREATE }
+                        { 'enabled': activeForm === CATEGORY_FORM_MODE.CREATE }
                     )}
-                    onClick={() => toggleForm(FORM_CREATE)}
+                    onClick={() => toggleForm(CATEGORY_FORM_MODE.CREATE)}
                     disabled={uiBlocked || selectedCategory?.restricted}
                 >
                     <span className="icon">➕</span>
@@ -77,13 +111,16 @@ export default function CategoryControlPanel({
                 </button>
 
                 <Collapsible
-                    isExpanded={activeForm === FORM_CREATE && !selectedCategory?.restricted}
+                    isExpanded={
+                        activeForm === CATEGORY_FORM_MODE.CREATE &&
+                        !selectedCategory?.restricted
+                    }
                     className="category-form-collapsible"
                     showContextIndicator={false}
                 >
                     {/* Форма для создания новой категории внутри выбранной */}
                     <CategoryForm
-                        { ...createFormProps }
+                        { ...createFormData }
                         onSubmit={processCategoryForm}
                         uiBlocked={uiBlocked}
                     />
@@ -94,9 +131,9 @@ export default function CategoryControlPanel({
                 <button
                     className={cn(
                         'category-form-toggle-btn--edit',
-                        { 'enabled': activeForm === FORM_EDIT }
+                        { 'enabled': activeForm === CATEGORY_FORM_MODE.EDIT }
                     )}
-                    onClick={() => toggleForm(FORM_EDIT)}
+                    onClick={() => toggleForm(CATEGORY_FORM_MODE.EDIT)}
                     disabled={uiBlocked || !selectedCategoryId}
                 >
                     <span className="icon">🖊</span>
@@ -104,13 +141,13 @@ export default function CategoryControlPanel({
                 </button>
 
                 <Collapsible
-                    isExpanded={activeForm === FORM_EDIT && selectedCategoryId}
+                    isExpanded={activeForm === CATEGORY_FORM_MODE.EDIT && selectedCategoryId}
                     className="category-form-collapsible"
                     showContextIndicator={false}
                 >
                     {/* Форма для редактирования выбранной категории */}
                     <CategoryForm
-                        {...editFormProps}
+                        {...editFormData}
                         onSubmit={processCategoryForm}
                         uiBlocked={uiBlocked}
                     />

@@ -107,6 +107,10 @@ export const handleCategoryCreateRequest: RequestHandler<
             );
             checkTimeout(req);
 
+            if (!createdCategory) {
+                throw createAppError(500, 'Ошибка создания: документ не был возвращен');
+            }
+
             // Перемещение товаров родительской категории, если она была листовой
             const unsortedCategory = await Category.findOne({ slug: UNSORTED_CATEGORY_SLUG })
                 .lean<TDbCategory>()

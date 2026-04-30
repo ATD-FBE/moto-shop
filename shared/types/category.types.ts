@@ -52,12 +52,13 @@ export type TCategoryCreateResponse =
     | TSuccessResponse<ICategoryCreateSuccessData>;
     
 /// Изменение категории ///
+interface ICategoryUpdateSuccessData extends ICategoryBaseSuccessData {}
 export type TCategoryUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'category'>
     | TGeneralErrorResponse
-    | TSuccessResponse<ICategoryBaseSuccessData>;
+    | TSuccessResponse<ICategoryUpdateSuccessData>;
     
 /// Удаление категории ///
 export type TCategoryDeleteResponse =

@@ -1,27 +1,94 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendCategoryCreateRequest, sendCategoryUpdateRequest } from '@/api/categoryRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, FIELD_UI_STATUS } from '@/config/constants.js';
 import {
+    NO_VALUE_LABEL,
+    CATEGORY_FORM_MODE,
+    FORM_STATUS,
+    BASE_SUBMIT_STATES,
+    FIELD_UI_STATUS
+} from '@/config/constants.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
     createFieldConfigMap,
     createInitialFieldsState,
-    fieldsStateReducer
+    fieldsStateReducer,
+    getStringValue
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldValue,
+    IFieldState,
+    IProcessFormFieldsResult,
+    ICategoryFormCommonData,
+    ICategoryEditFormData,
+    TCategoryFormProps,
+    TCategoryPerformFormSubmissionResult,
+    TAppThunk
+} from '@/types/index.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes
+} from 'react';
+import type {
+    TEntityField,
+    ICategoryBody,
+    TCategoryUpdateResponse,
+    TCategoryCreateResponse
+} from '@shared/types/index.js';
 
-const getSubmitStates = (isEditMode) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'category'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+type TFormFields = {
+    [K in keyof ICategoryBody]: TFieldValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> & 
+    SelectHTMLAttributes<HTMLSelectElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, BAD_REQUEST, NOT_FOUND, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = isEditMode ? 'Изменить' : 'Создать';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
@@ -43,110 +110,116 @@ const getSubmitStates = (isEditMode) => {
             addMessage: 'Категории товаров будут обновлены.',
             submitBtnLabel: 'Выполнено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const getFieldConfigs = (
-    isEditMode,
-    initValues,
-    defaultOrder,
-    maxOrder,
-    safeParentData,
-    parentName,
-    isRestricted
-) => {
-    const fieldConfigs = [
-        {
-            name: 'name',
-            label: 'Название',
-            elem: 'input',
-            type: 'text',
-            value: initValues.name,
-            placeholder: isEditMode ? 'Укажите новое название категории' : 'Укажите название категории',
-            autoComplete: 'off',
-            trim: true,
-            lock: isRestricted && !isEditMode
-        },
-        {
-            name: 'slug',
-            label: 'URL-адрес',
-            elem: 'input',
-            type: 'text',
-            value: initValues.slug,
-            placeholder: isEditMode ? 'Укажите новый адрес категории' : 'Укажите адрес категории',
-            autoComplete: 'off',
-            trim: true,
-            lock: isRestricted
-        },
-        {
-            name: 'order',
-            label: 'Порядковый номер',
-            elem: 'input',
-            type: 'number',
-            value: (isEditMode ? initValues.order : defaultOrder) + 1,
-            min: 1,
-            max: maxOrder + 1,
-            lock: isRestricted && !isEditMode
-        },
-        {
-            name: 'parent',
-            label: 'Родительская категория',
-            elem: isEditMode ? 'select' : 'input',
-            type: isEditMode ? undefined : 'hidden',
-            options: isEditMode
-                ? safeParentData.selectOptions.map(opt => ({ value: opt.id, label: opt.label }))
-                : undefined,
-            value: initValues.parent || '',
-            outputValue: !isEditMode ? parentName : undefined,
-            lock: isRestricted
-        }
-    ];
+    isEditMode: boolean,
+    initValues: ICategoryFormCommonData['initValues'],
+    defaultOrder: number | undefined,
+    maxOrder: number,
+    safeParentData: ICategoryEditFormData['safeParentData'] | undefined,
+    parentName: string | undefined,
+    isRestricted: boolean
+) => extendFieldConfigs([
+    {
+        name: 'name',
+        label: 'Название',
+        elem: 'input',
+        type: 'text',
+        defaultValue: initValues.name,
+        placeholder: isEditMode ? 'Укажите новое название категории' : 'Укажите название категории',
+        autoComplete: 'off',
+        trim: true,
+        lock: isRestricted && !isEditMode
+    },
+    {
+        name: 'slug',
+        label: 'URL-адрес',
+        elem: 'input',
+        type: 'text',
+        defaultValue: initValues.slug,
+        placeholder: isEditMode ? 'Укажите новый адрес категории' : 'Укажите адрес категории',
+        autoComplete: 'off',
+        trim: true,
+        lock: isRestricted
+    },
+    {
+        name: 'order',
+        label: 'Порядковый номер',
+        elem: 'input',
+        type: 'number',
+        defaultValue: (isEditMode ? initValues.order : (defaultOrder ?? 0)) + 1,
+        min: 1,
+        max: maxOrder + 1,
+        lock: isRestricted && !isEditMode
+    },
+    {
+        name: 'parent',
+        label: 'Родительская категория',
+        elem: isEditMode ? 'select' : 'output',
+        options: isEditMode && safeParentData
+            ? safeParentData.selectOptions.map(opt => ({ value: opt.id, label: opt.label }))
+            : [],
+        defaultValue: initValues.parent ?? '',
+        outputValue: !isEditMode ? (parentName ?? NO_VALUE_LABEL) : undefined,
+        lock: isRestricted
+    }
+] as const);
 
-    const fieldConfigMap = createFieldConfigMap(fieldConfigs); // Плюс дженерик <TValidFieldName>
+export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>): JSX.Element {
+    const {
+        mode,
+        categoryId, // В режиме edit может быть пустой строкой (категория не выбрана)
+        initValues, // { name, slug, order, parent }
+        maxOrder,
+        isRestricted,
+        onSubmit,
+        uiBlocked
+    } = props;
 
-    return { fieldConfigs, fieldConfigMap };
-};
+    const isEditMode = mode === CATEGORY_FORM_MODE.EDIT;
 
-export default function CategoryForm({
-    categoryId, // В режиме edit, может быть пустой строкой (категория не выбрана)
-    initValues, // { name, slug, order, parent }
-    maxOrder,
-    defaultOrder, // В режиме create
-    isRestricted,
-    safeParentData, // В режиме edit, { selectOptions: [...], subcatCounts: {...} }
-    parentName, // В режиме create
-    onSubmit,
-    uiBlocked
-}) {
-    const isEditMode = categoryId !== undefined;
+    const defaultOrder = !isEditMode ? props.defaultOrder : undefined;
+    const parentName = !isEditMode ? props.parentName : undefined;
+    const safeParentData = isEditMode ? props.safeParentData : undefined;
 
     const { submitStates, lockedStatuses } = useMemo(() => getSubmitStates(isEditMode), [isEditMode]);
-    const { fieldConfigs, fieldConfigMap } = useMemo(
-        () => getFieldConfigs(isEditMode, initValues, defaultOrder, maxOrder, safeParentData,
-            parentName, isRestricted),
-        [isEditMode, initValues, defaultOrder, maxOrder, safeParentData, parentName, isRestricted]
-    );
+
+    const { fieldConfigs, fieldConfigMap } = useMemo(() => {
+        const configs = getFieldConfigs(
+            isEditMode, initValues, defaultOrder, maxOrder,
+            safeParentData, parentName, isRestricted
+        );
+        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+
+        return { fieldConfigs: configs, fieldConfigMap: map };
+    }, [isEditMode, initValues, defaultOrder, maxOrder, safeParentData, parentName, isRestricted]);
+
+    const initialStateOptions = useMemo(() => ({
+        // Добавление дополнительного параметра в состояние для поля заказа
+        extraStateFields: { order: ['max'] } as Partial<Record<TValidFieldName, (keyof TFieldConfig)[]>>
+    }), []);
 
     const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer, // Плюс дженерик <TValidFieldName>
+        fieldsStateReducer,
         fieldConfigs,
-        (configs) => createInitialFieldsState(configs, { // Плюс дженерик <TValidFieldName>
-            extraStateFields: { order: ['max'] } // Добавление дополнительного поля в состояние
-        })
+        (configs) => createInitialFieldsState<TValidFieldName>(configs, initialStateOptions)
     );
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+
+    const dispatch = useAppDispatch();
+
+    console.log(fieldsState);
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
-    const handleFieldChange = (e) => {
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { name, type, value } = e.currentTarget;
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
@@ -156,7 +229,7 @@ export default function CategoryForm({
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -167,8 +240,8 @@ export default function CategoryForm({
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, ICategoryBody> => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.category[name];
                 if (!validation) {
@@ -176,9 +249,10 @@ export default function CategoryForm({
                     return acc;
                 }
 
-                const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
+                const { trim } = fieldConfigMap[name] ?? {};
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
                 const submittedValue =
-                    name === 'order'
+                    name === 'order' && typeof normalizedValue === 'number'
                         ? normalizedValue - 1
                         : (name === 'parent' && normalizedValue === '')
                             ? null
@@ -186,7 +260,7 @@ export default function CategoryForm({
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(submittedValue)
-                        : validation.test(submittedValue);
+                        : validation.test(String(submittedValue));
 
                 const isValid = ruleCheck;
 
@@ -195,11 +269,11 @@ export default function CategoryForm({
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.category[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.category[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid) {
-                    acc.formFields[name] = submittedValue;
+                    (acc.formFields as TFormFields)[name] = submittedValue;
                     
                     const initValue = initValues[name];
                     const isValueChanged = isEditMode
@@ -212,13 +286,18 @@ export default function CategoryForm({
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as ICategoryBody,
+                changedFields: [] as TValidFieldName[]
+            }
         );
     
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
         
         // Попытка отправки формы, находясь в корне категорий
@@ -227,7 +306,7 @@ export default function CategoryForm({
             return setSubmitStatus(FORM_STATUS.BAD_REQUEST);
         }
         
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
 
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
@@ -237,23 +316,21 @@ export default function CategoryForm({
             return setSubmitStatus(FORM_STATUS.UNCHANGED);
         }
 
-        const performFormSubmission = async () => {
+        const performFormSubmission = async (): Promise<
+            TCategoryPerformFormSubmissionResult | undefined
+        > => {
             setSubmitStatus(FORM_STATUS.SENDING);
             dispatch(setNavigationLock(true));
 
-            const requestThunk = isEditMode
-                ? sendCategoryUpdateRequest(categoryId, formFields)
-                : sendCategoryCreateRequest(formFields);
+            const requestThunk = (
+                isEditMode
+                    ? sendCategoryUpdateRequest(categoryId, formFields)
+                    : sendCategoryCreateRequest(formFields)
+            ) as TAppThunk<Promise<TCategoryCreateResponse | TCategoryUpdateResponse>> ;
             const responseData = await dispatch(requestThunk);
             if (isUnmountedRef.current) return;
             
-            const {
-                status,
-                message,
-                fieldErrors,
-                newCategoryId,
-                movedProductCount
-            } = responseData;
+            const { status, message } = responseData;
             const LOG_CTX = `CATEGORY: ${isEditMode ? 'UPDATE' : 'CREATE'}`;
 
             switch (status) {
@@ -271,6 +348,8 @@ export default function CategoryForm({
                     break;
 
                 case FORM_STATUS.INVALID: {
+                    const { fieldErrors } = responseData;
+
                     logRequestStatus({
                         context: LOG_CTX,
                         status,
@@ -278,10 +357,13 @@ export default function CategoryForm({
                         details: fieldErrors
                     });
     
-                    const fieldsStateUpdates = {};
-                    Object.entries(fieldErrors).forEach(([name, error]) => {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                    });
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
+                    (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                        .forEach(([name, error]) => {
+                            if (name in fieldConfigMap) {
+                                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                            }
+                        });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
@@ -292,7 +374,7 @@ export default function CategoryForm({
                 case FORM_STATUS.SUCCESS: {
                     logRequestStatus({ context: LOG_CTX, status, message });
 
-                    const fieldsStateUpdates = {};
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
                     changedFields.forEach(name => {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                     });
@@ -300,7 +382,7 @@ export default function CategoryForm({
 
                     setSubmitStatus(status);
 
-                    const finalizeSuccessHandling = () => {
+                    const finalizeSuccessHandling = (): void => {
                         if (isUnmountedRef.current) return;
 
                         changedFields.forEach(name => fieldsStateUpdates[name] = { uiStatus: '' });
@@ -310,7 +392,14 @@ export default function CategoryForm({
                         dispatch(setNavigationLock(false));
                     };
 
-                    return { status, finalizeSuccessHandling, newCategoryId, movedProductCount };
+                    return {
+                        status,
+                        finalizeSuccessHandling,
+                        newCategoryId: !isEditMode && 'newCategoryId' in responseData
+                            ? responseData.newCategoryId
+                            : undefined,
+                        movedProductCount: responseData.movedProductCount
+                    };
                 }
             
                 default:
@@ -336,14 +425,17 @@ export default function CategoryForm({
     // Обновление всех полей при изменении их конфигов (смена категории, пересоздание карты)
     useEffect(() => {
         setSubmitStatus(FORM_STATUS.DEFAULT);
-        dispatchFieldsState({ type: 'RESET', payload: createInitialFieldsState(fieldConfigs) });
+        dispatchFieldsState({
+            type: 'RESET',
+            payload: createInitialFieldsState(fieldConfigs, initialStateOptions)
+        });
     }, [fieldConfigs]);
 
     // Обновление поля order при изменении родителя категории в режиме редактирования
     useEffect(() => {
-        if (!isEditMode) return;
+        if (!isEditMode || !safeParentData) return;
 
-        const selectedParentId = fieldsState.parent.value;
+        const selectedParentId = String(fieldsState.parent.value);
         const subCount = safeParentData.subcatCounts[selectedParentId];
         if (subCount === undefined) return;
 
@@ -360,7 +452,7 @@ export default function CategoryForm({
                 }
             }
         });
-    }, [fieldsState.parent.value, safeParentData]);
+    }, [isEditMode, safeParentData, fieldsState.parent.value]);
 
     // Сброс статуса формы при отсутствии ошибок полей
     useEffect(() => {
@@ -382,48 +474,62 @@ export default function CategoryForm({
                     label,
                     elem,
                     type,
+                    outputValue,
                     placeholder,
                     autoComplete,
                     min,
                     trim,
                     options,
-                    outputValue,
                     lock: isFieldLocked
                 }) => {
                     const fieldId = `category-${isEditMode ? 'edit' : 'create'}-${toKebabCase(name)}`;
                     const fieldInfoClass = getFieldInfoClass(elem, type, name);
-                    const labelFor = elem === 'input' && type === 'hidden' ? undefined : fieldId;
-                    
-                    const elemProps = {
+
+                    const baseElemProps: TFieldElemProps = {
                         id: fieldId,
                         name,
-                        type,
-                        placeholder,
-                        value: fieldsState[name]?.value,
-                        min,
-                        max: fieldsState[name]?.max,
-                        autoComplete,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
                         disabled: isFormLocked || isFieldLocked
                     };
+    
+                    const fieldElem = (() => {
+                        if (elem === 'select') return (
+                            <select
+                                {...baseElemProps}
+                                value={getStringValue(fieldsState[name]?.value)}
+                            >
+                                {options.map((option, idx) => (
+                                    <option key={`${idx}-${option.value}`} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        );
 
-                    const elemChildren = elem === 'select'
-                        ? options.map((option, idx) => (
-                            <option key={`${idx}-${option.value}`} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))
-                        : null;
+                        if (elem === 'output') return (
+                            <output>{outputValue}</output>
+                        );
+                    
+                        return (
+                            <input
+                                {...baseElemProps}
+                                type={type}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                min={min}
+                                max={getStringValue(fieldsState[name]?.max)}
+                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                autoComplete={autoComplete}
+                            />
+                        );
+                    })();
 
                     return (
                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
-                            <label htmlFor={labelFor} className="form-entry-label">{label}:</label>
+                            <label htmlFor={fieldId} className="form-entry-label">{label}:</label>
 
                             <div className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
-                                {React.createElement(elem, elemProps, elemChildren)}
-
-                                {outputValue && <output>{outputValue}</output>}
+                                {fieldElem}
                                 
                                 {fieldsState[name]?.error && (
                                     <span className="invalid-message">

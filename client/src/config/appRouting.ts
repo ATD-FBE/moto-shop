@@ -96,8 +96,12 @@ export const routeConfig = {
         nav: { map: 'main', order: 3, featured: true }
     },
     productDetails: {
-        label: ({ sku, productId }) => sku ? `Товар ${sku}` : productId ? `Товар #${productId}` : 'Товар',
-        generatePath: ({ slug, sku, productId }) => `/catalog/products/${slug}~${sku ?? ''}~${productId}`,
+        label: (
+            { productId, sku }: { productId: string, sku?: string }
+        ): string => sku ? `Товар ${sku}` : productId ? `Товар #${productId}` : 'Товар',
+        generatePath: (
+            { productId, slug, sku }: { productId: string, slug: string, sku?: string }
+        ): string => `/catalog/products/${slug}~${sku ?? ''}~${productId}`,
         paths: ['/catalog/products/:productKey'],
         paramSchema: { productKey: { split: '~', map: ['slug', 'sku', 'productId'] } },
         access: 'public',
@@ -175,8 +179,12 @@ export const routeConfig = {
         nav: { map: 'adminDashboard', order: 1, badge: 'order-management' }
     },
     adminOrderDetails: {
-        label: ({ orderNumber }) => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
-        generatePath: ({ orderNumber, orderId }) => `/admin/orders/${orderNumber}~${orderId}`,
+        label: (
+            { orderNumber }: { orderNumber: string }
+        ): string => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
+        generatePath: (
+            { orderId, orderNumber }: { orderId: string, orderNumber: string }
+        ): string => `/admin/orders/${orderNumber}~${orderId}`,
         paths: ['/admin/orders/:orderKey'],
         paramSchema: { orderKey: { split: '~', map: ['orderNumber', 'orderId'] } },
         access: 'admin',
@@ -250,7 +258,9 @@ export const routeConfig = {
     },
     customerCheckout: {
         label: 'Оформление заказа',
-        generatePath: ({ orderId }) => `/customer/checkout/${orderId}`,
+        generatePath: (
+            { orderId }: { orderId: string }
+        ): string => `/customer/checkout/${orderId}`,
         paths: ['/customer/checkout/:orderId'],
         access: 'customer',
         parent: 'customerCart',
@@ -297,8 +307,12 @@ export const routeConfig = {
         nav: { map: 'customerPersonal', order: 2 }
     },
     customerOrderDetails: {
-        label: ({ orderNumber }) => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
-        generatePath: ({ orderNumber, orderId }) => getCustomerOrderDetailsPath(orderNumber, orderId),
+        label: (
+            { orderNumber }: { orderNumber: string }
+        ): string => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
+        generatePath: (
+            { orderId, orderNumber }: { orderId: string, orderNumber: string }
+        ): string => getCustomerOrderDetailsPath(orderNumber, orderId),
         paths: ['/customer/orders/:orderKey'],
         paramSchema: { orderKey: { split: '~', map: ['orderNumber', 'orderId'] } },
         access: 'customer',
@@ -307,7 +321,9 @@ export const routeConfig = {
     },
     customerOrderCardOnlinePayment: {
         label: 'Оплата картой',
-        generatePath: ({ orderNumber, orderId }) =>
+        generatePath: (
+            { orderId, orderNumber }: { orderId: string, orderNumber: string }
+        ): string =>
             `/customer/orders/${orderNumber}~${orderId}/payment/card-online`,
         paths: ['/customer/orders/:orderKey/payment/card-online'],
         paramSchema: { orderKey: { split: '~', map: ['orderNumber', 'orderId'] } },
@@ -340,7 +356,7 @@ export const routeConfig = {
         parent: 'home',
         component: NotFound
     }
-};
+} as const;
 
 export const navigationMap = buildNavigationMap(routeConfig);
 

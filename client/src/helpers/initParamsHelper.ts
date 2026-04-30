@@ -89,8 +89,8 @@ export const getInitSortParam = (
     if (isValidSort) return rawSort;
 
     const defaultOption = sortOptions[0];
-    const defaultField = defaultOption.dbField;
-    const defaultOrder = defaultOption.defaultOrder || 'asc';
+    const defaultField = defaultOption?.dbField ?? '';
+    const defaultOrder = defaultOption?.defaultOrder || 'asc';
 
     return defaultOrder === 'desc' ? `-${defaultField}` : defaultField;
 };

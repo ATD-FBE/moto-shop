@@ -38,6 +38,7 @@ export interface IFieldConfig {
     readonly maxSizeMB?: number;
     readonly options?: readonly { value: string; label: string; }[]
     readonly defaultValue?: TFieldValue;
+    readonly outputValue?: string;
     readonly placeholder?: string;
     readonly autoComplete?: 'on' | 'off';
     readonly trim?: boolean;
@@ -46,6 +47,7 @@ export interface IFieldConfig {
     readonly tooltip?: string;
     readonly enabled?: boolean;
     readonly optional?: boolean;
+    readonly lock?: boolean;
     readonly canApply?: (data: any) => boolean;
 }
 

@@ -99,7 +99,7 @@ export default function CustomerTableOrders(
 
         const lastLoadedOrder = loadedOrderList[0];
         const params = new URLSearchParams({
-            ...(lastLoadedOrder ? { firstOrderId: loadedOrderList[0].id } : {}),
+            ...(lastLoadedOrder ? { firstOrderId: loadedOrderList[0]?.id } : {}),
             skip: String(loadedOrderList.length),
             limit: String(limit)
         });

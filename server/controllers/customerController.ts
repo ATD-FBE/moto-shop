@@ -115,7 +115,7 @@ export const handleCustomerListRequest: RequestHandler<
         );
         const paginatedCustomerList = aggregateResult[0]?.paginatedCustomerList.map(c =>
             prepareCustomer(c)
-        );
+        ) || [];
 
         safeSendResponse(res, 200, {
             message: 'Данные клиентов успешно загружены',

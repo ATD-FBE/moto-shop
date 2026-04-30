@@ -205,8 +205,8 @@ export const parseSortParam = <TModel extends object>(
     sortOptions: readonly ISortOption<TModel>[]
 ): IParseSortResult<TModel> => {
     const defaultOption = sortOptions[0];
-    const defaultSortField = defaultOption.dbField as keyof TModel;
-    const defaultSortOrder = defaultOption.defaultOrder === 'asc' ? 1 : -1;
+    const defaultSortField = defaultOption?.dbField ?? '' as keyof TModel;
+    const defaultSortOrder = defaultOption?.defaultOrder === 'asc' ? 1 : -1;
 
     const sort = typeof sortParam === 'string' ? sortParam.trim() : '';
     if (!sort) return { sortField: defaultSortField, sortOrder: defaultSortOrder };

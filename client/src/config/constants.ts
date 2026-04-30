@@ -45,6 +45,11 @@ export const PRODUCT_IMAGE_LOADER = '/images/product_image_loader.jpg';
 export const PRODUCT_IMAGE_PLACEHOLDER = '/images/product_image_placeholder.jpg';
 export const BLANK_IMAGE_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
+export const CATEGORY_FORM_MODE = {
+    CREATE: 'create',
+    EDIT: 'edit'
+} as const;
+
 export const FIELD_UI_STATUS = {
     VALID: 'valid',
     CHANGED: 'changed',

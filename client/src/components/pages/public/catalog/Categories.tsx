@@ -1,19 +1,54 @@
 import { useState, useMemo } from 'react';
-import { useSelector } from 'react-redux';
 import cn from 'classnames';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import { findCategoryPath, getAllExpandableCategoryIds } from '@/helpers/categoryHelpers.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
+import type { JSX, Dispatch, SetStateAction, MouseEvent } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type { TCategoryTree, ICategoryNode } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICategoriesProps {
+    categoryTree: TCategoryTree;
+    selectedCategoryId: string;
+    setSelectedCategoryId: Dispatch<SetStateAction<string>>;
+    loadStatus: TDataLoadStatus;
+    reloadCategories: () => void;
+}
+
+interface ICategoryListProps extends ICategoriesProps {
+    expandedCategoryIds: string[];
+    setExpandedCategoryIds: Dispatch<SetStateAction<string[]>>;
+    selectedCategoryPath: string[];
+}
+
+type TCategoryItemProps = Pick<ICategoryListProps,
+    | 'expandedCategoryIds'
+    | 'setExpandedCategoryIds'
+    | 'selectedCategoryId'
+    | 'setSelectedCategoryId'
+    | 'selectedCategoryPath'
+> & {
+    category: ICategoryNode;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function Categories({
-    loadStatus,
-    reloadCategories,
     categoryTree,
     selectedCategoryId,
-    setSelectedCategoryId
-}) {
-    const isDashboardActive = useSelector(state => state.ui.isDashboardPanelActive);
-    const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
+    setSelectedCategoryId,
+    loadStatus,
+    reloadCategories
+}: ICategoriesProps): JSX.Element {
+    const isDashboardActive = useAppSelector(state => state.ui.isDashboardPanelActive);
+    const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>([]);
 
     const selectedCategoryPath = useMemo(
         () => findCategoryPath(categoryTree, selectedCategoryId),
@@ -27,7 +62,7 @@ export default function Categories({
     const isReady = loadStatus === DATA_LOAD_STATUS.READY;
     const isAllExpanded = expandedCategoryIds.length === allExpandableCategoryIds.length;
 
-    const toggleAllCategoriesExpansion = () => {
+    const toggleAllCategoriesExpansion = (): void => {
         if (isAllExpanded) {
             setExpandedCategoryIds([]);
         } else {
@@ -85,7 +120,7 @@ function CategoryList({
     selectedCategoryId,
     setSelectedCategoryId,
     selectedCategoryPath
-}) {
+}: ICategoryListProps): JSX.Element {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div className="categories-load-status">
@@ -144,15 +179,15 @@ function CategoryItem({
     selectedCategoryId,
     setSelectedCategoryId,
     selectedCategoryPath
-}) {
+}: TCategoryItemProps): JSX.Element {
     const isExpanded = expandedCategoryIds.includes(category.id);
-    const hasSubcategories = category.subcategories?.length > 0;
+    const hasSubcategories = category.subcategories.length > 0;
     const isInSelectedPath = selectedCategoryPath.includes(category.id);
     const isSelected = selectedCategoryId === category.id;
 
-    const selectCategory = () => setSelectedCategoryId(category.id);
+    const selectCategory = (): void => setSelectedCategoryId(category.id);
     
-    const toggleSubcategories = (e) => {
+    const toggleSubcategories = (e: MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
 
         setExpandedCategoryIds(prev =>

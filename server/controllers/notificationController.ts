@@ -17,7 +17,12 @@ import { USER_ROLE, NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constant
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { FilterQuery } from 'mongoose';
-import type { TDbNotification, TDbNotificationBase, TDbNotificationManaged } from '@server/types/index.js';
+import type {
+    TDbNotification,
+    TDbNotificationBase,
+    TDbNotificationManaged,
+    INotificationCustomerMetadata
+} from '@server/types/index.js';
 import type {
     INotification,
     INotificationBody,
@@ -166,14 +171,14 @@ export const handleNotificationListRequest: RequestHandler<
                 const notificationMap = notifications.reduce((acc, { notificationId, isRead, readAt }) => {
                     acc[notificationId.toString()] = { isRead, readAt: readAt ?? null };
                     return acc;
-                }, {} as Record<string, { isRead: boolean, readAt: Date | null }>);
+                }, {} as Record<string, INotificationCustomerMetadata>);
 
                 paginatedNotificationList = dbPaginatedNotificationList.map(notif => {
-                    const metadata = notificationMap[notif._id.toString()] || {};
+                    const metadata = notificationMap[notif._id.toString()];
                     const extendedNotif = {
                         ...notif,
-                        isRead: metadata.isRead,
-                        readAt: metadata.readAt
+                        isRead: metadata?.isRead ?? false,
+                        readAt: metadata?.readAt ?? null
                     };
 
                     return prepareNotification(extendedNotif, { managed: false });

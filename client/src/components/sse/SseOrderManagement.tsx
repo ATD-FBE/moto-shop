@@ -64,7 +64,9 @@ export default function SseOrderManagement(): null {
             saveUserToLocalStorage(updatedUser);
             dispatch(login({ user: updatedUser, accessTokenExp, refreshTokenExp }));
 
-            const isAdminOrdersPage = routeConfig.adminOrders.paths.includes(locationPathRef.current);
+            const isAdminOrdersPage = routeConfig.adminOrders.paths.some(
+                path => path === locationPathRef.current
+            );
 
             const oldActiveOrdersCount = activeOrdersCountRef.current;
             const newActiveOrdersCount = updatedUser.activeOrdersCount;
@@ -104,7 +106,9 @@ export default function SseOrderManagement(): null {
             dispatch(adjustAndSyncActiveOrders(newActiveOrdersChange));
 
             // Увеличение счётчика новых заказов для страницы списка всех заказов админа
-            const isAdminOrdersPage = routeConfig.adminOrders.paths.includes(locationPathRef.current);
+            const isAdminOrdersPage = routeConfig.adminOrders.paths.some(
+                path => path === locationPathRef.current
+            );
 
             if (newActiveOrdersChange > 0 && isAdminOrdersPage) {
                 dispatch(incrementNewActiveOrders(newActiveOrdersChange));

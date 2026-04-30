@@ -86,7 +86,7 @@ export const expiryDateValidation = (val: unknown, context: { split: unknown }):
     const parts = cleanedVal.split(split);
     if (parts.length !== 2) return false;
 
-    const [mm, yy] = parts;
+    const [mm = '', yy = ''] = parts;
 
     if (!/^(0[1-9]|1[0-2])$/.test(mm)) return false;
     if (!/^\d{2}$/.test(yy)) return false;

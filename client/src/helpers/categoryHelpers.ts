@@ -1,3 +1,4 @@
+import type { ISafeParentCategoryOption, TSubcategoryCounts } from '@/types/index.js';
 import type { ICategory, ICategoryNode, TCategoryTree, TCategoryMap } from '@shared/types/index.js';
 
 //////////////////////////
@@ -15,17 +16,9 @@ type TGetLeafCategoriesResult = {
     slug: string;
 }[];
 
-interface ISafeParentCategoryOption {
-    id: string;
-    label: string;
-    subcategoryCount: number;
-}
-
-type ISafeParentCategory = Record<string, number>;
-
 type IBuildSafeParentCategoryMapResult = Record<string, {
     selectOptions: ISafeParentCategoryOption[];
-    subcatCounts: ISafeParentCategory;
+    subcatCounts: TSubcategoryCounts;
 }>;
 
 /////////////////////
@@ -47,6 +40,11 @@ export const buildCategoryTreeAndMap = (
     // Заполнение подкатегорий карты и сборка дерева
     flatCategoryList.forEach(cat => {
         const node = categoryMap[cat.id];
+
+        if (!node) {
+            console.error(`Категория ${cat.id} отсутствует в карте категорий`);
+            return;
+        }
 
         if (cat.parent) {
             const parentNode = categoryMap[cat.parent];
@@ -202,7 +200,7 @@ export const buildSafeParentCategoryMap = (
         const subcatCounts = options.reduce((acc, { id, subcategoryCount }) => {
             acc[id] = subcategoryCount;
             return acc;
-        }, {} as ISafeParentCategory);
+        }, {} as TSubcategoryCounts);
         subcatCounts[rootOption.id] = rootOption.subcategoryCount;
 
         map[currentCat.id] = {

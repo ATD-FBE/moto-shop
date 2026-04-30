@@ -46,17 +46,16 @@ const YOOKASSA_WEBHOOK_IPS = [
 ];
 
 const checkYooKassaIp = (req: Request): boolean => {
-    const incomingIp =
-        req.headers['x-forwarded-for'] ||
-        req.socket?.remoteAddress ||
-        req.connection?.remoteAddress ||
-        '';
+    const xForwardedFor = req.headers['x-forwarded-for'];
+    const remoteIp = Array.isArray(xForwardedFor) 
+        ? xForwardedFor[0] ?? ''
+        : xForwardedFor?.split(',')[0] || req.socket.remoteAddress || '';
 
-    let cleanIp = (Array.isArray(incomingIp) ? incomingIp[0] : incomingIp.split(',')[0]).trim();
+    let cleanIp = remoteIp.trim();
 
-    // Удаление ::ffff: из IP, IPv6 не затрагивается (не имеет точек)
-    if (cleanIp.startsWith('::ffff:') && cleanIp.includes('.')) {
-        cleanIp = cleanIp.substring(7);
+    // Чистка IPv4-mapped IPv6 префикса
+    if (cleanIp.includes('.')) {
+        cleanIp = cleanIp.replace(/^::ffff:/, '');
     }
 
     return ipRangeCheck(cleanIp, YOOKASSA_WEBHOOK_IPS);
@@ -153,11 +152,13 @@ export const createYooKassaRefunds = async (
     const errors: ICreateOnlineRefundsResultError[] = [];
 
     refundSettled.forEach((r, idx) => {
+        const task = refundTasks[idx];
+
         if (r.status === 'fulfilled') {
             refundIds.push(r.value);
-        } else {
+        } else if (task) {
             errors.push({
-                task: refundTasks[idx],
+                task,
                 error: toError(r.reason)
             });
         }

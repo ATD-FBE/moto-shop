@@ -111,10 +111,11 @@ export type TDbPromoManaged = Pick<TDbPromo, keyof typeof MANAGED_DB_PROMO_FIELD
 
 export type TDbNotificationBase = Pick<TDbNotification, keyof typeof BASE_DB_NOTIFICATION_FIELDS>;
 export type TDbNotificationManaged = Pick<TDbNotification, keyof typeof MANAGED_DB_NOTIFICATION_FIELDS>;
-export type TDbNotificationCustomer = TDbNotificationBase & {
+export interface INotificationCustomerMetadata {
     isRead: boolean;
     readAt: Date | null;
-};
+}
+export type TDbNotificationCustomer = TDbNotificationBase & INotificationCustomerMetadata;
 
 export type TDbOrderWithTx = TDbOrderFinal & {
     financials: TDbOrderFinal['financials'] & {

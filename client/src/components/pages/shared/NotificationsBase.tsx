@@ -16,7 +16,7 @@ import type {
     TRenderNotificationCardProps,
     INewNotificationAlertProps
 } from '@/types/index.js';
-import type { INotification, TNotificationsSortOption } from '@shared/types/index.js';
+import type { INotification } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///

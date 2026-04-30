@@ -27,6 +27,7 @@ export const dotNotationToObject = (flatObj: Record<string, unknown>): Record<st
 
         for (let i = 0; i < parts.length - 1; i++) {
             const part = parts[i];
+            if (!part) continue;
 
             if (typeof target[part] !== 'object' || target[part] === null) {
                 target[part] = {};
@@ -35,7 +36,9 @@ export const dotNotationToObject = (flatObj: Record<string, unknown>): Record<st
             target = target[part];
         }
 
-        const lastKey = parts[parts.length - 1];
+        const lastKey = parts.at(-1);
+        if (!lastKey) continue;
+        
         target[lastKey] = value;
     }
 

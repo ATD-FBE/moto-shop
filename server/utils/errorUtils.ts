@@ -59,7 +59,7 @@ export const parseValidationErrors = <E extends TEntityType>(
         const error = err.errors[field]; // В валидаторе Mongoose используется полный путь поля
 
         if (field === GENERIC_FILE_FIELD && entityType && entityType in ENTITY_FILE_FIELDS) {
-            const message = error.message || 'Неизвестная ошибка файлового поля';
+            const message = error?.message || 'Неизвестная ошибка файлового поля';
             const fileFields = ENTITY_FILE_FIELDS[entityType as keyof typeof ENTITY_FILE_FIELDS];
             
             fileFields.forEach(fieldName => {
@@ -76,9 +76,9 @@ export const parseValidationErrors = <E extends TEntityType>(
         if (entityType && isValidEntityField(entityType, fieldName)) {
             const messageTypes = fieldErrorMessages[entityType][fieldName];
             
-            if (error.kind === 'unique') {
+            if (error?.kind === 'unique') {
                 fieldErrors[fieldName] = messageTypes.unique || DEFAULT_FIELD_ERROR_MESSAGE;
-            } else if (error.kind === 'user defined') {
+            } else if (error?.kind === 'user defined') {
                 const errorType = error.message; // Тип ошибки передаётся через сообщение
 
                 fieldErrors[fieldName] = (errorType && errorType in messageTypes) 
@@ -91,7 +91,7 @@ export const parseValidationErrors = <E extends TEntityType>(
                     DEFAULT_FIELD_ERROR_MESSAGE;
             }
         } else {
-            systemFieldErrors.push(`${field}: ${error.message}`);
+            systemFieldErrors.push(`${field}: ${error?.message || 'Ошибка системного поля'}`);
         }
     }
 

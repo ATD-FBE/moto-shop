@@ -111,6 +111,8 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
 
             if (match) {
                 const key = match[1]; // match[1] - ключ объекта или массив (не начинается с "[")
+                if (!key) return;
+                
                 parts.push(key);
 
                 if (match[3] !== undefined) { // match[2] - ([...]), match[3] - индекс массива
@@ -124,6 +126,7 @@ export const applyDotNotationPatches = <T extends Record<string, any>>(
         for (let i = 0; i < parts.length; i++) {
             const isLast = i === parts.length - 1;
             const key = parts[i];
+            if (key === undefined) return;
 
             if (isLast) {
                 if (value === undefined) {
@@ -213,6 +216,7 @@ export const getLastFinancialsEventEntry = <T extends object>(
 ): T | null => {
     for (let i = history.length - 1; i >= 0; i--) {
         const entry = history[i];
+        if (!entry) continue;
 
         if (!entry.voided?.flag) {
             return entry;

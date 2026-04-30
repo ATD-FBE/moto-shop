@@ -94,23 +94,14 @@ export const handleNewsCreateRequest: RequestHandler<
     const { title, content } = req.body;
 
     try {
-        const { newsLbl } = await runInDbTransaction(async (session) => {
-            const [newNews] = await News.create(
-                [
-                    {
-                        title: title.trim(),
-                        content: content.trim(),
-                        createdBy: userId
-                    }
-                ],
-                { session }
-            );
-            checkTimeout(req);
-
-            return { newsLbl: newNews.title };
+        const newNews = await News.create({
+            title: title.trim(),
+            content: content.trim(),
+            createdBy: userId
         });
+        checkTimeout(req);
 
-        safeSendResponse(res, 201, { message: `Новость "${newsLbl}" успешно создана` });
+        safeSendResponse(res, 201, { message: `Новость "${newNews.title}" успешно создана` });
     } catch (err) {
         next(err);
     }

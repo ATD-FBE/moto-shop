@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Categories from './catalog/Categories.jsx';
 import Products from './catalog/Products.jsx';
 import {
@@ -20,34 +20,36 @@ import { reconcileCartWithProducts } from '@/services/cartService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { TFilterParams, ICategory, IProduct } from '@shared/types/index.js';
 
-export default function Catalog() {
-    const isAuthenticated = useSelector(state => state.auth.isAuthenticated);
+export default function Catalog(): JSX.Element {
+    const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
 
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState(new URLSearchParams());
-    const [sort, setSort] = useState(productsSortOptions[0].dbField);
+    const [filter, setFilter] = useState<TFilterParams>({});
+    const [sort, setSort] = useState<string>(productsSortOptions[0].dbField);
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(productsPageLimitOptions[0]);
+    const [limit, setLimit] = useState<number>(productsPageLimitOptions[0]);
 
     const [initCategoriesReady, setInitCategoriesReady] = useState(false);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [categoriesLoadError, setCategoriesLoadError] = useState(false);
-    const [flatCategoryList, setFlatCategoryList] = useState([]);
+    const [flatCategoryList, setFlatCategoryList] = useState<ICategory[]>([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
     const [initProductsReady, setInitProductsReady] = useState(false);
     const [productsLoading, setProductsLoading] = useState(true);
     const [productsLoadError, setProductsLoadError] = useState(false);
     const [totalProducts, setTotalProducts] = useState(0);
-    const [paginatedProductList, setPaginatedProductList] = useState([]);
+    const [paginatedProductList, setPaginatedProductList] = useState<IProduct[]>([]);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const { categoryTree, categoryMap } = useMemo(
@@ -73,26 +75,27 @@ export default function Catalog() {
 
     const isProductUiBlocked = categoriesLoadError || productsLoading || productsLoadError;
 
-    const loadCategories = async () => {
+    const loadCategories = async (): Promise<void> => {
         setCategoriesLoadError(false);
         setCategoriesLoading(true);
 
-        const { status, message, categoryList } = await dispatch(sendCategoryListRequest());
+        const responseData = await dispatch(sendCategoryListRequest());
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CATEGORY: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCategoriesLoadError(true);
         } else {
-            setFlatCategoryList(categoryList);
+            setFlatCategoryList(responseData.categoryList);
             setInitCategoriesReady(true);
         }
 
         setCategoriesLoading(false);
     };
 
-    const loadProducts = async (urlParams) => {
+    const loadProducts = async (urlParams: string): Promise<void> => {
         setProductsLoadError(false);
         setProductsLoading(true);
 
@@ -102,12 +105,14 @@ export default function Catalog() {
         );
         if (isUnmountedRef.current) return;
 
-        const { status, message, productCount, paginatedProductList } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'PRODUCT: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setProductsLoadError(true);
         } else {
+            const { productCount, paginatedProductList } = responseData;
+
             setTotalProducts(productCount);
             setPaginatedProductList(paginatedProductList);
             setInitProductsReady(true);
@@ -117,9 +122,9 @@ export default function Catalog() {
         setProductsLoading(false);
     };
 
-    const reloadProducts = async () => {
+    const reloadProducts = (): void => {
         const urlParams = location.search.slice(1);
-        await loadProducts(urlParams);
+        loadProducts(urlParams);
     };
 
     // Стартовая загрузка списка категорий и очистка при размонтировании
@@ -151,13 +156,18 @@ export default function Catalog() {
     useEffect(() => {
         if (!initialized) return;
 
-        const category = selectedCategoryId && categoryMap[selectedCategoryId]
+        const categoryParam = selectedCategoryId && categoryMap[selectedCategoryId]
             ? `${categoryMap[selectedCategoryId].slug}~${selectedCategoryId}`
             : '';
             
-        const params = new URLSearchParams({ category, search, sort, page, limit });
-        filter.forEach((value, key) => params.append(key, value));
-
+        const params = new URLSearchParams({
+            category: categoryParam,
+            search,
+            sort,
+            page: String(page),
+            limit: String(limit),
+            ...filter
+        });
         const urlParams = params.toString();
 
         if (location.search !== `?${urlParams}`) {
@@ -176,21 +186,18 @@ export default function Catalog() {
 
             <div className="catalog-main">
                 <Categories
-                    loadStatus={categoriesLoadStatus}
-                    reloadCategories={loadCategories}
                     categoryTree={categoryTree}
                     selectedCategoryId={selectedCategoryId}
                     setSelectedCategoryId={setSelectedCategoryId}
+                    loadStatus={categoriesLoadStatus}
+                    reloadCategories={loadCategories}
                 />
 
                 {initialized && (
                     <Products
                         loadStatus={productsLoadStatus}
                         reloadProducts={reloadProducts}
-                        uiBlocked={isProductUiBlocked}
-                        paginatedProductList={paginatedProductList}
-                        totalProducts={totalProducts}
-                        initDataReady={initProductsReady}
+                        products={paginatedProductList}
                         search={search}
                         setSearch={setSearch}
                         filter={filter}
@@ -204,6 +211,9 @@ export default function Catalog() {
                         limit={limit}
                         setLimit={setLimit}
                         limitOptions={productsPageLimitOptions}
+                        initDataReady={initProductsReady}
+                        totalProducts={totalProducts}
+                        uiBlocked={isProductUiBlocked}
                     />
                 )}
             </div>

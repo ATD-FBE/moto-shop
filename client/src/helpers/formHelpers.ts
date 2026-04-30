@@ -44,13 +44,13 @@ export const createFieldConfigMap = <
 export const createInitialFieldsState = <TFieldName extends string>(
     fieldConfigs: readonly (IFieldConfig & { name: TFieldName })[],
     options: {
-        extraStateFields?: Record<TFieldName, (keyof IFieldConfig)[]>,
+        extraStateFields?: Partial<Record<TFieldName, (keyof IFieldConfig)[]>>,
         autoSave?: boolean,
     } = {}
 ): TFormState<TFieldName> => {
     const { extraStateFields, autoSave } = options;
 
-    return fieldConfigs.reduce((acc, config) => {
+    const state = fieldConfigs.reduce((acc, config) => {
         const { enabled, name, elem, type, defaultValue } = config;
 
         const state: IFieldState = {
@@ -91,6 +91,8 @@ export const createInitialFieldsState = <TFieldName extends string>(
         acc[name] = state;
         return acc;
     }, {} as TFormState<TFieldName>);
+
+    return state;
 };
 
 export const fieldsStateReducer = <TFieldName extends string>(
@@ -102,11 +104,9 @@ export const fieldsStateReducer = <TFieldName extends string>(
             const newState = { ...state };
 
             for (const name in action.payload) {
-                const fieldName = name as TFieldName;
-
-                newState[fieldName] = { 
-                    ...state[fieldName], 
-                    ...action.payload[fieldName] 
+                newState[name] = { 
+                    ...state[name], 
+                    ...action.payload[name] 
                 };
             }
 
@@ -130,17 +130,15 @@ export const fieldsStateReducer = <TFieldName extends string>(
             const saveState = { ...state };
 
             for (const name in fields) {
-                const fieldName = name as TFieldName;
-
-                saveState[fieldName] = {
-                    ...state[fieldName],
+                saveState[name] = {
+                    ...state[name],
                     savedValue: status === FIELD_SAVE_STATUS.SUCCESS
-                        ? fields[fieldName]
-                        : state[fieldName].savedValue,
+                        ? fields[name]
+                        : state[name].savedValue,
                     saveStatus: status,
                     saveStatusMessage: status
                         ? FIELD_SAVE_STATUS_MESSAGES[status]
-                        : state[fieldName].saveStatusMessage
+                        : state[name].saveStatusMessage
                 };
             }
             
@@ -222,7 +220,7 @@ export const processFormattedFieldDeletion = (
             
             // Поиск и удаление ближайшего значащего символа слева от курсора
             let charToDeleteIdx = selectionStart - 1;
-            while (charToDeleteIdx >= 0 && !charRegex.test(value[charToDeleteIdx])) {
+            while (charToDeleteIdx >= 0 && !charRegex.test(value.charAt(charToDeleteIdx))) {
                 charToDeleteIdx--;
             }
             if (charToDeleteIdx < 0) return null;
@@ -234,7 +232,7 @@ export const processFormattedFieldDeletion = (
 
             // Поиск и удаление ближайшего значащего символа справа от курсора
             let charToDeleteIdx = selectionStart;
-            while (charToDeleteIdx < value.length && !charRegex.test(value[charToDeleteIdx])) {
+            while (charToDeleteIdx < value.length && !charRegex.test(value.charAt(charToDeleteIdx))) {
                 charToDeleteIdx++;
             }
             if (charToDeleteIdx >= value.length) return null;
@@ -264,7 +262,7 @@ export const calcFormattedFieldCursorPos = (
     let validCharsCount = 0;
     
     for (let i = 0; i < rawCursorPos; i++) {
-        if (charRegex.test(rawString[i])) {
+        if (charRegex.test(rawString.charAt(i))) {
             validCharsCount++;
         }
     }
@@ -274,14 +272,17 @@ export const calcFormattedFieldCursorPos = (
     let foundChars = 0;
 
     while (foundChars < validCharsCount && newCursorPos < formattedString.length) {
-        if (charRegex.test(formattedString[newCursorPos])) {
+        if (charRegex.test(formattedString.charAt(newCursorPos))) {
             foundChars++;
         }
         newCursorPos++;
     }
 
     // Пропуск разделителей перед следующим значащим символом
-    while (newCursorPos < formattedString.length && !charRegex.test(formattedString[newCursorPos])) {
+    while (
+        newCursorPos < formattedString.length &&
+        !charRegex.test(formattedString.charAt(newCursorPos))
+    ) {
         newCursorPos++;
     }
 

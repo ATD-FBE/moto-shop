@@ -90,7 +90,7 @@ export const productsFilterOptions = [
         paramName: 'active',
         defaultValue: 'true'
     }
-];
+] as const;
 
 export const productEditorFilterOptions = [
     {

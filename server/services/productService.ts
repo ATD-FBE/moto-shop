@@ -165,7 +165,8 @@ export const redistributeProductProportionallyInOrderDrafts = async (
     tempResults.sort((a, b) => b.fraction - a.fraction);
 
     for (let i = 0; i < tempResults.length && remaining > 0; i++, remaining--) {
-        tempResults[i].allocated++;
+        const req = tempResults[i];
+        if (req) req.allocated++;
     }
 
     // Удаление из результатов тех запросов, в которых количество после распределения не измелось
