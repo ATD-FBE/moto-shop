@@ -8,6 +8,7 @@ import {
     DISCOUNT_SOURCE,
     PRODUCT_THUMBNAIL_PRESETS,
     NOTIFICATION_STATUS,
+    PRODUCTS_PAGE_CONTEXT,
     INTENT,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
@@ -31,7 +32,8 @@ import {
 } from '@shared/sortOptions.js';
 import {
     customersFilterOptions,
-    productsFilterOptions,
+    productsFilterConfig,
+    productCatalogFilterOptions,
     productEditorFilterOptions,
     ordersFilterOptions
 } from '@shared/filterOptions.js';
@@ -103,6 +105,8 @@ export type TCurrency = typeof CURRENCY[keyof typeof CURRENCY];
 export type TDiscountSource = typeof DISCOUNT_SOURCE[keyof typeof DISCOUNT_SOURCE];
 
 export type TNotificationStatus = typeof NOTIFICATION_STATUS[keyof typeof NOTIFICATION_STATUS];
+
+export type TProductsPageContext = typeof PRODUCTS_PAGE_CONTEXT[keyof typeof PRODUCTS_PAGE_CONTEXT];
 
 export type TProductThumbnailKey = keyof typeof PRODUCT_THUMBNAIL_PRESETS;
 export type TProductThumbnailSize = typeof PRODUCT_THUMBNAIL_PRESETS[TProductThumbnailKey];
@@ -213,9 +217,15 @@ export interface IDotNotationPatch {
 //////////////////////
 
 export type TCustomersFilterOption = typeof customersFilterOptions[number];
-export type TProductsFilterOption = typeof productsFilterOptions[number];
+export type TProductFilterOptionConfig = typeof productsFilterConfig[number];
+export type TProductCatalogFilterOption = typeof productCatalogFilterOptions[number];
 export type TProductEditorFilterOption = typeof productEditorFilterOptions[number];
 export type TOrdersFilterOption = typeof ordersFilterOptions[number];
+
+export type TFilterOptionConfig<TContext extends string> = TFilterOption & {
+    contexts: readonly TContext[];
+    defaultByContext?: Partial<Record<TContext, TBoolFilterValue>>;
+};
 
 export type TFilterOption<TModel extends object = any> = 
     | INumberFilter<TModel> 

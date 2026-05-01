@@ -29,6 +29,7 @@ export const EventVoidedSchema = new Schema({
                 required: true
             }
         },
+        _id: false,
         required: true
     },
     changedAt: {

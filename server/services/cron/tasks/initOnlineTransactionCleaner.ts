@@ -93,10 +93,12 @@ export const startInitOnlineTransactionCleaner = (): void => {
 
                         // Транзакции не найдены => удаление данных онлайн транзакции и SSE-сообщ. админам
                         if (!foundTransactions || !foundTransactions.length) {
-                            const clearedTransactionCount =
-                                await clearOrderOnlineTransaction(orderId, stuckOnlineTxStatus);
+                            const clearedTxsCount = await clearOrderOnlineTransaction(
+                                orderId,
+                                stuckOnlineTxStatus
+                            );
 
-                            if (clearedTransactionCount > 0) {
+                            if (clearedTxsCount > 0) {
                                 const orderPatches = [{
                                     path: orderDotNotationMap.currentOnlineTransaction,
                                     value: undefined
@@ -298,14 +300,14 @@ const processStuckTransactionGroup = async (
     });
     
     // Очистка данных онлайн транзакции
-    let clearedTransactionCount = 0;
+    let clearedTxsCount = 0;
 
     if (shouldClearTransaction) {
-        clearedTransactionCount = await clearOrderOnlineTransaction(orderId, stuckOnlineTxStatus);
+        clearedTxsCount = await clearOrderOnlineTransaction(orderId, stuckOnlineTxStatus);
     }
 
     // Отправка SSE-сообщения админам
-    if (orderUpdateData && (!shouldClearTransaction || clearedTransactionCount > 0)) {
+    if (orderUpdateData && (!shouldClearTransaction || clearedTxsCount > 0)) {
         const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
     }

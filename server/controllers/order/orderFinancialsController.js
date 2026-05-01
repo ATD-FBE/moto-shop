@@ -260,19 +260,18 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
                 }
             ].filter(({ oldValue, newValue }) => oldValue !== newValue);
 
-            // Установка изменённых данных
+            // Откат последнего времени активности заказа (статус заказ или предыдущее финансовое событие)
             if (isLastEventEntryVoided) {
                 const currentOrderStatusEntry = dbOrder.statusHistory.at(-1);
                 const maxActivityAt = Math.max(
-                    new Date(currentOrderStatusEntry.changedAt).getTime(),
-                    newLastFinancialsEventEntry
-                        ? new Date(newLastFinancialsEventEntry.changedAt).getTime()
-                        : -Infinity
+                    currentOrderStatusEntry.changedAt.getTime(),
+                    newLastFinancialsEventEntry?.changedAt.getTime() ?? -Infinity
                 );
 
                 dbOrder.lastActivityAt = new Date(maxActivityAt);
             }
 
+            // Установка изменений
             changes.forEach(({ field, newValue }) => {
                 dbOrder.set(field, newValue);
             });
@@ -292,8 +291,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
             const orderUpdateData = {
                 orderPatches,
-                voidedFinancialsEventEntry: targetFinancialsEventEntry,
-                ...(isLastEventEntryVoided && { lastFinancialsEventEntry: newLastFinancialsEventEntry })
+                voidedFinancialsEventEntry: targetFinancialsEventEntry
             };
 
             return { orderLbl, eventLbl, orderUpdateData };
@@ -307,19 +305,6 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             message: `Финансовая запись ${eventLbl} заказа ${orderLbl} успешно аннулирована`
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'financials');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
@@ -845,11 +830,10 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
             log.error(`Ошибка создания транзакции оплаты для заказа ${orderLbl}:`, paymentResult.error);
 
             // Откат создания данных онлайн-транзакции в заказе
-            const clearedTransactionCount =
-                await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
+            const clearedTxsCount = await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
 
             // Формирование и отправка SSE-сообщения с удалённой онлайн-транзакцией (до проверки таймаута)
-            if (clearedTransactionCount > 0) {
+            if (clearedTxsCount > 0) {
                 const orderPatches = [{
                     path: orderDotNotationMap.currentOnlineTransaction,
                     value: undefined
@@ -1075,11 +1059,10 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         // Обработка ситуации, когда не создалось ни одного успешного возврата
         if (!allRefundIds.length) {
             // Откат создания данных онлайн-транзакции в заказе
-            const clearedTransactionCount =
-                await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
+            const clearedTxsCount = await clearOrderOnlineTransaction(orderId, TRANSACTION_STATUS.INIT);
 
             // Формирование и отправка SSE-сообщения с удалённой онлайн-транзакцией (до проверки таймаута)
-            if (clearedTransactionCount > 0) {
+            if (clearedTxsCount > 0) {
                 const orderPatches = [{
                     path: orderDotNotationMap.currentOnlineTransaction,
                     value: undefined

@@ -117,6 +117,13 @@ export interface INotificationCustomerMetadata {
 }
 export type TDbNotificationCustomer = TDbNotificationBase & INotificationCustomerMetadata;
 
+export interface IDbProductComputedFields {
+    inStock: boolean;
+    isBrandNew: boolean;
+    isRestocked: boolean;
+}
+export type TDbProductView = TDbProduct & IDbProductComputedFields;
+
 export type TDbOrderWithTx = TDbOrderFinal & {
     financials: TDbOrderFinal['financials'] & {
         currentOnlineTransaction: NonNullable<TDbOrderFinal['financials']['currentOnlineTransaction']>;

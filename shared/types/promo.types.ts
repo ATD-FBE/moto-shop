@@ -31,7 +31,7 @@ interface IPromoUpdateBodyBase<TFile> extends IPromoCreateBodyBase<TFile> {
     removeImage?: string;
 }
 
-/// Загрузка всех акций ///
+/// Загрузка списка акций ///
 export type TPromoListQuery = IBaseQuery;
 
 interface IPromoListSuccessData {

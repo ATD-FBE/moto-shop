@@ -70,7 +70,7 @@ export interface IInvoiceDefinition {
     defaultStyle?: Record<string, any>;
     styles?: Record<string, any>;
     content: any[];
-    footer?: (currentPage: number, pageCount: number) => any;
+    footer?: (currentPage: number, pagesCount: number) => any;
     header?: any;
 }
 export type TFonts = Record<string, {
@@ -116,19 +116,6 @@ export interface IOrderItemRef {
     productId: string | Types.ObjectId;
     quantity: number;
 }
-
-///////////////////////
-/// PRODUCT SERVICE ///
-///////////////////////
-
-export interface IProductFilterQuery {
-    inStock?: string;
-    brandNew?: string;
-    restocked?: string;
-    active?: string;
-    [key: string]: string | undefined;
-}
-
 ///////////////////////
 /// STORAGE SERVICE ///
 ///////////////////////

@@ -14,7 +14,7 @@ import type {
 
 const PROMO_TIMEOUT = 25000;
 
-/// Загрузка всех акций ///
+/// Загрузка списка акций ///
 export const sendPromoListRequest = (
     isAuthenticated: boolean,
     urlParams?: string

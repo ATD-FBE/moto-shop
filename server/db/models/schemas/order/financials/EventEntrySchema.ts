@@ -54,6 +54,7 @@ export const EventEntrySchema = new Schema({
                 match: validationRules.refund.externalReference
             }
         },
+        _id: false,
         required: true
     },
     changedBy: {
@@ -72,6 +73,7 @@ export const EventEntrySchema = new Schema({
                 default: USER_ROLE.SYSTEM
             }
         },
+        _id: false,
         required: true
     },
     changedAt: {

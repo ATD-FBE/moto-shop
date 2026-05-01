@@ -173,7 +173,7 @@ export const buildSafeParentCategoryMap = (
     const rootOption: ISafeParentCategoryOption = {
         id: '',
         label: `${rootLabel} (${categoryTree.length || 'нет'} кат.)`,
-        subcategoryCount: categoryTree.length
+        subcategoriesCount: categoryTree.length
     };
 
     const dataMap = allCategories.reduce((map, currentCat) => {
@@ -193,15 +193,15 @@ export const buildSafeParentCategoryMap = (
             .map(cat => ({
                 id: cat.id,
                 label: `${cat.name} (${cat.subcategories.length || 'нет'} подкат.)`,
-                subcategoryCount: cat.subcategories.length
+                subcategoriesCount: cat.subcategories.length
             }))
             .sort((a, b) => a.label.localeCompare(b.label));
 
-        const subcatCounts = options.reduce((acc, { id, subcategoryCount }) => {
-            acc[id] = subcategoryCount;
+        const subcatCounts = options.reduce((acc, { id, subcategoriesCount }) => {
+            acc[id] = subcategoriesCount;
             return acc;
         }, {} as TSubcategoryCounts);
-        subcatCounts[rootOption.id] = rootOption.subcategoryCount;
+        subcatCounts[rootOption.id] = rootOption.subcategoriesCount;
 
         map[currentCat.id] = {
             selectOptions: [rootOption, ...options],

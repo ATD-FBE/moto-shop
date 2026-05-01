@@ -10,7 +10,7 @@ import {
     getInitLimitParam,
     getInitCategoryParams
 } from '@/helpers/initParamsHelper.js';
-import { productsFilterOptions } from '@shared/filterOptions.js';
+import { productCatalogFilterOptions } from '@shared/filterOptions.js';
 import { productsSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { sendCategoryListRequest } from '@/api/categoryRequests.js';
@@ -19,7 +19,7 @@ import { buildCategoryTreeAndMap } from '@/helpers/categoryHelpers.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { PRODUCTS_PAGE_CONTEXT, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { TFilterParams, ICategory, IProduct } from '@shared/types/index.js';
 
@@ -99,9 +99,8 @@ export default function Catalog(): JSX.Element {
         setProductsLoadError(false);
         setProductsLoading(true);
 
-        const pageContext = 'catalog';
         const responseData = await dispatch(
-            sendProductListRequest(isAuthenticated, pageContext, urlParams)
+            sendProductListRequest(isAuthenticated, PRODUCTS_PAGE_CONTEXT.CATALOG, urlParams)
         );
         if (isUnmountedRef.current) return;
 
@@ -111,9 +110,9 @@ export default function Catalog(): JSX.Element {
         if (status !== REQUEST_STATUS.SUCCESS) {
             setProductsLoadError(true);
         } else {
-            const { productCount, paginatedProductList } = responseData;
+            const { productsCount, paginatedProductList } = responseData;
 
-            setTotalProducts(productCount);
+            setTotalProducts(productsCount);
             setPaginatedProductList(paginatedProductList);
             setInitProductsReady(true);
             dispatch(reconcileCartWithProducts(paginatedProductList));
@@ -144,7 +143,7 @@ export default function Catalog(): JSX.Element {
 
         setSelectedCategoryId(getInitCategoryParams(params, categoryMap));
         setSearch(params.get('search') || '');
-        setFilter(getInitFilterParams(params, productsFilterOptions));
+        setFilter(getInitFilterParams(params, productCatalogFilterOptions));
         setSort(getInitSortParam(params, productsSortOptions));
         setPage(getInitPageParam(params));
         setLimit(getInitLimitParam(params, productsPageLimitOptions));
@@ -202,7 +201,7 @@ export default function Catalog(): JSX.Element {
                         setSearch={setSearch}
                         filter={filter}
                         setFilter={setFilter}
-                        filterOptions={productsFilterOptions}
+                        filterOptions={productCatalogFilterOptions}
                         sort={sort}
                         setSort={setSort}
                         sortOptions={productsSortOptions}

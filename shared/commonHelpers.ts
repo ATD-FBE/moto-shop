@@ -5,15 +5,14 @@ import {
     PAYMENT_METHOD,
     CARD_ONLINE_PROVIDER
 } from './constants.js';
+import type { IFinancialsEventEntry, IRefundablePayment }  from './types/order.types.js';
 import type {
     IDotNotationPatch,
-    IFinancialsEventEntry,
-    IFinancialsEventEntrySummary,
-    IRefundablePayment,
-    TCardOnlineProvider
-}  from './types/index.js';
-import type { TDiscountSource } from './types/shared.types.js';
-import type { TDbOrderFinancialsEventEntry } from '@server/types/db.types.js';
+    TCardOnlineProvider,
+    TDiscountSource,
+    TFilterOption,
+    TFilterOptionConfig
+} from './types/shared.types.js';
 
 export interface IGetAppliedDiscountResult {
     appliedDiscount: number;
@@ -59,6 +58,26 @@ export const ensureArray = <T>(val: T | T[] | undefined): T[] => {
     if (val === undefined) return [];
     return Array.isArray(val) ? val : [val];
 };
+
+export const getFilterOptionsByContext = <TContext extends string>(
+    options: readonly TFilterOptionConfig<TContext>[],
+    context: TContext,
+): readonly TFilterOption[] =>
+    options
+        .filter(opt => opt.contexts.includes(context))
+        .map(opt => {
+            if (opt.type === 'boolean') {
+                const { contexts, defaultByContext, ...rest } = opt;
+
+                return {
+                    ...rest,
+                    defaultValue: defaultByContext?.[context] ?? rest.defaultValue ?? ''
+                } as TFilterOption;
+            }
+
+            const { contexts, ...rest } = opt;
+            return rest as TFilterOption;
+        });
 
 export const trimSetByFilter = (
     originalSet: Set<string>,

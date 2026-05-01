@@ -15,7 +15,6 @@ export interface IOrderUpdateData {
     newOrderStatusEntry?: IOrderStatusEntry;
     newFinancialsEventEntry?: IFinancialsEventEntry;
     voidedFinancialsEventEntry?: IFinancialsEventEntry;
-    lastFinancialsEventEntry?: IFinancialsEventEntry | null;
     newAuditLogEntry?: IAuditLogEntry;
 }
 

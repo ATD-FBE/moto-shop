@@ -22,9 +22,9 @@ import type { ParamsDictionary } from 'express-serve-static-core';
 import type { PipelineStage } from 'mongoose';
 import type { TDbUser, TDbOrderFinal } from '@server/types/index.js';
 import type {
+    TCustomerListFilterParams,
     TCustomerListQuery,
     TCustomerListResponse,
-    TCustomerListFilterParams,
     ICustomerOrderListQuery,
     TCustomerOrderListResponse,
     ICustomerDiscountUpdateBody,
@@ -53,7 +53,7 @@ interface ICustomerParams extends ParamsDictionary {
 /// FUNCTIONALITY ///
 /////////////////////
 
-/// Загрузка ID всех отфильтрованных клиентов и их данных для одной страницы ///
+/// Загрузка ID отфильтрованных клиентов и их данных для одной страницы таблицы ///
 export const handleCustomerListRequest: RequestHandler<
     {},
     TCustomerListResponse,
@@ -134,9 +134,6 @@ export const handleCustomerOrderListRequest: RequestHandler<
     {},
     ICustomerOrderListQuery
 > = async (req, res, next) => {
-    if (!requireDbUser(req, next)) return;
-
-    const dbUser = req.dbUser;
     const customerId = req.params.customerId;
     const firstOrderId = req.query.firstOrderId;
     const skip = Math.max(parseInt(req.query.skip ?? '0', 10), 0);
@@ -178,8 +175,7 @@ export const handleCustomerOrderListRequest: RequestHandler<
         const customerOrderList = dbCustomerOrderList.map(dbOrder => prepareOrder(dbOrder, {
             inList: true,
             managed: false,
-            details: false,
-            viewerRole: dbUser.role
+            details: false
         }));
 
         safeSendResponse(res, 200, {

@@ -41,7 +41,7 @@ interface IPromoParams extends ParamsDictionary {
 /// FUNCTIONALITY ///
 /////////////////////
 
-/// Загрузка всех акций ///
+/// Загрузка списка акций ///
 export const handlePromoListRequest: RequestHandler<
     {},
     TPromoListResponse,

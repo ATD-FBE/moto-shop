@@ -12,7 +12,7 @@ import type {
 
 const NEWS_TIMEOUT = 20000;
 
-/// Загрузка всех новостей ///
+/// Загрузка списка новостей ///
 export const sendNewsListRequest = (isAuthenticated: boolean): TAppThunk<Promise<TNewsListResponse>> =>
     async (dispatch) => {
         const url = '/api/news';

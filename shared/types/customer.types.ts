@@ -27,7 +27,7 @@ interface ICustomerUpdateSuccessData {
     customerUpdateData: Partial<ICustomer>;
 }
 
-/// Загрузка ID всех отфильтрованных клиентов и их данных для одной страницы ///
+/// Загрузка ID отфильтрованных клиентов и их данных для одной страницы таблицы ///
 export type TCustomerListFilterParams = TInferFilterParams<TCustomersFilterOption>;
 export type TCustomerListQuery = IBaseQuery<TCustomersSortOption['dbField']> & TCustomerListFilterParams;
 

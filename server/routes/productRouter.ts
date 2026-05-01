@@ -6,6 +6,11 @@ import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser
 } from '@server/middlewares/authMiddleware.js';
+import { validateInput } from '@server/middlewares/validationMiddleware.js';
+import {
+    productListSchema,
+    productSchema,
+} from '@server/validation/schemas/product.schemas.js';
 import {
     handleProductListRequest,
     handleProductRequest,
@@ -36,12 +41,56 @@ const uploadImages = createMulterConfig({
 const router: Router = Router();
 const { ADMIN } = USER_ROLE;
 
-router.get('/', optionalAuth, optionalUser, handleProductListRequest);
-router.get('/:productId', optionalAuth, optionalUser, handleProductRequest);
-router.post('/', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImages, handleProductCreateRequest);
-router.put('/:productId', verifyAuth, verifyUser, verifyRole(ADMIN), uploadImages, handleProductUpdateRequest);
-router.patch('/bulk', verifyAuth, verifyUser, verifyRole(ADMIN), handleBulkProductUpdateRequest);
-router.delete('/bulk', verifyAuth, verifyUser, verifyRole(ADMIN), handleBulkProductDeleteRequest);
-router.delete('/:productId', verifyAuth, verifyUser, verifyRole(ADMIN), handleProductDeleteRequest);
+router.get(
+    '/',
+    optionalAuth,
+    optionalUser,
+    validateInput(productListSchema),
+    handleProductListRequest
+);
+router.get(
+    '/:productId',
+    optionalAuth,
+    optionalUser,
+    validateInput(productSchema),
+    handleProductRequest
+);
+router.post(
+    '/',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    uploadImages,
+    handleProductCreateRequest
+);
+router.put(
+    '/:productId',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    uploadImages,
+    handleProductUpdateRequest
+);
+router.patch(
+    '/bulk',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    handleBulkProductUpdateRequest
+);
+router.delete(
+    '/bulk',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    handleBulkProductDeleteRequest
+);
+router.delete(
+    '/:productId',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    handleProductDeleteRequest
+);
 
 export default router;

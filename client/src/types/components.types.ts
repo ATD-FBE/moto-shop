@@ -75,7 +75,7 @@ export interface INewNotificationAlertProps {
 export interface ISafeParentCategoryOption {
     id: string;
     label: string;
-    subcategoryCount: number;
+    subcategoriesCount: number;
 }
 export type TSubcategoryCounts = Record<string, number>;
 
@@ -88,7 +88,7 @@ interface ICategoryPerformFormSubmissionSuccessResult {
     status: typeof REQUEST_STATUS.SUCCESS;
     finalizeSuccessHandling: () => void;
     newCategoryId?: string;
-    movedProductCount: number;
+    movedProductsCount: number;
 }
 export type TCategoryPerformFormSubmissionResult =
     | ICategoryPerformFormSubmissionErrorResult

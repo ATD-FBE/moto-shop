@@ -12,7 +12,7 @@ import type {
 
 const CUSTOMER_TIMEOUT = 30000;
 
-/// Загрузка списков ID всех отфильтрованных клиентов и их данных для одной страницы таблицы ///
+/// Загрузка ID отфильтрованных клиентов и их данных для одной страницы таблицы ///
 export const sendCustomerListRequest = (urlParams: string): TAppThunk<Promise<TCustomerListResponse>> =>
     async (dispatch) => {
         const url = `/api/customers?${urlParams}`;

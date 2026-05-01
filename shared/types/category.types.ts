@@ -30,10 +30,10 @@ export type TCategoryTree = ICategoryNode[];
 export type TCategoryMap = Record<string, ICategoryNode>;
 
 interface ICategoryBaseSuccessData {
-    movedProductCount: number;
+    movedProductsCount: number;
 }
 
-/// Загрузка всех категорий ///
+/// Загрузка списка категорий ///
 interface ICategoryListSuccessData {
     categoryList: ICategory[];
 }

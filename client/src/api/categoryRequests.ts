@@ -11,7 +11,7 @@ import type {
 
 const CATEGORY_TIMEOUT = 20000;
 
-/// Загрузка всех категорий ///
+/// Загрузка списка категорий ///
 export const sendCategoryListRequest = (): TAppThunk<Promise<TCategoryListResponse>> =>
     async (dispatch) => {
         const url = '/api/catalog/categories';

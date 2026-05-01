@@ -131,14 +131,14 @@ export default function OrdersBase({
             orderPatches = [],
             newOrderStatusEntry,
             newFinancialsEventEntry,
-            lastFinancialsEventEntry
+            voidedFinancialsEventEntry
         } = orderUpdateData;
 
         if (
             !orderPatches.length &&
             !newOrderStatusEntry &&
             !newFinancialsEventEntry &&
-            lastFinancialsEventEntry !== undefined
+            !voidedFinancialsEventEntry
         ) return;
 
         setPaginatedOrderList(prev => prev.map(order => {
@@ -154,14 +154,22 @@ export default function OrdersBase({
             }
             if (newFinancialsEventEntry) {
                 updatedOrder.financials = {
-                    ...(updatedOrder.financials || {}),
-                    eventHistory: [newFinancialsEventEntry]
+                    ...updatedOrder.financials,
+                    eventHistory: [
+                        ...updatedOrder.financials.eventHistory,
+                        newFinancialsEventEntry
+                    ]
                 };
             }
-            if (lastFinancialsEventEntry !== undefined) {
+            if (voidedFinancialsEventEntry) {
                 updatedOrder.financials = {
-                    ...(updatedOrder.financials || {}),
-                    eventHistory: lastFinancialsEventEntry === null ? [] : [lastFinancialsEventEntry]
+                    ...updatedOrder.financials,
+                    eventHistory: updatedOrder.financials.eventHistory.map(entry => {
+                        if (entry.eventId === voidedFinancialsEventEntry.eventId) {
+                            return voidedFinancialsEventEntry;
+                        }
+                        return entry;
+                    })
                 };
             }
     

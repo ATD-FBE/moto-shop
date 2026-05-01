@@ -205,8 +205,7 @@ export const handleOrderListRequest = async (req, res, next) => {
         const paginatedOrderList = dbPaginatedOrderList.map(dbOrder => prepareOrder(dbOrder, {
             inList: true,
             managed: isManaged,
-            details: true,
-            viewerRole: dbUser.role
+            details: true
         }));
 
         safeSendResponse(res, 200, {
@@ -221,7 +220,7 @@ export const handleOrderListRequest = async (req, res, next) => {
 
 /// Загрузка или обновление отдельного заказа ///
 export const handleOrderRequest = async (req, res, next) => {
-    const viewerRole = req.dbUser.role;
+    const userRole = req.dbUser.role;
     const orderId = req.params.orderId;
     const viewMode = req.query.viewMode;
 
@@ -242,8 +241,8 @@ export const handleOrderRequest = async (req, res, next) => {
             return safeSendResponse(res, 404, { message: `Заказ ${orderLbl} не найден` });
         }
 
-        const viewConfig = ORDER_VIEW_MATRIX[viewerRole][viewMode];
-        const order = prepareOrder(dbOrder, { ...viewConfig, viewerRole });
+        const viewConfig = ORDER_VIEW_MATRIX[userRole][viewMode];
+        const order = prepareOrder(dbOrder, viewConfig);
 
         safeSendResponse(res, 200, { message: `Заказ ${orderLbl} успешно загружен`, order });
     } catch (err) {

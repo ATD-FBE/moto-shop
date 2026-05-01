@@ -64,6 +64,11 @@ export const NOTIFICATION_STATUS = {
     SENT: 'sent'
 } as const;
 
+export const PRODUCTS_PAGE_CONTEXT = {
+    CATALOG: 'catalog',
+    EDITOR: 'editor'
+} as const;
+
 export const PRODUCT_THUMBNAIL_SIZES: readonly TProductThumbnailSize[] =
     Object.values(PRODUCT_THUMBNAIL_PRESETS);
 

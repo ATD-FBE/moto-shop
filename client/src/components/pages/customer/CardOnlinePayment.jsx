@@ -242,7 +242,8 @@ export default function CardOnlinePayment() {
     };
 
     const handleFieldChange = (e) => {
-        const { name, type, value, selectionStart } = e.currentTarget;
+        const input = e.currentTarget; // Сохранение ссылки на объект для доступа к методам в коллбэках
+        const { name, type, value, selectionStart } = input;
         const { format, hasFormatSeparators, charRegex = /\d/ } = fieldConfigMap[name] ?? {};
         let processedValue;
 
@@ -268,13 +269,14 @@ export default function CardOnlinePayment() {
                     processedValue,
                     charRegex
                 );
-                e.currentTarget.setSelectionRange(newCursorPos, newCursorPos);
+                input.setSelectionRange(newCursorPos, newCursorPos);
             });
         }
     };
 
     const handleFieldKeyDown = (e) => {
-        const { name, value, selectionStart, selectionEnd } = e.currentTarget;
+        const input = e.currentTarget; // Сохранение ссылки на объект для доступа к методам в коллбэках
+        const { name, value, selectionStart, selectionEnd } = input;
         const config = fieldConfigMap[name];
         if (!config?.hasFormatSeparators) return;
     
@@ -298,7 +300,7 @@ export default function CardOnlinePayment() {
     
         // Установка позиции курсора после ререндера
         requestAnimationFrame(() => {
-            e.currentTarget.setSelectionRange(result.nextCursorPos, result.nextCursorPos);
+            input.setSelectionRange(result.nextCursorPos, result.nextCursorPos);
         });
     };
 

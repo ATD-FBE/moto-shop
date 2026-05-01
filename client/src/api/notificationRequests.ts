@@ -14,7 +14,7 @@ import type {
 
 const NOTIFICATION_TIMEOUT = 30000;
 
-/// Загрузка списка уведомлений на страницу (для управления админом или просмотра клиентом) ///
+/// Загрузка списка уведомлений для одной страницы (управление админом или просмотр клиентом) ///
 export const sendNotificationListRequest = (
     urlParams: string
 ): TAppThunk<Promise<TNotificationListResponse>> =>

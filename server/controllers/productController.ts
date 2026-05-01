@@ -1,5 +1,7 @@
+import { Types } from 'mongoose';
 import Product from '@server/db/models/Product.js';
 import Category from '@server/db/models/Category.js';
+import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import {
@@ -9,34 +11,64 @@ import {
     buildProductsComputedFields,
     buildCategoriesPipeline
 } from '@server/services/productService.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
-    buildSortPipeline,
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
 import { parseValidationErrors } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE, AGGREGATE_COLLATION_OPTIONS } from '@server/config/constants.js';
 import { ensureArray } from '@shared/commonHelpers.js';
-import { productsFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
+import { productCatalogFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productsSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
-import { PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
-//import type { TDbProduct } from '@server/types/index.js';
+import { USER_ROLE, PRODUCTS_PAGE_CONTEXT, PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { PipelineStage } from 'mongoose';
+import type { TDbProduct, TDbProductView } from '@server/types/index.js';
+import type {
+    TProductListFilterParams,
+    TProductListQuery,
+    TProductListResponse,
+    TProductResponse,
+} from '@shared/types/index.js';
 
-/// Загрузка ID всех отфильтрованных товаров и данных товаров для одной страницы ///
-export const handleProductListRequest = async (req, res, next) => {
-    const isAdmin = req.dbUser?.role === 'admin';
-    const isEditor = req.query.context === 'catalogManagement';
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductListAggregateResult {
+    filteredProductIdList: { _id: Types.ObjectId }[];
+    paginatedProductList: TDbProductView[];
+}
+
+interface IProductParams extends ParamsDictionary {
+    productId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+/// Загрузка ID отфильтрованных товаров и их данных для одной страницы ///
+export const handleProductListRequest: RequestHandler<
+    {},
+    TProductListResponse,
+    {},
+    TProductListQuery
+> = async (req, res, next) => {
+    const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
+    const isEditor = req.query.pageContext === PRODUCTS_PAGE_CONTEXT.EDITOR;
 
     // Определение опций фильтрации
-    const filterOptions = isAdmin && isEditor ? productEditorFilterOptions : productsFilterOptions;
+    const filterOptions = isAdmin && isEditor ? productEditorFilterOptions : productCatalogFilterOptions;
     const sortOptions = isAdmin && isEditor ? productEditorSortOptions : productsSortOptions;
     const pageLimitOptions = isAdmin && isEditor ? productEditorPageLimitOptions : productsPageLimitOptions;
 
@@ -44,15 +76,15 @@ export const handleProductListRequest = async (req, res, next) => {
     const computedFields = buildProductsComputedFields(req.query);
 
     // Настройка фильтра поиска
-    const allowedSearchFields = ['sku', 'name', 'brand', 'tags'];
-    const searchMatch = buildSearchMatch/*<TDbProduct>*/(
+    const allowedSearchFields = ['sku', 'name', 'brand', 'tags'] as const;
+    const searchMatch = buildSearchMatch<TDbProductView>(
         req.query.search,
         allowedSearchFields,
         DEFAULT_SEARCH_TYPE
     );
 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch/*<TDbProduct, TProductListFilterQuery>*/(req.query, filterOptions);
+    const filterMatch = buildFilterMatch<TDbProductView, TProductListFilterParams>(req.query, filterOptions);
 
     // Настройка фильтра категорий
     const categoriesPipeline = await buildCategoriesPipeline(req.query.category);
@@ -69,7 +101,7 @@ export const handleProductListRequest = async (req, res, next) => {
     const filteredPipeline = [{ $project: { _id: 1 } }];
 
     // Пайплайн вывода результатов на странице
-    const paginatedPipeline = buildPaginatedPipeline/*<TDbProduct>*/(req.query, sortOptions, pageLimitOptions);
+    const paginatedPipeline = buildPaginatedPipeline<TDbProductView>(req.query, sortOptions, pageLimitOptions);
 
     // Сборка пайплайна для агрегатора
     const pipeline = [
@@ -88,10 +120,14 @@ export const handleProductListRequest = async (req, res, next) => {
         //console.dir(explainResult.stages[0].$cursor, { depth: null });
 
         // Агрегатный запрос
-        const aggregateResult = await Product.aggregate(pipeline).collation(AGGREGATE_COLLATION_OPTIONS);
+        const aggregateResult = await Product
+            .aggregate<IProductListAggregateResult>(pipeline)
+            .collation(AGGREGATE_COLLATION_OPTIONS);
         checkTimeout(req);
         
-        const filteredProductIdList = aggregateResult[0]?.filteredProductIdList.map(c => c._id) || [];
+        const filteredProductIdList = aggregateResult[0]?.filteredProductIdList.map(c =>
+            c._id.toString()
+        ) || [];
         const dbPaginatedProductList = aggregateResult[0]?.paginatedProductList || [];
 
         const requestTime = Date.now();
@@ -104,7 +140,7 @@ export const handleProductListRequest = async (req, res, next) => {
             message: 'Товары успешно загружены',
             ...(isAdmin && isEditor 
                 ? { filteredProductIdList }
-                : { productCount: filteredProductIdList.length }),
+                : { productsCount: filteredProductIdList.length }),
             paginatedProductList
         });
     } catch (err) {
@@ -113,16 +149,15 @@ export const handleProductListRequest = async (req, res, next) => {
 };
 
 /// Загрузка отдельного товара на его странице ///
-export const handleProductRequest = async (req, res, next) => {
-    const isAdmin = req.dbUser?.role === 'admin';
+export const handleProductRequest: RequestHandler<
+    IProductParams,
+    TProductResponse
+> = async (req, res, next) => {
+    const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
     const productId = req.params.productId;
 
-    if (!typeCheck.objectId(productId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: productId' });
-    }
-
     try {
-        const dbProduct = await Product.findById(productId).lean();
+        const dbProduct = await Product.findById(productId).lean<TDbProduct>();
         checkTimeout(req);
 
         if (!dbProduct) {
@@ -140,6 +175,8 @@ export const handleProductRequest = async (req, res, next) => {
 
 /// Создание товара ///
 export const handleProductCreateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const { files: images, fileUploadError } = req; // Проверено в multer
@@ -277,27 +314,14 @@ export const handleProductCreateRequest = async (req, res, next) => {
             storageService.cleanupProductFiles(newProductId, reqCtx);
         }
 
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Изменение товара ///
 export const handleProductUpdateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const productId = req.params.productId;
@@ -523,21 +547,6 @@ export const handleProductUpdateRequest = async (req, res, next) => {
             }
         }
 
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
@@ -689,21 +698,6 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, statusCode, responseData);
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'product');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
@@ -735,11 +729,6 @@ export const handleProductDeleteRequest = async (req, res, next) => {
         // Удаление файлов фотографий товара, если они были (безопасно)
         storageService.cleanupProductFiles(productId, reqCtx);
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

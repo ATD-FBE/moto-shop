@@ -34,7 +34,7 @@ interface ICategoryParams extends ParamsDictionary {
 /// FUNCTIONALITY ///
 /////////////////////
 
-/// Загрузка всех категорий ///
+/// Загрузка списка категорий ///
 export const handleCategoryListRequest: RequestHandler<
     {},
     TCategoryListResponse
@@ -61,7 +61,7 @@ export const handleCategoryCreateRequest: RequestHandler<
     const orderNum = Number(order);
 
     try {
-        const { newCategory, movedProductCount } = await runInDbTransaction(async (session) => {
+        const { newCategory, movedProductsCount } = await runInDbTransaction(async (session) => {
             // Проверка родительской категории
             if (parent !== null) {
                 const dbParentCategory = await Category.findById(parent).lean<TDbCategory>().session(session);
@@ -79,12 +79,12 @@ export const handleCategoryCreateRequest: RequestHandler<
             }
 
             // Корректировка порядковых номеров создаваемой категории и её соседей (индексация от 0)
-            const neighborCount = await Category.countDocuments({ parent }).session(session);
+            const neighborsCount = await Category.countDocuments({ parent }).session(session);
             checkTimeout(req);
 
-            const correctedOrder = Math.min(Math.max(0, orderNum), neighborCount);
+            const correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount);
 
-            if (neighborCount && correctedOrder < neighborCount) {
+            if (neighborsCount && correctedOrder < neighborsCount) {
                 await Category.updateMany(
                     { parent, order: { $gte: correctedOrder } }, // Поиск док-та с номером >= correctedOrder
                     { $inc: { order: 1 } }, // Инкремент поля order у найденных документов на 1
@@ -124,7 +124,7 @@ export const handleCategoryCreateRequest: RequestHandler<
                 );
             }
 
-            const productsMovedResult = await Product.updateMany(
+            const productsMoveResult = await Product.updateMany(
                 { category: parent },
                 { category: unsortedCategory._id },
                 { session }
@@ -133,7 +133,7 @@ export const handleCategoryCreateRequest: RequestHandler<
 
             return {
                 newCategory: createdCategory,
-                movedProductCount: productsMovedResult.modifiedCount
+                movedProductsCount: productsMoveResult.modifiedCount
             };
         });
 
@@ -141,7 +141,7 @@ export const handleCategoryCreateRequest: RequestHandler<
         safeSendResponse(res, 201, {
             message: `Категория товаров "${newCategory.name}" успешно создана`,
             newCategoryId: newCategory._id.toString(),
-            movedProductCount
+            movedProductsCount
         });
     } catch (err) {
         next(err);
@@ -166,7 +166,7 @@ export const handleCategoryUpdateRequest: RequestHandler<
     }
 
     try {
-        const { categoryName, movedProductCount } = await runInDbTransaction(async (session) => {
+        const { categoryName, movedProductsCount } = await runInDbTransaction(async (session) => {
             // Проверка существования изменяемой категории
             const dbCategory = await Category.findById(categoryId).session(session);
             checkTimeout(req);
@@ -224,12 +224,12 @@ export const handleCategoryUpdateRequest: RequestHandler<
                 checkTimeout(req);
 
                 // Сдвиг номера у новых соседей
-                const neighborCount = await Category.countDocuments({ parent }).session(session);
+                const neighborsCount = await Category.countDocuments({ parent }).session(session);
                 checkTimeout(req);
 
-                correctedOrder = Math.min(Math.max(0, orderNum), neighborCount);
+                correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount);
 
-                if (neighborCount && correctedOrder < neighborCount) {
+                if (neighborsCount && correctedOrder < neighborsCount) {
                     await Category.updateMany(
                         { parent, order: { $gte: correctedOrder } },
                         { $inc: { order: 1 } },
@@ -238,10 +238,10 @@ export const handleCategoryUpdateRequest: RequestHandler<
                     checkTimeout(req);
                 }
             } else if (orderNum !== currentOrder) { // Категория остаётся на месте, но её номер меняется
-                const neighborCount = await Category.countDocuments({ parent }).session(session);
+                const neighborsCount = await Category.countDocuments({ parent }).session(session);
                 checkTimeout(req);
 
-                correctedOrder = Math.min(Math.max(0, orderNum), neighborCount - 1);
+                correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount - 1);
 
                 const rangeFilter = correctedOrder < currentOrder
                     ? { $gte: correctedOrder, $lt: currentOrder }
@@ -273,7 +273,7 @@ export const handleCategoryUpdateRequest: RequestHandler<
             checkTimeout(req);
 
             // Перемещение товаров новой родительской категории, если она была листовой
-            let movedProductCount = 0;
+            let movedProductsCount = 0;
 
             if (parent !== currentParent) {
                 const unsortedCategory = await Category
@@ -288,23 +288,23 @@ export const handleCategoryUpdateRequest: RequestHandler<
                     );
                 }
     
-                const productsMovedResult = await Product.updateMany(
+                const productsMoveResult = await Product.updateMany(
                     { category: parent },
                     { category: unsortedCategory._id },
                     { session }
                 );
                 checkTimeout(req);
 
-                movedProductCount = productsMovedResult.modifiedCount;
+                movedProductsCount = productsMoveResult.modifiedCount;
             }
 
-            return { categoryName: dbCategory.name, movedProductCount };
+            return { categoryName: dbCategory.name, movedProductsCount };
         });
 
         // Транзакция успешно завершена - ответ клиенту об успехе
         safeSendResponse(res, 200, {
             message: `Категория товаров "${categoryName}" успешно изменена`,
-            movedProductCount
+            movedProductsCount
         });
     } catch (err) {
         next(err);
@@ -377,7 +377,7 @@ export const handleCategoryDeleteRequest: RequestHandler<
                 );
             }
 
-            const productsMovedResult = await Product.updateMany(
+            const productsMoveResult = await Product.updateMany(
                 { category: { $in: deletingCategoryObjIds } },
                 { category: unsortedCategory._id },
                 { session }
@@ -387,11 +387,11 @@ export const handleCategoryDeleteRequest: RequestHandler<
             return {
                 categoryName: dbCategory.name,
                 descendantCatNames: descendantCategories.map(d => d.name),
-                movedProductCount: productsMovedResult.modifiedCount
+                movedProductsCount: productsMoveResult.modifiedCount
             };
         });
 
-        const { categoryName, descendantCatNames, movedProductCount } = transactionResult;
+        const { categoryName, descendantCatNames, movedProductsCount } = transactionResult;
 
         const message = `Категория товаров "${categoryName}" успешно удалена` +
             (descendantCatNames.length
@@ -399,7 +399,7 @@ export const handleCategoryDeleteRequest: RequestHandler<
                 descendantCatNames.join('", "') + '"'
                 : '');
 
-        safeSendResponse(res, 200, { message, movedProductCount });
+        safeSendResponse(res, 200, { message, movedProductsCount });
     } catch (err) {
         next(err);
     }

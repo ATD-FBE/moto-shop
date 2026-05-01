@@ -20,7 +20,7 @@ import { productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productEditorSortOptions } from '@shared/sortOptions.js';
 import { productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { trimSetByFilter } from '@shared/commonHelpers.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { PRODUCTS_PAGE_CONTEXT, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { TFilterParams, ICategory, IProduct } from '@shared/types/index.js';
 
@@ -117,9 +117,8 @@ export default function CatalogManagement(): JSX.Element {
         setProductsLoadError(false);
         setProductsLoading(true);
 
-        const pageContext = 'catalogManagement';
         const responseData = await dispatch(
-            sendProductListRequest(isAuthenticated, pageContext, urlParams)
+            sendProductListRequest(isAuthenticated, PRODUCTS_PAGE_CONTEXT.EDITOR, urlParams)
         );
         if (isUnmountedRef.current) return;
 

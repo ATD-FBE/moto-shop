@@ -3,21 +3,22 @@ import apiResponse from './core/apiResponse.js';
 
 const PRODUCT_TIMEOUT = 35000;
 
-/// Загрузка списка товаров для одной страницы ///
-export const sendProductListRequest = (isAuthenticated, context, urlParams) => async (dispatch) => {
-    const url = `/api/catalog/products?context=${context}&${urlParams}`;
-    const options = { method: 'GET' };
-    const errorPrefix = 'Не удалось загрузить товары';
-    const config = {
-        authRequired: isAuthenticated,
-        timeout: PRODUCT_TIMEOUT,
-        minDelay: 500,
-        errorPrefix
-    };
+/// Загрузка ID отфильтрованных товаров и их данных для одной страницы ///
+export const sendProductListRequest = (isAuthenticated, pageContext, urlParams) =>
+    async (dispatch) => {
+        const url = `/api/catalog/products?pageContext=${pageContext}&${urlParams}`;
+        const options = { method: 'GET' };
+        const errorPrefix = 'Не удалось загрузить товары';
+        const config = {
+            authRequired: isAuthenticated,
+            timeout: PRODUCT_TIMEOUT,
+            minDelay: 500,
+            errorPrefix
+        };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
+    };
 
 /// Загрузка отдельного товара на его странице ///
 export const sendProductRequest = (isAuthenticated, productId) => async (dispatch) => {

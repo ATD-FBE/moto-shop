@@ -109,12 +109,10 @@ export const prepareOrder = (
         inList = true,
         managed = false,
         details = true,
-        viewerRole = USER_ROLE.CUSTOMER
     }: {
         inList?: boolean;
         managed?: boolean;
         details?: boolean;
-        viewerRole?: TRegisteredUserRole
     } = {}
 ): IOrder => ({
     id: dbOrder._id.toString(),
@@ -177,7 +175,7 @@ export const prepareOrder = (
         }),
         currentOnlineTransaction: prepareCurrentOnlineTransaction(
             dbOrder.financials.currentOnlineTransaction,
-            { inList, viewerRole }
+            { inList, managed }
         )
     },
     ...(managed && {
@@ -337,15 +335,12 @@ const summarizeFinancialsEventEntry = (
 
 const prepareCurrentOnlineTransaction = (
     currentOnlineTx: TDbOrderCurrentOnlineTransaction | null | undefined,
-    { inList, viewerRole }: { inList: boolean, viewerRole: TRegisteredUserRole }
+    { inList, managed }: { inList: boolean, managed: boolean }
 ): ICurrentOnlineTransaction | undefined => {
     if (!currentOnlineTx) return undefined;
 
     const transactionType = currentOnlineTx.type;
-    const canSeeConfirmation = !inList && (
-        (viewerRole === USER_ROLE.CUSTOMER && transactionType === TRANSACTION_TYPE.PAYMENT) ||
-        (viewerRole === USER_ROLE.ADMIN && transactionType === TRANSACTION_TYPE.REFUND)
-    );
+    const canSeeConfirmation = !inList && !managed && transactionType === TRANSACTION_TYPE.PAYMENT;
 
     return {
         type: transactionType,
@@ -826,9 +821,9 @@ export const generateOrderInvoicePdf = (dbOrder: TDbOrderFinal): IOrderInvoiceRe
         ],
 
         // Вывод номера страницы
-        footer: (currentPage, pageCount) => {
-            if (pageCount === 1) return null;
-            return { text: `Страница ${currentPage} из ${pageCount}`, alignment: 'center', fontSize: 8 };
+        footer: (currentPage, pagesCount) => {
+            if (pagesCount === 1) return null;
+            return { text: `Страница ${currentPage} из ${pagesCount}`, alignment: 'center', fontSize: 8 };
         }
     };
 

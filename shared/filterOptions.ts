@@ -1,10 +1,11 @@
-import { formatDateOnly } from './commonHelpers.js';
+import { formatDateOnly, getFilterOptionsByContext } from './commonHelpers.js';
 import {
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
     FINANCIALS_ACTIVE_STATES,
     FINANCIALS_FINAL_STATES
 } from './constants.js';
+
 
 export const customersFilterOptions = [
     {
@@ -43,103 +44,68 @@ export const customersFilterOptions = [
     }
 ] as const;
 
-export const productsFilterOptions = [
+export const productsFilterConfig = [
     {
         dbField: 'price',
         label: 'Цена (руб.)',
         type: 'number',
+        minParamName: 'minPrice',
+        maxParamName: 'maxPrice',
         minLimit: '0',
         maxLimit: '',
-        minParamName: 'minPrice',
-        maxParamName: 'maxPrice'
+        contexts: ['catalog', 'editor']
     },
     {
         dbField: 'discount',
         label: 'Уценка (%)',
         type: 'number',
+        minParamName: 'minDiscount',
+        maxParamName: 'maxDiscount',
         minLimit: '0',
         maxLimit: '100',
-        minParamName: 'minDiscount',
-        maxParamName: 'maxDiscount'
+        contexts: ['catalog', 'editor']
     },
     {
         dbField: 'inStock',
         label: 'В наличии',
         type: 'boolean',
         paramName: 'inStock',
-        defaultValue: 'true'
+        contexts: ['catalog', 'editor'],
+        defaultByContext: {
+            catalog: 'true',
+            editor: ''
+        }
     },
     {
         dbField: 'isBrandNew',
         label: 'Новинки',
         type: 'boolean',
         paramName: 'brandNew',
-        defaultValue: ''
+        defaultValue: '',
+        contexts: ['catalog', 'editor']
     },
     {
         dbField: 'isRestocked',
         label: 'Недавно пополненные',
         type: 'boolean',
         paramName: 'restocked',
-        defaultValue: ''
+        defaultValue: '',
+        contexts: ['catalog', 'editor']
     },
     {
         dbField: 'isActive',
         label: 'В продаже',
         type: 'boolean',
         paramName: 'active',
-        defaultValue: 'true'
+        contexts: ['editor'],
+        defaultByContext: {
+            editor: ''
+        }
     }
 ] as const;
 
-export const productEditorFilterOptions = [
-    {
-        dbField: 'price',
-        label: 'Цена (руб.)',
-        type: 'number',
-        minLimit: '0',
-        maxLimit: '',
-        minParamName: 'minPrice',
-        maxParamName: 'maxPrice'
-    },
-    {
-        dbField: 'discount',
-        label: 'Уценка (%)',
-        type: 'number',
-        minLimit: '0',
-        maxLimit: '100',
-        minParamName: 'minDiscount',
-        maxParamName: 'maxDiscount'
-    },
-    {
-        dbField: 'inStock',
-        label: 'В наличии',
-        type: 'boolean',
-        paramName: 'inStock',
-        defaultValue: ''
-    },
-    {
-        dbField: 'isBrandNew',
-        label: 'Новинки',
-        type: 'boolean',
-        paramName: 'brandNew',
-        defaultValue: ''
-    },
-    {
-        dbField: 'isRestocked',
-        label: 'Недавно пополненные',
-        type: 'boolean',
-        paramName: 'restocked',
-        defaultValue: ''
-    },
-    {
-        dbField: 'isActive',
-        label: 'В продаже',
-        type: 'boolean',
-        paramName: 'active',
-        defaultValue: ''
-    }
-] as const;
+export const productCatalogFilterOptions = getFilterOptionsByContext(productsFilterConfig, 'catalog');
+export const productEditorFilterOptions = getFilterOptionsByContext(productsFilterConfig, 'editor');
 
 export const ordersFilterOptions = [
     {

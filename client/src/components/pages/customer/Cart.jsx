@@ -90,8 +90,8 @@ export default function Cart() {
         cartItemIdsInProgress.size > 0 ||
         checkoutInProgress;
 
-    const { filteredCartItemIdsSet, cartWarningCount } = useMemo(() => {
-        let warningCount = 0;
+    const { filteredCartItemIdsSet, cartWarningsCount } = useMemo(() => {
+        let warningsCount = 0;
 
         const filteredCartItemIds = cartItemList.reduce((acc, cartItem) => {
             const product = productMap[cartItem.id];
@@ -112,7 +112,7 @@ export default function Cart() {
                 cartItem.inactive ||
                 cartItem.outOfStock ||
                 cartItem.quantityReduced;
-            if (isWarning) warningCount++;
+            if (isWarning) warningsCount++;
     
             const matchesFilter = filter === 'warnings' ? isWarning : true;
     
@@ -126,7 +126,7 @@ export default function Cart() {
     
         return {
             filteredCartItemIdsSet: new Set(filteredCartItemIds),
-            cartWarningCount: warningCount
+            cartWarningsCount: warningsCount
         };
     }, [cartItemList, search, filter]);
 
@@ -369,9 +369,9 @@ export default function Cart() {
 
     // Сброс фильтра warnings, если проблемные товары устранены
     useEffect(() => {
-        if (!initialized || cartLoadStatus !== DATA_LOAD_STATUS.READY || cartWarningCount > 0) return;
+        if (!initialized || cartLoadStatus !== DATA_LOAD_STATUS.READY || cartWarningsCount > 0) return;
         setFilter('');
-    }, [initialized, cartLoadStatus, cartWarningCount]);
+    }, [initialized, cartLoadStatus, cartWarningsCount]);
 
     if (!initialized) return null;
 
@@ -462,7 +462,7 @@ export default function Cart() {
                                         {')'}
                                     </span>
                                 )}
-                                {cartWarningCount > 0 && filter === 'warnings' && (
+                                {cartWarningsCount > 0 && filter === 'warnings' && (
                                     <>
                                         :&nbsp;
                                         <BlockableLink
@@ -479,7 +479,7 @@ export default function Cart() {
                                 )}
                             </p>
 
-                            {cartWarningCount > 0 && !cartLoading && (
+                            {cartWarningsCount > 0 && !cartLoading && (
                                 <p>
                                     <BlockableLink
                                         href="#"
@@ -494,10 +494,10 @@ export default function Cart() {
                                         aria-label="Показать проблемные товары"
                                     >
                                         <span className="warning-cart-items-count">
-                                            {cartWarningCount}
+                                            {cartWarningsCount}
                                         </span>
                                         &nbsp;
-                                        {pluralize(cartWarningCount, [
+                                        {pluralize(cartWarningsCount, [
                                             'позиция требует проверки:',
                                             'позиции требуют проверки:',
                                             'позиций требуют проверки:'

@@ -36,7 +36,7 @@ export interface INotificationBody {
     signature: string;
 }
 
-/// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
+/// Загрузка списка уведомлений для одной страницы (управление админом или просмотр клиентом) ///
 export type TNotificationListQuery = IBaseQuery<TNotificationsSortOption['dbField']>;
 
 interface INotificationListSuccessData {

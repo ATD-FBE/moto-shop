@@ -31,7 +31,7 @@ interface INewsParams extends ParamsDictionary {
 /// FUNCTIONALITY ///
 /////////////////////
 
-/// Загрузка всех новостей ///
+/// Загрузка списка новостей ///
 export const handleNewsListRequest: RequestHandler<{}, TNewsListResponse> = async (req, res, next) => {
     const isAdmin = req.dbUser?.role === USER_ROLE.ADMIN;
     const selectedDbFields = isAdmin ? MANAGED_DB_NEWS_FIELDS : BASE_DB_NEWS_FIELDS;

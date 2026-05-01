@@ -75,7 +75,6 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;
-        const typedDbField = dbField as keyof TModel;
 
         switch (type) {
             case 'number': {
@@ -89,22 +88,22 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                 const maxLimitNum = maxLimit !== '' ? Number(maxLimit) : Infinity;
 
                 if (!isNaN(minValueNum) && minValueNum > minLimitNum) {
-                    filterMatch[typedDbField] = { $gte: minValueNum };
+                    filterMatch[dbField] = { $gte: minValueNum };
                 }
 
                 if (!isNaN(maxValueNum) && maxValueNum < maxLimitNum) {
-                    filterMatch[typedDbField] = {
-                        ...(filterMatch[typedDbField] ?? {}),
+                    filterMatch[dbField] = {
+                        ...(filterMatch[dbField] ?? {}),
                         $lte: maxValueNum
                     };
                 }
 
                 if (
-                    filterMatch[typedDbField]?.$gte !== undefined &&
-                    filterMatch[typedDbField]?.$lte !== undefined &&
-                    filterMatch[typedDbField].$gte > filterMatch[typedDbField].$lte
+                    filterMatch[dbField]?.$gte !== undefined &&
+                    filterMatch[dbField]?.$lte !== undefined &&
+                    filterMatch[dbField].$gte > filterMatch[dbField].$lte
                 ) {
-                    delete filterMatch[typedDbField];
+                    delete filterMatch[dbField];
                 }
 
                 break;
@@ -128,7 +127,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                     minDate.setMinutes(minDate.getMinutes() - offsetNum); // Смещение времени даты
 
                     if (minDate.getTime() > minLimitDate.getTime()) {
-                        filterMatch[typedDbField] = { $gte: minDate };
+                        filterMatch[dbField] = { $gte: minDate };
                     }
                 }
 
@@ -137,19 +136,19 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                     maxDate.setMinutes(maxDate.getMinutes() - offsetNum); // Смещение времени даты
 
                     if (maxDate.getTime() < maxLimitDate.getTime()) {
-                        filterMatch[typedDbField] = {
-                            ...(filterMatch[typedDbField] ?? {}),
+                        filterMatch[dbField] = {
+                            ...(filterMatch[dbField] ?? {}),
                             $lte: maxDate
                         };
                     }
                 }
 
                 if (
-                    filterMatch[typedDbField]?.$gte !== undefined &&
-                    filterMatch[typedDbField]?.$lte !== undefined &&
-                    filterMatch[typedDbField].$gte > filterMatch[typedDbField].$lte
+                    filterMatch[dbField]?.$gte !== undefined &&
+                    filterMatch[dbField]?.$lte !== undefined &&
+                    filterMatch[dbField].$gte > filterMatch[dbField].$lte
                 ) {
-                    delete filterMatch[typedDbField];
+                    delete filterMatch[dbField];
                 }
 
                 break;
@@ -161,14 +160,14 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                 const value = query[paramName] ?? '';
 
                 if (value === 'true') {
-                    filterMatch[typedDbField] = true;
+                    filterMatch[dbField] = true;
                 } else if (value === 'false') {
-                    filterMatch[typedDbField] = { $ne: true };
+                    filterMatch[dbField] = { $ne: true };
                 } else if (value && defaultValue) {
                     if (defaultValue === 'true') {
-                        filterMatch[typedDbField] = true;
+                        filterMatch[dbField] = true;
                     } else if (defaultValue === 'false') {
-                        filterMatch[typedDbField] = { $ne: true };
+                        filterMatch[dbField] = { $ne: true };
                     }
                 }
 
@@ -182,11 +181,11 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                 const valueOption = valueOptions.find(opt => opt.value === value);
 
                 if (valueOption?.matches) {
-                    filterMatch[typedDbField] = { $in: valueOption.matches };
+                    filterMatch[dbField] = { $in: valueOption.matches };
                 } else if (valueOption?.value) {
-                    filterMatch[typedDbField] = valueOption.value;
+                    filterMatch[dbField] = valueOption.value;
                 } else if (defaultValue) {
-                    filterMatch[typedDbField] = defaultValue;
+                    filterMatch[dbField] = defaultValue;
                 }
 
                 break;

@@ -20,12 +20,13 @@ import {
 } from '@shared/constants.js';
 import type {
     TDbProduct,
+    IDbProductComputedFields,
+    TDbProductView,
     TDbCartItem,
     TDbOrderDraft,
     TDbUser,
     TOrderAdjustmentTypes,
-    IOrderItemRef,
-    IProductFilterQuery
+    IOrderItemRef
 } from '@server/types/index.js';
 import type {
     IProduct,
@@ -33,18 +34,30 @@ import type {
     TProductImageThumbs,
     TProductThumbnailKey,
     TProductThumbnailSize,
-    IProductSnapshot
+    IProductSnapshot,
+    TQuery
 } from '@shared/types/index.js';
 
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductFilterQuery<TModel extends object> extends TQuery<TModel> {
+    inStock?: string;
+    brandNew?: string;
+    restocked?: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 export const prepareProduct = (
-    dbProduct: TDbProduct,
+    dbProduct: TDbProduct & Partial<IDbProductComputedFields>,
     { managed = false, now = Date.now() }: { managed?: boolean; now?: number } = {}
 ): IProduct => {
     const productId = dbProduct._id.toString();
     const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
-    const isAvailable = available > 0;
-    const brandNewSince = now - PRODUCT_BRAND_NEW_THRESHOLD_MS;
-    const restockSince = now - PRODUCT_RESTOCK_THRESHOLD_MS;
 
     return {
         id: productId,
@@ -55,8 +68,10 @@ export const prepareProduct = (
         brand: dbProduct.brand ?? undefined,
         description: dbProduct.description ?? undefined,
         available,
-        isBrandNew: dbProduct.createdAt.getTime() >= brandNewSince && isAvailable,
-        isRestocked: dbProduct.lastRestockAt.getTime() >= restockSince && isAvailable,
+        isBrandNew: dbProduct.isBrandNew ?? 
+            (dbProduct.createdAt.getTime() >= (now - PRODUCT_BRAND_NEW_THRESHOLD_MS) && available > 0),
+        isRestocked: dbProduct.isRestocked ?? 
+            (dbProduct.lastRestockAt.getTime() >= (now - PRODUCT_RESTOCK_THRESHOLD_MS) && available > 0),
         unit: dbProduct.unit,
         price: dbProduct.price,
         discount: dbProduct.discount,
@@ -295,14 +310,16 @@ export const buildProductInventoryUpdatePipeline = (
 };
 
 // Создание вычисляемых полей-флагов для фильтрации
-export const buildProductsComputedFields = (query: IProductFilterQuery): PipelineStage[] => {
+export const buildProductsComputedFields = (
+    query: IProductFilterQuery<TDbProductView>
+): PipelineStage[] => {
     const needInStockFilter = query.inStock === 'true' || query.inStock === 'false';
     const needBrandNewFilter = query.brandNew === 'true' || query.brandNew === 'false';
     const needRestockedFilter = query.restocked === 'true' || query.restocked === 'false';
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter) return [];
 
-    const fields: FilterQuery<any> = {};
+    const fields: FilterQuery<TDbProductView> = {};
     const now = Date.now();
 
     const availableStockExpr = { $subtract: ['$stock', '$reserved'] };

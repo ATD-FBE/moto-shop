@@ -48,7 +48,7 @@ export default function CategoryEditor({
     setShouldProductsLoad,
     uiBlocked
 }: ICategoryEditorProps): JSX.Element {
-    const movedProductCountOnCategoryDeletionRef = useRef(0);
+    const movedProductsCountOnCategoryDeletionRef = useRef(0);
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();
 
@@ -72,7 +72,7 @@ export default function CategoryEditor({
         if (isUnmountedRef.current || !responseData) return;
 
         if (responseData.status === REQUEST_STATUS.SUCCESS) {
-            const { finalizeSuccessHandling, newCategoryId, movedProductCount } = responseData;
+            const { finalizeSuccessHandling, newCategoryId, movedProductsCount } = responseData;
 
             await loadCategories();
             if (isUnmountedRef.current) return;
@@ -80,12 +80,12 @@ export default function CategoryEditor({
             finalizeSuccessHandling();
             if (newCategoryId) setSelectedCategoryId(newCategoryId);
 
-            if (movedProductCount > 0) {
-                const товар = pluralize(movedProductCount, ['товар', 'товара', 'товаров']);
-                const находившийся = pluralize(movedProductCount, ['находившийся', 'находившихся',
+            if (movedProductsCount > 0) {
+                const товар = pluralize(movedProductsCount, ['товар', 'товара', 'товаров']);
+                const находившийся = pluralize(movedProductsCount, ['находившийся', 'находившихся',
                     'находившихся']);
-                const был = pluralize(movedProductCount, ['был', 'были', 'были']);
-                const перемещён = pluralize(movedProductCount, ['перемещён', 'перемещены',
+                const был = pluralize(movedProductsCount, ['был', 'были', 'были']);
+                const перемещён = pluralize(movedProductsCount, ['перемещён', 'перемещены',
                     'перемещены']);
 
                 openAlertModal({
@@ -94,7 +94,7 @@ export default function CategoryEditor({
                     title: 'Внимание!',
                     message:
                         `В связи с изменением структуры категорий, ` +
-                        `${movedProductCount} ${товар}, ранее ${находившийся} в категории, ` +
+                        `${movedProductsCount} ${товар}, ранее ${находившийся} в категории, ` +
                         `ставшей родительской, ${был} ${перемещён} в корневую категорию ` +
                         `«${unsortedCategory?.name || NO_VALUE_LABEL}».`
                 });
@@ -135,7 +135,7 @@ export default function CategoryEditor({
             }
     
             if (status === REQUEST_STATUS.SUCCESS) {
-                movedProductCountOnCategoryDeletionRef.current = responseData.movedProductCount;
+                movedProductsCountOnCategoryDeletionRef.current = responseData.movedProductsCount;
             }
         };
     
@@ -145,14 +145,14 @@ export default function CategoryEditor({
             await loadCategories();
             if (isUnmountedRef.current) return;
 
-            const movedProductCount = movedProductCountOnCategoryDeletionRef.current;
+            const movedProductsCount = movedProductsCountOnCategoryDeletionRef.current;
 
-            if (movedProductCount > 0) {
-                const товар = pluralize(movedProductCount, ['товар', 'товара', 'товаров']);
-                const содержащийся = pluralize(movedProductCount, ['содержащийся', 'содержащихся',
+            if (movedProductsCount > 0) {
+                const товар = pluralize(movedProductsCount, ['товар', 'товара', 'товаров']);
+                const содержащийся = pluralize(movedProductsCount, ['содержащийся', 'содержащихся',
                     'содержащихся']);
-                const был = pluralize(movedProductCount, ['был', 'были', 'были']);
-                const перемещён = pluralize(movedProductCount, ['перемещён', 'перемещены',
+                const был = pluralize(movedProductsCount, ['был', 'были', 'были']);
+                const перемещён = pluralize(movedProductsCount, ['перемещён', 'перемещены',
                     'перемещены']);
 
                 openAlertModal({
@@ -160,12 +160,12 @@ export default function CategoryEditor({
                     dismissible: false,
                     title: 'Внимание!',
                     message:
-                        `При удалении категории или всей её ветки ${movedProductCount} ${товар}, ` +
+                        `При удалении категории или всей её ветки ${movedProductsCount} ${товар}, ` +
                         `${содержащийся} в этих категориях, ${был} ${перемещён} ` +
                         `в корневую категорию «${unsortedCategory?.name || NO_VALUE_LABEL}».`
                 });
 
-                movedProductCountOnCategoryDeletionRef.current = 0;
+                movedProductsCountOnCategoryDeletionRef.current = 0;
             }
 
             setSelectedCategoryId(parentCategory);

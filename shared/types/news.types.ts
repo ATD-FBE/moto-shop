@@ -21,7 +21,7 @@ export interface INewsBody {
     content: string;
 }
 
-/// Загрузка всех новостей ///
+/// Загрузка списка новостей ///
 interface INewsListSuccessData {
     newsList: INews[];
 }

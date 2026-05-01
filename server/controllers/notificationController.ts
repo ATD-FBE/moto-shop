@@ -48,7 +48,7 @@ interface INotificationParams extends ParamsDictionary {
 /// FUNCTIONALITY ///
 /////////////////////
 
-/// Загрузка всех уведомлений (для управления админом или просмотра клиентом) ///
+/// Загрузка списка уведомлений для одной страницы (управление админом или просмотр клиентом) ///
 export const handleNotificationListRequest: RequestHandler<
     {},
     TNotificationListResponse,

@@ -67,7 +67,7 @@ const getSubmitStates = (markAsFailed) => {
 
 const isOnlineRefundUnavailable = (method, availableCardRefundAmount) =>
     method === REFUND_METHOD.CARD_ONLINE &&
-    !availableCardRefundAmount;
+    availableCardRefundAmount === 0;
 
 const fieldConfigs = [
     {
@@ -87,7 +87,7 @@ const fieldConfigs = [
             return 'Текущий заказ не содержит оплат по картам';
         },
         shouldNote: ({ method, availableCardRefundAmount, isRefundDisabled }) =>
-            isOnlineRefundUnavailable(method, availableCardRefundAmount) &&
+            !isOnlineRefundUnavailable(method, availableCardRefundAmount) &&
             !isRefundDisabled
     },
     {
@@ -461,8 +461,8 @@ export default function RefundForm({
                     const note = typeof getNote === 'function'
                         ? getNote({ method, availableCardRefundAmount })
                         : null;
-                    const showNote  = typeof shouldNote === 'function'
-                        ? !!note && shouldNote({ method, availableCardRefundAmount, isRefundDisabled })
+                    const showNote  = !!note && typeof shouldNote === 'function'
+                        ? shouldNote({ method, availableCardRefundAmount, isRefundDisabled })
                         : false;
                     const collapsible = !!canApply;
 

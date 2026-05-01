@@ -215,8 +215,6 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
 
     const dispatch = useAppDispatch();
 
-    console.log(fieldsState);
-
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
@@ -398,7 +396,7 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
                         newCategoryId: !isEditMode && 'newCategoryId' in responseData
                             ? responseData.newCategoryId
                             : undefined,
-                        movedProductCount: responseData.movedProductCount
+                        movedProductsCount: responseData.movedProductsCount
                     };
                 }
             
