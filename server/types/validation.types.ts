@@ -12,7 +12,7 @@ export interface IValidationSchema {
     match?: boolean | RegExp;                      // Для типа string
     min?: number;                                  // Для типов number и integer
     max?: number;                                  // Для типов number и integer
-    enum?: readonly (string | number | boolean)[]; // Для типов string, number и integer
+    enum?: readonly (string | number | boolean)[]; // Для типов string, number, integer и boolean
     formField?: boolean;                           // Для поля формы
     errorType?: string;                            // Для поля формы
 }

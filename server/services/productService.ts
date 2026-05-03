@@ -43,9 +43,9 @@ import type {
 //////////////////////////
 
 interface IProductFilterQuery<TModel extends object> extends TQuery<TModel> {
-    inStock?: string;
-    brandNew?: string;
-    restocked?: string;
+    inStock?: boolean | '';
+    brandNew?: boolean | '';
+    restocked?: boolean | '';
 }
 
 /////////////////////
@@ -68,9 +68,9 @@ export const prepareProduct = (
         brand: dbProduct.brand ?? undefined,
         description: dbProduct.description ?? undefined,
         available,
-        isBrandNew: dbProduct.isBrandNew ?? 
+        isBrandNew: dbProduct.isBrandNew ??
             (dbProduct.createdAt.getTime() >= (now - PRODUCT_BRAND_NEW_THRESHOLD_MS) && available > 0),
-        isRestocked: dbProduct.isRestocked ?? 
+        isRestocked: dbProduct.isRestocked ??
             (dbProduct.lastRestockAt.getTime() >= (now - PRODUCT_RESTOCK_THRESHOLD_MS) && available > 0),
         unit: dbProduct.unit,
         price: dbProduct.price,
@@ -313,9 +313,9 @@ export const buildProductInventoryUpdatePipeline = (
 export const buildProductsComputedFields = (
     query: IProductFilterQuery<TDbProductView>
 ): PipelineStage[] => {
-    const needInStockFilter = query.inStock === 'true' || query.inStock === 'false';
-    const needBrandNewFilter = query.brandNew === 'true' || query.brandNew === 'false';
-    const needRestockedFilter = query.restocked === 'true' || query.restocked === 'false';
+    const needInStockFilter = query.inStock !== undefined && query.inStock !== '';
+    const needBrandNewFilter = query.brandNew !== undefined && query.brandNew !== '';
+    const needRestockedFilter = query.restocked !== undefined && query.restocked !== '';
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter) return [];
 

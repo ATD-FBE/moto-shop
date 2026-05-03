@@ -450,6 +450,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             return { isValid: false };
         }
 
+        // Проверка и сбор новых файлов фотографий
         const newImages = activeImages.filter(img => img.type === 'new');
         const newImageFiles = [];
     
@@ -463,31 +464,37 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             }
         });
     
-        if (invalidNewImages.size || (!newImageFiles.length && !optional)) {
+        if (invalidNewImages.size > 0 || (!newImageFiles.length && !optional)) {
             return { isValid: false };
         }
     
+        // Сбор имён существующих файлов фотографий
         const existingImageFilenamesToDelete = images
             .filter(img => img.type === 'existing' && img.markedForDeletion)
             .map(img => img.filename);
 
-        const mainImageIndex = activeImages.findIndex(img => img.main);
-
+        // Установка полей для удаляемых и новых фотографий
         const fieldEntries = [
-            ...existingImageFilenamesToDelete.map(url => ['imageFilenamesToDelete', url]),
+            ...(existingImageFilenamesToDelete.length > 0
+                ? [['imageFilenamesToDelete', existingImageFilenamesToDelete.join(',')]]
+                : []),
             ...newImageFiles.map(file => ['images', file])
         ];
+
+        // Установка поля индекса главной фотографии
+        const oldMainImageIndex = product?.mainImageIndex;
+        const newMainImageIndex = activeImages.findIndex(img => img.main);
         
-        if (mainImageIndex !== -1) {
-            fieldEntries.push(['mainImageIndex', mainImageIndex]);
+        if (newMainImageIndex !== -1) {
+            fieldEntries.push(['mainImageIndex', newMainImageIndex]);
         }
 
-        const initMainImageIndex = product?.mainImageIndex;
+        // Проверка на изменение
         const isValueChanged = Boolean(
-            newImages.length ||
-            existingImageFilenamesToDelete.length ||
-            (typeof initMainImageIndex !== 'number' && mainImageIndex !== -1) ||
-            (typeof initMainImageIndex === 'number' && mainImageIndex !== initMainImageIndex)
+            newImages.length > 0 ||
+            existingImageFilenamesToDelete.length > 0 ||
+            (typeof oldMainImageIndex !== 'number' && newMainImageIndex !== -1) ||
+            (typeof oldMainImageIndex === 'number' && newMainImageIndex !== oldMainImageIndex)
         );
     
         return { isValid: true, fieldStateValue: { files: [] }, fieldEntries, isValueChanged };

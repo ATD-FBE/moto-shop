@@ -12,7 +12,8 @@ import type {
     TInferFilterParams,
     TProductsSortOption,
     TProductEditorSortOption,
-    TProductFilterOptionConfig
+    TProductFilterOptionConfig,
+    TProductUnit
 } from './shared.types.js';
 
 export type TProductImageThumbs = {
@@ -36,7 +37,7 @@ export interface IProduct {
     available: number;
     isBrandNew: boolean;
     isRestocked: boolean;
-    unit: string;
+    unit: TProductUnit;
     price: number;
     discount: number;
     isActive: boolean;
@@ -54,12 +55,24 @@ export interface IProductSnapshot {
 
 export type TPurchaseProduct = IProduct | IProductSnapshot;
 
-interface IProductBodyBase<TFile> {
+interface IProductCreateBodyBase<TFile> {
     images?: TFile[];
-    
+    mainImageIndex?: number;
+    sku?: string;
+    name: string;
+    brand?: string;
+    description?: string;
+    stock: number;
+    unit: TProductUnit;
+    price: number;
+    discount: number;
+    category: string;
+    tags?: string;
+    isActive: boolean;
 }
-export type TProductBodyServer = IProductBodyBase<Express.Multer.File>;
-export type TProductBodyClient = IProductBodyBase<File>;
+interface IProductUpdateBodyBase<TFile> extends IProductCreateBodyBase<TFile> {
+    imageFilenamesToDelete?: string;
+}
 
 /// Загрузка ID отфильтрованных товаров и их данных для одной страницы ///
 export type TProductListFilterParams = TInferFilterParams<TProductFilterOptionConfig>;
@@ -90,7 +103,66 @@ export type TProductResponse =
     | TSuccessResponse<IProductSuccessData>;
     
 /// Создание товара ///
+export type TProductCreateBodyServer = IProductCreateBodyBase<Express.Multer.File>;
+export type TProductCreateBodyClient = IProductCreateBodyBase<File>;
+
+interface IProductCreateSuccessData {
+    newProduct: IProduct;
+}
 export type TProductCreateResponse =
+    | TAuthErrorResponse
+    | TFormFieldsErrorResponse<'product'>
+    | TGeneralErrorResponse
+    | TSuccessResponse<IProductCreateSuccessData>;
+    
+/// Изменение товара ///
+export type TProductUpdateBodyServer = IProductUpdateBodyBase<Express.Multer.File>;
+export type TProductUpdateBodyClient = IProductUpdateBodyBase<File>;
+
+interface IProductUpdateSuccessData {
+    updatedProduct: IProduct;
+}
+export type TProductUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFormFieldsErrorResponse<'product'>
+    | TGeneralErrorResponse
+    | TSuccessResponse<IProductUpdateSuccessData>;
+
+/// Изменение группы товаров ///
+export interface IBulkProductUpdateBody {
+    productIds: string[];
+    formFields: {
+        brand?: string;
+        unit?: TProductUnit;
+        discount?: number;
+        category?: string;
+        tags?: string;
+        isActive?: boolean;
+    };
+}
+
+interface IBulkProductUpdateSuccessData {
+    updatedProducts: IProduct[];
+}
+export type TBulkProductUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFormFieldsErrorResponse<'product'>
+    | TGeneralErrorResponse
+    | TSuccessResponse<IBulkProductUpdateSuccessData>;
+    
+/// Удаление товара ///
+export type TProductDeleteResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Удаление группы товаров ///
+export interface IBulkProductDeleteBody {
+    productIds: string[];
+}
+export type TBulkProductDeleteResponse =
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'product'>
     | TGeneralErrorResponse

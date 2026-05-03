@@ -43,8 +43,8 @@ export type TCustomerListResponse =
 /// Загрузка заказов клиента в таблице ///
 export interface ICustomerOrderListQuery {
     firstOrderId?: string;
-    skip?: string;
-    limit?: string;
+    skip?: number;
+    limit?: number;
 }
 
 interface ICustomerOrderListSuccessData {

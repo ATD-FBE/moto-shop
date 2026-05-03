@@ -131,7 +131,7 @@ export interface TStorageProvider {
     cleanupPromoFiles: (promoId: string | null, reqCtx: string) => Promise<void>;
     saveProductImages: (productId: string, tempFiles: Express.Multer.File[]) => Promise<void>;
     deleteProductImages: (productId: string, filenames: string[], reqCtx: string) => Promise<void>;
-    cleanupProductFiles: (productId: string, reqCtx: string) => Promise<void>;
+    cleanupProductFiles: (productId: string | null, reqCtx: string) => Promise<void>;
     saveOrderItemsImages: (orderId: string, orderItems: TDbOrderFinalItem[]) => Promise<void>;
     deleteOrderItemsImages: (orderId: string, filenames: string[], reqCtx: string) => Promise<void>;
     cleanupOrderFiles: (orderId: string, reqCtx: string) => Promise<void>;

@@ -131,7 +131,7 @@ export default function CatalogManagement(): JSX.Element {
         } else {
             const { filteredProductIdList, paginatedProductList } = responseData;
 
-            setFilteredProductIds(new Set(filteredProductIdList));
+            setFilteredProductIds(new Set(filteredProductIdList ?? []));
             setPaginatedProductList(paginatedProductList);
             setInitProductsReady(true);
             dispatch(upsertProductsInStore(paginatedProductList));

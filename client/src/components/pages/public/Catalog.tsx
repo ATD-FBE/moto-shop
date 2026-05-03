@@ -112,7 +112,7 @@ export default function Catalog(): JSX.Element {
         } else {
             const { productsCount, paginatedProductList } = responseData;
 
-            setTotalProducts(productsCount);
+            setTotalProducts(productsCount ?? 0);
             setPaginatedProductList(paginatedProductList);
             setInitProductsReady(true);
             dispatch(reconcileCartWithProducts(paginatedProductList));

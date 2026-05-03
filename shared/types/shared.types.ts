@@ -53,15 +53,15 @@ export interface IDataChange {
 /////////////
 
 export interface IBaseQuery<TSort extends string = string> {
-    page?: string;
-    limit?: string;
+    page?: number;
+    limit?: number;
     sort?: TSort | `-${TSort}`;
     search?: string;
-    timestamp?: string;
-    timeZoneOffset?: string;
+    timestamp?: number;
+    timeZoneOffset?: number;
 }
 
-export type TFilterParams = Record<string, string>;
+export type TFilterParams = Record<string, unknown>;
 
 export type TQuery<TModel extends object, TFilter extends TFilterParams = {}> =
     IBaseQuery<Extract<keyof TModel, string>> &
@@ -77,13 +77,17 @@ export type TInferFilterParams<T extends TFilterOption> = {
             } ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
                 : never
     ]?: K extends { type: 'boolean' }
-        ? TBoolFilterValue
+        ? boolean | '' // Пустая строка для emptyableBoolean
+        : K extends { type: 'number' }
+            ? number
+        : K extends { type: 'date' }
+            ? Date
         : K extends {
             type: 'string';
             valueOptions: readonly { value: infer V }[];
         }
             ? V
-            : string; // number || date
+            : string;
 };
 
 /////////////////

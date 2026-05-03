@@ -58,7 +58,6 @@ export const handleCategoryCreateRequest: RequestHandler<
     ICategoryBody
 > = async (req, res, next) => {
     const { name, slug, order, parent } = req.body;
-    const orderNum = Number(order);
 
     try {
         const { newCategory, movedProductsCount } = await runInDbTransaction(async (session) => {
@@ -82,7 +81,7 @@ export const handleCategoryCreateRequest: RequestHandler<
             const neighborsCount = await Category.countDocuments({ parent }).session(session);
             checkTimeout(req);
 
-            const correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount);
+            const correctedOrder = Math.min(Math.max(0, order), neighborsCount);
 
             if (neighborsCount && correctedOrder < neighborsCount) {
                 await Category.updateMany(
@@ -156,7 +155,6 @@ export const handleCategoryUpdateRequest: RequestHandler<
 > = async (req, res, next) => {
     const categoryId = req.params.categoryId;
     const { name, slug, order, parent } = req.body;
-    const orderNum = Number(order);
 
     // Проверка отличия родителя от самой категории
     if (parent === categoryId) {
@@ -177,7 +175,7 @@ export const handleCategoryUpdateRequest: RequestHandler<
 
             const currentParent = dbCategory.parent?.toString() ?? null; // Строка ID или null
             const currentOrder = dbCategory.order; // Число
-            let correctedOrder = orderNum;
+            let correctedOrder = order;
 
             // Проверка родительской категории, если это не корень
             if (parent !== null) {
@@ -227,7 +225,7 @@ export const handleCategoryUpdateRequest: RequestHandler<
                 const neighborsCount = await Category.countDocuments({ parent }).session(session);
                 checkTimeout(req);
 
-                correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount);
+                correctedOrder = Math.min(Math.max(0, order), neighborsCount);
 
                 if (neighborsCount && correctedOrder < neighborsCount) {
                     await Category.updateMany(
@@ -237,11 +235,11 @@ export const handleCategoryUpdateRequest: RequestHandler<
                     );
                     checkTimeout(req);
                 }
-            } else if (orderNum !== currentOrder) { // Категория остаётся на месте, но её номер меняется
+            } else if (order !== currentOrder) { // Категория остаётся на месте, но её номер меняется
                 const neighborsCount = await Category.countDocuments({ parent }).session(session);
                 checkTimeout(req);
 
-                correctedOrder = Math.min(Math.max(0, orderNum), neighborsCount - 1);
+                correctedOrder = Math.min(Math.max(0, order), neighborsCount - 1);
 
                 const rangeFilter = correctedOrder < currentOrder
                     ? { $gte: correctedOrder, $lt: currentOrder }

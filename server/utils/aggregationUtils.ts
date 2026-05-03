@@ -80,18 +80,18 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
             case 'number': {
                 const { minParamName, maxParamName, minLimit, maxLimit } = option;
 
-                const minValue = query[minParamName] ?? '';
-                const maxValue = query[maxParamName] ?? '';
-                const minValueNum = minValue !== '' ? Number(minValue) : -Infinity;
-                const maxValueNum = maxValue !== '' ? Number(maxValue) : Infinity;
+                const minValue = query[minParamName] as number | undefined;
+                const maxValue = query[maxParamName] as number | undefined;
+                const minValueNum = typeof minValue === 'number' ? minValue : -Infinity;
+                const maxValueNum = typeof maxValue === 'number' ? maxValue : Infinity;
                 const minLimitNum = minLimit !== '' ? Number(minLimit) : -Infinity;
                 const maxLimitNum = maxLimit !== '' ? Number(maxLimit) : Infinity;
 
-                if (!isNaN(minValueNum) && minValueNum > minLimitNum) {
+                if (minValueNum > minLimitNum && minValueNum !== -Infinity) {
                     filterMatch[dbField] = { $gte: minValueNum };
                 }
 
-                if (!isNaN(maxValueNum) && maxValueNum < maxLimitNum) {
+                if (maxValueNum < maxLimitNum && maxValueNum !== Infinity) {
                     filterMatch[dbField] = {
                         ...(filterMatch[dbField] ?? {}),
                         $lte: maxValueNum
@@ -112,13 +112,15 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
             case 'date': {
                 const { minParamName, maxParamName, minLimit, maxLimit } = option;
 
-                const minDate = new Date(query[minParamName] ?? '');
-                const maxDate = new Date(query[maxParamName] ?? '');
+                const minVal = query[minParamName] as Date | undefined;
+                const maxVal = query[maxParamName] as Date | undefined;
+                const minDate = minVal instanceof Date ? new Date(minVal) : new Date(NaN);
+                const maxDate = maxVal instanceof Date ? new Date(maxVal) : new Date(NaN);
                 const minLimitDate = minLimit !== '' ? new Date(minLimit) : new Date(-MAX_DATE_TS);
                 const maxLimitDate = maxLimit !== '' ? new Date(maxLimit) : new Date(MAX_DATE_TS);
 
-                let offsetNum = Number(query.timeZoneOffset);
-                if (isNaN(offsetNum) || Math.abs(offsetNum) > MAX_TIMEZONE_OFFSET_MINUTES) {
+                let offsetNum = typeof query.timeZoneOffset === 'number' ? query.timeZoneOffset : 0;
+                if (Math.abs(offsetNum) > MAX_TIMEZONE_OFFSET_MINUTES) {
                     offsetNum = 0;
                 }
 
@@ -157,13 +159,13 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
             case 'boolean': {
                 const { paramName, defaultValue } = option;
 
-                const value = query[paramName] ?? '';
+                const value = query[paramName] as boolean | undefined;
 
-                if (value === 'true') {
+                if (value === true) {
                     filterMatch[dbField] = true;
-                } else if (value === 'false') {
+                } else if (value === false) {
                     filterMatch[dbField] = { $ne: true };
-                } else if (value && defaultValue) {
+                } else if (defaultValue) {
                     if (defaultValue === 'true') {
                         filterMatch[dbField] = true;
                     } else if (defaultValue === 'false') {
@@ -177,15 +179,19 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
             case 'string': {
                 const { paramName, defaultValue, valueOptions } = option;
 
-                const value = query[paramName] ?? '';
+                const value = query[paramName] as string | undefined;
+
+                if (!value && defaultValue) {
+                    filterMatch[dbField] = defaultValue;
+                    break;
+                }
+
                 const valueOption = valueOptions.find(opt => opt.value === value);
 
                 if (valueOption?.matches) {
                     filterMatch[dbField] = { $in: valueOption.matches };
                 } else if (valueOption?.value) {
                     filterMatch[dbField] = valueOption.value;
-                } else if (defaultValue) {
-                    filterMatch[dbField] = defaultValue;
                 }
 
                 break;
@@ -242,8 +248,8 @@ export const buildPaginatedPipeline = <TModel extends object>(
     const defaultPageLimit = pageLimitOptions[0] || 10;
     const maxPagelimit = pageLimitOptions.at(-1) || defaultPageLimit;
 
-    const page = Math.max(parseInt(query.page ?? '1', 10), 1); // Номер страницы для результатов
-    const rawLimit = parseInt(query.limit ?? String(defaultPageLimit), 10);
+    const page = Math.max(query.page ?? 1, 1); // Номер страницы для результатов
+    const rawLimit = query.limit ?? defaultPageLimit;
     const limit = Math.min(Math.max(rawLimit, 1), maxPagelimit); // Количество выводимых результатов
     const skip = (page - 1) * limit; // Количество пропускаемых результатов до выводимых
 

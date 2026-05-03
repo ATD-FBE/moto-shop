@@ -11,7 +11,6 @@ import {
     buildProductsComputedFields,
     buildCategoriesPipeline
 } from '@server/services/productService.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import {
     buildSearchMatch,
     buildFilterMatch,
@@ -21,23 +20,30 @@ import {
 import { requireDbUser } from '@server/utils/typeGuards.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { ensureArray } from '@shared/commonHelpers.js';
 import { productCatalogFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productsSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { USER_ROLE, PRODUCTS_PAGE_CONTEXT, PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { PipelineStage } from 'mongoose';
-import type { TDbProduct, TDbProductView } from '@server/types/index.js';
+import type { FilterQuery } from 'mongoose';
+import type { TDbProduct, TDbProductView, TDbCategory } from '@server/types/index.js';
 import type {
     TProductListFilterParams,
     TProductListQuery,
     TProductListResponse,
     TProductResponse,
+    TProductCreateBodyServer,
+    TProductCreateResponse,
+    TProductUpdateBodyServer,
+    TProductUpdateResponse,
+    IBulkProductUpdateBody,
+    TBulkProductUpdateResponse,
+    TProductDeleteResponse,
+    IBulkProductDeleteBody,
+    TBulkProductDeleteResponse
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -52,6 +58,8 @@ interface IProductListAggregateResult {
 interface IProductParams extends ParamsDictionary {
     productId: string;
 }
+
+type TProductArrayField = 'imageFilenames' | 'tags';
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -174,54 +182,29 @@ export const handleProductRequest: RequestHandler<
 };
 
 /// Создание товара ///
-export const handleProductCreateRequest = async (req, res, next) => {
+export const handleProductCreateRequest: RequestHandler<
+    {},
+    TProductCreateResponse,
+    TProductCreateBodyServer
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
+
+    const { files: images, fileUploadError } = req; // Проверено в multer
+
+    if (!Array.isArray(images)) {
+        return next(new Error('Поле images не является массивом файлов'));
+    }
 
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
-    const { files: images, fileUploadError } = req; // Проверено в multer
     const {
         mainImageIndex, sku, name, brand, description,
         stock, unit, price, discount, category, tags, isActive
-    } = req.body ?? {};
-    
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        images: { value: images, type: 'array', formField: true },
-        mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
-        sku: { value: sku, type: 'string', optional: true, formField: true },
-        name: { value: name, type: 'string', formField: true },
-        brand: { value: brand, type: 'string', optional: true, formField: true },
-        description: { value: description, type: 'string', optional: true, formField: true },
-        stock: { value: stock, type: 'number', formField: true },
-        unit: { value: unit, type: 'string', formField: true },
-        price: { value: price, type: 'number', formField: true },
-        discount: { value: discount, type: 'number', formField: true },
-        category: { value: category, type: 'objectId', formField: true },
-        tags: { value: tags, type: 'string', optional: true, formField: true },
-        isActive: { value: isActive, type: 'boolean', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    // Проверка индекса фотографий
-    const mainImageIndexNum = Number(mainImageIndex);
-
-    if (mainImageIndex !== undefined &&  (!Number.isInteger(mainImageIndexNum) || mainImageIndexNum < 0)) {
-        return safeSendResponse(res, 400, { message: 'Некорректное значение поля: mainImageIndex' });
-    }
+    } = req.body;
 
     // Проверка на согласованность индекса и количества фотографий
     const noImages = images.length === 0;
-    const indexOutOfRange = mainImageIndexNum >= images.length;
+    const indexOutOfRange = (mainImageIndex ?? 0) >= images.length;
 
     if (
         (images.length > 0 && mainImageIndex === undefined) ||
@@ -230,12 +213,13 @@ export const handleProductCreateRequest = async (req, res, next) => {
         return safeSendResponse(res, 400, { message: 'Несогласованные данные для фотографий товара' });
     }
     
-    let newProductId;
+    // Создание документа нового товара
+    let newProductId: string | null = null;
 
     try {
         const { newDbProduct } = await runInDbTransaction(async (session) => {
             // Проверка на существование категории товара
-            const dbCategory = await Category.findById(category).session(session);
+            const dbCategory = await Category.findById(category).lean<TDbCategory>().session(session);
             checkTimeout(req);
                 
             if (!dbCategory) {
@@ -256,31 +240,29 @@ export const handleProductCreateRequest = async (req, res, next) => {
             // Подготовка данных
             const prepDbFields = {
                 imageFilenames: images.map(img => img.filename),
-                mainImageIndex: mainImageIndex === undefined ? null : mainImageIndexNum,
+                mainImageIndex: mainImageIndex !== undefined ? mainImageIndex : null,
                 sku: sku?.trim() || null,
                 name: name.trim(),
                 brand: brand?.trim() || null,
                 description: description?.trim() || null,
-                stock: Number(stock),
+                stock,
                 reserved: 0,
                 unit,
-                price: Number(price),
-                discount: Number(discount),
+                price,
+                discount,
                 category,
                 tags: [...new Set(tags?.split(',').map(tag => tag.trim()).filter(Boolean) ?? [])],
-                isActive: isActive === 'true'
+                isActive,
+                createdBy: userId
             };
 
             // Предварительное создание документа для валидации до сохранения
             const newProductDoc = new Product(prepDbFields);
 
-            // Инвалидация полей
+            // Инвалидация файлового поля при ошибке загрузки
             if (fileUploadError) {// Отметка поля фотографий невалидным при ошибке в multer
                 const { field, message } = fileUploadError; // field = 'images' - поле из формы
                 newProductDoc.invalidate(field, message);
-            }
-            if (!Number.isInteger(prepDbFields.stock)) {
-                newProductDoc.invalidate('stock');
             }
 
             // Предварительная валидация до работы с файловой системой
@@ -290,12 +272,11 @@ export const handleProductCreateRequest = async (req, res, next) => {
             // Создание иконок и сохранение всех файлов фотографий в хранилище
             if (images.length > 0) {
                 newProductId = newProductDoc._id.toString(); // ID создался при валидации
-                await storageService.saveProductImages(newProductId, images, req);
+                await storageService.saveProductImages(newProductId, images);
                 checkTimeout(req);
             }
 
-            // Добавление лога создания и сохранение документа товара
-            newProductDoc.createdBy = userId;
+            // Сохранение документа товара
             const newDbProduct = await newProductDoc.save({ session });
             checkTimeout(req);
 
@@ -319,54 +300,27 @@ export const handleProductCreateRequest = async (req, res, next) => {
 };
 
 /// Изменение товара ///
-export const handleProductUpdateRequest = async (req, res, next) => {
+export const handleProductUpdateRequest: RequestHandler<
+    IProductParams,
+    TProductUpdateResponse,
+    TProductUpdateBodyServer
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
+
+    const { files: images, fileUploadError } = req; // Проверено в multer
+
+    if (!Array.isArray(images)) {
+        return next(new Error('Поле images не является массивом файлов'));
+    }
 
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const productId = req.params.productId;
-    const imageFilenamesToDelete = ensureArray(req.body?.imageFilenamesToDelete);
-    const { files: images, fileUploadError } = req; // Проверено в multer
     const {
+        imageFilenamesToDelete,
         mainImageIndex, sku, name, brand, description,
         stock, unit, price, discount, category, tags, isActive
-    } = req.body ?? {};
-    
-    // Предварительная проверка формата данных
-    /*const validationConfigMap = {
-        productId: { value: productId, type: 'objectId' },
-        imageFilenamesToDelete: { value: imageFilenamesToDelete, type: 'arrayOf', arrElemType: 'string' },
-        images: { value: images, type: 'array', formField: true },
-        mainImageIndex: { value: mainImageIndex, type: 'number', optional: true },
-        sku: { value: sku, type: 'string', optional: true, formField: true },
-        name: { value: name, type: 'string', formField: true },
-        brand: { value: brand, type: 'string', optional: true, formField: true },
-        description: { value: description, type: 'string', optional: true, formField: true },
-        stock: { value: stock, type: 'number', formField: true },
-        unit: { value: unit, type: 'string', formField: true },
-        price: { value: price, type: 'number', formField: true },
-        discount: { value: discount, type: 'number', formField: true },
-        category: { value: category, type: 'objectId', formField: true },
-        tags: { value: tags, type: 'string', optional: true, formField: true },
-        isActive: { value: isActive, type: 'boolean', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }*/
-
-    // Проверка индекса фотографий
-    const mainImageIndexNum = Number(mainImageIndex);
-
-    if (mainImageIndex !== undefined && (!Number.isInteger(mainImageIndexNum) || mainImageIndexNum < 0)) {
-        return safeSendResponse(res, 400, { message: 'Некорректное значение поля: mainImageIndex' });
-    }
+    } = req.body;
 
     const newImageFilenames = images.map(img => img.filename);
     let rollbackCleanupFiles = false;
@@ -389,7 +343,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
             // Проверки новой катагории товара
             if (category !== dbProduct.category.toString()) {
                 // Проверка на существование категории товара
-                const dbCategory = await Category.findById(category).session(session);
+                const dbCategory = await Category.findById(category).lean<TDbCategory>().session(session);
                 checkTimeout(req);
                             
                 if (!dbCategory) {
@@ -408,8 +362,9 @@ export const handleProductUpdateRequest = async (req, res, next) => {
                 }
             }
 
-            // Фильтрация существующих имён файлов фотографий для удаления и их апдейт
-            const actualImgFilenamesToDelete = imageFilenamesToDelete
+            // Фильтрация и подготовка имён файлов фотографий
+            const imgFilenamesToDeleteArray = imageFilenamesToDelete?.split(',') ?? [];
+            const actualImgFilenamesToDelete = imgFilenamesToDeleteArray
                 .filter(filename => oldImageFilenames.includes(filename));
             const imgFilenamesToDeleteSet = new Set(actualImgFilenamesToDelete);
             const preparedImgFilenames = oldImageFilenames
@@ -418,7 +373,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 
             // Проверка на согласованность индекса и изменённого количества фотографий
             const noImages = preparedImgFilenames.length === 0;
-            const indexOutOfRange = mainImageIndexNum >= preparedImgFilenames.length;
+            const indexOutOfRange = (mainImageIndex ?? 0) >= preparedImgFilenames.length;
 
             if (
                 (preparedImgFilenames.length > 0 && mainImageIndex === undefined) ||
@@ -428,35 +383,34 @@ export const handleProductUpdateRequest = async (req, res, next) => {
             }
 
             // Подготовка данных
-            const newStock = Number(stock);
-            const hasRestock = newStock > dbProduct.stock;
-            const hasReservedOverflow = newStock < dbProduct.reserved;
+            const hasRestock = stock > dbProduct.stock;
+            const hasReservedOverflow = stock < dbProduct.reserved;
 
             const prepDbFields = {
-                mainImageIndex: mainImageIndex === undefined ? null : mainImageIndexNum,
+                mainImageIndex: mainImageIndex ?? null,
                 sku: sku?.trim() || null,
                 name: name.trim(),
                 brand: brand?.trim() || null,
                 description: description?.trim() || null,
-                stock: newStock,
-                reserved: Math.min(newStock, dbProduct.reserved),
+                stock,
+                reserved: Math.min(stock, dbProduct.reserved),
                 ...(hasRestock && { lastRestockAt: new Date() }),
                 unit,
-                price: Number(price),
-                discount: Number(discount),
+                price,
+                discount,
                 category,
-                isActive: isActive === 'true'
+                isActive
             };
 
             const preparedTags = [...new Set(tags?.split(',').map(tag => tag.trim()).filter(Boolean) ?? [])];
 
             // Проверка на изменение и установка в документ массивов фотографий и тегов
-            const modifiableArrayFields = [
+            const arrayFieldsToUpdate: [TProductArrayField, string[]][] = [
                 ['imageFilenames', preparedImgFilenames],
                 ['tags', preparedTags]
             ];
 
-            modifiableArrayFields.forEach(([field, newArray]) => {
+            arrayFieldsToUpdate.forEach(([field, newArray]) => {
                 const oldArray = dbProduct[field];
                 const isFieldChanged = isArrayContentDifferent(oldArray, newArray);
 
@@ -466,7 +420,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
                 }
             });
 
-            // Установка полей без массивов
+            // Установка значений остальных полей
             dbProduct.set(prepDbFields);
 
             // Проверка изменений. При fileUploadError данные могут совпасть
@@ -474,16 +428,13 @@ export const handleProductUpdateRequest = async (req, res, next) => {
                 throw createAppError(204);
             }
 
-            // Инвалидация полей
+            // Инвалидация файлового поля при ошибке загрузки и превышение лимита общего кол-ва фотографий
             if (fileUploadError) { // Отметка поля фотографий невалидным при ошибке в multer
                 const { field, message } = fileUploadError; // field = 'images' - поле из формы
                 dbProduct.invalidate(field, message);
             }
             if (preparedImgFilenames.length > PRODUCT_FILES_LIMIT) {
-                dbProduct.invalidate('images'); // Превышение лимита общего количества фотографий
-            }
-            if (!Number.isInteger(prepDbFields.stock)) {
-                dbProduct.invalidate('stock');
+                dbProduct.invalidate('images', 'Превышен лимит фотографий товара');
             }
 
             // Предварительная валидация до работы с файловой системой
@@ -504,7 +455,7 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 
             // Пропорциональное распределение зарезервированных товаров среди клиентов, оформляющих заказ
             if (hasReservedOverflow) {
-                await redistributeProductProportionallyInOrderDrafts(productId, newStock, session);
+                await redistributeProductProportionallyInOrderDrafts(productId, stock, session);
                 checkTimeout(req);
             }
 
@@ -552,38 +503,22 @@ export const handleProductUpdateRequest = async (req, res, next) => {
 };
 
 /// Изменение группы товаров ///
-export const handleBulkProductUpdateRequest = async (req, res, next) => {
+export const handleBulkProductUpdateRequest: RequestHandler<
+    {},
+    TBulkProductUpdateResponse,
+    IBulkProductUpdateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userId = req.dbUser._id;
-    const { productIds, formFields } = req.body ?? {};
-    const { brand, unit, discount, category, tags, isActive } = formFields ?? {};
-
-    // Предварительная проверка формата данных
-    /*const validationConfigMap = {
-        productIds: { value: productIds, type: 'arrayOf', arrElemType: 'objectId' },
-        formFields: { value: formFields, type: 'object' },
-        brand: { value: brand, type: 'string', optional: true, formField: true },
-        unit: { value: unit, type: 'string', optional: true, formField: true },
-        discount: { value: discount, type: 'number', optional: true, formField: true },
-        category: { value: category, type: 'objectId', optional: true, formField: true },
-        tags: { value: tags, type: 'string', optional: true, formField: true },
-        isActive: { value: isActive, type: 'boolean', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'product');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }*/
+    const { productIds, formFields } = req.body;
+    const { brand, unit, discount, category, tags, isActive } = formFields;
 
     // Проверка выбранных товаров для апдейта
     const uniqueProductIds = [...new Set(productIds)];
-    const total = uniqueProductIds.length;
+    const totalProductIds = uniqueProductIds.length;
 
-    if (!total) {
+    if (!totalProductIds) {
         return safeSendResponse(res, 400, {
             message: 'Товары для изменения не выбраны',
             reason: REQUEST_STATUS.NO_SELECTION
@@ -591,20 +526,19 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
     }
     
     // Проверка выбранных полей для апдейта
-    /*const noFormUpdates = Object.values(validationConfigMap)
-        .filter(({ form }) => form)
-        .every(({ value }) => value === undefined);
+    const fieldsToUpdate = [brand, unit, discount, category, tags, isActive];
+    const hasFieldsToUpdate = fieldsToUpdate.some(f => f !== undefined);
 
-    if (noFormUpdates) {
+    if (!hasFieldsToUpdate) {
         return safeSendResponse(res, 204);
-    }*/
+    }
 
     try {
-        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Обработка категории
             if (category !== undefined) {
                 // Проверка на существование категории товара
-                const dbCategory = await Category.findById(category).session(session);
+                const dbCategory = await Category.findById(category).lean<TDbCategory>().session(session);
                 checkTimeout(req);
                             
                 if (!dbCategory) {
@@ -624,32 +558,32 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
             }
 
             // Подготовка данных
-            const updateDoc = { $set: {}, $unset: {} };
+            const updateQuery: FilterQuery<TDbProduct> = { $set: {}, $unset: {} };
 
             if (brand !== undefined) {
                 const trimmedBrand = brand.trim();
 
                 if (trimmedBrand) {
-                    updateDoc.$set.brand = trimmedBrand;
+                    updateQuery.$set.brand = trimmedBrand;
                 } else {
-                    updateDoc.$unset.brand = 1;
+                    updateQuery.$unset.brand = 1;
                 }
             }
 
-            if (unit !== undefined) updateDoc.$set.unit = unit;
-            if (discount !== undefined) updateDoc.$set.discount = Number(discount);
-            if (category !== undefined) updateDoc.$set.category = category;
+            if (unit !== undefined) updateQuery.$set.unit = unit;
+            if (discount !== undefined) updateQuery.$set.discount = discount;
+            if (category !== undefined) updateQuery.$set.category = category;
             if (tags !== undefined) {
-                updateDoc.$set.tags = [...new Set(tags.split(',').map(t => t.trim()).filter(Boolean))];
+                updateQuery.$set.tags = [...new Set(tags.split(',').map(t => t.trim()).filter(Boolean))];
             }
-            if (isActive !== undefined) updateDoc.$set.isActive = isActive;
+            if (isActive !== undefined) updateQuery.$set.isActive = isActive;
 
-            updateDoc.$set.updatedBy = userId;
+            updateQuery.$set.updatedBy = userId;
         
             // Сохранение в базе MongoDB с валидацией полей
             const updateResult = await Product.updateMany(
                 { _id: { $in: uniqueProductIds } },
-                updateDoc,
+                updateQuery,
                 { session, runValidators: true } // Валидация изменяемых полей на каждом документе вкл.
             );
             checkTimeout(req);
@@ -658,16 +592,16 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
 
             // Отправка ответов клиенту
             if (matchedCount === 0) {
-                return { statusCode: 404, responseData: { message: 'Ни один товар не найден' } };
+                throw createAppError(404, 'Ни один товар не найден');
             }
             if (modifiedCount === 0) { // Не срабатывает из-за изменения updatedAt
-                return { statusCode: 204 };
+                throw createAppError(204);
             }
 
             // Сбор данных по всем обновлённым документам
             const dbUpdatedProducts = await Product
                 .find({ _id: { $in: uniqueProductIds } })
-                .lean()
+                .lean<TDbProduct[]>()
                 .session(session);
             checkTimeout(req);
 
@@ -677,11 +611,11 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
                 now
             }));
 
-            if (matchedCount < total) {
+            if (matchedCount < totalProductIds) {
                 return {
                     statusCode: 207,
                     responseData: {
-                        message: `Товары частично обновлены: ${modifiedCount} из ${total}`,
+                        message: `Товары частично обновлены: ${modifiedCount} из ${totalProductIds}`,
                         updatedProducts
                     }
                 };
@@ -696,6 +630,8 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
             };
         });
 
+        const { statusCode, responseData } = transactionResult;
+
         safeSendResponse(res, statusCode, responseData);
     } catch (err) {
         next(err);
@@ -703,26 +639,21 @@ export const handleBulkProductUpdateRequest = async (req, res, next) => {
 };
 
 /// Удаление товара ///
-export const handleProductDeleteRequest = async (req, res, next) => {
+export const handleProductDeleteRequest: RequestHandler<
+    IProductParams,
+    TProductDeleteResponse
+> = async (req, res, next) => {
     const reqCtx = req.reqCtx;
     const productId = req.params.productId;
 
-    if (!typeCheck.objectId(productId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: productId' });
-    }
-
     try {
-        const dbProduct = await runInDbTransaction(async (session) => {
-            // Поиск и удаление документа в базе MongoDB
-            const dbProduct = await Product.findByIdAndDelete(productId).session(session);
-            checkTimeout(req);
+        // Поиск и удаление документа в базе MongoDB
+        const dbProduct = await Product.findByIdAndDelete(productId).lean<TDbProduct>();
+        checkTimeout(req);
 
-            if (!dbProduct) {
-                throw createAppError(404, `Товар (ID: ${productId}) не найден`);
-            }
-
-            return dbProduct;
-        });
+        if (!dbProduct) {
+            return safeSendResponse(res, 404, { message: `Товар (ID: ${productId}) не найден` });
+        }
 
         safeSendResponse(res, 200, { message: `Товар "${dbProduct.name}" успешно удалён` });
 
@@ -734,20 +665,18 @@ export const handleProductDeleteRequest = async (req, res, next) => {
 };
 
 /// Удаление группы товаров ///
-export const handleBulkProductDeleteRequest = async (req, res, next) => {
+export const handleBulkProductDeleteRequest: RequestHandler<
+    {},
+    TBulkProductDeleteResponse,
+    IBulkProductDeleteBody
+> = async (req, res, next) => {
     const reqCtx = req.reqCtx;
-
-    // Предварительная проверка формата данных
-    const { productIds } = req.body ?? {};
-
-    /*if (!typeCheck.arrayOf(productIds, 'objectId', typeCheck) ) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: productIds' });
-    }*/
+    const { productIds } = req.body;
 
     const uniqueProductIds = [...new Set(productIds)];
-    const total = uniqueProductIds.length;
+    const totalProductIds = uniqueProductIds.length;
 
-    if (!total) {
+    if (!totalProductIds) {
         return safeSendResponse(res, 400, {
             message: 'Товары для удаления не выбраны',
             reason: REQUEST_STATUS.NO_SELECTION
@@ -755,35 +684,33 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
     }
 
     try {
-        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Поиск и сбор ID удаляемых товаров
             const existingDbProducts = await Product
                 .find({ _id: { $in: uniqueProductIds } }, '_id')
+                .lean<TDbProduct[]>()
                 .session(session);
             checkTimeout(req);
 
             if (!existingDbProducts.length) {
-                return {
-                    statusCode: 404,
-                    responseData: { message: 'Ни один товар не найден' }
-                };
+                throw createAppError(404, 'Ни один товар не найден');
             }
 
             // Поиск по ID и удаление документов в базе MongoDB
-            const existingProductIds = existingDbProducts.map(dbProd => dbProd._id.toString());
+            const existingProductObjIds = existingDbProducts.map(dbProd => dbProd._id);
             const deletionResult = await Product
-                .deleteMany({ _id: { $in: existingProductIds } })
+                .deleteMany({ _id: { $in: existingProductObjIds } })
                 .session(session);
             checkTimeout(req);
 
             // Подготовка успешных ответов
             const { deletedCount } = deletionResult;
 
-            if (deletedCount < total) {
+            if (deletedCount < totalProductIds) {
                 return {
                     statusCode: 207,
                     responseData: {
-                        message: `Некоторые товары не найдены. Удалено: ${deletedCount} из ${total}`
+                        message: `Некоторые товары не найдены. Удалено: ${deletedCount} из ${totalProductIds}`
                     }
                 };
             }
@@ -793,6 +720,8 @@ export const handleBulkProductDeleteRequest = async (req, res, next) => {
                 responseData: { message: 'Все товары успешно удалены' }
             };
         });
+
+        const { statusCode, responseData } = transactionResult;
 
         safeSendResponse(res, statusCode, responseData);
 

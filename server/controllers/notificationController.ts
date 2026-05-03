@@ -59,8 +59,8 @@ export const handleNotificationListRequest: RequestHandler<
     
     const dbUser = req.dbUser;
 
-    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-    const limit = Math.max(parseInt(req.query.limit || String(notificationsPageLimitOptions[0]), 10), 1);
+    const page = Math.max(req.query.page ?? 1, 1);
+    const limit = Math.max(req.query.limit ?? notificationsPageLimitOptions[0], 1);
     const skip = (page - 1) * limit;
 
     try {

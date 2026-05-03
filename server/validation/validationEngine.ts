@@ -125,7 +125,7 @@ export const validateByType = (
     let isValid = validator?.(value) ?? false;
 
     // match для строки -> булево значение для поля формы, регулярное выражение - для любого поля
-    if (isValid && type === 'string' && typeof value === 'string' && match) {
+    if (isValid && typeof value === 'string' && match) {
         let rule: RegExp | ((val: string) => boolean) | undefined;
 
         if (
@@ -191,7 +191,7 @@ export const validateArrayItems = <E extends TEntityType>(
     if (!arrSchema) {
         return { isValid: false, invalidInputPaths: parentPath ? [parentPath] : [], fieldErrors };
     }
-
+    
     for (let i = 0; i < arr.length; i++) {
         const item = arr[i];
         const currentPath = `${parentPath}[${i}]`;

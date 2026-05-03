@@ -10,6 +10,11 @@ import { validateInput } from '@server/middlewares/validationMiddleware.js';
 import {
     productListSchema,
     productSchema,
+    productCreateSchema,
+    productUpdateSchema,
+    bulkProductUpdateSchema,
+    productDeleteSchema,
+    bulkProductDeleteSchema
 } from '@server/validation/schemas/product.schemas.js';
 import {
     handleProductListRequest,
@@ -61,6 +66,7 @@ router.post(
     verifyUser,
     verifyRole(ADMIN),
     uploadImages,
+    validateInput(productCreateSchema),
     handleProductCreateRequest
 );
 router.put(
@@ -69,6 +75,7 @@ router.put(
     verifyUser,
     verifyRole(ADMIN),
     uploadImages,
+    validateInput(productUpdateSchema),
     handleProductUpdateRequest
 );
 router.patch(
@@ -76,6 +83,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(bulkProductUpdateSchema),
     handleBulkProductUpdateRequest
 );
 router.delete(
@@ -83,6 +91,7 @@ router.delete(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(bulkProductDeleteSchema),
     handleBulkProductDeleteRequest
 );
 router.delete(
@@ -90,6 +99,7 @@ router.delete(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(productDeleteSchema),
     handleProductDeleteRequest
 );
 

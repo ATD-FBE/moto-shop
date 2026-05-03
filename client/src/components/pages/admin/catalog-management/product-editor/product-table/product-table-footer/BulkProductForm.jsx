@@ -115,8 +115,8 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Теги (через запятую)',
             elem: 'input',
             type: 'text',
-            placeholder: 'Укажите общие теги',
             defaultValue: '',
+            placeholder: 'Укажите общие теги',
             autoComplete: 'off',
             trim: true,
             allowEmpty: true,
@@ -305,7 +305,9 @@ export default function BulkProductForm({ uiBlocked, productIds, allowedCategori
             setSubmitStatus(FORM_STATUS.SENDING);
             dispatch(setNavigationLock(true));
 
-            const responseData = await dispatch(sendBulkProductUpdateRequest(productIds, formFields));
+            formFields.isActive = 'true';
+
+            const responseData = await dispatch(sendBulkProductUpdateRequest({ productIds, formFields }));
             if (isUnmountedRef.current) return;
 
             const { status, message, fieldErrors, updatedProducts } = responseData;

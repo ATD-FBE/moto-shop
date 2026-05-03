@@ -107,7 +107,7 @@ export default function ProductEditor({
         const processBulkProductDeletions = async (productIds) => {
             setOperationBusy(true);
 
-            const { status, message } = await dispatch(sendBulkProductDeleteRequest(productIds));
+            const { status, message } = await dispatch(sendBulkProductDeleteRequest({ productIds }));
             if (isUnmountedRef.current) return;
             
             logRequestStatus({ context: 'PRODUCT: DELETE BULK', status, message });

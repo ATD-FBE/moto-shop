@@ -11,6 +11,7 @@ export const ProductSchema = new Schema({
     },
     mainImageIndex: { // Зависит от imageFilenames
         type: Number,
+        min: 0,
         set: (val: null | number): number | undefined => val === null ? undefined : val
     },
     sku: { // Опционально

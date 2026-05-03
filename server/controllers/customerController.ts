@@ -11,7 +11,6 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { requireDbUser } from '@server/utils/typeGuards.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';
@@ -136,8 +135,8 @@ export const handleCustomerOrderListRequest: RequestHandler<
 > = async (req, res, next) => {
     const customerId = req.params.customerId;
     const firstOrderId = req.query.firstOrderId;
-    const skip = Math.max(parseInt(req.query.skip ?? '0', 10), 0);
-    const limit = Math.max(parseInt(req.query.limit ?? '0', 10), 0);
+    const skip = Math.max(req.query.skip ?? 0, 0);
+    const limit = Math.max(req.query.limit ?? 0, 0);
 
     try {
         const matchFilter = { 
