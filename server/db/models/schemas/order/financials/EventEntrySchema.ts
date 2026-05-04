@@ -9,7 +9,7 @@ import {
     CARD_ONLINE_PROVIDER,
     FINANCIALS_EVENT
 } from '@shared/constants.js';
-import { validationRules, textValidation } from '@shared/fieldRules.js';
+import { validationRules, currencyValidation, textValidation } from '@shared/fieldRules.js';
 
 export const EventEntrySchema = new Schema({
     eventId: {
@@ -31,7 +31,7 @@ export const EventEntrySchema = new Schema({
             amount: { // Сумма транша/попытки оплаты/возврата
                 type: Number,
                 required: true,
-                validate: [(val: number): boolean => validationRules.financials.amount.test(String(val))]
+                validate: [(val: number): boolean => currencyValidation(String(val))]
             },
             provider: { // Банк при переводе/провайдер платёжного шлюза при оплате/возврате картой онлайн
                 type: String,

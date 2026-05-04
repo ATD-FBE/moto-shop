@@ -69,7 +69,7 @@ export const FinalItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean =>currencyValidation(String(val))]
+        validate: [(val: number): boolean => currencyValidation(String(val))]
     },
     appliedDiscount: { // В процентах
         type: Number,
