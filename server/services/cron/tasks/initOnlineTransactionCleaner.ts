@@ -153,7 +153,7 @@ const groupTransactionsByOrderId = (
     const map = new Map<string, INormalizedExternalTx<TAnyExternalTx>[]>(); // orderId => [{}, ...]
                 
     transactions.forEach(tx => {
-        if (!tx.orderId || !typeCheck.objectId(tx.orderId)) return;
+        if (!tx.orderId || !typeCheck.objectIdString(tx.orderId)) return;
         map.set(tx.orderId, [...(map.get(tx.orderId) ?? []), tx]);
     });
 

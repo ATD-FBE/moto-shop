@@ -2,7 +2,7 @@ import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
-import { getInitSortParam, getInitPageParam, getInitLimitParam } from '@/helpers/initParamsHelper.js';
+import { getInitSortParam, getInitPageParam, getInitLimitParam } from '@/helpers/urlParamsHelper.js';
 import { notificationsSortOptions } from '@shared/sortOptions.js';
 import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { sendNotificationListRequest } from '@/api/notificationRequests.js';

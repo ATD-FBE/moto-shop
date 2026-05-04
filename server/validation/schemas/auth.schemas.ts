@@ -20,7 +20,7 @@ const guestCartSchema: IValidationSchema = {
     items: {
         type: 'object',
         fields: {
-            id: { type: 'objectId' },
+            id: { type: 'objectIdString' },
             quantity: { type: 'integer', min: 1 }
         }
     }

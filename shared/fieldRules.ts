@@ -25,13 +25,14 @@ export const adminRegCodeValidation = /^[a-zA-Z0-9@#$%^&*!?-]{1,30}$/;
 export const textValidation = /\S+/;
 export const naturalValidation = /^\d+$/;
 export const decimalValidation = /^\d+(\.\d+)?$/;
-export const currencyValidation = /^\d+(?:\.\d{1,2})?$/;
 export const currencySignedValidation = /^-?\d+(?:\.\d{1,2})?$/;
 export const dateValidation = /^\d{4}-\d{2}-\d{2}$/;
 export const slugValidation = /^[a-z0-9_-]{2,}$/;
 export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 export const phoneValidation = /^(\+7|8)\d{10}$/;
 export const cvcValidation = /^\d{3,4}$/;
+
+export const currencyValidation = (val: unknown) => /^\d+(?:\.\d{1,2})?$/.test(String(val));
 
 export const alwaysPassValidation = (_val: unknown): boolean => true;
 
@@ -370,7 +371,7 @@ export const fieldErrorMessages: TFieldErrorMessages = {
             default: ''
         },
         unit: {
-            default: 'Некорректная товарная единица'
+            default: 'Некорректная единица товара'
         },
         stock: {
             default: 'Допустимо целое число от 0'

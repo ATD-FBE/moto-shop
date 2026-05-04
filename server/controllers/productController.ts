@@ -17,7 +17,7 @@ import {
     buildPaginatedPipeline,
     buildOrderedFiltersPipeline
 } from '@server/utils/aggregationUtils.js';
-import { requireDbUser } from '@server/utils/typeGuards.js';
+import { requireDbUser, requireFileArrayField } from '@server/utils/typeGuards.js';
 import { isArrayContentDifferent } from '@server/utils/compareUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
@@ -188,19 +188,17 @@ export const handleProductCreateRequest: RequestHandler<
     TProductCreateBodyServer
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
+    if (!requireFileArrayField('images', req, next)) return;
 
-    const { files: images, fileUploadError } = req; // Проверено в multer
-
-    if (!Array.isArray(images)) {
-        return next(new Error('Поле images не является массивом файлов'));
-    }
+    console.log(req.body);
 
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const {
-        mainImageIndex, sku, name, brand, description,
+        images, mainImageIndex, sku, name, brand, description,
         stock, unit, price, discount, category, tags, isActive
     } = req.body;
+    const { fileUploadError } = req; // Проверено в multer
 
     // Проверка на согласованность индекса и количества фотографий
     const noImages = images.length === 0;
@@ -306,21 +304,18 @@ export const handleProductUpdateRequest: RequestHandler<
     TProductUpdateBodyServer
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
+    if (!requireFileArrayField('images', req, next)) return;
 
-    const { files: images, fileUploadError } = req; // Проверено в multer
-
-    if (!Array.isArray(images)) {
-        return next(new Error('Поле images не является массивом файлов'));
-    }
+    console.log(req.body);
 
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const productId = req.params.productId;
     const {
-        imageFilenamesToDelete,
-        mainImageIndex, sku, name, brand, description,
+        images, mainImageIndex, imageFilenamesToDelete, sku, name, brand, description,
         stock, unit, price, discount, category, tags, isActive
     } = req.body;
+    const { fileUploadError } = req; // Проверено в multer
 
     const newImageFilenames = images.map(img => img.filename);
     let rollbackCleanupFiles = false;
@@ -363,8 +358,7 @@ export const handleProductUpdateRequest: RequestHandler<
             }
 
             // Фильтрация и подготовка имён файлов фотографий
-            const imgFilenamesToDeleteArray = imageFilenamesToDelete?.split(',') ?? [];
-            const actualImgFilenamesToDelete = imgFilenamesToDeleteArray
+            const actualImgFilenamesToDelete = imageFilenamesToDelete
                 .filter(filename => oldImageFilenames.includes(filename));
             const imgFilenamesToDeleteSet = new Set(actualImgFilenamesToDelete);
             const preparedImgFilenames = oldImageFilenames

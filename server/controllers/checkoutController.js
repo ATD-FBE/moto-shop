@@ -42,7 +42,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
     const customerDiscount = dbUser.discount;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -220,7 +220,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
         } = itemSnapshot ?? {};
 
         if (
-            !typeCheck.objectId(productId) ||
+            !typeCheck.objectIdString(productId) ||
             !typeCheck.number(priceSnapshot) ||
             priceSnapshot < 0 ||
             !typeCheck.number(appliedDiscountSnapshot) ||
@@ -443,7 +443,7 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
     } = req.body ?? {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         firstName: { value: firstName, type: 'string', optional: true, formField: true },
         lastName: { value: lastName, type: 'string', optional: true, formField: true },
         middleName: { value: middleName, type: 'string', optional: true, formField: true },
@@ -541,7 +541,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
     } = req.body ?? {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         firstName: { value: firstName, type: 'string', formField: true },
         lastName: { value: lastName, type: 'string', formField: true },
         middleName: { value: middleName, type: 'string', optional: true, formField: true },
@@ -868,7 +868,7 @@ export const handleOrderDraftDeleteRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 

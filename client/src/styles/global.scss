@@ -5469,7 +5469,10 @@ main {
                     justify-content: space-between;
                     align-items: center;
                     gap: 8px;
-                    padding-bottom: 26px;
+
+                    &:not(:last-child) {
+                        padding-bottom: 26px;
+                    }
 
                     .form-entry-checkbox-label {
                         display: flex;

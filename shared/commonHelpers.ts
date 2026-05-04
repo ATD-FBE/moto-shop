@@ -47,16 +47,29 @@ export const formatDateOnly = (date: Date | string | number | null | undefined):
     return `${d.getFullYear()}-${padTwoDigits(d.getMonth() + 1)}-${padTwoDigits(d.getDate())}`;
 };
 
-export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
-    if (!obj || typeof obj !== 'object') return undefined;
-    return path.split('.').reduce((acc, key) => acc?.[key], obj);
-};
-
 export const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const ensureArray = <T>(val: T | T[] | undefined): T[] => {
     if (val === undefined) return [];
     return Array.isArray(val) ? val : [val];
+};
+
+export const isObjectsEqual = (a: Record<string, string>, b: Record<string, string>) => {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+
+    if (aKeys.length !== bKeys.length) return false;
+
+    for (const key of aKeys) {
+        if (a[key] !== b[key]) return false;
+    }
+
+    return true;
+};
+
+export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    return path.split('.').reduce((acc, key) => acc?.[key], obj);
 };
 
 export const getFilterOptionsByContext = <TContext extends string>(
@@ -66,15 +79,6 @@ export const getFilterOptionsByContext = <TContext extends string>(
     options
         .filter(opt => opt.contexts.includes(context))
         .map(opt => {
-            if (opt.type === 'boolean') {
-                const { contexts, defaultByContext, ...rest } = opt;
-
-                return {
-                    ...rest,
-                    defaultValue: defaultByContext?.[context] ?? rest.defaultValue ?? ''
-                } as TFilterOption;
-            }
-
             const { contexts, ...rest } = opt;
             return rest as TFilterOption;
         });

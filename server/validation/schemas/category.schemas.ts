@@ -12,13 +12,13 @@ type TCategoryEntity = typeof categoryEntity;
 
 const categoryEntity = 'category';
 const paramsBaseSchema: IValidationInputSchema<TCategoryEntity>['params'] = {
-    categoryId: 'objectId'
+    categoryId: 'objectIdString'
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TCategoryEntity>['body'] = {
     name: { type: 'string', match: true, formField: true },
     slug: { type: 'string', match: true, formField: true },
     order: { type: 'integer', min: 0, formField: true },
-    parent: { type: 'nullableObjectId', formField: true }
+    parent: { type: 'nullableObjectIdString', formField: true }
 } as const;
 
 export const categoryCreateSchema: IValidationInputSchema<TCategoryEntity> = {

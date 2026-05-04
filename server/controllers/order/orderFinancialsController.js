@@ -58,7 +58,7 @@ export const handleOrderInvoicePdfRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -98,7 +98,7 @@ export const handleOrderRemainingAmountRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -147,8 +147,8 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
     const { voidedNote } = req.body ?? {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
-        eventId: { value: eventId, type: 'objectId', formField: true }, // Значение из формы вынесено в параметр
+        orderId: { value: orderId, type: 'objectIdString' },
+        eventId: { value: eventId, type: 'objectIdString', formField: true }, // Значение из формы вынесено в параметр
         voidedNote: { value: voidedNote, type: 'string', optional: true, formField: true },
     };
 
@@ -320,7 +320,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     } = typeCheck.object(transaction) ? transaction : {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', formField: true },
         provider: { value: provider, type: 'string', optional: true, formField: true },
@@ -498,7 +498,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     } = typeCheck.object(transaction) ? transaction : {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', formField: true },
         provider: { value: provider, type: 'string', optional: true, formField: true },
@@ -670,7 +670,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
     const { provider, amount } = typeCheck.object(transaction) ? transaction : {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         paymentToken: { value: paymentToken, type: 'string' },
         transaction: { value: transaction, type: 'object' },
         provider: { value: provider, type: 'string', formField: true },
@@ -902,7 +902,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -1167,7 +1167,7 @@ export const handleWebhook = async (req, res, next) => {
     // Проверка ID заказа и попытка его найти через ID транзакции оплаты
     let orderId = normalizedWebhook.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         let orderLookupFilter = {};
 
         if (transactionType === TRANSACTION_TYPE.PAYMENT) {
@@ -1179,7 +1179,7 @@ export const handleWebhook = async (req, res, next) => {
         const foundDbOrder = await Order.findOne(orderLookupFilter).select('_id').lean();
         orderId = foundDbOrder?._id.toString();
 
-        if (!typeCheck.objectId(orderId)) {
+        if (!typeCheck.objectIdString(orderId)) {
             logCriticalEvent({
                 logContext,
                 category: 'financials',

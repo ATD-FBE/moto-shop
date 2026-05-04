@@ -2,7 +2,8 @@ import type { TEntityType, TEntityField } from '@shared/types/index.js';
 
 export type TCheckType =
     | 'string' | 'number' | 'integer' | 'boolean' | 'emptyableBoolean' | 'date'
-    | 'objectId' | 'nullableObjectId' | 'array' | 'object' | 'file' | 'files';
+    | 'objectId' | 'objectIdString' | 'nullableObjectId' | 'nullableObjectIdString' | 'array' | 'object'
+    | 'file' | 'files';
 
 export interface IValidationSchema {
     type: TCheckType;                              // Тип значения поля

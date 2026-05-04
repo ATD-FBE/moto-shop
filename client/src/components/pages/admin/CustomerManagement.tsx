@@ -18,7 +18,7 @@ import {
     getInitSortParam,
     getInitPageParam,
     getInitLimitParam
-} from '@/helpers/initParamsHelper.js';
+} from '@/helpers/urlParamsHelper.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -28,7 +28,7 @@ import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { IUpdateCustomerDiscountResult } from '@/types/index.js';
 import type {
-    TFilterParams,
+    TFilterParamsClient,
     ICustomer,
     ICustomerDiscountUpdateBody,
     ICustomerBanStatusUpdateBody
@@ -38,7 +38,7 @@ export default function CustomerManagement(): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
     
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState<TFilterParams>({});
+    const [filter, setFilter] = useState<TFilterParamsClient>({});
     const [sort, setSort] = useState<string>(customersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(customersPageLimitOptions[0]);

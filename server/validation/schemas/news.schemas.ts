@@ -12,7 +12,7 @@ type TNewsEntity = typeof newsEntity;
 
 const newsEntity = 'news';
 const paramsBaseSchema: IValidationInputSchema<TNewsEntity>['params'] = {
-    newsId: 'objectId'
+    newsId: 'objectIdString'
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TNewsEntity>['body'] = {
     title: { type: 'string', match: true, formField: true },

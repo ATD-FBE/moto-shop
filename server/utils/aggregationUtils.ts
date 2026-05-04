@@ -7,7 +7,7 @@ import type { FilterQuery, PipelineStage } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
     TFilterOption,
-    TFilterParams,
+    TFilterParamsServer,
     ISortOption,
     TQuery
 } from '@shared/types/index.js';
@@ -67,7 +67,7 @@ export const buildSearchMatch = <T extends object>(
     return searchMatch;
 };
 
-export const buildFilterMatch = <TModel extends object, TFilter extends TFilterParams>(
+export const buildFilterMatch = <TModel extends object, TFilter extends TFilterParamsServer>(
     query: TQuery<TModel, TFilter>,
     filterOptions: readonly TFilterOption<TModel>[]
 ): FilterQuery<TModel> => {
@@ -84,8 +84,8 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                 const maxValue = query[maxParamName] as number | undefined;
                 const minValueNum = typeof minValue === 'number' ? minValue : -Infinity;
                 const maxValueNum = typeof maxValue === 'number' ? maxValue : Infinity;
-                const minLimitNum = minLimit !== '' ? Number(minLimit) : -Infinity;
-                const maxLimitNum = maxLimit !== '' ? Number(maxLimit) : Infinity;
+                const minLimitNum = minLimit ?? -Infinity;
+                const maxLimitNum = maxLimit ?? Infinity;
 
                 if (minValueNum > minLimitNum && minValueNum !== -Infinity) {
                     filterMatch[dbField] = { $gte: minValueNum };
@@ -116,8 +116,8 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                 const maxVal = query[maxParamName] as Date | undefined;
                 const minDate = minVal instanceof Date ? new Date(minVal) : new Date(NaN);
                 const maxDate = maxVal instanceof Date ? new Date(maxVal) : new Date(NaN);
-                const minLimitDate = minLimit !== '' ? new Date(minLimit) : new Date(-MAX_DATE_TS);
-                const maxLimitDate = maxLimit !== '' ? new Date(maxLimit) : new Date(MAX_DATE_TS);
+                const minLimitDate = minLimit ? new Date(minLimit) : new Date(-MAX_DATE_TS);
+                const maxLimitDate = maxLimit ? new Date(maxLimit) : new Date(MAX_DATE_TS);
 
                 let offsetNum = typeof query.timeZoneOffset === 'number' ? query.timeZoneOffset : 0;
                 if (Math.abs(offsetNum) > MAX_TIMEZONE_OFFSET_MINUTES) {
@@ -157,7 +157,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
             }
 
             case 'boolean': {
-                const { paramName, defaultValue } = option;
+                const { paramName } = option;
 
                 const value = query[paramName] as boolean | undefined;
 
@@ -165,12 +165,6 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
                     filterMatch[dbField] = true;
                 } else if (value === false) {
                     filterMatch[dbField] = { $ne: true };
-                } else if (defaultValue) {
-                    if (defaultValue === 'true') {
-                        filterMatch[dbField] = true;
-                    } else if (defaultValue === 'false') {
-                        filterMatch[dbField] = { $ne: true };
-                    }
                 }
 
                 break;

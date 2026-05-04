@@ -475,10 +475,9 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
 
         // Установка полей для удаляемых и новых фотографий
         const fieldEntries = [
-            ...(existingImageFilenamesToDelete.length > 0
-                ? [['imageFilenamesToDelete', existingImageFilenamesToDelete.join(',')]]
-                : []),
-            ...newImageFiles.map(file => ['images', file])
+            ['imageFilenamesToDelete', existingImageFilenamesToDelete],
+            //...newImageFiles.map(file => ['images', file])
+            ['images', newImageFiles]
         ];
 
         // Установка поля индекса главной фотографии
@@ -548,7 +547,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                 if (isValid) {
                     // Сбор данных для отправки
                     fieldEntries.forEach(([key, val]) => {
-                        acc.formData.append(key, val);
+                        acc.formFields[key] = val;
                     });
                         
                     // Запоминание изменённого поля
@@ -563,15 +562,12 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                 allValid: true,
                 invalidNewImages: new Set(),
                 fieldsStateUpdates: {},
-                formData: new FormData(),
+                formFields: {},
                 changedFields: []
             }
         );
 
-        return {
-            ...result,
-            formData: moveKeyToEndInFormData(result.formData, 'images'), // Размещение images в конце
-        };
+        return result;
     };
     
     const handleFormSubmit = async (e) => {
@@ -581,7 +577,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             allValid,
             invalidNewImages,
             fieldsStateUpdates,
-            formData,
+            formFields,
             changedFields
         } = processFormFields();
 
@@ -599,8 +595,8 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
             dispatch(setNavigationLock(true));
 
             const requestThunk = isEditMode
-                ? sendProductUpdateRequest(product.id, formData)
-                : sendProductCreateRequest(formData);
+                ? sendProductUpdateRequest(product.id, formFields)
+                : sendProductCreateRequest(formFields);
             const responseData = await dispatch(requestThunk);
             if (isUnmountedRef.current) return;
 

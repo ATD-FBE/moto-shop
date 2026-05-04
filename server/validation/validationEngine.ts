@@ -7,7 +7,7 @@ import type {
     IValidationConfig,
     TValidationConfigMap
 } from '@server/types/index.js';
-import type { TEntityType, TFieldErrors, TFilterOption } from '@shared/types/index.js';
+import type { TEntityType, TValidationRuleType, TFieldErrors, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -26,12 +26,6 @@ interface IValidationResult<E extends TEntityType = TEntityType> {
     fieldErrors: TFieldErrors<E>;
 }
 
-interface IMulterContext {
-    fieldName: string;
-    file?: Express.Multer.File; // req.file
-    files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>; // req.files
-}
-
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
@@ -48,33 +42,24 @@ const BASE_QUERY_VALIDATION_SCHEMA: Record<string, IValidationSchema> = {
 const baseTypeChecks: TBaseTypeChecks = {
     string: (val: unknown): val is string => typeof val === 'string',
 
-    number: (val: unknown): val is string | number =>
-        ['string', 'number'].includes(typeof val) &&
-        val !== '' &&
-        isFinite(Number(val)),
+    number: (val: unknown): val is number => typeof val === 'number' && isFinite(val),
 
-    integer: (val: unknown): val is string | number =>
-        ['string', 'number'].includes(typeof val) &&
-        val !== '' &&
-        Number.isInteger(Number(val)),
+    integer: (val: unknown): val is number => typeof val === 'number' && Number.isInteger(val),
 
-    boolean: (val: unknown): val is string | boolean =>
-        typeof val === 'boolean' ||
-        (typeof val === 'string' && (val === 'true' || val === 'false')),
+    boolean: (val: unknown): val is boolean => typeof val === 'boolean',
 
-    emptyableBoolean: (val: unknown): val is string | boolean =>
-        val === '' ||
-        typeof val === 'boolean' ||
-        (typeof val === 'string' && (val === 'true' || val === 'false')),
+    emptyableBoolean: (val: unknown): val is '' | boolean => val === '' || typeof val === 'boolean',
 
-    date: (val: unknown): val is Date =>
-        (typeof val === 'string' || val instanceof Date) &&
-        !isNaN(new Date(val).getTime()),
+    date: (val: unknown): val is Date => val instanceof Date && !isNaN(val.getTime()),
 
-    objectId: (val: unknown): val is string | mongoose.Types.ObjectId =>
-        mongoose.Types.ObjectId.isValid(val as any),
+    objectId: (val: unknown): val is mongoose.Types.ObjectId => mongoose.Types.ObjectId.isValid(val as any),
 
-    nullableObjectId: (val: unknown): val is null | string | mongoose.Types.ObjectId =>
+    objectIdString: (val: unknown): val is string => mongoose.Types.ObjectId.isValid(val as any),
+
+    nullableObjectId: (val: unknown): val is null | mongoose.Types.ObjectId =>
+        val === null || mongoose.Types.ObjectId.isValid(val as any),
+
+    nullableObjectIdString: (val: unknown): val is null | string =>
         val === null || mongoose.Types.ObjectId.isValid(val as any),
 
     array: (val: unknown): val is unknown[] => Array.isArray(val),
@@ -124,9 +109,9 @@ export const validateByType = (
     const validator = typeCheck[type];
     let isValid = validator?.(value) ?? false;
 
-    // match для строки -> булево значение для поля формы, регулярное выражение - для любого поля
-    if (isValid && typeof value === 'string' && match) {
-        let rule: RegExp | ((val: string) => boolean) | undefined;
+    // match -> булево значение для поля формы, регулярное выражение - для любого поля
+    if (isValid && match) {
+        let rule: TValidationRuleType | undefined;
 
         if (
             typeof match === 'boolean' &&
@@ -139,22 +124,18 @@ export const validateByType = (
             rule = match;
         }
 
-        if (rule) {
+        if (rule instanceof RegExp && typeof value === 'string') {
             const trimmedValue = value.trim();
-
-            if (rule instanceof RegExp) {
-                isValid = rule.test(trimmedValue);
-            } else if (typeof rule === 'function') {
-                isValid = rule(trimmedValue);
-            }
+            isValid = rule.test(trimmedValue);
+        } else if (typeof rule === 'function') {
+            isValid = rule(value);
         }
     }
 
     // min/max для чисел
-    if (isValid && ['number', 'integer'].includes(type)) {
-        const num = Number(value);
-        if (min !== undefined && num < min) isValid = false;
-        if (max !== undefined && num > max) isValid = false;
+    if (isValid && ['number', 'integer'].includes(type) && typeof value === 'number') {
+        if (min !== undefined && value < min) isValid = false;
+        if (max !== undefined && value > max) isValid = false;
     }
 
     // enum для примитивов
@@ -162,10 +143,7 @@ export const validateByType = (
         const isEnumSupported = ['string', 'number', 'integer', 'boolean'].includes(type);
     
         if (isEnumSupported) {
-            const isNumeric = ['number', 'integer'].includes(type);
-            const normalizedValue = isNumeric ? Number(value) : value;
-
-            isValid = enumValues.includes(normalizedValue as any);
+            isValid = enumValues.includes(value as 'string' | 'number' | 'boolean');
         }
     }
 
@@ -322,6 +300,34 @@ export const validateObjectFields = <E extends TEntityType>(
     return { isValid, invalidInputPaths, fieldErrors };
 };
 
+// Рекурсивное заполнение валидационных схем инпут-значениями от клиента
+export const buildValidationConfig = (
+    schema: IValidationSchema,
+    value: unknown
+): IValidationConfig => {
+    const { type, fields, ...restSchema } = schema;
+
+    const config: IValidationConfig = {
+        type,
+        ...restSchema,
+        value
+    };
+
+    if (type === 'object' && fields && value && typeof value === 'object') {
+        config.fields = Object.fromEntries(
+            Object.entries(fields).map(([key, fieldSchema]) => [
+                key,
+                buildValidationConfig(
+                    fieldSchema,
+                    (value as Record<string, unknown>)[key]
+                )
+            ])
+        );
+    }
+
+    return config;
+};
+
 // Функция автозаполнения схемы валидации query
 export const buildQueryValidationSchema = (
     filterOptions: readonly TFilterOption[] = []
@@ -341,7 +347,7 @@ export const buildQueryValidationSchema = (
                 break;
 
             case 'boolean':
-                querySchema[option.paramName] = { type: 'emptyableBoolean', optional: true };
+                querySchema[option.paramName] = { type: 'boolean', optional: true };
                 break;
 
             case 'string':
@@ -351,59 +357,4 @@ export const buildQueryValidationSchema = (
     });
 
     return querySchema;
-};
-
-// Рекурсивное заполнение валидационных схем инпут-значениями от клиента
-export const buildValidationConfig = (
-    schema: IValidationSchema,
-    value: unknown,
-    multerContext?: IMulterContext
-): IValidationConfig => {
-    const { type, fields, ...restSchema } = schema;
-    let finalValue = value;
-
-    if (multerContext) {
-        const { fieldName, file, files } = multerContext;
-
-        if (type === 'file') {
-            // Тип конфига multer 'single' -> req.file = Файл
-            if (file?.fieldname === fieldName) {
-                finalValue = file;
-            } 
-            // Тип конфига multer 'fields' -> req.file = Объект с массивом из одного файла по ключу fieldName
-            else if (files && !Array.isArray(files) && files[fieldName]?.[0]) {
-                finalValue = files[fieldName][0];
-            }
-        } else if (type === 'files') {
-            // Тип конфига multer 'array' -> req.files = Массив файлов
-            if (Array.isArray(files) && files[0]?.fieldname === fieldName) {
-                finalValue = files;
-            }
-            // Тип конфига multer 'fields' -> req.files = Объект с массивами файлов по ключам fieldname
-            else if (files && !Array.isArray(files) && files[fieldName]) {
-                finalValue = files[fieldName];
-            }
-        }
-    }
-
-    const baseConfig: IValidationConfig = {
-        type,
-        ...restSchema,
-        value: finalValue
-    };
-
-    if (type === 'object' && fields) {
-        baseConfig.fields = Object.fromEntries(
-            Object.entries(fields).map(([key, fieldSchema]) => [
-                key,
-                buildValidationConfig(
-                    fieldSchema, 
-                    (value as any)?.[key], 
-                    multerContext ? { ...multerContext, fieldName: key } : undefined
-                )
-            ])
-        );
-    }
-
-    return baseConfig;
 };

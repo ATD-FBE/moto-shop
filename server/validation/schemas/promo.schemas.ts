@@ -13,7 +13,7 @@ type TPromoEntity = typeof promoEntity;
 
 const promoEntity = 'promotion';
 const paramsBaseSchema: IValidationInputSchema<TPromoEntity>['params'] = {
-    promoId: 'objectId'
+    promoId: 'objectIdString'
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TPromoEntity>['body'] = {
     image: { type: 'file', optional: true, formField: true },

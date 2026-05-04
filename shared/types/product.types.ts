@@ -12,7 +12,7 @@ import type {
     TInferFilterParams,
     TProductsSortOption,
     TProductEditorSortOption,
-    TProductFilterOptionConfig,
+    TProductsFilterOption,
     TProductUnit
 } from './shared.types.js';
 
@@ -56,7 +56,7 @@ export interface IProductSnapshot {
 export type TPurchaseProduct = IProduct | IProductSnapshot;
 
 interface IProductCreateBodyBase<TFile> {
-    images?: TFile[];
+    images: TFile[];
     mainImageIndex?: number;
     sku?: string;
     name: string;
@@ -71,11 +71,11 @@ interface IProductCreateBodyBase<TFile> {
     isActive: boolean;
 }
 interface IProductUpdateBodyBase<TFile> extends IProductCreateBodyBase<TFile> {
-    imageFilenamesToDelete?: string;
+    imageFilenamesToDelete: string[];
 }
 
 /// Загрузка ID отфильтрованных товаров и их данных для одной страницы ///
-export type TProductListFilterParams = TInferFilterParams<TProductFilterOptionConfig>;
+export type TProductListFilterParams = TInferFilterParams<TProductsFilterOption>;
 export type TProductListQuery =
     IBaseQuery<TProductsSortOption['dbField'] | TProductEditorSortOption['dbField']> &
     TProductListFilterParams & {

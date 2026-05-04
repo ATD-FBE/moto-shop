@@ -28,6 +28,26 @@ export const requireDbUser = <R extends Request<any, any, any, any>>(
     return true;
 };
 
+export const requireFileArrayField = <
+    F extends string,
+    R extends Request<any, any, any, any>
+>(
+    fieldName: F,
+    req: R,
+    next: NextFunction
+): req is R & {
+    body: R['body'] & Record<F, Express.Multer.File[]>
+} => {
+    const value = (req.body as Record<string, unknown>)[fieldName];
+
+    if (!Array.isArray(value)) {
+        next(new Error(`Поле ${fieldName} не является массивом файлов`));
+        return false;
+    }
+
+    return true;
+};
+
 export const isAppError = (err: Error): err is Error & { statusCode: number } => {
     return err.isAppError === true && typeof err.statusCode === 'number';
 };

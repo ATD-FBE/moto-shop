@@ -15,7 +15,7 @@ export const handleGuestCartItemListRequest = async (req, res, next) => {
     }
 
     for (const { id, quantity } of guestCart) {
-        if (!typeCheck.objectId(id) || !Number.isInteger(quantity) || quantity < 1) {
+        if (!typeCheck.objectIdString(id) || !Number.isInteger(quantity) || quantity < 1) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в guestCart' });
         }
     }*/
@@ -60,7 +60,7 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
     const { quantity } = req.body ?? {};
 
     const validationConfigMap = {
-        productId: { value: productId, type: 'objectId' },
+        productId: { value: productId, type: 'objectIdString' },
         quantity: { value: quantity, type: 'number' }
     };
 
@@ -128,7 +128,7 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
     const { quantity, position } = req.body ?? {};
 
     const validationConfigMap = {
-        productId: { value: productId, type: 'objectId' },
+        productId: { value: productId, type: 'objectIdString' },
         quantity: { value: quantity, type: 'number' },
         position: { value: position, type: 'number' }
     };
@@ -224,7 +224,7 @@ export const handleCartItemRemoveRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
     const productId = req.params.productId;
 
-    if (!typeCheck.objectId(productId)) {
+    if (!typeCheck.objectIdString(productId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: productId' });
     }
 

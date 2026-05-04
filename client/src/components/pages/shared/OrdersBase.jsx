@@ -13,7 +13,7 @@ import {
     getInitPageParam,
     getInitLimitParam,
     getInitFilterParams
-} from '@/helpers/initParamsHelper.js';
+} from '@/helpers/urlParamsHelper.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import {

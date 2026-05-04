@@ -32,9 +32,7 @@ import {
 } from '@shared/sortOptions.js';
 import {
     customersFilterOptions,
-    productsFilterConfig,
-    productCatalogFilterOptions,
-    productEditorFilterOptions,
+    productsFilterOptions,
     ordersFilterOptions
 } from '@shared/filterOptions.js';
 
@@ -61,9 +59,10 @@ export interface IBaseQuery<TSort extends string = string> {
     timeZoneOffset?: number;
 }
 
-export type TFilterParams = Record<string, unknown>;
+export type TFilterParamsClient = Record<string, string>;
+export type TFilterParamsServer = Record<string, string | number | boolean | Date | undefined>;
 
-export type TQuery<TModel extends object, TFilter extends TFilterParams = {}> =
+export type TQuery<TModel extends object, TFilter extends TFilterParamsServer = {}> =
     IBaseQuery<Extract<keyof TModel, string>> &
     TFilter;
 
@@ -74,7 +73,8 @@ export type TInferFilterParams<T extends TFilterOption> = {
             : K extends {
                 minParamName: infer MinP;
                 maxParamName: infer MaxP;
-            } ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
+            }
+                ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
                 : never
     ]?: K extends { type: 'boolean' }
         ? boolean | '' // Пустая строка для emptyableBoolean
@@ -221,9 +221,7 @@ export interface IDotNotationPatch {
 //////////////////////
 
 export type TCustomersFilterOption = typeof customersFilterOptions[number];
-export type TProductFilterOptionConfig = typeof productsFilterConfig[number];
-export type TProductCatalogFilterOption = typeof productCatalogFilterOptions[number];
-export type TProductEditorFilterOption = typeof productEditorFilterOptions[number];
+export type TProductsFilterOption = typeof productsFilterOptions[number];
 export type TOrdersFilterOption = typeof ordersFilterOptions[number];
 
 export type TFilterOptionConfig<TContext extends string> = TFilterOption & {
@@ -252,22 +250,21 @@ interface INumberFilter<TModel> extends IBaseFilter<TModel> {
     type: 'number';
     minParamName: string;
     maxParamName: string;
-    minLimit: string;
-    maxLimit: string;
+    minLimit?: number;
+    maxLimit?: number;
 }
 
 interface IDateFilter<TModel> extends IBaseFilter<TModel> {
     type: 'date';
     minParamName: string;
     maxParamName: string;
-    minLimit: string;
-    maxLimit: string;
+    minLimit?: Date;
+    maxLimit?: Date;
 }
 
 interface IBooleanFilter<TModel> extends IBaseFilter<TModel> {
     type: 'boolean';
     paramName: string;
-    defaultValue?: TBoolFilterValue;
 }
 
 interface IStringFilter<TModel> extends IBaseFilter<TModel> {

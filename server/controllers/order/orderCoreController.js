@@ -224,7 +224,7 @@ export const handleOrderRequest = async (req, res, next) => {
     const orderId = req.params.orderId;
     const viewMode = req.query.viewMode;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
     if (!['page', 'list'].includes(viewMode)) {
@@ -254,7 +254,7 @@ export const handleOrderRequest = async (req, res, next) => {
 export const handleOrderItemsAvailabilityRequest = async (req, res, next) => {
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -299,7 +299,7 @@ export const handleOrderRepeatRequest = async (req, res, next) => {
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectId(orderId)) {
+    if (!typeCheck.objectIdString(orderId)) {
         return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
     }
 
@@ -359,7 +359,7 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
     const { internalNote } = req.body ?? {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         internalNote: { value: internalNote, type: 'string', optional: true, formField: true }
     };
 
@@ -442,7 +442,7 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
     } = req.body ?? {};
 
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         firstName: { value: firstName, type: 'string', optional: true, formField: true },
         lastName: { value: lastName, type: 'string', optional: true, formField: true },
         middleName: { value: middleName, type: 'string', optional: true, formField: true },
@@ -595,7 +595,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     const { items, editReason } = req.body ?? {};
 
     /*const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         items: { value: items, type: 'arrayOf', arrElemType: 'object' },
         editReason: { value: editReason, type: 'string', formField: true }
     };
@@ -611,7 +611,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     const itemFieldErrors = {};
 
     for (const { productId, quantity } of items) {
-        if (!typeCheck.objectId(productId)) {
+        if (!typeCheck.objectIdString(productId)) {
             return safeSendResponse(res, 400, { message: 'Неверный формат данных в items' });
         }
 
@@ -883,7 +883,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
     // Предварительная проверка формата данных
     const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectId' },
+        orderId: { value: orderId, type: 'objectIdString' },
         action: { value: action, type: 'string' },
         formFields: { value: formFields, type: 'object', optional: true },
         shippingCost: { value: shippingCost, type: 'number', optional: true, formField: true },

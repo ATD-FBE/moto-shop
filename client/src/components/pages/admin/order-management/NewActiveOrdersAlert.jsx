@@ -4,7 +4,7 @@ import cn from 'classnames';
 import {
     resetNewActiveOrders as resetNewActiveOrdersCount
 } from '@/redux/slices/uiSlice.js';
-import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
+import { getInitFilterParams } from '@/helpers/urlParamsHelper.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 
 const resetedFilter = getInitFilterParams(null, ordersFilterOptions);

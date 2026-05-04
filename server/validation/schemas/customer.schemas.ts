@@ -14,7 +14,7 @@ type TCustomerEntity = typeof customerEntity;
 
 const customerEntity = 'customer';
 const paramsBaseSchema: IValidationInputSchema<TCustomerEntity>['params'] = {
-    customerId: 'objectId'
+    customerId: 'objectIdString'
 } as const;
 
 export const customerListSchema: IValidationInputSchema<TCustomerEntity> = {
@@ -26,7 +26,7 @@ export const customerOrderListSchema: IValidationInputSchema<TCustomerEntity> = 
     entityType: customerEntity,
     params: paramsBaseSchema,
     query: {
-        firstOrderId: { type: 'objectId', optional: true },
+        firstOrderId: { type: 'objectIdString', optional: true },
         skip: { type: 'integer', optional: true },
         limit: { type: 'integer', optional: true }
     }

@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 import uniqueValidator from 'mongoose-unique-validator';
 import { PRODUCT_UNITS } from '@shared/constants.js';
-import { validationRules } from '@shared/fieldRules.js';
+import { validationRules, currencyValidation } from '@shared/fieldRules.js';
 import type { TDbProduct } from '@server/types/index.js';
 
 export const ProductSchema = new Schema({
@@ -59,9 +59,7 @@ export const ProductSchema = new Schema({
         type: Number,
         required: true,
         min: 0,
-        validate: [ // Не сработает при updateMany
-            (val: number): boolean => validationRules.product.price.test(String(val))
-        ]
+        validate: [(val: number): boolean => currencyValidation(String(val))]
     },
     discount: { // В процентах
         type: Number,

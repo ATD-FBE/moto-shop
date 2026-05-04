@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { validationRules } from '@shared/fieldRules.js';
+import { validationRules, currencyValidation } from '@shared/fieldRules.js';
 import { DISCOUNT_SOURCE, PRODUCT_UNITS } from '@shared/constants.js';
 
 const baseItemFields = {
@@ -69,7 +69,7 @@ export const FinalItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean =>currencyValidation(String(val))]
     },
     appliedDiscount: { // В процентах
         type: Number,
@@ -86,13 +86,13 @@ export const FinalItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean => currencyValidation(String(val))]
     },
     totalPrice: { // finalUnitPrice * quantity
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => validationRules.product.price.test(String(val))]
+        validate: [(val: number): boolean => currencyValidation(String(val))]
     },
 }, {
     _id: false

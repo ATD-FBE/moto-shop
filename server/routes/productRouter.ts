@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import config from '@server/config/config.js';
 import { PRODUCT_STORAGE_PATH } from '@server/config/paths.js';
-import createMulterConfig from '@server/utils/multerConfig.js';
+import { MULTER_MODE } from '@server/config/constants.js';
 import {
     verifyAuth, verifyUser, verifyRole,
     optionalAuth, optionalUser
@@ -25,7 +25,7 @@ import {
     handleProductDeleteRequest,
     handleBulkProductDeleteRequest
 } from '@server/controllers/productController.js';
-import { MULTER_MODE } from '@server/config/constants.js';
+import createMulterConfig from '@server/utils/multerConfig.js';
 import {
     ALLOWED_IMAGE_MIME_TYPES,
     PRODUCT_FILES_LIMIT,

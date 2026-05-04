@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react';
 import cn from 'classnames';
 import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
-import { getInitFilterParams } from '@/helpers/initParamsHelper.js';
-import { formatDateOnly } from '@shared/commonHelpers.js';
+import { getInitFilterParams } from '@/helpers/urlParamsHelper.js';
+import { formatDateOnly, isObjectsEqual } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction, ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
-import type { TFilterParams, TFilterOption } from '@shared/types/index.js';
+import type { TFilterParamsClient, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
 interface IFilterControlsProps {
-    filter?: TFilterParams;
-    setFilter?: Dispatch<SetStateAction<TFilterParams>>;
+    filter?: TFilterParamsClient;
+    setFilter?: Dispatch<SetStateAction<TFilterParamsClient>>;
     options?: readonly TFilterOption[];
     uiBlocked?: boolean;
 }
@@ -22,7 +22,7 @@ interface IHandleInputChangeParams {
     type: TFilterOption['type'];
     minValue?: string;
     maxValue?: string;
-    paramName: keyof TFilterParams;
+    paramName: keyof TFilterParamsClient;
 }
 
 /////////////////////
@@ -45,14 +45,14 @@ export default function FilterControls({
     const [filterParams, setFilterParams] = useState(filter);
     const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
-    const isFilterChanged = JSON.stringify(filterParams) !== JSON.stringify(filter);
-    const isFilterReseted = JSON.stringify(filterParams) === JSON.stringify(initFilterParams);
+    const isFilterChanged = !isObjectsEqual(filterParams, filter);
+    const isFilterReseted = isObjectsEqual(filterParams, initFilterParams);
 
-    const calcNumberInputWidth = (minLimit: string, maxLimit: string): string => {
+    const calcNumberInputWidth = (minLimit?: number, maxLimit?: number): string => {
         const MAX_WIDTH_CH = 12;
-        if (minLimit === '' || maxLimit === '') return MAX_WIDTH_CH + 'ch';
+        if (minLimit === undefined || maxLimit === undefined) return MAX_WIDTH_CH + 'ch';
 
-        const numberInputWidth = Math.max(minLimit.length, maxLimit.length) + 3;
+        const numberInputWidth = Math.max(String(minLimit).length, String(maxLimit).length) + 3;
         return Math.min(numberInputWidth, MAX_WIDTH_CH) + 'ch';
     };
 
@@ -105,6 +105,8 @@ export default function FilterControls({
         switch (type) {
             case 'number': {
                 const { minLimit, maxLimit, minParamName, maxParamName } = option;
+                const minLimitStr = minLimit !== undefined ? String(minLimit) : '';
+                const maxLimitStr = maxLimit !== undefined ? String(maxLimit) : '';
 
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
@@ -118,23 +120,23 @@ export default function FilterControls({
                                     id={`range-from-${idx}`}
                                     type={type}
                                     style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
-                                    value={filterParams[minParamName] ?? minLimit}
-                                    min={minLimit}
-                                    max={maxLimit}
+                                    value={filterParams[minParamName] ?? minLimitStr}
+                                    min={minLimitStr}
+                                    max={maxLimitStr}
                                     onChange={e => handleInputChange(e, {
                                         type,
                                         paramName: minParamName
                                     })}
                                     onBlur={e => handleInputChange(e, {
                                         type,
-                                        minValue: minLimit,
-                                        maxValue: filterParams[maxParamName] ?? maxLimit,
+                                        minValue: minLimitStr,
+                                        maxValue: filterParams[maxParamName] ?? maxLimitStr,
                                         paramName: minParamName
                                     })}
                                     onKeyDown={e => e.key === 'Enter' && handleInputChange(e, {
                                         type,
-                                        minValue: minLimit,
-                                        maxValue: filterParams[maxParamName] ?? maxLimit,
+                                        minValue: minLimitStr,
+                                        maxValue: filterParams[maxParamName] ?? maxLimitStr,
                                         paramName: minParamName
                                     })}
                                 />
@@ -149,23 +151,23 @@ export default function FilterControls({
                                     id={`range-to-${idx}`}
                                     type={type}
                                     style={{ width: calcNumberInputWidth(minLimit, maxLimit) }}
-                                    value={filterParams[maxParamName] ?? maxLimit}
-                                    min={minLimit}
-                                    max={maxLimit}
+                                    value={filterParams[maxParamName] ?? maxLimitStr}
+                                    min={minLimitStr}
+                                    max={maxLimitStr}
                                     onChange={e => handleInputChange(e, {
                                         type,
                                         paramName: maxParamName
                                     })}
                                     onBlur={e => handleInputChange(e, {
                                         type,
-                                        minValue: filterParams[minParamName] ?? minLimit,
-                                        maxValue: maxLimit,
+                                        minValue: filterParams[minParamName] ?? minLimitStr,
+                                        maxValue: maxLimitStr,
                                         paramName: maxParamName
                                     })}
                                     onKeyDown={e => e.key === 'Enter' && handleInputChange(e, {
                                         type,
-                                        minValue: filterParams[minParamName] ?? minLimit,
-                                        maxValue: maxLimit,
+                                        minValue: filterParams[minParamName] ?? minLimitStr,
+                                        maxValue: maxLimitStr,
                                         paramName: maxParamName
                                     })}
                                 />
@@ -177,6 +179,8 @@ export default function FilterControls({
 
             case 'date': {
                 const { minLimit, maxLimit, minParamName, maxParamName } = option;
+                const minLimitStr = formatDateOnly(minLimit);
+                const maxLimitStr = formatDateOnly(maxLimit);
                 
                 return (
                     <div key={idx} className={`filter-option ${type}-type`}>
@@ -189,11 +193,11 @@ export default function FilterControls({
                                 <input
                                     id={`range-from-${idx}`}
                                     type={type}
-                                    value={filterParams[minParamName] ?? minLimit}
+                                    value={filterParams[minParamName] ?? minLimitStr}
                                     onChange={e => handleInputChange(e, {
                                         type,
-                                        minValue: minLimit,
-                                        maxValue: filterParams[maxParamName] ?? maxLimit,
+                                        minValue: minLimitStr,
+                                        maxValue: filterParams[maxParamName] ?? maxLimitStr,
                                         paramName: minParamName
                                     })}
                                 />
@@ -207,11 +211,11 @@ export default function FilterControls({
                                 <input
                                     id={`range-to-${idx}`}
                                     type={type}
-                                    value={filterParams[maxParamName] ?? maxLimit}
+                                    value={filterParams[maxParamName] ?? maxLimitStr}
                                     onChange={e => handleInputChange(e, {
                                         type,
-                                        minValue: filterParams[minParamName] ?? minLimit,
-                                        maxValue: maxLimit,
+                                        minValue: filterParams[minParamName] ?? minLimitStr,
+                                        maxValue: maxLimitStr,
                                         paramName: maxParamName
                                     })}
                                 />

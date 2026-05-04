@@ -9,7 +9,7 @@ import {
     getInitPageParam,
     getInitLimitParam,
     getInitCategoryParams
-} from '@/helpers/initParamsHelper.js';
+} from '@/helpers/urlParamsHelper.js';
 import { productCatalogFilterOptions } from '@shared/filterOptions.js';
 import { productsSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -21,7 +21,7 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { PRODUCTS_PAGE_CONTEXT, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
-import type { TFilterParams, ICategory, IProduct } from '@shared/types/index.js';
+import type { TFilterParamsClient, ICategory, IProduct } from '@shared/types/index.js';
 
 export default function Catalog(): JSX.Element {
     const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
@@ -29,7 +29,7 @@ export default function Catalog(): JSX.Element {
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState<TFilterParams>({});
+    const [filter, setFilter] = useState<TFilterParamsClient>({});
     const [sort, setSort] = useState<string>(productsSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(productsPageLimitOptions[0]);

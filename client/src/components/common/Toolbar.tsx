@@ -7,7 +7,7 @@ import PaginationPages from '@/components/common/toolbar/PaginationPages.jsx';
 import PaginationInfo from '@/components/common/toolbar/PaginationInfo.jsx';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type { TToolbarControls, TDataLoadStatus } from '@/types/index.js';
-import type { TFilterParams, TFilterOption, ISortOption } from '@shared/types/index.js';
+import type { TFilterParamsClient, TFilterOption, ISortOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -19,8 +19,8 @@ interface IToolbarProps {
     search?: string;
     setSearch?: Dispatch<SetStateAction<string>>;
     searchPlaceholder?: string;
-    filter?: TFilterParams;
-    setFilter?: Dispatch<SetStateAction<TFilterParams>>;
+    filter?: TFilterParamsClient;
+    setFilter?: Dispatch<SetStateAction<TFilterParamsClient>>;
     filterOptions?: readonly TFilterOption[];
     sort?: string;
     setSort?: Dispatch<SetStateAction<string>>;

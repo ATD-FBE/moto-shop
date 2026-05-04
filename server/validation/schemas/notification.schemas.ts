@@ -13,12 +13,12 @@ type TNotificationEntity = typeof notificationEntity;
 
 const notificationEntity = 'notification';
 const paramsBaseSchema: IValidationInputSchema<TNotificationEntity>['params'] = {
-    notificationId: 'objectId'
+    notificationId: 'objectIdString'
 } as const;
 const bodyBaseSchema: IValidationInputSchema<TNotificationEntity>['body'] = {
     recipients: {
         type: 'array',
-        items: { type: 'objectId' },
+        items: { type: 'objectIdString' },
         match: true,
         formField: true
     },

@@ -1,6 +1,7 @@
+import { formatDateOnly } from '@shared/commonHelpers.js';
 import { BOOL_FILTER_VALUES } from '@shared/constants.js';
 import type {
-    TFilterParams,
+    TFilterParamsClient,
     TFilterOption,
     IStringFilterValueOption,
     ISortOption,
@@ -10,28 +11,31 @@ import type {
 export const getInitFilterParams = (
     searchParams: URLSearchParams | null | undefined,
     filterOptions: readonly TFilterOption[]
-): TFilterParams => {
-    const initFilterParams: TFilterParams = {};
+): TFilterParamsClient => {
+    const initFilterParams: TFilterParamsClient = {};
 
     const getValidValue = (
         type: 'number' | 'date' | 'boolean' | 'string',
         param: string,
-        fallback: string = '',
+        fallback?: string | number | Date,
         valueOptions?: IStringFilterValueOption[]
     ): string => {
+        const normalizeFallback = type === 'date' ? formatDateOnly(fallback) : String(fallback ?? '');
+
         const value = searchParams?.get(param);
-        if (value == null) return fallback;
+        if (value == null) return normalizeFallback;
     
         switch (type) {
             case 'number':
                 const parsedInt = parseInt(value, 10);
-                return isNaN(parsedInt) ? fallback : String(parsedInt);
+                return isNaN(parsedInt) ? normalizeFallback : String(parsedInt);
             case 'date':
-                return isNaN(new Date(value).getTime()) ? fallback : value;
+                const parsedDate = new Date(value);
+                return isNaN(parsedDate.getTime()) ? normalizeFallback : formatDateOnly(parsedDate);
             case 'boolean':
-                return BOOL_FILTER_VALUES.some(v => v === value) ? value : fallback;
+                return BOOL_FILTER_VALUES.some(v => v === value) ? value : '';
             case 'string':
-                return valueOptions?.some(opt => opt.value === value) ? value : fallback;
+                return valueOptions?.some(opt => opt.value === value) ? value : normalizeFallback;
             default:
                 return value;
         }
@@ -55,9 +59,9 @@ export const getInitFilterParams = (
             }
                 
             case 'boolean': {
-                const { paramName, defaultValue } = option;
+                const { paramName } = option;
 
-                const value = getValidValue(type, paramName, defaultValue);
+                const value = getValidValue(type, paramName);
                 initFilterParams[paramName] = value;
 
                 break;
