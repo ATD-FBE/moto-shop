@@ -26,7 +26,7 @@ import { validationRules } from '@shared/fieldRules.js';
 import {
     notificationsSortOptions,
     customersSortOptions,
-    productsSortOptions,
+    productCatalogSortOptions,
     productEditorSortOptions,
     ordersSortOptions
 } from '@shared/sortOptions.js';
@@ -280,7 +280,7 @@ interface IStringFilter<TModel> extends IBaseFilter<TModel> {
 
 export type TNotificationsSortOption = typeof notificationsSortOptions[number];
 export type TCustomersSortOption = typeof customersSortOptions[number];
-export type TProductsSortOption = typeof productsSortOptions[number];
+export type TProductCatalogSortOption = typeof productCatalogSortOptions[number];
 export type TProductEditorSortOption = typeof productEditorSortOptions[number];
 export type TOrdersSortOption = typeof ordersSortOptions[number];
 

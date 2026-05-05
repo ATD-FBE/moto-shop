@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import cn from 'classnames';
+import ProductTable from '../ProductTable.js';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import BulkProductForm from './product-table-footer/BulkProductForm.jsx';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof ProductTable>;
+
+type TProductTableFooterProps = Pick<TParentProps,
+    | 'selectedIds'
+    | 'allowedCategories'
+    | 'onProcessBulkProduct'
+    | 'onConfirmBulkDeletion'
+    | 'uiBlocked'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductTableFooter({
-    uiBlocked,
     selectedIds,
     allowedCategories,
-    onProcessBulkForm,
-    onConfirmBulkDeletion
-}) {
+    onProcessBulkProduct,
+    onConfirmBulkDeletion,
+    uiBlocked
+}: TProductTableFooterProps): JSX.Element {
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
@@ -50,10 +70,10 @@ export default function ProductTableFooter({
 
             <Collapsible isExpanded={isExpanded} className="bulk-product-form-collapsible">
                 <BulkProductForm
-                    uiBlocked={uiBlocked}
                     productIds={[...selectedIds]}
                     allowedCategories={allowedCategories}
-                    onSubmit={onProcessBulkForm}
+                    onSubmit={onProcessBulkProduct}
+                    uiBlocked={uiBlocked}
                 />
             </Collapsible>
         </div>

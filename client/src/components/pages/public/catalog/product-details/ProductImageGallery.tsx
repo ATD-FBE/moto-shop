@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import ImageSlider from './product-image-gallery/ImageSlider.jsx';
-import ImageThumbnails from './product-image-gallery/ImageThumbnails.jsx';
+import ImageThumbnails from './product-image-gallery/ImageThumbnails.js';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
 import {
     DATA_LOAD_STATUS,
@@ -8,6 +8,25 @@ import {
     PRODUCT_IMAGE_PLACEHOLDER,
     PRODUCT_AUTOSLIDE_TIMER
 } from '@/config/constants.js';
+import type { JSX } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type { IProductImage } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductImageGalleryProps {
+    loadStatus: TDataLoadStatus;
+    images: IProductImage[];
+    mainImageIndex: number;
+    title: string;
+    reloadData: () => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductImageGallery({
     loadStatus,
@@ -15,9 +34,9 @@ export default function ProductImageGallery({
     mainImageIndex,
     title,
     reloadData
-}) {
+}: IProductImageGalleryProps): JSX.Element {
     const [currentThumbIdx, setCurrentThumbIdx] = useState(mainImageIndex);
-    const sliderTimerRef = useRef(null);
+    const sliderTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
     const isReady = loadStatus === DATA_LOAD_STATUS.READY;
     const hasProductImage = isReady && images.length > 0;
@@ -27,39 +46,39 @@ export default function ProductImageGallery({
         : PRODUCT_IMAGE_LOADER;
     const currentImageAlt = hasProductImage ? title : '';
 
-    const startAutoSlide = () => {
+    const startAutoSlide = (): void => {
         sliderTimerRef.current = setInterval(() => {
             setCurrentThumbIdx(prev => (prev + 1) % images.length);
         }, PRODUCT_AUTOSLIDE_TIMER);
     };
 
-    const reStartAutoSlide = () => {
+    const reStartAutoSlide = (): void => {
         clearInterval(sliderTimerRef.current);
         startAutoSlide();
     };
 
-    const slideImagesBackward = () => {
+    const slideImagesBackward = (): void => {
         if (images.length <= 1) return;
 
         reStartAutoSlide();
         setCurrentThumbIdx(prev => (prev - 1 + images.length) % images.length);
     };
 
-    const slideImagesForward = () => {
+    const slideImagesForward = (): void => {
         if (images.length <= 1) return;
 
         reStartAutoSlide();
         setCurrentThumbIdx(prev => (prev + 1) % images.length);
     };
 
-    const selectThumbImage = (idx) => {
+    const selectThumbImage = (idx: number): void => {
         if (images.length <= 1) return;
 
         reStartAutoSlide();
         setCurrentThumbIdx(idx);
     };
 
-    const handleSliderImageClick = () => {
+    const handleSliderImageClick = (): void => {
         clearInterval(sliderTimerRef.current);
 
         openImageViewerModal({

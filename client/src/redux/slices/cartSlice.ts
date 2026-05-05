@@ -1,6 +1,35 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IBaseCartItem, IGuestCartItem, ICartItem } from '@shared/types/index.js';
 
-const initialState = {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface ICartState {
+    byId: Record<string, ICartItem>;
+    ids: string[];
+    rawTotal: number;
+    discountedTotal: number;
+    isAccessible: boolean;
+}
+
+interface IUpdateCartTotalsPayload {
+    rawTotal: number;
+    discountedTotal: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const defaultCartItemExtendedParams = {
+    quantityReduced: false,
+    outOfStock: false,
+    inactive: false,
+    deleted: false
+} as const;
+
+const initialState: ICartState = {
     byId: {},
     ids: [],
     rawTotal: 0,
@@ -12,39 +41,42 @@ const cartSlice = createSlice({
     name: 'cart',
     initialState,
     reducers: {
-        setCartAccessibility: (state, action) => {
+        setCartAccessibility: (state, action: PayloadAction<boolean>) => {
             state.isAccessible = action.payload;
         },
 
-        setCart: (state, action) => {
+        setCart: (state, action: PayloadAction<(IGuestCartItem | ICartItem)[]>) => {
             const cartItemList = action.payload;
 
-            state.byId = Object.fromEntries(cartItemList.map(item => [item.id, item]));
+            state.byId = Object.fromEntries(cartItemList.map(item => [item.id, {
+                ...defaultCartItemExtendedParams,
+                ...item
+            }]));
             state.ids = cartItemList.map(item => item.id);
         },
 
-        upsertCartItem: (state, action) => {
+        upsertCartItem: (state, action: PayloadAction<IBaseCartItem>) => {
             const cartItem = action.payload;
             const { id, quantity } = cartItem;
             const isNew = !state.byId[id];
 
             if (isNew) {
-                state.byId[id] = cartItem;
+                state.byId[id] = { ...defaultCartItemExtendedParams, ...cartItem };
                 state.ids.push(id);
-            } else {
+            } else if (state.byId[id]) {
                 state.byId[id].quantity = quantity; // quantity > 0 при upsertCartItem
                 state.byId[id].quantityReduced = false;
             }
         },
 
-        removeCartItem: (state, action) => {
+        removeCartItem: (state, action: PayloadAction<string>) => {
             const productId = action.payload;
 
             delete state.byId[productId];
             state.ids = state.ids.filter(id => id !== productId);
         },
 
-        updateCartTotals: (state, action) => {
+        updateCartTotals: (state, action: PayloadAction<IUpdateCartTotalsPayload>) => {
             const { rawTotal, discountedTotal } = action.payload;
 
             state.rawTotal = rawTotal;

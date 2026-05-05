@@ -1,12 +1,31 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import ProductTable from '../ProductTable.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof ProductTable>;
+
+type TProductTableHeaderProps = Pick<TParentProps,
+    | 'filteredIds'
+    | 'selectedIds'
+    | 'onToggleAllSelection'
+    | 'uiBlocked'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductTableHeader({
-    uiBlocked,
     filteredIds,
     selectedIds,
-    onToggleAllSelection
-}) {
+    onToggleAllSelection,
+    uiBlocked
+}: TProductTableHeaderProps): JSX.Element {
     const areAllItemsSelected = useMemo(
         () => filteredIds.size > 0 && selectedIds.size === filteredIds.size,
         [filteredIds, selectedIds]

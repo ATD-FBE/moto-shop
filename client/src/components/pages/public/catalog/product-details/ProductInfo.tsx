@@ -1,7 +1,37 @@
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import ProductQuantitySelector from '@/components/common/ProductQuantitySelector.jsx';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { TUserRole } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductInfoProps {
+    id: string | undefined;
+    sku: string;
+    name: string;
+    brand: string;
+    description: string;
+    available: number;
+    unit: string;
+    price: number;
+    productDiscount: number;
+    customerDiscount: number;
+    isRestocked: boolean;
+    isActive: boolean;
+    isTouchDevice: boolean;
+    userRole: TUserRole;
+    isAuthenticated: boolean;
+    uiBlocked: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductInfo({
     id,
@@ -20,16 +50,16 @@ export default function ProductInfo({
     userRole,
     isAuthenticated,
     uiBlocked
-}) {
-    const cartState = useSelector(state => state.cart);
+}: IProductInfoProps): JSX.Element {
+    const cartItem = id ? useAppSelector(state => state.cart.byId[id]) : null;
+    const isCartAccessible = useAppSelector(state => state.cart.isAccessible);
 
-    const cartItem = cartState.byId[id];
     const quantity = cartItem?.quantity ?? 0;
     const quantityReduced = cartItem?.quantityReduced ?? false;
 
     const showCartControls =
-        ['guest', 'customer'].includes(userRole) &&
-        cartState.isAccessible &&
+        [USER_ROLE.GUEST, USER_ROLE.CUSTOMER].some(role => role === userRole) &&
+        isCartAccessible &&
         available > 0 &&
         isActive;
 
@@ -91,7 +121,7 @@ export default function ProductInfo({
                         </div>
                     )}
 
-                    {showCartControls && (
+                    {showCartControls && id && (
                         <ProductQuantitySelector
                             id={id}
                             availableQuantity={available}

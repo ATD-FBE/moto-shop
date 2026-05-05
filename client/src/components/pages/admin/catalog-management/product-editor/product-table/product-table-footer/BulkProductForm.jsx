@@ -171,7 +171,9 @@ const fieldsStateReducer = (state, action) => {
     }
 };
 
-export default function BulkProductForm({ uiBlocked, productIds, allowedCategories, onSubmit }) {
+export default function BulkProductForm(
+    { productIds, allowedCategories, onSubmit, uiBlocked }
+) {
     const { fieldConfigs, fieldConfigMap } = useMemo(
         () => getFieldConfigs(allowedCategories),
         [allowedCategories]

@@ -1,5 +1,7 @@
+import { routeConfig } from '@/config/appRouting.js';
 import {
     SCREEN_SIZE,
+    AUTH_NAV_TYPE,
     CATEGORY_FORM_MODE,
     DATA_LOAD_STATUS,
     FORM_STATUS,
@@ -8,11 +10,20 @@ import {
 } from '@/config/constants.js';
 import type { TIntent } from '@shared/types/index.js';
 
+///////////////////
+/// APP ROUTING ///
+///////////////////
+
+export type TRouteConfig = typeof routeConfig;
+export type TRoute = TRouteConfig[keyof typeof routeConfig];
+
 /////////////////
 /// CONSTANTS ///
 /////////////////
 
 export type TScreenSize = typeof SCREEN_SIZE[keyof typeof SCREEN_SIZE];
+
+export type TAuthNavType = typeof AUTH_NAV_TYPE[keyof typeof AUTH_NAV_TYPE];
 
 export type TCategoryFormMode = typeof CATEGORY_FORM_MODE[keyof typeof CATEGORY_FORM_MODE];
 

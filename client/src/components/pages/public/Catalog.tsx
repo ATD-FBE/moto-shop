@@ -11,7 +11,7 @@ import {
     getInitCategoryParams
 } from '@/helpers/urlParamsHelper.js';
 import { productCatalogFilterOptions } from '@shared/filterOptions.js';
-import { productsSortOptions } from '@shared/sortOptions.js';
+import { productCatalogSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { sendCategoryListRequest } from '@/api/categoryRequests.js';
 import { sendProductListRequest } from '@/api/productRequests.js';
@@ -30,7 +30,7 @@ export default function Catalog(): JSX.Element {
 
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<TFilterParamsClient>({});
-    const [sort, setSort] = useState<string>(productsSortOptions[0].dbField);
+    const [sort, setSort] = useState<string>(productCatalogSortOptions[0].dbField);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(productsPageLimitOptions[0]);
 
@@ -144,7 +144,7 @@ export default function Catalog(): JSX.Element {
         setSelectedCategoryId(getInitCategoryParams(params, categoryMap));
         setSearch(params.get('search') || '');
         setFilter(getInitFilterParams(params, productCatalogFilterOptions));
-        setSort(getInitSortParam(params, productsSortOptions));
+        setSort(getInitSortParam(params, productCatalogSortOptions));
         setPage(getInitPageParam(params));
         setLimit(getInitLimitParam(params, productsPageLimitOptions));
 
@@ -204,7 +204,7 @@ export default function Catalog(): JSX.Element {
                         filterOptions={productCatalogFilterOptions}
                         sort={sort}
                         setSort={setSort}
-                        sortOptions={productsSortOptions}
+                        sortOptions={productCatalogSortOptions}
                         page={page}
                         setPage={setPage}
                         limit={limit}

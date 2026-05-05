@@ -1,9 +1,37 @@
 import type {
+    TRoute,
+    TAuthNavType,
     TFormStatus,
     TSubmitStates,
     TFieldUiStatus,
     TFieldSaveStatus
 } from './config.types.js';
+
+/////////////////////
+/// ROUTE HELPERS ///
+/////////////////////
+
+type TRouteNav = Extract<TRoute, { nav?: any }>['nav'];
+type TNavBadge = Extract<TRouteNav, { badge?: any }>['badge'];
+
+export type TRoutePath = TRoute['paths'][number];
+
+export interface INavItem {
+    label: TRoute['label'] | string;
+    paths?: TRoute['paths'] | string[];
+    order?: number;
+    authType?: TAuthNavType;
+    featured?: boolean;
+    badge?: TNavBadge;
+    children?: INavItem[];
+}
+
+export interface IBreadcrumb {
+    label: TRoute['label'];
+    parentPath: TRoutePath | null;
+    generatePath?: Extract<TRoute, { generatePath?: any }>['generatePath'];
+    paramSchema?: Extract<TRoute, { paramSchema?: any }>['paramSchema'];
+}
 
 ////////////////////
 /// FORM HELPERS ///

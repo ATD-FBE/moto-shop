@@ -1,22 +1,48 @@
 import { useState, useRef, useEffect } from 'react';
+import ProductTable from '../ProductTable.js';
 import ProductTableRow from './product-table-body/ProductTableRow.jsx';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof ProductTable>;
+
+type TProductTableBodyProps = Pick<TParentProps,
+    | 'loadStatus'
+    | 'onReload'
+    | 'products'
+    | 'selectedIds'
+    | 'expandedIds'
+    | 'onToggleSelection'
+    | 'onToggleExpansion'
+    | 'onConfirmDeletion'
+    | 'onProcessProduct'
+    | 'allowedCategories'
+    | 'uiBlocked'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductTableBody({
     loadStatus,
-    uiBlocked,
+    onReload,
     products,
+    allowedCategories,
     selectedIds,
     expandedIds,
     onToggleSelection,
     onToggleExpansion,
     onConfirmDeletion,
-    onReload,
-    allowedCategories,
-    onProcessForm
-}) {
+    onProcessProduct,
+    uiBlocked
+}: TProductTableBodyProps): JSX.Element {
     const [tableBodyHeight, setTableBodyHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
-    const tableBodyRef = useRef(null);
+    const tableBodyRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!tableBodyRef.current) return;
@@ -74,14 +100,14 @@ export default function ProductTableBody({
                 <ProductTableRow
                     key={product.id}
                     product={product}
-                    uiBlocked={uiBlocked}
+                    allowedCategories={allowedCategories}
                     selectedIds={selectedIds}
                     expandedIds={expandedIds}
                     onToggleSelection={onToggleSelection}
                     onToggleExpansion={onToggleExpansion}
                     onConfirmDeletion={onConfirmDeletion}
-                    onProcessForm={onProcessForm}
-                    allowedCategories={allowedCategories}
+                    onProcessProduct={onProcessProduct}
+                    uiBlocked={uiBlocked}
                 />
             ))}
         </div>

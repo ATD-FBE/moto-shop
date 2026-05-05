@@ -72,7 +72,7 @@ export default function ImageThumbnails({
                         {loadStatusData?.text || NO_VALUE_LABEL}
                     </p>
 
-                    {loadStatusData.reloadBtn && (
+                    {loadStatusData?.reloadBtn && (
                         <button className="reload-btn" onClick={reloadData} aria-label="Перезагрузить">
                             Повторить
                         </button>

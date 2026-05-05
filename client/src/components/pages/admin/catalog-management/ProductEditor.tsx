@@ -1,5 +1,5 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useRef, useMemo, useEffect } from 'react';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import ProductTable from './product-editor/ProductTable.jsx';
 import ProductCreationPanel from './product-editor/ProductCreationPanel.jsx';
@@ -9,9 +9,62 @@ import { sendProductDeleteRequest, sendBulkProductDeleteRequest } from '@/api/pr
 import { upsertProductsInStore, removeProductsFromStore } from '@/redux/slices/productsSlice.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX, Dispatch, SetStateAction } from 'react';
+import type {
+    TDataLoadStatus,
+    TProductPerformFormSubmissionResult,
+    IDeletingProduct
+} from '@/types/index.js';
+import type {
+    IProduct,
+    TFilterParamsClient,
+    TFilterOption,
+    ISortOption,
+    TCategoryTree
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductEditorProps {
+    categoryTree: TCategoryTree;
+    setOperationBusy: Dispatch<SetStateAction<boolean>>;
+    shouldProductsLoad: boolean;
+    search: string;
+    setSearch: Dispatch<SetStateAction<string>>;
+    filter: TFilterParamsClient;
+    setFilter: Dispatch<SetStateAction<TFilterParamsClient>>;
+    filterOptions?: readonly TFilterOption[];
+    sort: string;
+    setSort: Dispatch<SetStateAction<string>>;
+    sortOptions: readonly ISortOption[];
+    page: number;
+    setPage: Dispatch<SetStateAction<number>>;
+    limit: number;
+    setLimit: Dispatch<SetStateAction<number>>;
+    limitOptions: readonly number[];
+    initDataReady: boolean;
+    loadStatus: TDataLoadStatus;
+    onReload: () => Promise<void>;
+    products: IProduct[];
+    filteredIds: Set<string>;
+    selectedIds: Set<string>;
+    expandedIds: Set<string>;
+    onToggleAllSelection: (areAllProductsSelected: boolean) => void;
+    onToggleSelection: (id: string) => void;
+    onToggleExpansion: (id: string) => void;
+    uiBlocked: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
 export default function ProductEditor({
     categoryTree,
+    setOperationBusy,
+    shouldProductsLoad,
     search,
     setSearch,
     filter,
@@ -27,36 +80,37 @@ export default function ProductEditor({
     limitOptions,
     initDataReady,
     loadStatus,
-    paginatedProductList,
-    filteredProductIds,
-    selectedProductIds,
-    expandedProductIds,
-    toggleAllProductSelection,
-    toggleProductSelection,
-    toggleProductExpansion,
-    setOperationBusy,
-    shouldProductsLoad,
-    reloadProducts,
+    onReload,
+    products,
+    filteredIds,
+    selectedIds,
+    expandedIds,
+    onToggleAllSelection,
+    onToggleSelection,
+    onToggleExpansion,
     uiBlocked
-}) {
+}: IProductEditorProps): JSX.Element {
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const productLeafCategories = useMemo(() => getLeafCategories(categoryTree), [categoryTree]);
 
-    const processProductForm = async (performFormSubmission) => {
+    const processProductForm = async (
+        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
+    ) => {
         setOperationBusy(true);
 
-        const { status, affectedProducts } = await performFormSubmission();
+        const responseData = await performFormSubmission();
         if (isUnmountedRef.current) return;
 
-        const { SUCCESS, PARTIAL } = REQUEST_STATUS;
-        const isAllowed = [SUCCESS, PARTIAL].includes(status);
-        if (isAllowed) {
-            dispatch(upsertProductsInStore(affectedProducts));
+        if (
+            responseData.status === REQUEST_STATUS.SUCCESS ||
+            responseData.status === REQUEST_STATUS.PARTIAL
+        ) {
+            dispatch(upsertProductsInStore(responseData.affectedProducts));
 
             if (shouldProductsLoad) {
-                await reloadProducts();
+                await onReload();
                 if (isUnmountedRef.current) return;
             }
         }
@@ -64,10 +118,10 @@ export default function ProductEditor({
         setOperationBusy(false);
     };
 
-    const confirmProductDeletion = (product) => {
+    const confirmProductDeletion = (product: IDeletingProduct): void => {
         if (!product) return;
 
-        const processProductDeletion = async (productId) => {
+        const processProductDeletion = async (productId: string): Promise<void> => {
             setOperationBusy(true);
 
             const { status, message } = await dispatch(sendProductDeleteRequest(productId));
@@ -76,7 +130,8 @@ export default function ProductEditor({
             logRequestStatus({ context: 'PRODUCT: DELETE SINGLE', status, message });
     
             const { SUCCESS, NOT_FOUND } = REQUEST_STATUS;
-            const isAllowed = [SUCCESS, NOT_FOUND].includes(status);
+            const isAllowed = [SUCCESS, NOT_FOUND].some(s => s === status);
+
             if (!isAllowed) {
                 setOperationBusy(false);
                 throw new Error(message);
@@ -85,9 +140,9 @@ export default function ProductEditor({
             dispatch(removeProductsFromStore([productId]));
         };
 
-        const finalizeProductDeletion = async () => {
+        const finalizeProductDeletion = async (): Promise<void> => {
             if (shouldProductsLoad) {
-                await reloadProducts();
+                await onReload();
                 if (isUnmountedRef.current) return;
             }
 
@@ -101,10 +156,10 @@ export default function ProductEditor({
         });
     };
 
-    const confirmBulkProductDeletion = async (productIds) => {
+    const confirmBulkProductDeletion = (productIds: string[]): void => {
         if (!productIds || !productIds.length) return;
 
-        const processBulkProductDeletions = async (productIds) => {
+        const processBulkProductDeletions = async (productIds: string[]): Promise<void> => {
             setOperationBusy(true);
 
             const { status, message } = await dispatch(sendBulkProductDeleteRequest({ productIds }));
@@ -113,7 +168,8 @@ export default function ProductEditor({
             logRequestStatus({ context: 'PRODUCT: DELETE BULK', status, message });
     
             const { SUCCESS, PARTIAL, NOT_FOUND } = REQUEST_STATUS;
-            const isAllowed = [SUCCESS, PARTIAL, NOT_FOUND].includes(status);
+            const isAllowed = [SUCCESS, PARTIAL, NOT_FOUND].some(s => s === status);
+
             if (!isAllowed) {
                 setOperationBusy(false);
                 throw new Error(message);
@@ -122,9 +178,9 @@ export default function ProductEditor({
             dispatch(removeProductsFromStore(productIds));
         };
 
-        const finalizeBulkProductDeletion = async () => {
+        const finalizeBulkProductDeletion = async (): Promise<void> => {
             if (shouldProductsLoad) {
-                await reloadProducts();
+                await onReload();
                 if (isUnmountedRef.current) return;
             }
 
@@ -150,7 +206,7 @@ export default function ProductEditor({
             <ProductCreationPanel
                 uiBlocked={uiBlocked}
                 allowedCategories={productLeafCategories}
-                onSubmit={processProductForm}
+                onProcessProduct={processProductForm}
             />
 
             <div className="product-table-section">
@@ -172,25 +228,25 @@ export default function ProductEditor({
                     setLimit={setLimit}
                     limitOptions={limitOptions}
                     initDataReady={initDataReady}
-                    totalItems={filteredProductIds.size}
+                    totalItems={filteredIds.size}
                     uiBlocked={uiBlocked}
                 />
 
                 <ProductTable
                     loadStatus={loadStatus}
-                    products={paginatedProductList}
-                    filteredIds={filteredProductIds}
-                    selectedIds={selectedProductIds}
-                    expandedIds={expandedProductIds}
-                    onToggleAllSelection={toggleAllProductSelection}
-                    onToggleSelection={toggleProductSelection}
-                    onToggleExpansion={toggleProductExpansion}
+                    products={products}
+                    allowedCategories={productLeafCategories}
+                    filteredIds={filteredIds}
+                    selectedIds={selectedIds}
+                    expandedIds={expandedIds}
+                    onToggleAllSelection={onToggleAllSelection}
+                    onToggleSelection={onToggleSelection}
+                    onToggleExpansion={onToggleExpansion}
                     onConfirmDeletion={confirmProductDeletion}
                     onConfirmBulkDeletion={confirmBulkProductDeletion}
-                    onReload={reloadProducts}
-                    allowedCategories={productLeafCategories}
-                    onProcessForm={processProductForm}
-                    onProcessBulkForm={processProductForm}
+                    onReload={onReload}
+                    onProcessProduct={processProductForm}
+                    onProcessBulkProduct={processProductForm}
                     uiBlocked={uiBlocked}
                 />
                 
@@ -202,7 +258,7 @@ export default function ProductEditor({
                     limit={limit}
                     loadStatus={loadStatus}
                     initDataReady={initDataReady}
-                    totalItems={filteredProductIds.size}
+                    totalItems={filteredIds.size}
                     label="Товары"
                     uiBlocked={uiBlocked}
                 />

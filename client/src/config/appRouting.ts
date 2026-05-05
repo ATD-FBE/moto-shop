@@ -48,6 +48,9 @@ import NotFound from '@/components/pages/NotFound.jsx';
 import { buildNavigationMap, buildBreadcrumbMap } from '@/helpers/routeHelpers.js';
 import { getCustomerOrderDetailsPath } from '@shared/commonHelpers.js';
 
+// Constants
+import { AUTH_NAV_TYPE } from '@/config/constants.js';
+
 export const routeConfig = {
     // Конфиги страниц с публичным доступом
     home: {
@@ -338,14 +341,14 @@ export const routeConfig = {
         paths: ['/login'],
         access: 'auth',
         component: LoginForm,
-        nav: { map: 'guestAuth', order: 0, type: 'link' }
+        nav: { map: 'guestAuth', order: 0, authType: AUTH_NAV_TYPE.LINK }
     },
     register: {
         label: 'Регистрация',
         paths: ['/register'],
         access: 'auth',
         component: RegistrationForm,
-        nav: { map: 'guestAuth', order: 1, type: 'link' }
+        nav: { map: 'guestAuth', order: 1, authType: AUTH_NAV_TYPE.LINK }
     },
 
     // Конфиг для отсутствующих страниц
@@ -358,7 +361,7 @@ export const routeConfig = {
     }
 } as const;
 
-export const navigationMap = buildNavigationMap(routeConfig);
+export const navigationMap = buildNavigationMap();
 
-export const breadcrumbMap = buildBreadcrumbMap(routeConfig);
+export const breadcrumbMap = buildBreadcrumbMap();
   

@@ -23,7 +23,7 @@ import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { productCatalogFilterOptions, productEditorFilterOptions } from '@shared/filterOptions.js';
-import { productsSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
+import { productCatalogSortOptions, productEditorSortOptions } from '@shared/sortOptions.js';
 import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { USER_ROLE, PRODUCTS_PAGE_CONTEXT, PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
@@ -77,7 +77,7 @@ export const handleProductListRequest: RequestHandler<
 
     // Определение опций фильтрации
     const filterOptions = isAdmin && isEditor ? productEditorFilterOptions : productCatalogFilterOptions;
-    const sortOptions = isAdmin && isEditor ? productEditorSortOptions : productsSortOptions;
+    const sortOptions = isAdmin && isEditor ? productEditorSortOptions : productCatalogSortOptions;
     const pageLimitOptions = isAdmin && isEditor ? productEditorPageLimitOptions : productsPageLimitOptions;
 
     // Создание вычисляемых полей для фильтра

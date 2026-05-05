@@ -18,8 +18,8 @@ const MainHeader = forwardRef(function (_, ref) {
     const userRole = isAuthenticated ? user?.role ?? 'guest' : 'guest';
     const userName = isAuthenticated ? user?.name ?? 'Гость' : 'Гость';
 
-    const setActiveClass = (paths) => paths?.includes(location.pathname) ? 'active' : null;
-    const setFeaturedClass = (navItem) => navItem.featured ? 'featured' : null;
+    const setActiveClass = (paths) => paths?.includes(location.pathname) ? 'active' : '';
+    const setFeaturedClass = (navItem) => navItem.featured ? 'featured' : '';
 
     const props = {
         userRole,

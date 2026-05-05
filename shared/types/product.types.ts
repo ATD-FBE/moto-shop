@@ -10,21 +10,11 @@ import type {
     TProductsPageContext,
     IBaseQuery,
     TInferFilterParams,
-    TProductsSortOption,
+    TProductCatalogSortOption,
     TProductEditorSortOption,
     TProductsFilterOption,
     TProductUnit
 } from './shared.types.js';
-
-export type TProductImageThumbs = {
-    [K in TProductThumbnailKey]: string;
-}
-
-export interface IProductImage {
-    filename: string;
-    original: string;
-    thumbnails: TProductImageThumbs;
-}
 
 export interface IProduct {
     id: string;
@@ -45,6 +35,16 @@ export interface IProduct {
     reserved?: number;
     category?: string;
     tags?: string;
+}
+
+export interface IProductImage {
+    filename: string;
+    original: string;
+    thumbnails: TProductImageThumbs;
+}
+
+export type TProductImageThumbs = {
+    [K in TProductThumbnailKey]: string;
 }
 
 export interface IProductSnapshot {
@@ -77,7 +77,7 @@ interface IProductUpdateBodyBase<TFile> extends IProductCreateBodyBase<TFile> {
 /// Загрузка ID отфильтрованных товаров и их данных для одной страницы ///
 export type TProductListFilterParams = TInferFilterParams<TProductsFilterOption>;
 export type TProductListQuery =
-    IBaseQuery<TProductsSortOption['dbField'] | TProductEditorSortOption['dbField']> &
+    IBaseQuery<TProductCatalogSortOption['dbField'] | TProductEditorSortOption['dbField']> &
     TProductListFilterParams & {
         pageContext?: TProductsPageContext;
         category?: string;

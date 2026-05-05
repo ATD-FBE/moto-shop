@@ -11,7 +11,7 @@ export const customersSortOptions = [
     { dbField: 'isBanned', label: 'Блокировка', defaultOrder: 'desc' }
 ] as const;
 
-export const productsSortOptions = [
+export const productCatalogSortOptions = [
     { dbField: 'name', label: 'Наименование', defaultOrder: 'asc' },
     { dbField: 'brand', label: 'Бренд', defaultOrder: 'asc' },
     { dbField: 'sku', label: 'Артикул', defaultOrder: 'asc' },

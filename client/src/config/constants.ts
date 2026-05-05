@@ -37,6 +37,12 @@ export const DASHBOARD_TITLES = {
     CUSTOMER: 'Панель покупателя'
 } as const;
 
+export const AUTH_NAV_TYPE = {
+    LINK: 'link',
+    USER_LABEL: 'user_label',
+    LOGOUT: 'logout'
+} as const;
+
 export const NO_VALUE_LABEL = '---';
 export const TEXT_LOG_LINE_BREAK = '\n\n';
 export const CATEGORY_ROOT_LABEL = '(корень)';

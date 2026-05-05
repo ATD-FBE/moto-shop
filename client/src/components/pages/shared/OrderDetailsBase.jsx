@@ -56,10 +56,10 @@ export default function OrderDetailsBase({
 
     const dispatch = useDispatch();
     const location = useLocation();
-    const params = useParams();
     const navigate = useNavigate();
+    const params = useParams();
 
-    const { orderNumber, orderId } = parseRouteParams({ routeKey, params, routeConfig });
+    const { orderNumber, orderId } = parseRouteParams({ routeKey, params });
 
     const orderLoadStatus =
         orderLoading

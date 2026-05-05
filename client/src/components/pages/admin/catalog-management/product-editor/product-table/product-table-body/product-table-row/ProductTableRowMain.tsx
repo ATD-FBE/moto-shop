@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import ProductTableRow from '../ProductTableRow.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
@@ -6,18 +7,42 @@ import { formatProductTitle } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { PRODUCT_IMAGE_PLACEHOLDER, NO_VALUE_LABEL } from '@/config/constants.js';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof ProductTableRow>;
+
+type TProductTableRowMainProps = Pick<TParentProps,
+    | 'product'
+    | 'allowedCategories'
+    | 'onToggleSelection'
+    | 'onToggleExpansion'
+    | 'onConfirmDeletion'
+    | 'uiBlocked'
+> & {
+    isHovered: boolean;
+    isSelected: boolean;
+    isExpanded: boolean;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductTableRowMain({
-    uiBlocked,
     product,
-    allowedCategories,
     isHovered,
     isSelected,
     isExpanded,
+    allowedCategories,
     onToggleSelection,
     onToggleExpansion,
-    onConfirmDeletion
-}) {
+    onConfirmDeletion,
+    uiBlocked
+}: TProductTableRowMainProps): JSX.Element {
     const {
         id, images, mainImageIndex, sku, name, brand, description, stock, reserved,
         isBrandNew, isRestocked, unit, price, discount, category, tags, isActive
@@ -28,10 +53,11 @@ export default function ProductTableRowMain({
     const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
 
     const hasImages = images.length > 0;
-    const thumbImageSrc = hasImages
-        ? (images[mainImageIndex] ?? images[0]).thumbnails.small
-        : PRODUCT_IMAGE_PLACEHOLDER;
+    const mainImage = hasImages ? images[mainImageIndex ?? 0] ?? images[0] : null;
+    const thumbImageSrc = mainImage?.thumbnails.small ?? PRODUCT_IMAGE_PLACEHOLDER;
     const thumbImageAlt = hasImages ? title : '';
+
+    const categoryName = category ? allowedCategories.find(cat => cat.id === category)?.name : null;
     
     return (
         <div 
@@ -40,7 +66,7 @@ export default function ProductTableRowMain({
                 'table-row-main',
                 {
                     'hovered': isHovered,
-                    'warning': stock === 0,
+                    'warning': !stock,
                     'inactive': !isActive
                 }
             )}
@@ -88,9 +114,11 @@ export default function ProductTableRowMain({
             <div role="cell" className="row-cell stock-unit">
                 <div className="cell-label">Количество:</div>
                 <div className="cell-content">
-                    {stock} {unit}
+                    {stock ?? NO_VALUE_LABEL} {unit}
                     {isRestocked && <span className="restock"> → поступление</span>}
-                    {reserved > 0 && <span className="reserv"><br />(резерв: {reserved} {unit})</span>}
+                    {(reserved ?? 0) > 0 && (
+                        <span className="reserv"><br />(резерв: {reserved} {unit})</span>
+                    )}
                 </div>
             </div>
             <div role="cell" className="row-cell price-discount">
@@ -100,7 +128,7 @@ export default function ProductTableRowMain({
             <div role="cell" className="row-cell category">
                 <div className="cell-label">Категория:</div>
                 <div className="cell-content">
-                    {allowedCategories.find(cat => cat.id === category)?.name ?? (
+                    {categoryName ?? (
                         <span className="invalid-category">⚠️ Ошибка размещения!</span>
                     )}
                 </div>

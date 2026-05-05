@@ -291,9 +291,9 @@ export default function CatalogManagement(): JSX.Element {
 
             {initialized && (
                 <ProductEditor
-                    loadStatus={productsLoadStatus}
                     categoryTree={categoryTree}
-                    initDataReady={initProductsReady}
+                    setOperationBusy={setProductOperationBusy}
+                    shouldProductsLoad={shouldProductsLoad}
                     search={search}
                     setSearch={setSearch}
                     filter={filter}
@@ -307,16 +307,16 @@ export default function CatalogManagement(): JSX.Element {
                     limit={limit}
                     setLimit={setLimit}
                     limitOptions={productEditorPageLimitOptions}
-                    paginatedProductList={paginatedProductList}
-                    filteredProductIds={filteredProductIds}
-                    selectedProductIds={selectedProductIds}
-                    expandedProductIds={expandedProductIds}
-                    toggleAllProductSelection={toggleAllProductSelection}
-                    toggleProductSelection={toggleProductSelection}
-                    toggleProductExpansion={toggleProductExpansion}
-                    setOperationBusy={setProductOperationBusy}
-                    shouldProductsLoad={shouldProductsLoad}
-                    reloadProducts={reloadProducts}
+                    initDataReady={initProductsReady}
+                    loadStatus={productsLoadStatus}
+                    onReload={reloadProducts}
+                    products={paginatedProductList}
+                    filteredIds={filteredProductIds}
+                    selectedIds={selectedProductIds}
+                    expandedIds={expandedProductIds}
+                    onToggleAllSelection={toggleAllProductSelection}
+                    onToggleSelection={toggleProductSelection}
+                    onToggleExpansion={toggleProductExpansion}
                     uiBlocked={isProductUiBlocked}
                 />
             )}

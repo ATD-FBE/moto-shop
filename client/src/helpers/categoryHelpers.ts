@@ -1,4 +1,4 @@
-import type { ISafeParentCategoryOption, TSubcategoryCounts } from '@/types/index.js';
+import type { ISafeParentCategoryOption, TSubcategoryCounts, TLeafCategories } from '@/types/index.js';
 import type { ICategory, ICategoryNode, TCategoryTree, TCategoryMap } from '@shared/types/index.js';
 
 //////////////////////////
@@ -9,12 +9,6 @@ interface IBuildCategoryTreeAndMapResult {
     categoryTree: TCategoryTree;
     categoryMap: TCategoryMap;
 }
-
-type TGetLeafCategoriesResult = {
-    id: string;
-    name: string;
-    slug: string;
-}[];
 
 type IBuildSafeParentCategoryMapResult = Record<string, {
     selectOptions: ISafeParentCategoryOption[];
@@ -108,7 +102,7 @@ export const getAllExpandableCategoryIds = (categoryTree: TCategoryTree): string
 };
 
 // Получение всех конечных категорий - рекурсивный вариант по дереву
-export const getLeafCategories = (categoryTree: TCategoryTree): TGetLeafCategoriesResult =>
+export const getLeafCategories = (categoryTree: TCategoryTree): TLeafCategories =>
     categoryTree.flatMap(cat =>
         !cat.subcategories.length
             ? [{ id: cat.id, name: cat.name, slug: cat.slug }]
@@ -116,7 +110,7 @@ export const getLeafCategories = (categoryTree: TCategoryTree): TGetLeafCategori
     );
 
 // Получение всех конечных категорий - вариант с фильтрацией карты
-/*export const getLeafCategories = (categoryMap: TCategoryMap): TGetLeafCategoriesResult =>
+/*export const getLeafCategories = (categoryMap: TCategoryMap): TLeafCategories =>
     Object.values(categoryMap)
         .filter(cat => !cat.subcategories.length)
         .map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }));*/

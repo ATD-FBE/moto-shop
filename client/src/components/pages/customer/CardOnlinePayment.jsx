@@ -188,8 +188,7 @@ export default function CardOnlinePayment() {
 
     const { orderNumber, orderId } = parseRouteParams({
         routeKey: 'customerOrderCardOnlinePayment',
-        params: useParams(),
-        routeConfig
+        params: useParams()
     });
 
     const isFormLocked = lockedStatuses.has(submitStatus) || loadingRemainingAmount;

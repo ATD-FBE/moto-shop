@@ -15,7 +15,7 @@ export interface IAuthState {
     refreshTokenExpiresAt: number;
 }
 
-interface IAuthLoginPayload {
+interface ILoginPayload {
     user: IUser;
     isLocalSession?: boolean;
     suppressAuthRedirect?: boolean;
@@ -35,13 +35,13 @@ const initialState: IAuthState = {
     user: null,
     accessTokenExpiresAt: 0,
     refreshTokenExpiresAt: 0
-};
+} as const;
 
 const authSlice = createSlice({
     name: 'auth',
     initialState,
     reducers: {
-        login: (state, action: PayloadAction<IAuthLoginPayload>) => {
+        login: (state, action: PayloadAction<ILoginPayload>) => {
             const {
                 isLocalSession = false,
                 suppressAuthRedirect = false,

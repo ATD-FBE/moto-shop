@@ -1,29 +1,34 @@
 import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import ImageUploader from '@/components/common/ImageUploader.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
-import { openImageViewerModal } from '@/services/modalImageViewerService.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendProductCreateRequest, sendProductUpdateRequest } from '@/api/productRequests.js';
-import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import {
-    ALLOWED_IMAGE_MIME_TYPES,
-    PRODUCT_FILES_LIMIT,
-    MAX_PRODUCT_IMAGE_SIZE_MB
-} from '@shared/constants.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
-import { UNSORTED_CATEGORY_SLUG, PRODUCT_UNITS } from '@shared/constants.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import { openImageViewerModal } from '@/services/modalImageViewerService.js';
+import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
+import { logRequestStatus } from '@/helpers/requestLogger.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
+import {
+    ALLOWED_IMAGE_MIME_TYPES,
+    PRODUCT_FILES_LIMIT,
+    MAX_PRODUCT_IMAGE_SIZE_MB,
+    UNSORTED_CATEGORY_SLUG,
+    PRODUCT_UNITS
+} from '@shared/constants.js';
 
 const getSubmitStates = (isEditMode) => {
     const base = BASE_SUBMIT_STATES;
@@ -262,7 +267,9 @@ const prepareNewImages = ({
     });
 };
 
-export default function ProductForm({ uiBlocked, product, allowedCategories, onSubmit }) {
+export default function ProductForm(
+    { product, allowedCategories, onSubmit, uiBlocked }
+) {
     const isEditMode = Boolean(product);
     const title = formatProductTitle(product?.name, product?.brand); // Если product нет, вернёт ''
 
@@ -285,7 +292,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
     }));
     const imagesFileInputRef = useRef(null);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
@@ -541,7 +548,7 @@ export default function ProductForm({ uiBlocked, product, allowedCategories, onS
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.product[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.product[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {

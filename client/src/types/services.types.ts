@@ -1,4 +1,4 @@
-type TModalAction = (() => void) | null;
+type TModalAction = ((...args: any[]) => void) | null;
 
 ///////////////////
 /// ALERT MODAL ///
@@ -38,5 +38,19 @@ export interface TConfirmModalActions {
     onConfirm: TModalAction;
     onFinalize: TModalAction;
     onCancel: TModalAction;
+    onClose: TModalAction;
+}
+
+//////////////////////////
+/// IMAGE VIEWER MODAL ///
+//////////////////////////
+
+export interface IOpenImageViewerModalParams {
+    images: { url: string, title: string }[];
+    initialIndex: number;
+    onClose?: TModalAction;
+}
+
+export interface TImageViewerModalActions {
     onClose: TModalAction;
 }

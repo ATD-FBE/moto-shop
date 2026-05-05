@@ -1,9 +1,11 @@
 import type { TDiscountSource } from './shared.types.js';
 
-export interface IGuestCartItem {
+export interface IBaseCartItem {
     id: string;
     quantity: number;
 }
+
+export interface IGuestCartItem extends IBaseCartItem {}
 
 export interface ICartItem {
     id: string;

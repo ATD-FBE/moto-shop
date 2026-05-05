@@ -1,9 +1,29 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import ProductForm from './ProductForm.jsx';
+import type { JSX } from 'react';
+import type { TLeafCategories, TProductPerformFormSubmissionResult } from '@/types/index.js';
 
-export default function ProductCreationPanel({ uiBlocked, allowedCategories, onSubmit }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductCreationPanelProps {
+    uiBlocked: boolean;
+    allowedCategories: TLeafCategories;
+    onProcessProduct: (
+        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
+    ) => Promise<void>;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function ProductCreationPanel(
+    { uiBlocked, allowedCategories, onProcessProduct }: IProductCreationPanelProps
+): JSX.Element {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const toggleExpansion = () => setIsExpanded(prev => !prev);
@@ -20,9 +40,10 @@ export default function ProductCreationPanel({ uiBlocked, allowedCategories, onS
 
             <Collapsible isExpanded={isExpanded} className="product-form-collapsible">
                 <ProductForm
-                    uiBlocked={uiBlocked}
+                    product={null}
                     allowedCategories={allowedCategories}
-                    onSubmit={onSubmit}
+                    onSubmit={onProcessProduct}
+                    uiBlocked={uiBlocked}
                 />
             </Collapsible>
         </div>

@@ -1,24 +1,53 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import useImageTracking from '@/hooks/useImageTracking.js';
+import type { JSX } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IZoomControllerProps {
+    zoomAnchorElem: HTMLElement;
+    thumbImageElem: HTMLImageElement;
+    originalImageSrc: string;
+    zoomFactor?: number
+}
+
+interface IZoomState {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    initialized: boolean;
+}
+
+interface IMouseCoords {
+    clientX: number;
+    clientY: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ZoomController({
-    thumbImageRef,
-    zoomAnchorRef,
+    zoomAnchorElem,
+    thumbImageElem,
     originalImageSrc,
     zoomFactor = 1
-}) {
+}: IZoomControllerProps): JSX.Element | null {
     const [visible, setVisible] = useState(false);
     
-    const [backgroundState, setBackgroundState, backgroundStateRef] = useSyncedStateWithRef({
+    const [backgroundState, setBackgroundState, backgroundStateRef] = useSyncedStateWithRef<IZoomState>({
         x: 0,
         y: 0,
         w: 0,
         h: 0,
         initialized: false
     });
-    const [lensState, setLensState, lensStateRef] = useSyncedStateWithRef({
+    const [lensState, setLensState, lensStateRef] = useSyncedStateWithRef<IZoomState>({
         x: 0,
         y: 0,
         w: 0,
@@ -27,22 +56,21 @@ export default function ZoomController({
     });
 
     const isHoveringRef = useRef(false);
-    const mouseCoordsRef = useRef(null);
-    const zoomPreviewRef = useRef(null);
+    const mouseCoordsRef = useRef<IMouseCoords | null>(null);
+    const zoomPreviewRef = useRef<HTMLDivElement | null>(null);
 
-    const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+    const clamp = (val: number, min: number, max: number): number => Math.min(Math.max(val, min), max);
 
     const initLensSize = () => {
-        const thumbEl = thumbImageRef.current;
-        const previewEl = zoomPreviewRef.current;
+        const zoomPreviewElem = zoomPreviewRef.current;
         const backgroundState = backgroundStateRef.current;
 
-        if (!thumbEl || !previewEl || !backgroundState.initialized) return;
+        if (!thumbImageElem || !zoomPreviewElem || !backgroundState.initialized) return;
 
-        const thumbW = thumbEl.offsetWidth;
-        const thumbH = thumbEl.offsetHeight;
-        const previewW = previewEl.offsetWidth;
-        const previewH = previewEl.offsetHeight;
+        const thumbW = thumbImageElem.offsetWidth;
+        const thumbH = thumbImageElem.offsetHeight;
+        const previewW = zoomPreviewElem.offsetWidth;
+        const previewH = zoomPreviewElem.offsetHeight;
         const backgroundW = backgroundState.w;
         const backgroundH = backgroundState.h;
 
@@ -54,27 +82,26 @@ export default function ZoomController({
 
     const calcPositions = () => {
         const mouseCoords = mouseCoordsRef.current;
-        const thumbEl = thumbImageRef.current;
-        const previewEl = zoomPreviewRef.current;
+        const zoomPreviewElem = zoomPreviewRef.current;
         const lensState = lensStateRef.current;
         const backgroundState = backgroundStateRef.current;
     
         if (
             !mouseCoords ||
-            !thumbEl ||
-            !previewEl ||
+            !thumbImageElem ||
+            !zoomPreviewElem ||
             !lensState.initialized ||
             !backgroundState.initialized
         ) return;
     
-        const thumbRect = thumbEl.getBoundingClientRect();
+        const thumbRect = thumbImageElem.getBoundingClientRect();
         const mouseX = mouseCoords.clientX - thumbRect.left;
         const mouseY = mouseCoords.clientY - thumbRect.top;
     
-        const thumbW = thumbEl.offsetWidth;
-        const thumbH = thumbEl.offsetHeight;
-        const previewW = previewEl.offsetWidth;
-        const previewH = previewEl.offsetHeight;
+        const thumbW = thumbImageElem.offsetWidth;
+        const thumbH = thumbImageElem.offsetHeight;
+        const previewW = zoomPreviewElem.offsetWidth;
+        const previewH = zoomPreviewElem.offsetHeight;
         const lensW = lensState.w;
         const lensH = lensState.h;
         const backgroundW = backgroundState.w;
@@ -115,10 +142,9 @@ export default function ZoomController({
     
     // Установка и очистка слушателей мыши на thumb-картинке
     useEffect(() => {
-        const thumbEl = thumbImageRef.current;
-        if (!thumbEl) return;
+        if (!thumbImageElem) return;
 
-        const handleMouseEnter = (e) => {
+        const handleMouseEnter = (e: MouseEvent): void => {
             isHoveringRef.current = true;
             mouseCoordsRef.current = { clientX: e.clientX, clientY: e.clientY };
 
@@ -128,10 +154,10 @@ export default function ZoomController({
                 // Загрузка оригинальной картинки, чтобы узнать её реальные размеры
                 const img = new Image();
 
-                img.onload = () => {
+                const handleLoadSuccess = () => {
                     completeTracking(); // Завершение отслеживания загрузки картинки при успехе
                     if (!isHoveringRef.current) return;
-
+            
                     setBackgroundState(prev => ({
                         ...prev,
                         w: img.naturalWidth * zoomFactor,
@@ -141,6 +167,8 @@ export default function ZoomController({
                     setVisible(true);
                 };
 
+                img.onload = handleLoadSuccess;
+
                 img.onerror = () => {
                     completeTracking(); // Завершение отслеживания загрузки картинки при ошибке
                 };
@@ -149,14 +177,14 @@ export default function ZoomController({
 
                 // Картинка загружена и находится в кэше
                 if (img.complete && img.naturalWidth > 0) {
-                    img.onload();
+                    handleLoadSuccess();
                 }
             } else {
                 setVisible(true);
             }
         };
 
-        const handleMouseMove = (e) => {
+        const handleMouseMove = (e: MouseEvent): void => {
             mouseCoordsRef.current = { clientX: e.clientX, clientY: e.clientY };
             calcPositions();
         };
@@ -171,18 +199,18 @@ export default function ZoomController({
             if (mouseCoordsRef.current) calcPositions();
         };
 
-        thumbEl.addEventListener('mouseenter', handleMouseEnter);
-        thumbEl.addEventListener('mousemove', handleMouseMove);
-        thumbEl.addEventListener('mouseleave', handleMouseLeave);
+        thumbImageElem.addEventListener('mouseenter', handleMouseEnter);
+        thumbImageElem.addEventListener('mousemove', handleMouseMove);
+        thumbImageElem.addEventListener('mouseleave', handleMouseLeave);
         window.addEventListener('scroll', handleScroll, true);
 
         return () => {
-            thumbEl.removeEventListener('mouseenter', handleMouseEnter);
-            thumbEl.removeEventListener('mousemove', handleMouseMove);
-            thumbEl.removeEventListener('mouseleave', handleMouseLeave);
+            thumbImageElem.removeEventListener('mouseenter', handleMouseEnter);
+            thumbImageElem.removeEventListener('mousemove', handleMouseMove);
+            thumbImageElem.removeEventListener('mouseleave', handleMouseLeave);
             window.removeEventListener('scroll', handleScroll, true);
         };
-    }, []);
+    }, [thumbImageElem]);
 
     // Инициализация размеров линзы
     useLayoutEffect(() => {
@@ -217,7 +245,7 @@ export default function ZoomController({
             />
 
             {/* Зум оригинальной картинки в привью */}
-            {zoomAnchorRef.current && createPortal(
+            {createPortal(
                 <div
                     ref={zoomPreviewRef}
                     className="zoom-preview"
@@ -227,7 +255,7 @@ export default function ZoomController({
                         backgroundPosition: `${backgroundState.x}px ${backgroundState.y}px`,
                     }}
                 />,
-                zoomAnchorRef.current
+                zoomAnchorElem
             )}
         </>
     );

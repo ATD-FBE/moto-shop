@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import cn from 'classnames';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
@@ -9,7 +9,73 @@ import ZoomController from '@/components/common/ZoomController.jsx';
 import { routeConfig } from '@/config/appRouting.js';
 import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
-import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
+import {
+    LOAD_STATUS_MIN_HEIGHT,
+    DATA_LOAD_STATUS,
+    PRODUCT_IMAGE_PLACEHOLDER
+} from '@/config/constants.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { JSX, Dispatch, SetStateAction } from 'react';
+import type { TDataLoadStatus } from '@/types/index.js';
+import type {
+    IProduct,
+    TFilterParamsClient,
+    TFilterOption,
+    ISortOption,
+    TUserRole
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductsProps {
+    loadStatus: TDataLoadStatus;
+    reloadProducts: () => void;
+    products: IProduct[];
+    search: string;
+    setSearch: Dispatch<SetStateAction<string>>;
+    filter: TFilterParamsClient;
+    setFilter: Dispatch<SetStateAction<TFilterParamsClient>>;
+    filterOptions?: readonly TFilterOption[];
+    sort: string;
+    setSort: Dispatch<SetStateAction<string>>;
+    sortOptions: readonly ISortOption[];
+    page: number;
+    setPage: Dispatch<SetStateAction<number>>;
+    limit: number;
+    setLimit: Dispatch<SetStateAction<number>>;
+    limitOptions: readonly number[];
+    initDataReady: boolean;
+    totalProducts: number;
+    uiBlocked: boolean;
+}
+
+type TProductsMainProps = Pick<IProductsProps,
+    | 'loadStatus'
+    | 'reloadProducts'
+    | 'products'
+    | 'uiBlocked'
+> & {
+    isTouchDevice: boolean;
+    isAuthenticated: boolean;
+    userRole: Exclude<TUserRole, typeof USER_ROLE.SYSTEM>;
+    customerDiscount: number;
+};
+
+type TProductCardProps = Pick<TProductsMainProps,
+    | 'isTouchDevice'
+    | 'isAuthenticated'
+    | 'userRole'
+    | 'customerDiscount'
+    | 'uiBlocked'
+> & {
+    product: IProduct;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function Products({
     loadStatus,
@@ -30,12 +96,12 @@ export default function Products({
     limitOptions,
     initDataReady,
     totalProducts,
-    uiBlocked,
-}) {
-    const isTouchDevice = useSelector(state => state.ui.isTouchDevice);
-    const { isAuthenticated, user } = useSelector(state => state.auth);
+    uiBlocked
+}: IProductsProps): JSX.Element {
+    const isTouchDevice = useAppSelector(state => state.ui.isTouchDevice);
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
 
-    const userRole = user?.role ?? 'guest';
+    const userRole = user?.role ?? USER_ROLE.GUEST;
     const customerDiscount = user?.discount ?? 0;
 
     return (
@@ -102,22 +168,22 @@ function ProductsMain({
     userRole,
     customerDiscount,
     uiBlocked
-}) {
-    const [listMainHeight, setListMainHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
-    const listMainRef = useRef(null);
+}: TProductsMainProps): JSX.Element {
+    const [productsMainHeight, setProductsMainHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
+    const productsMainRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        if (!listMainRef.current) return;
+        if (!productsMainRef.current) return;
         
-        const newHeight = listMainRef.current.offsetHeight;
-        if (newHeight !== listMainHeight) setListMainHeight(newHeight);
+        const newHeight = productsMainRef.current.offsetHeight;
+        if (newHeight !== productsMainHeight) setProductsMainHeight(newHeight);
     }, [loadStatus]);
 
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div
                 className="products-main"
-                style={{ height: Math.max(LOAD_STATUS_MIN_HEIGHT, listMainHeight) }}
+                style={{ height: Math.max(LOAD_STATUS_MIN_HEIGHT, productsMainHeight) }}
             >
                 <div className="products-load-status">
                     <p>
@@ -132,7 +198,7 @@ function ProductsMain({
     if (loadStatus === DATA_LOAD_STATUS.ERROR) {
         return (
             <div
-                ref={listMainRef}
+                ref={productsMainRef}
                 className="products-main"
                 style={{ height: LOAD_STATUS_MIN_HEIGHT }}
             >
@@ -150,7 +216,7 @@ function ProductsMain({
     if (loadStatus === DATA_LOAD_STATUS.NOT_FOUND) {
         return (
             <div
-                ref={listMainRef}
+                ref={productsMainRef}
                 className="products-main"
                 style={{ height: LOAD_STATUS_MIN_HEIGHT }}
             >
@@ -165,7 +231,7 @@ function ProductsMain({
     }
 
     return (
-        <div ref={listMainRef} className="products-main">
+        <div ref={productsMainRef} className="products-main">
             <ul className="product-list">
                 {products.map(prod => (
                     <li key={prod.id} className="product-item">
@@ -191,23 +257,24 @@ function ProductCard({
     userRole,
     customerDiscount,
     uiBlocked
-}) {
-    const cartState = useSelector(state => state.cart);
-    const thumbImageRef = useRef(null);
-    const thumbRef = useRef(null);
-
+}: TProductCardProps): JSX.Element {
     const {
         id, images, mainImageIndex, sku, name, brand, available,
         isBrandNew, isRestocked, unit, price, discount: productDiscount, isActive
     } = product;
+    
+    const cartItem = useAppSelector(state => state.cart.byId[id]);
+    const isCartAccessible = useAppSelector(state => state.cart.isAccessible);
+
+    const [thumbElem, setThumbElem] = useState<HTMLDivElement | null>(null);
+    const [thumbImageElem, setThumbImageElem] = useState<HTMLImageElement | null>(null);
 
     const showCartControls =
-        ['guest', 'customer'].includes(userRole) &&
-        cartState.isAccessible &&
+        [USER_ROLE.GUEST, USER_ROLE.CUSTOMER].some(role => role === userRole) &&
+        isCartAccessible &&
         available > 0 &&
         isActive;
 
-    const cartItem = cartState.byId[id];
     const quantity = cartItem?.quantity ?? 0;
     const quantityReduced = cartItem?.quantityReduced ?? false;
 
@@ -216,9 +283,8 @@ function ProductCard({
     const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
 
     const hasImages = images.length > 0;
-    const thumbImageSrc = hasImages
-        ? (images[mainImageIndex] ?? images[0]).thumbnails.medium
-        : PRODUCT_IMAGE_PLACEHOLDER;
+    const mainImage = hasImages ? images[mainImageIndex ?? 0] ?? images[0] : null;
+    const thumbImageSrc = mainImage?.thumbnails.medium ?? PRODUCT_IMAGE_PLACEHOLDER;
     const thumbImageAlt = hasImages ? title : '';
 
     const effectiveDiscount = Math.max(productDiscount, customerDiscount);
@@ -230,19 +296,19 @@ function ProductCard({
 
     return (
         <article data-id={id} className="product-card">
-            <div ref={thumbRef} className="product-thumb">
+            <div ref={setThumbElem} className="product-thumb">
                 <BlockableLink to={productUrl}>
                     <TrackedImage
-                        ref={thumbImageRef}
+                        ref={setThumbImageElem}
                         className="product-thumb-img"
                         src={thumbImageSrc}
                         alt={thumbImageAlt}
                     />
-                    {hasImages && (
+                    {hasImages && mainImage && thumbElem && thumbImageElem && (
                         <ZoomController
-                            thumbImageRef={thumbImageRef}
-                            zoomAnchorRef={thumbRef}
-                            originalImageSrc={images[mainImageIndex].original}
+                            zoomAnchorElem={thumbElem}
+                            thumbImageElem={thumbImageElem}
+                            originalImageSrc={mainImage.original}
                             zoomFactor={0.6}
                         />
                     )}

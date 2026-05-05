@@ -3,12 +3,15 @@ import { REQUEST_STATUS } from '@shared/constants.js';
 import type { RefObject, Dispatch, SetStateAction } from 'react';
 import type {
     INotification,
+    IProduct,
     TAuthErrorStatus,
     TGeneralErrorStatus,
     TSuccessStatus,
     TRequestStatus,
     TCategoryCreateResponse,
-    TCategoryUpdateResponse
+    TCategoryUpdateResponse,
+    TProductCreateResponse,
+    TProductUpdateResponse
 } from '@shared/types/index.js';
 
 ///////////////
@@ -71,6 +74,12 @@ export interface INewNotificationAlertProps {
 /// CATEGORY ///
 ////////////////
 
+export type TLeafCategories = {
+    id: string;
+    name: string;
+    slug: string;
+}[];
+
 /// Safe Parent Category Map ///
 export interface ISafeParentCategoryOption {
     id: string;
@@ -80,9 +89,11 @@ export interface ISafeParentCategoryOption {
 export type TSubcategoryCounts = Record<string, number>;
 
 /// Category Perform Form Submission ///
-type TCategoryRequestStatuses = TCategoryCreateResponse['status'] | TCategoryUpdateResponse['status'];
 interface ICategoryPerformFormSubmissionErrorResult {
-    status: Exclude<TCategoryRequestStatuses, typeof REQUEST_STATUS.SUCCESS>
+    status: Exclude<
+        TCategoryCreateResponse['status'] | TCategoryUpdateResponse['status'],
+        typeof REQUEST_STATUS.SUCCESS
+    >
 }
 interface ICategoryPerformFormSubmissionSuccessResult {
     status: typeof REQUEST_STATUS.SUCCESS;
@@ -128,3 +139,27 @@ export interface ICategoryEditFormData<T extends string = any> extends ICategory
 export type TCategoryFormProps<T extends string = any> = ICategoryBaseFormProps & (
     ICategoryCreateFormData<T> | ICategoryEditFormData<T>
 );
+
+///////////////
+/// PRODUCT ///
+///////////////
+
+export interface IDeletingProduct {
+    id: string;
+    name: string;
+}
+
+/// Category Perform Form Submission ///
+interface IProductPerformFormSubmissionErrorResult {
+    status: Exclude<
+        TProductCreateResponse['status'] | TProductUpdateResponse['status'],
+        TSuccessStatus
+    >
+}
+interface IProductPerformFormSubmissionSuccessResult {
+    status: TSuccessStatus;
+    affectedProducts?: IProduct[];
+}
+export type TProductPerformFormSubmissionResult =
+    | IProductPerformFormSubmissionErrorResult
+    | IProductPerformFormSubmissionSuccessResult;

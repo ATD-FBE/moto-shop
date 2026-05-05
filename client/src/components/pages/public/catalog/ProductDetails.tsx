@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import ProductImageGallery from './product-details/ProductImageGallery.jsx';
 import ProductInfo from './product-details/ProductInfo.jsx';
 import { sendProductRequest } from '@/api/productRequests.js';
@@ -11,28 +11,29 @@ import { formatProductTitle } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';
 import { DATA_LOAD_STATUS, NO_VALUE_LABEL } from '@/config/constants.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { IProduct } from '@shared/types/index.js';
 
-export default function ProductDetails() {
-    const isTouchDevice = useSelector(state => state.ui.isTouchDevice);
+export default function ProductDetails(): JSX.Element {
+    const isTouchDevice = useAppSelector(state => state.ui.isTouchDevice);
 
-    const { isAuthenticated, user } = useSelector(state => state.auth);
-    const userRole = user?.role ?? 'guest';
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
+    const userRole = user?.role ?? USER_ROLE.GUEST;
 
     const [productLoading, setProductLoading] = useState(true);
     const [productLoadError, setProductLoadError] = useState(false);
-    const [product, setProduct] = useState(null);
+    const [product, setProduct] = useState<IProduct | null>(null);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const { sku, productId } = parseRouteParams({
         routeKey: 'productDetails',
-        params: useParams(),
-        routeConfig
+        params: useParams()
     });
 
     const productLoadStatus =
@@ -49,19 +50,27 @@ export default function ProductDetails() {
 
     const title = formatProductTitle(name, brand);
 
-    const loadProduct = async () => {
+    const loadProduct = async (): Promise<void> => {
+        if (!productId) {
+            setProductLoading(false);
+            setProductLoadError(true);
+            return;
+        }
+
         setProductLoadError(false);
         setProductLoading(true);
 
         const responseData = await dispatch(sendProductRequest(isAuthenticated, productId));
         if (isUnmountedRef.current) return;
 
-        const { status, message, product } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'PRODUCT: LOAD SINGLE', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setProductLoadError(true);
         } else {
+            const { product } = responseData;
+
             setProduct(product);
             dispatch(reconcileCartWithProducts([product]));
 

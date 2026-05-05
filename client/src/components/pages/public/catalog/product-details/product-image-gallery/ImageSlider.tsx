@@ -1,6 +1,24 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
+import type { JSX } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IImageSliderProps {
+    currentImageSrc: string;
+    currentImageAlt: string;
+    onPrev: () => void;
+    onNext: () => void;
+    onImageClick: () => void;
+    uiBlocked: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ImageSlider({
     currentImageSrc,
@@ -9,15 +27,15 @@ export default function ImageSlider({
     onNext,
     onImageClick,
     uiBlocked
-}) {
-    const imageRef = useRef(null);
+}: IImageSliderProps): JSX.Element {
+    const imageRef = useRef<HTMLImageElement | null>(null);
 
     useEffect(() => {
         const img = imageRef.current;
         if (!img) return;
 
         img.classList.remove('animate');
-        void img.offsetWidth; // Форсировать пересчёт браузером состояния DOM
+        void img.offsetWidth; // Форсирование пересчёта браузером состояния DOM
         img.classList.add('animate');
     }, [currentImageSrc]);
 
