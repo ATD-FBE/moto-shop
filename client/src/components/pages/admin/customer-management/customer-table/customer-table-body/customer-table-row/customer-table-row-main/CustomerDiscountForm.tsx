@@ -38,15 +38,10 @@ type TCustomerDiscountFormProps = Pick<TParentProps,
     setIsEditingDiscount: Dispatch<SetStateAction<boolean>>
 };
 
-// Локальная типизация конфигов полей
 type TFieldConfig = ReturnType<typeof getFieldConfig>;
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'customer'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'customer'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
     [K in keyof ICustomerDiscountUpdateBody]: TFieldStateValue;
@@ -78,7 +73,7 @@ export default function CustomerDiscountForm({
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         [fieldConfig],
-        createInitialFieldsState<TValidFieldName>
+        createInitialFieldsState<TFieldName>
     );
     const [updating, setUpdating] = useState(false);
     const isUnmountedRef = useRef(false);
@@ -111,7 +106,7 @@ export default function CustomerDiscountForm({
     };
 
     const processFormFields = (): IProcessSingleFormFieldResult<
-        TValidFieldName,
+        TFieldName,
         ICustomerDiscountUpdateBody
     > => {
         const fieldsStateUpdates: TFieldsStateUpdates = {};

@@ -428,7 +428,7 @@ export default function RefundForm({
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import CustomerTableBody from '../CustomerTableBody.jsx';
+import CustomerTableBody from '../CustomerTableBody.js';
 import CustomerTableRowMain from './customer-table-row/CustomerTableRowMain.jsx';
 import CustomerTableRowExpansion from './customer-table-row/CustomerTableRowExpansion.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';

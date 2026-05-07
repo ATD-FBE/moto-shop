@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
@@ -16,7 +16,7 @@ import {
     extendFieldConfigs,
     createFieldConfigMap,
     createInitialFieldsState,
-    //fieldsStateReducer,
+    fieldsStateReducer,
     getStringValue,
     getBoolValue
 } from '@/helpers/formHelpers.js';
@@ -27,9 +27,60 @@ import {
     fieldErrorMessages,
     DEFAULT_FIELD_ERROR_MESSAGE
 } from '@shared/fieldRules.js';
-import { PRODUCT_UNITS } from '@shared/constants.js';
+import { UNSORTED_CATEGORY_SLUG, PRODUCT_UNITS } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes,
+    HTMLAttributes
+} from 'react';
+import type {
+    TLeafCategories,
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldApiValue,
+    IFieldState,
+    IProcessFormFieldsResult,
+    TProductPerformFormSubmission,
+    TProductPerformFormSubmissionResult
+} from '@/types/index.js';
+import type { TEntityField, IBulkProductUpdateBody } from '@shared/types/index.js';
 
-const getSubmitStates = () => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'product'>>;
+
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+interface IBulkProductFormProps {
+    productIds: string[];
+    allowedCategories: TLeafCategories;
+    onSubmit: (performFormSubmission: TProductPerformFormSubmission) => Promise<void>;
+    uiBlocked: boolean;
+}
+
+type TFormFields = {
+    [K in keyof IBulkProductUpdateBody['formFields']]: TFieldApiValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement> &
+    HTMLAttributes<HTMLSpanElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, BAD_REQUEST, NOT_FOUND, UNCHANGED,
@@ -37,7 +88,7 @@ const getSubmitStates = () => {
     } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
@@ -71,18 +122,18 @@ const getSubmitStates = () => {
             addMessage: 'Список товаров будет обновлён.',
             submitBtnLabel: 'Сохранено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const getFieldConfigs = (allowedCategories) => {
+const getFieldConfigs = (allowedCategories: TLeafCategories) => {
+    const initCategory = allowedCategories.find(cat => cat.slug === UNSORTED_CATEGORY_SLUG);
+
     const fieldConfigs = [
         {
             name: 'brand',
@@ -93,7 +144,7 @@ const getFieldConfigs = (allowedCategories) => {
             placeholder: 'Укажите бренд товаров',
             autoComplete: 'off',
             trim: true,
-            allowEmpty: true,
+            optional: true,
             enabled: false
         },
         {
@@ -120,7 +171,7 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Категория товаров',
             elem: 'select',
             options: allowedCategories.map(cat => ({ value: cat.id, label: cat.name })),
-            defaultValue: allowedCategories[0]?.id || '',
+            defaultValue: initCategory?.id ?? (allowedCategories[0]?.id || ''),
             enabled: false
         },
         {
@@ -128,11 +179,11 @@ const getFieldConfigs = (allowedCategories) => {
             label: 'Теги (через запятую)',
             elem: 'input',
             type: 'text',
-            defaultValue: '',
             placeholder: 'Укажите общие теги',
+            defaultValue: '',
             autoComplete: 'off',
             trim: true,
-            allowEmpty: true,
+            optional: true,
             enabled: false
         },
         {
@@ -142,77 +193,45 @@ const getFieldConfigs = (allowedCategories) => {
             checkboxLabel: 'Доступен для продажи',
             defaultValue: true
         }
-    ];
+    ] as const;
 
-    const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-        acc[config.name] = config;
-        return acc;
-    }, {});
-
-    return { fieldConfigs, fieldConfigMap };
-};
-
-const initFieldsStateReducer = (fieldConfigs) =>
-    fieldConfigs.reduce((acc, { name, enabled, defaultValue }) => {
-        acc[name] = { enabled, value: defaultValue ?? '', uiStatus: '', error: '' };
-        return acc;
-    }, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        case 'TOGGLE_ENABLED':
-            const name = payload.name;
-            return {
-                ...state,
-                [name]: { ...state[name], enabled: !state[name].enabled }
-            };
-
-        case 'RESET':
-            return payload;
-
-        default:
-            return state;
-    }
+    return extendFieldConfigs(fieldConfigs);
 };
 
 export default function BulkProductForm(
-    { productIds, allowedCategories, onSubmit, uiBlocked }
-) {
-    const { fieldConfigs, fieldConfigMap } = useMemo(
-        () => getFieldConfigs(allowedCategories),
-        [allowedCategories]
-    );
+    { productIds, allowedCategories, onSubmit, uiBlocked }: IBulkProductFormProps
+): JSX.Element {
+    const { fieldConfigs, fieldConfigMap } = useMemo(() => {
+        const configs = getFieldConfigs(allowedCategories);
+        const map = createFieldConfigMap<TFieldName, TFieldConfig>(configs);
+        
+        return { fieldConfigs: configs, fieldConfigMap: map };
+    }, [allowedCategories]);
     
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        initFieldsStateReducer
+        createInitialFieldsState<TFieldName>
     );
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
-    const toggleFieldEnable = (name) => {
+    const toggleFieldEnable = (name: TFieldName): void => {
         dispatchFieldsState({
-            type: 'TOGGLE_ENABLED',
+            type: 'ENABLE',
             payload: { name }
         });
     };
 
-    const handleFieldChange = (e) => {
-        const { name, type, value, checked } = e.currentTarget;
-        let processedValue;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        const checked = target instanceof HTMLInputElement && target.checked;
+        let processedValue: string | number | boolean | undefined;
         
         if (type === 'number' && value !== '') {
             processedValue = Number(value.replace(',', '.'))
@@ -228,7 +247,7 @@ export default function BulkProductForm(
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -239,26 +258,14 @@ export default function BulkProductForm(
         });
     };
 
-    const processGenericField = (enabled, config, validation, value) => {
-        const { name, trim, allowEmpty } = config;
-        const normalizedValue = trim ? value.trim() : value;
-        const fieldStateValue = { value: normalizedValue };
-        const ruleCheck =
-            typeof validation === 'function'
-                ? validation(normalizedValue)
-                : validation.test(normalizedValue);
-
-        const hasValue = normalizedValue !== '';
-        const isValid = (!hasValue && allowEmpty) || ruleCheck;
-        const fieldEntries = enabled && isValid ? [[name, normalizedValue]] : [];
-    
-        return { isValid, fieldStateValue, fieldEntries };
-    };
-
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TFieldName,
+        IBulkProductUpdateBody['formFields']
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { enabled, value }]) => {
-                const config = fieldConfigMap[name];
+                if (!enabled) return acc;
+
                 const validation = validationRules.product[name];
 
                 if (!validation) {
@@ -266,47 +273,55 @@ export default function BulkProductForm(
                     return acc;
                 }
 
-                // Валидация значений полей, формирование данных на отправку и проверка на изменение
-                const processFieldResult = processGenericField(enabled, config, validation, value);
-                const { isValid, fieldStateValue, fieldEntries } = processFieldResult;
+                const { trim, optional } = fieldConfigMap[name] ?? {};
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+
+                const ruleCheck =
+                    typeof validation === 'function'
+                        ? validation(normalizedValue)
+                        : typeof normalizedValue === 'string'
+                            ? validation.test(normalizedValue)
+                            : false;
+
+                const hasValue = normalizedValue !== '';
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
     
-                // Сбор данных для обновления состояния поля
                 acc.fieldsStateUpdates[name] = {
-                    ...fieldStateValue,
+                    value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.product[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.product[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
-                if (!isValid) {
-                    acc.allValid = false;
-                } else if (enabled) {
-                    // Сбор данных для отправки
-                    fieldEntries.forEach(([key, val]) => {
-                        acc.formFields[key] = val;
-                    });
-                        
-                    // Запоминание изменённого поля
+                if (isValid) {
+                    (acc.formFields as TFormFields)[name] = normalizedValue;
                     acc.changedFields.push(name);
+                } else {
+                    acc.allValid = false;
                 }
     
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IBulkProductUpdateBody['formFields'],
+                changedFields: [] as TFieldName[]
+            }
         );
 
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         if (!productIds.length) {
             return setSubmitStatus(FORM_STATUS.NO_SELECTION);
         }
         
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
 
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
@@ -316,16 +331,18 @@ export default function BulkProductForm(
             return setSubmitStatus(FORM_STATUS.UNCHANGED);
         }
 
-        const performFormSubmission = async () => {
+        const performFormSubmission = async (): Promise<
+            TProductPerformFormSubmissionResult | undefined
+        > => {
             setSubmitStatus(FORM_STATUS.SENDING);
             dispatch(setNavigationLock(true));
 
-            formFields.isActive = 'true';
+            console.log(formFields);
 
             const responseData = await dispatch(sendBulkProductUpdateRequest({ productIds, formFields }));
             if (isUnmountedRef.current) return;
 
-            const { status, message, fieldErrors, updatedProducts } = responseData;
+            const { status, message } = responseData;
             const LOG_CTX = 'PRODUCT: UPDATE BULK';
 
             switch (status) {
@@ -344,6 +361,7 @@ export default function BulkProductForm(
                     break;
 
                 case FORM_STATUS.INVALID: {
+                    const { fieldErrors } = responseData;
                     logRequestStatus({
                         context: LOG_CTX,
                         status,
@@ -351,10 +369,13 @@ export default function BulkProductForm(
                         details: fieldErrors
                     });
     
-                    const fieldsStateUpdates = {};
-                    Object.entries(fieldErrors).forEach(([name, error]) => {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                    });
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
+                    (Object.entries(fieldErrors) as [TFieldName, string][])
+                        .forEach(([name, error]) => {
+                            if (name in fieldConfigMap) {
+                                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                            }
+                        });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
@@ -364,9 +385,10 @@ export default function BulkProductForm(
             
                 case FORM_STATUS.PARTIAL:
                 case FORM_STATUS.SUCCESS: {
+                    const { updatedProducts } = responseData;
                     logRequestStatus({ context: LOG_CTX, status, message });
 
-                    const fieldsStateUpdates = {};
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
                     changedFields.forEach(name => {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                     });
@@ -374,20 +396,22 @@ export default function BulkProductForm(
 
                     setSubmitStatus(status);
 
-                    await new Promise(resolve => setTimeout(() => {
-                        if (isUnmountedRef.current) return;
-
-                        dispatchFieldsState({
-                            type: 'RESET',
-                            payload: initFieldsStateReducer(fieldConfigs)
-                        });
-
-                        setSubmitStatus(FORM_STATUS.DEFAULT);
-                        dispatch(setNavigationLock(false));
-                        resolve();
-                    }, SUCCESS_DELAY));
-
-                    return { status, affectedProducts: updatedProducts ?? [] };
+                    await new Promise<void>(resolve => {
+                        setTimeout(() => {
+                            if (isUnmountedRef.current) return;
+    
+                            dispatchFieldsState({
+                                type: 'RESET',
+                                payload: createInitialFieldsState<TFieldName>(fieldConfigs)
+                            });
+    
+                            setSubmitStatus(FORM_STATUS.DEFAULT);
+                            dispatch(setNavigationLock(false));
+                            resolve();
+                        }, SUCCESS_DELAY);
+                    });
+    
+                    return { status, affectedProducts: updatedProducts };
                 }
             
                 default:
@@ -413,14 +437,17 @@ export default function BulkProductForm(
     // Сброс состояния полей при изменении их конфигов
     useEffect(() => {
         setSubmitStatus(FORM_STATUS.DEFAULT);
-        dispatchFieldsState({ type: 'RESET', payload: initFieldsStateReducer(fieldConfigs) });
+        dispatchFieldsState({
+            type: 'RESET',
+            payload: createInitialFieldsState<TFieldName>(fieldConfigs)
+        });
     }, [fieldConfigs]);
 
     // Сброс статуса формы при отсутствии ошибок полей
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 
@@ -436,43 +463,33 @@ export default function BulkProductForm(
                     label,
                     elem,
                     type,
-                    placeholder,
+                    step,
                     min,
                     max,
-                    step,
-                    multiple,
-                    accept,
                     options,
+                    placeholder,
                     checkboxLabel,
                     autoComplete,
                     trim
                 }) => {
-                    const fieldInfoClass = getFieldInfoClass(elem, type, name);
                     const fieldId = `bulk-products-${toKebabCase(name)}`;
+                    const fieldInfoClass = getFieldInfoClass(elem, type, name);
                     const isEnabled = fieldsState[name]?.enabled;
-                    
-                    const elemProps = {
+
+                    const baseElemProps: TFieldElemProps = {
                         //id: fieldId, // id привязан к чекбоксу активации поля формы
                         name,
-                        type,
-                        placeholder,
-                        value: fieldsState[name]?.value,
-                        min,
-                        max,
-                        step,
-                        multiple,
-                        accept,
                         autoComplete,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
-                        disabled: !isEnabled || isFormLocked
+                        disabled: !isEnabled || isFormLocked,
                     };
-
-                    let fieldElem;
-
-                    if (elem === 'select') {
-                        fieldElem = (
-                            <select {...elemProps}>
+    
+                    const fieldElem = (() => {
+                        if (elem === 'select') return (
+                            <select
+                                {...baseElemProps}
+                                value={getStringValue(fieldsState[name]?.value)}
+                            >
                                 {options.map((option, idx) => (
                                     <option key={`${idx}-${option.value}`} value={option.value}>
                                         {option.label}
@@ -480,18 +497,28 @@ export default function BulkProductForm(
                                 ))}
                             </select>
                         );
-                    } else if (elem === 'checkbox') {
-                        fieldElem = (
+                        
+                        if (elem === 'checkbox') return (
                             <DesignedCheckbox
-                                {...elemProps}
+                                {...baseElemProps}
                                 label={checkboxLabel}
-                                checked={fieldsState[name]?.value}
-                                value={undefined}
+                                checked={getBoolValue(fieldsState[name]?.value)}
                             />
                         );
-                    } else {
-                        fieldElem = React.createElement(elem, elemProps);
-                    }
+                    
+                        return (
+                            <input
+                                {...baseElemProps}
+                                type={type}
+                                step={step}
+                                min={min}
+                                max={max}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                            />
+                        );
+                    })();
 
                     return (
                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>

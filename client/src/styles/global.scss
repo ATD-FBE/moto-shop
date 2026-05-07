@@ -5468,26 +5468,10 @@ main {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    gap: 8px;
 
                     &:not(:last-child) {
                         padding-bottom: 26px;
                     }
-
-                    .form-entry-checkbox-label {
-                        display: flex;
-                        align-items: center;
-
-                        .designed-checkbox-container {
-                            margin-right: 6px;
-                        }
-
-                        .form-entry-label {
-                            flex-grow: 1;
-                            width: 0;
-                        }
-                    }
-
                     &.textarea-elem,
                     &.input-file-elem {
                         align-items: flex-start;
@@ -5514,6 +5498,7 @@ main {
                     &.select-elem {
                         .form-entry-field {
                             width: auto;
+                            max-width: 72%;
                             min-width: 104px;
                         }
                     }
@@ -5527,11 +5512,26 @@ main {
                             }
                         }
                     }
-    
+
+                    .form-entry-checkbox-label {
+                        display: flex;
+                        align-items: center;
+
+                        .designed-checkbox-container {
+                            margin-right: 6px;
+                        }
+                        .form-entry-label {
+                            flex-grow: 1;
+                            width: 0;
+                        }
+                    }
                     .form-entry-label,
                     .form-entry-checkbox-label {
+                        $form-entry-gap: 8px;
+
                         @include form-entry-label-base();
-                        width: 28%;
+                        width: calc(28% - $form-entry-gap);
+                        margin-right: $form-entry-gap;
                     }
                     .form-entry-field {
                         @include form-entry-field-base();

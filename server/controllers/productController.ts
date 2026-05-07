@@ -190,8 +190,6 @@ export const handleProductCreateRequest: RequestHandler<
     if (!requireDbUser(req, next)) return;
     if (!requireFileArrayField('images', req, next)) return;
 
-    console.log(req.body);
-
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
     const {
@@ -305,8 +303,6 @@ export const handleProductUpdateRequest: RequestHandler<
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
     if (!requireFileArrayField('images', req, next)) return;
-
-    console.log(req.body);
 
     const reqCtx = req.reqCtx;
     const userId = req.dbUser._id;
@@ -521,7 +517,7 @@ export const handleBulkProductUpdateRequest: RequestHandler<
     
     // Проверка выбранных полей для апдейта
     const fieldsToUpdate = [brand, unit, discount, category, tags, isActive];
-    const hasFieldsToUpdate = fieldsToUpdate.some(f => f !== undefined);
+    const hasFieldsToUpdate = fieldsToUpdate.some(field => field !== undefined);
 
     if (!hasFieldsToUpdate) {
         return safeSendResponse(res, 204);
@@ -555,7 +551,7 @@ export const handleBulkProductUpdateRequest: RequestHandler<
             const updateQuery: FilterQuery<TDbProduct> = { $set: {}, $unset: {} };
 
             if (brand !== undefined) {
-                const trimmedBrand = brand.trim();
+                const trimmedBrand = brand?.trim();
 
                 if (trimmedBrand) {
                     updateQuery.$set.brand = trimmedBrand;
@@ -563,12 +559,13 @@ export const handleBulkProductUpdateRequest: RequestHandler<
                     updateQuery.$unset.brand = 1;
                 }
             }
-
             if (unit !== undefined) updateQuery.$set.unit = unit;
             if (discount !== undefined) updateQuery.$set.discount = discount;
             if (category !== undefined) updateQuery.$set.category = category;
             if (tags !== undefined) {
-                updateQuery.$set.tags = [...new Set(tags.split(',').map(t => t.trim()).filter(Boolean))];
+                updateQuery.$set.tags = tags
+                    ? [...new Set(tags.split(',').map(t => t.trim()).filter(Boolean))]
+                    : [];
             }
             if (isActive !== undefined) updateQuery.$set.isActive = isActive;
 

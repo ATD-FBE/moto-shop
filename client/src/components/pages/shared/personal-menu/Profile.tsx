@@ -41,16 +41,11 @@ import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'auth'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
     [K in keyof IAuthUserUpdateBody]: TFieldStateValue;
@@ -137,8 +132,8 @@ const fieldConfigs = extendFieldConfigs([
     }
 ] as const);
 
-const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
  
 export default function Profile(): JSX.Element | null {
     const user = useAppSelector(state => state.auth.user);
@@ -169,8 +164,8 @@ export default function Profile(): JSX.Element | null {
         });
     };
 
-    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, IAuthUserUpdateBody> => {
-        const fieldsStateEntries = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]);
+    const processFormFields = (): IProcessFormFieldsResult<TFieldName, IAuthUserUpdateBody> => {
+        const fieldsStateEntries = (Object.entries(fieldsState) as [TFieldName, IFieldState][]);
 
         const isAnyPasswordFieldFilled = fieldsStateEntries
             .some(([name, { value }]) => fieldConfigMap[name]?.isPassword && value !== '');
@@ -271,7 +266,7 @@ export default function Profile(): JSX.Element | null {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -296,7 +291,7 @@ export default function Profile(): JSX.Element | null {
                 });
 
                 const fieldsToUpdate = updatedFormFields.filter(
-                    (name): name is TValidFieldName => name in fieldConfigMap
+                    (name): name is TFieldName => name in fieldConfigMap
                 );
                 if (fieldsToUpdate.includes('newPassword')) {
                     fieldsToUpdate.push('currentPassword', 'confirmNewPassword');
@@ -306,7 +301,7 @@ export default function Profile(): JSX.Element | null {
                 fieldsToUpdate.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -351,7 +346,7 @@ export default function Profile(): JSX.Element | null {
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

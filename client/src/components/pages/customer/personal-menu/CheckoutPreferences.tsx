@@ -65,17 +65,12 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'checkout'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
-
-// Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldStateValue>;
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
     [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldStateValue;
@@ -83,8 +78,8 @@ type TFormFields = {
 
 interface IFormGroupEntriesProps {
     fieldConfigs: TFieldConfigs;
-    fieldsState: TFormState<TValidFieldName>;
-    applicabilityMap: Record<TValidFieldName, boolean>;
+    fieldsState: TFormState<TFieldName>;
+    applicabilityMap: Record<TFieldName, boolean>;
     isFormLocked: boolean;
     handleFieldChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
@@ -311,8 +306,8 @@ const formGroupConfigs = [
 ] as const;
 
 const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
-const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
  
 export default function CheckoutPreferences(): JSX.Element {
     const user = useAppSelector(state => state.auth.user);
@@ -333,7 +328,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 cfg.name,
                 typeof cfg.canApply === 'function' ? cfg.canApply({ deliveryMethod }) : true
             ])
-        ) as Record<TValidFieldName, boolean>,
+        ) as Record<TFieldName, boolean>,
         [deliveryMethod]
     );
 
@@ -379,14 +374,14 @@ export default function CheckoutPreferences(): JSX.Element {
         };
 
         const initValues = initFieldValuesRef.current;
-        const initValuesEntries = Object.entries(initValues) as [TValidFieldName, TFieldStateValue][];
+        const initValuesEntries = Object.entries(initValues) as [TFieldName, TFieldStateValue][];
 
         if (initValuesEntries.length > 0) {
             dispatchFieldsState({
                 type: 'UPDATE',
                 payload: Object.fromEntries(
                     initValuesEntries.map(([key, value]) => ([key, { value }]))
-                ) as Record<TValidFieldName, { value: TFieldStateValue }>
+                ) as Record<TFieldName, { value: TFieldStateValue }>
             });
         }
         
@@ -425,10 +420,10 @@ export default function CheckoutPreferences(): JSX.Element {
     };
 
     const processFormFields = (): IProcessFormFieldsResult<
-        TValidFieldName,
+        TFieldName,
         IAuthCheckoutPrefsUpdateBody
     > => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) return acc;
@@ -477,7 +472,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as IAuthCheckoutPrefsUpdateBody,
-                changedFields: [] as TValidFieldName[]
+                changedFields: [] as TFieldName[]
             }
         );
     
@@ -524,7 +519,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -542,9 +537,9 @@ export default function CheckoutPreferences(): JSX.Element {
 
                 // Обновление начальных значений полей
                 initFieldValuesRef.current = Object.fromEntries(
-                    (Object.entries(fieldsState) as [TValidFieldName, IFieldState][])
+                    (Object.entries(fieldsState) as [TFieldName, IFieldState][])
                         .map(([key, { value }]) => ([key, value]))
-                ) as Record<TValidFieldName, TFieldStateValue>;
+                ) as Record<TFieldName, TFieldStateValue>;
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
@@ -589,7 +584,7 @@ export default function CheckoutPreferences(): JSX.Element {
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

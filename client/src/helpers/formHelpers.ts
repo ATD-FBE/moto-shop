@@ -114,7 +114,7 @@ export const fieldsStateReducer = <TFieldName extends string>(
             return newState;
         }
 
-        case 'TOGGLE_ENABLED': {
+        case 'ENABLE': {
             const name = action.payload.name;
 
             return {

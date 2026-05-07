@@ -64,17 +64,12 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'promotion'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'promotion'>>;
-
-// Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldApiValue>;
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface IPromoEditorProps {
     promoId: string | null;
@@ -183,8 +178,8 @@ const fieldConfigs = extendFieldConfigs([
     }
 ] as const);
 
-const fieldConfigMap = createFieldConfigMap<TValidFieldName, TFieldConfig>(fieldConfigs);
-const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfigs);
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
 export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element {
     const isEditMode = Boolean(promoId);
@@ -364,8 +359,8 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         return { isValid, fieldStateValue, fieldEntries, isValueChanged };
     };
 
-    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, TPromoBody> => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TFieldName, TPromoBody> => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value, files }]) => {
                 const validation = validationRules.promotion[name];
                 if (!validation) {
@@ -406,7 +401,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as TPromoBody,
-                changedFields: [] as TValidFieldName[]
+                changedFields: [] as TFieldName[]
             }
         );
     
@@ -459,7 +454,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -511,7 +506,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

@@ -31,12 +31,6 @@ export const validateInput = <E extends TEntityType = TEntityType>(
         ? parseValues(req.query ?? {}, query)
         : req.query ?? {};
 
-    //console.log('body:', req.body);
-    //console.log('parsedBody:', parsedBody);
-
-    //console.log('query:', req.query);
-    //console.log('parsedQuery:', parsedQuery);
-
     const validationConfigMap: Record<string, IValidationConfig> = {};
 
     if (params) {
@@ -136,7 +130,7 @@ const parseValues = (
                 return parseArray(item, itemSchema.items);
             }
 
-            return parseFieldValue(item, itemSchema.type);
+            return parseFieldValue(item, itemSchema.type, itemSchema.nullable);
         });
     };
 
@@ -169,14 +163,15 @@ const parseValues = (
         }
 
         // PRIMITIVE
-        result[key] = parseFieldValue(value, fieldSchema.type);
+        result[key] = parseFieldValue(value, fieldSchema.type, fieldSchema.nullable);
     }
 
     return result;
 };
 
-const parseFieldValue = (value: unknown, type: TCheckType): unknown => {
+const parseFieldValue = (value: unknown, type: TCheckType, nullable?: boolean): unknown => {
     if (typeof value !== 'string') return value;
+    if (value === '' && nullable) return null;
     if (value === '' && type !== 'emptyableBoolean') return undefined;
     if (value === 'null' && type !== 'string') return null;
 

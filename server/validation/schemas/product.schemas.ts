@@ -78,11 +78,11 @@ export const bulkProductUpdateSchema: IValidationInputSchema<TProductEntity> = {
         formFields: {
             type: 'object',
             fields: {
-                brand: { type: 'string', optional: true, match: true, formField: true },
+                brand: { type: 'string', optional: true, nullable: true, match: true, formField: true },
                 unit: { type: 'string', optional: true, enum: PRODUCT_UNITS, formField: true },
                 discount: { type: 'float', optional: true, min: 0, max: 100, formField: true },
                 category: { type: 'objectIdString', optional: true, formField: true },
-                tags: { type: 'string', optional: true, match: true, formField: true },
+                tags: { type: 'string', optional: true, nullable: true, match: true, formField: true },
                 isActive: { type: 'boolean', optional: true, formField: true }
             }
         }

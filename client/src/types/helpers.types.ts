@@ -97,7 +97,7 @@ export type TFormState<TFieldName extends string> = Record<TFieldName, IFieldSta
 
 export type TFieldsAction<TFieldName extends string> =
     | { type: 'UPDATE'; payload: Partial<Record<TFieldName, Partial<IFieldState>>> }
-    | { type: 'TOGGLE_ENABLED'; payload: { name: TFieldName } }
+    | { type: 'ENABLE'; payload: { name: TFieldName } }
     | { 
         type: 'SAVE'; 
         payload: { 

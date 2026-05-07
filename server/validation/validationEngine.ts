@@ -56,12 +56,6 @@ const baseTypeChecks: TBaseTypeChecks = {
 
     objectIdString: (val: unknown): val is string => mongoose.Types.ObjectId.isValid(val as any),
 
-    nullableObjectId: (val: unknown): val is null | mongoose.Types.ObjectId =>
-        val === null || mongoose.Types.ObjectId.isValid(val as any),
-
-    nullableObjectIdString: (val: unknown): val is null | string =>
-        val === null || mongoose.Types.ObjectId.isValid(val as any),
-
     array: (val: unknown): val is unknown[] => Array.isArray(val),
 
     object: (val: unknown): val is Record<string | number, unknown> =>
@@ -103,8 +97,9 @@ export const validateByType = (
     entityType?: TEntityType, 
     fieldName?: string
 ): boolean => {
-    const { value, type, optional, match, min, max, enum: enumValues } = config;
+    const { value, type, optional, nullable, match, min, max, enum: enumValues } = config;
     if (optional && value === undefined) return true;
+    if (nullable && value === null) return true;
 
     const validator = typeCheck[type];
     let isValid = validator?.(value) ?? false;

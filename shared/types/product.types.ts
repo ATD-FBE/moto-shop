@@ -133,11 +133,11 @@ export type TProductUpdateResponse =
 export interface IBulkProductUpdateBody {
     productIds: string[];
     formFields: {
-        brand?: string;
+        brand?: string | null;
         unit?: TProductUnit;
         discount?: number;
         category?: string;
-        tags?: string;
+        tags?: string | null;
         isActive?: boolean;
     };
 }

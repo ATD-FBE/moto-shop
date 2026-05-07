@@ -60,17 +60,12 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'notification'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'notification'>>;
-
-// Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldApiValue>;
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface INotificationEditorProps {
     notificationId: string | null;
@@ -196,7 +191,7 @@ export default function NotificationEditor({
 
     const { fieldConfigs, fieldConfigMap } = useMemo(() => {
         const configs = getFieldConfigs(selectedCustomerIds.size);
-        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+        const map = createFieldConfigMap<TFieldName, TFieldConfig>(configs);
         
         return { fieldConfigs: configs, fieldConfigMap: map };
     }, [selectedCustomerIds.size]);
@@ -204,7 +199,7 @@ export default function NotificationEditor({
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        createInitialFieldsState<TValidFieldName>
+        createInitialFieldsState<TFieldName>
     );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(
         isEditMode ? FORM_STATUS.LOADING : FORM_STATUS.DEFAULT
@@ -324,8 +319,8 @@ export default function NotificationEditor({
         return { isValid, normalizedValue, fieldEntries, isValueChanged };
     };
 
-    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, INotificationBody> => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TFieldName, INotificationBody> => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.notification[name];
                 if (!validation) {
@@ -371,7 +366,7 @@ export default function NotificationEditor({
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as INotificationBody,
-                changedFields: [] as TValidFieldName[]
+                changedFields: [] as TFieldName[]
             }
         );
     
@@ -424,7 +419,7 @@ export default function NotificationEditor({
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -492,7 +487,7 @@ export default function NotificationEditor({
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

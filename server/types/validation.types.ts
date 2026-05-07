@@ -2,14 +2,14 @@ import type { TEntityType, TEntityField } from '@shared/types/index.js';
 
 export type TCheckType =
     | 'string' | 'float' | 'integer' | 'boolean' | 'emptyableBoolean' | 'date'
-    | 'objectId' | 'objectIdString' | 'nullableObjectId' | 'nullableObjectIdString' | 'array' | 'object'
-    | 'file' | 'files';
+    | 'objectId' | 'objectIdString' | 'array' | 'object' | 'file' | 'files';
 
 export interface IValidationSchema {
     type: TCheckType;                              // Тип значения поля
     fields?: Record<string, IValidationSchema>;    // Для проверки содержимого объектов -> тип object
     items?: IValidationSchema;                     // Для проверки содержимого массивов -> тип array
     optional?: boolean;                            // Для опционального поля -> значение undefined
+    nullable?: boolean;                            // Для nullable поля -> значение null
     match?: boolean | RegExp;                      // Для типа string
     min?: number;                                  // Для типов number и integer
     max?: number;                                  // Для типов number и integer

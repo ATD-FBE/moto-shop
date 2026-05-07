@@ -46,16 +46,11 @@ import type { TEntityField, IAuthRegistrationBody } from '@shared/types/index.js
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'auth'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
     [K in keyof IAuthRegistrationBody['formFields']]: TFieldStateValue;
@@ -156,7 +151,7 @@ export default function RegistrationForm(): JSX.Element {
 
     const { fieldConfigs, fieldConfigMap } = useMemo(() => {
         const configs = getFieldConfigs(isAdminRegistration);
-        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+        const map = createFieldConfigMap<TFieldName, TFieldConfig>(configs);
         
         return { fieldConfigs: configs, fieldConfigMap: map };
     }, [isAdminRegistration]);
@@ -164,7 +159,7 @@ export default function RegistrationForm(): JSX.Element {
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        createInitialFieldsState<TValidFieldName>
+        createInitialFieldsState<TFieldName>
     );
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
 
@@ -196,10 +191,10 @@ export default function RegistrationForm(): JSX.Element {
     };
 
     const processFormFields = (): IProcessFormFieldsResult<
-        TValidFieldName,
+        TFieldName,
         IAuthRegistrationBody['formFields']
     > => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.auth[name];
                 if (!validation) {
@@ -277,7 +272,7 @@ export default function RegistrationForm(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                (Object.entries(fieldErrors) as [TFieldName, string][])
                     .forEach(([name, error]) => {
                         if (name in fieldConfigMap) {
                             fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -360,7 +355,7 @@ export default function RegistrationForm(): JSX.Element {
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

@@ -59,16 +59,11 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'category'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'category'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
     [K in keyof ICategoryBody]: TFieldApiValue;
@@ -176,7 +171,7 @@ const getFieldConfigs = (
     return extendFieldConfigs(fieldConfigs);
 }
 
-export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>): JSX.Element {
+export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX.Element {
     const {
         mode,
         categoryId, // В режиме edit может быть пустой строкой (категория не выбрана)
@@ -200,24 +195,23 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
             isEditMode, initValues, defaultOrder, maxOrder,
             safeParentData, parentName, isRestricted
         );
-        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+        const map = createFieldConfigMap<TFieldName, TFieldConfig>(configs);
 
         return { fieldConfigs: configs, fieldConfigMap: map };
     }, [isEditMode, initValues, defaultOrder, maxOrder, safeParentData, parentName, isRestricted]);
 
     const initialStateOptions = useMemo(() => ({
         // Добавление дополнительного параметра в состояние для поля заказа
-        extraStateFields: { order: ['max'] } as Partial<Record<TValidFieldName, (keyof TFieldConfig)[]>>
+        extraStateFields: { order: ['max' as keyof TFieldConfig] }
     }), []);
-
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        (configs) => createInitialFieldsState<TValidFieldName>(configs, initialStateOptions)
+        (configs) => createInitialFieldsState<TFieldName>(configs, initialStateOptions)
     );
+
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
-
     const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
@@ -243,8 +237,8 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
         });
     };
 
-    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, ICategoryBody> => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TFieldName, ICategoryBody> => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.category[name];
                 if (!validation) {
@@ -257,15 +251,14 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
                 const submittedValue =
                     name === 'order' && typeof normalizedValue === 'number'
                         ? normalizedValue - 1
-                        : (name === 'parent' && normalizedValue === '')
-                            ? null
-                            : normalizedValue;
-                const ruleCheck =
+                        : normalizedValue;
+
+                const isValid = 
                     typeof validation === 'function'
                         ? validation(submittedValue)
-                        : validation.test(String(submittedValue));
-
-                const isValid = ruleCheck;
+                        : typeof submittedValue === 'string'
+                            ? validation.test(submittedValue)
+                            : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -293,7 +286,7 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
                 allValid: true,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as ICategoryBody,
-                changedFields: [] as TValidFieldName[]
+                changedFields: [] as TFieldName[]
             }
         );
     
@@ -361,7 +354,7 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
                     });
     
                     const fieldsStateUpdates: TFieldsStateUpdates = {};
-                    (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                    (Object.entries(fieldErrors) as [TFieldName, string][])
                         .forEach(([name, error]) => {
                             if (name in fieldConfigMap) {
                                 fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -461,7 +454,7 @@ export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>)
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 

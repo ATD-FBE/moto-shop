@@ -76,16 +76,11 @@ import type {
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Локальная типизация конфигов полей
 type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
 type TFieldConfig = TFieldConfigs[number];
-type TFieldName = TFieldConfig['name'];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'product'>>;
 
-// Проверка наличия полей конфига в наборе полей сущности
-type TValidFieldName = Extract<TFieldName, TEntityField<'product'>>;
-
-// Вспомогательные типы
-type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface IPrepareExistingImagesProps {
     images?: IProductImage[];
@@ -102,9 +97,7 @@ interface IPrepareNewImagesProps {
 interface IProductFormProps {
     product: IProduct | null;
     allowedCategories: TLeafCategories;
-    onSubmit: (
-        performFormSubmission: TProductPerformFormSubmission
-    ) => Promise<void>;
+    onSubmit: (performFormSubmission: TProductPerformFormSubmission) => Promise<void>;
     uiBlocked: boolean;
 }
 
@@ -346,7 +339,7 @@ export default function ProductForm(
 
     const { fieldConfigs, fieldConfigMap } = useMemo(() => {
         const configs = getFieldConfigs(isEditMode, product, allowedCategories);
-        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+        const map = createFieldConfigMap<TFieldName, TFieldConfig>(configs);
         
         return { fieldConfigs: configs, fieldConfigMap: map };
     }, [isEditMode, product, allowedCategories]);
@@ -354,11 +347,9 @@ export default function ProductForm(
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        createInitialFieldsState<TValidFieldName>
+        createInitialFieldsState<TFieldName>
     );
-
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
-
     const [images, setImages, imagesRef] = useSyncedStateWithRef<IImageUpload[]>(() =>
         prepareExistingImages({
             images: product?.images,
@@ -366,10 +357,8 @@ export default function ProductForm(
             mainImageIndex: product?.mainImageIndex
         })
     );
-
     const imagesFileInputRef = useRef<HTMLInputElement | null>(null);
     const isUnmountedRef = useRef(false);
-    
     const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
@@ -465,6 +454,14 @@ export default function ProductForm(
         });
     };
 
+    const revokeNewImageObjectUrls = (images: IImageUpload[]): void => {
+        images.forEach(img => {
+            if (img.type === 'new') {
+                URL.revokeObjectURL(img.previewUrl); // Для originalUrl такой же ObjectURL
+            }
+        });
+    };
+
     const handleAddFilesClick = (): void => {
         imagesFileInputRef.current?.click();
     };
@@ -512,14 +509,6 @@ export default function ProductForm(
         dispatchFieldsState({
             type: 'UPDATE',
             payload: { [name]: { value: normalizedValue } }
-        });
-    };
-
-    const revokeNewImageObjectUrls = (images: IImageUpload[]): void => {
-        images.forEach(img => {
-            if (img.type === 'new') {
-                URL.revokeObjectURL(img.previewUrl); // Для originalUrl такой же ObjectURL
-            }
         });
     };
 
@@ -618,10 +607,10 @@ export default function ProductForm(
         return { isValid, fieldStateValue, fieldEntries, isValueChanged };
     };
 
-    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, TProductBody> & {
+    const processFormFields = (): IProcessFormFieldsResult<TFieldName, TProductBody> & {
         invalidNewImageUrls: Set<string>;
     } => {
-        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const config = fieldConfigMap[name];
                 const validation = validationRules.product[name];
@@ -666,7 +655,7 @@ export default function ProductForm(
                 invalidNewImageUrls: new Set() as Set<string>,
                 fieldsStateUpdates: {} as TFieldsStateUpdates,
                 formFields: {} as TProductBody,
-                changedFields: [] as TValidFieldName[]
+                changedFields: [] as TFieldName[]
             }
         );
 
@@ -734,7 +723,7 @@ export default function ProductForm(
                     });
     
                     const fieldsStateUpdates: TFieldsStateUpdates = {};
-                    (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                    (Object.entries(fieldErrors) as [TFieldName, string][])
                         .forEach(([name, error]) => {
                             if (name in fieldConfigMap) {
                                 fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
@@ -771,7 +760,7 @@ export default function ProductForm(
                             if (!isEditMode) {
                                 dispatchFieldsState({
                                     type: 'RESET',
-                                    payload: createInitialFieldsState<TValidFieldName>(fieldConfigs)
+                                    payload: createInitialFieldsState<TFieldName>(fieldConfigs)
                                 });
                             }
 
@@ -815,7 +804,7 @@ export default function ProductForm(
         setSubmitStatus(FORM_STATUS.DEFAULT);
         dispatchFieldsState({
             type: 'RESET',
-            payload: createInitialFieldsState<TValidFieldName>(fieldConfigs)
+            payload: createInitialFieldsState<TFieldName>(fieldConfigs)
         });
     }, [fieldConfigs]);
 
@@ -823,7 +812,7 @@ export default function ProductForm(
     useEffect(() => {
         if (submitStatus !== FORM_STATUS.INVALID) return;
 
-        const isErrorField = Object.values(fieldsState).some(val => Boolean(val.error));
+        const isErrorField = Object.values(fieldsState).some(state => Boolean(state.error));
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 
@@ -839,13 +828,13 @@ export default function ProductForm(
                     label,
                     elem,
                     type,
-                    placeholder,
+                    step,
                     min,
                     max,
-                    step,
                     multiple,
                     accept,
                     options,
+                    placeholder,
                     checkboxLabel,
                     autoComplete,
                     trim,
@@ -901,9 +890,9 @@ export default function ProductForm(
                                 ref={isImages ? imagesFileInputRef : undefined}
                                 style={isImages ? { display: 'none' } : undefined}
                                 type={type}
+                                step={step}
                                 min={min}
                                 max={max}
-                                step={step}
                                 multiple={multiple}
                                 accept={accept}
                                 placeholder={placeholder}

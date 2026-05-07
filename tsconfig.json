@@ -29,7 +29,7 @@
 		"client/**/*",
 		"server/**/*",
 		"shared/**/*"
-	],
+, "client/src/components/pages/admin/customer-management/customer-table/CustomerTableBody.tsx"	],
 	"exclude": [
 		"node_modules",
 		"client/build",
