@@ -180,7 +180,7 @@ const parseFieldValue = (value: unknown, type: TCheckType): unknown => {
     if (value === '' && type !== 'emptyableBoolean') return undefined;
     if (value === 'null' && type !== 'string') return null;
 
-    if (type === 'number') {
+    if (type === 'float') {
         if (!/^[-+]?\d+(\.\d+)?$/.test(value)) return value;
         return Number(value);
     }

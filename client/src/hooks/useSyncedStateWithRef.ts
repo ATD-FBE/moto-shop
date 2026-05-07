@@ -6,7 +6,7 @@ import type { RefObject } from 'react';
 //////////////////////////
 
 type TStateUpdaterFn<T> = (prevState: T) => T;
-type TSetUpdater<T> = TStateUpdaterFn<T> | T;
+type TSetUpdater<T> = T | TStateUpdaterFn<T>;
 type TUseSyncedStateWithRefResult<T> = [T, (updater: TSetUpdater<T>) => void, RefObject<T>];
 
 /////////////////////
@@ -15,7 +15,16 @@ type TUseSyncedStateWithRefResult<T> = [T, (updater: TSetUpdater<T>) => void, Re
 
 const isFunction = <T>(val: TSetUpdater<T>): val is TStateUpdaterFn<T> => typeof val === 'function';
 
-export default function useSyncedStateWithRef<T>(initialValue: T): TUseSyncedStateWithRefResult<T> {
+// Перегрузка: Сигнатура с аргументом-функцией
+export default function useSyncedStateWithRef<T>(initialValue: () => T): TUseSyncedStateWithRefResult<T>;
+
+// Перегрузка: Сигнатура с аргументом-результатом
+export default function useSyncedStateWithRef<T>(initialValue: T): TUseSyncedStateWithRefResult<T>;
+
+// Главная реализация хука
+export default function useSyncedStateWithRef<T>(
+    initialValue: T | (() => T)
+): TUseSyncedStateWithRefResult<T> {
     const [state, setState] = useState(initialValue);
     const ref = useRef(state);
 

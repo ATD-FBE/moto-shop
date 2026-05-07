@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
+import { useMemo, useReducer, useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import ImageUploader from '@/components/common/ImageUploader.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
@@ -14,8 +14,16 @@ import {
 } from '@/config/constants.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue,
+    getBoolValue
+} from '@/helpers/formHelpers.js';
 import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import moveKeyToEndInFormData from '@/helpers/moveKeyToEndInFormData.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import {
     validationRules,
@@ -29,15 +37,113 @@ import {
     UNSORTED_CATEGORY_SLUG,
     PRODUCT_UNITS
 } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes,
+    SelectHTMLAttributes,
+    HTMLAttributes
+} from 'react';
+import type {
+    TLeafCategories,
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldStateValue,
+    TFieldApiValue,
+    IFieldState,
+    IImageUpload,
+    TAppThunk,
+    IProcessFormFieldsResult,
+    TProductPerformFormSubmission,
+    TProductPerformFormSubmissionResult
+} from '@/types/index.js';
+import type {
+    IProduct,
+    IProductImage,
+    TEntityField,
+    TValidationRuleType,
+    TProductCreateBodyClient,
+    TProductUpdateBodyClient,
+    TProductCreateResponse,
+    TProductUpdateResponse
+} from '@shared/types/index.js';
 
-const getSubmitStates = (isEditMode) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+// Локальная типизация конфигов полей
+type TFieldConfigs = ReturnType<typeof getFieldConfigs>;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = TFieldConfig['name'];
+
+// Проверка наличия полей конфига в наборе полей сущности
+type TValidFieldName = Extract<TFieldName, TEntityField<'product'>>;
+
+// Вспомогательные типы
+type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
+
+interface IPrepareExistingImagesProps {
+    images?: IProductImage[];
+    title?: string;
+    mainImageIndex?: number;
+}
+
+interface IPrepareNewImagesProps {
+    files: File[];
+    currentImages: IImageUpload[];
+    title?: string;
+}
+
+interface IProductFormProps {
+    product: IProduct | null;
+    allowedCategories: TLeafCategories;
+    onSubmit: (
+        performFormSubmission: TProductPerformFormSubmission
+    ) => Promise<void>;
+    uiBlocked: boolean;
+}
+
+type TProductBody = TProductCreateBodyClient | TProductUpdateBodyClient;
+type TProductBodyAllKeys = keyof (TProductCreateBodyClient & TProductUpdateBodyClient);
+type TFieldEntries = [TProductBodyAllKeys, TFieldApiValue][];
+
+interface IProcessFieldResult {
+    isValid: boolean;
+    fieldStateValue: {
+        files?: File[];
+        value?: TFieldStateValue;
+    };
+    fieldEntries: TFieldEntries;
+    isValueChanged: boolean;
+}
+
+type TFormFields = {
+    [K in TProductBodyAllKeys]: TFieldApiValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> & 
+    TextareaHTMLAttributes<HTMLTextAreaElement> &
+    SelectHTMLAttributes<HTMLSelectElement> &
+    HTMLAttributes<HTMLSpanElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, BAD_REQUEST, NOT_FOUND, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = isEditMode ? 'Изменить' : 'Создать';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [BAD_REQUEST]: { ...base[BAD_REQUEST], submitBtnLabel: actionLabel },
@@ -55,16 +161,18 @@ const getSubmitStates = (isEditMode) => {
             addMessage: 'Список товаров будет обновлён.',
             submitBtnLabel: 'Выполнено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const getFieldConfigs = (isEditMode, product, allowedCategories) => {
+const getFieldConfigs = (
+    isEditMode: boolean,
+    product: IProduct | null,
+    allowedCategories: TLeafCategories
+) => {
     const initCategory = product
         ? allowedCategories.find(cat => cat.id === product.category)
         : allowedCategories.find(cat => cat.slug === UNSORTED_CATEGORY_SLUG);
@@ -75,10 +183,9 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             label: 'Фотографии',
             elem: 'input',
             type: 'file',
-            files: [],
             multiple: true,
-            accept: ALLOWED_IMAGE_MIME_TYPES.join(', '),
             filesLimit: PRODUCT_FILES_LIMIT,
+            accept: ALLOWED_IMAGE_MIME_TYPES.join(', '),
             allowedTypes: ALLOWED_IMAGE_MIME_TYPES,
             maxSizeMB: MAX_PRODUCT_IMAGE_SIZE_MB,
             optional: true
@@ -89,11 +196,10 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             elem: 'input',
             type: 'text',
             placeholder: isEditMode ? 'Укажите новый артикул' : 'Укажите артикул товара',
-            value: product?.sku ?? '',
+            defaultValue: product?.sku ?? '',
             autoComplete: 'off',
             trim: true,
-            optional: true,
-            allowEmpty: true
+            optional: true
         },
         {
             name: 'name',
@@ -101,7 +207,7 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             elem: 'input',
             type: 'text',
             placeholder: isEditMode ? 'Укажите новое наименование' : 'Укажите наименование товара',
-            value: product?.name ?? '',
+            defaultValue: product?.name ?? '',
             trim: true,
             autoComplete: 'off'
         },
@@ -111,22 +217,20 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             elem: 'input',
             type: 'text',
             placeholder: isEditMode ? 'Укажите новый бренд' : 'Укажите бренд товара',
-            value: product?.brand ?? '',
+            defaultValue: product?.brand ?? '',
             autoComplete: 'off',
             trim: true,
-            optional: true,
-            allowEmpty: true
+            optional: true
         },
         {
             name: 'description',
             label: 'Описание',
             elem: 'textarea',
             placeholder: isEditMode ? 'Введите новое описание' : 'Введите описание товара',
-            value: product?.description ?? '',
+            defaultValue: product?.description ?? '',
             autoComplete: 'off',
             trim: true,
-            optional: true,
-            allowEmpty: true
+            optional: true
         },
         {
             name: 'stock',
@@ -135,14 +239,14 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             type: 'number',
             step: 1,
             min: 0,
-            value: product?.stock ?? 0
+            defaultValue: product?.stock ?? 0
         },
         {
             name: 'unit',
             label: 'Единица измерения',
             elem: 'select',
             options: PRODUCT_UNITS.map(unit => ({ value: unit, label: unit })),
-            value: product?.unit ?? PRODUCT_UNITS[0]
+            defaultValue: product?.unit ?? PRODUCT_UNITS[0]
         },
         {
             name: 'price',
@@ -151,7 +255,7 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             type: 'number',
             step: 0.01,
             min: 0,
-            value: product?.price ?? 0
+            defaultValue: product?.price ?? 0
         },
         {
             name: 'discount',
@@ -161,14 +265,14 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             step: 0.5,
             min: 0,
             max: 100,
-            value: product?.discount ?? 0
+            defaultValue: product?.discount ?? 0
         },
         {
             name: 'category',
             label: 'Категория товаров',
             elem: 'select',
             options: allowedCategories.map(cat => ({ value: cat.id, label: cat.name })),
-            value: initCategory?.id ?? (allowedCategories[0]?.id || '')
+            defaultValue: initCategory?.id ?? (allowedCategories[0]?.id || '')
         },
         {
             name: 'tags',
@@ -176,69 +280,34 @@ const getFieldConfigs = (isEditMode, product, allowedCategories) => {
             elem: 'input',
             type: 'text',
             placeholder: isEditMode ? 'Укажите новые теги' : 'Укажите теги',
-            value: product?.tags ?? '',
+            defaultValue: product?.tags ?? '',
             autoComplete: 'off',
             trim: true,
-            optional: true,
-            allowEmpty: true
+            optional: true
         },
         {
             name: 'isActive',
             label: 'Активность',
             elem: 'checkbox',
             checkboxLabel: 'Доступен для продажи',
-            value: product?.isActive ?? true
+            defaultValue: product?.isActive ?? true
         }
-    ];
+    ] as const;
 
-    const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-        acc[config.name] = config;
-        return acc;
-    }, {});
-
-    return { fieldConfigs, fieldConfigMap };
-};
-
-const initFieldsStateReducer = (fieldConfigs) =>
-    fieldConfigs.reduce((acc, { name, type, files, value }) => {
-        acc[name] = {
-            ...(type === 'file' ? { files } : { value }),
-            uiStatus: '',
-            error: ''
-        };
-        return acc;
-    }, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        case 'RESET':
-            return payload;
-
-        default:
-            return state;
-    }
+    return extendFieldConfigs(fieldConfigs);
 };
 
 const prepareExistingImages = ({
     images = [],
     title = '',
-    mainImageIndex = 0,
-}) => {
+    mainImageIndex = 0
+}: IPrepareExistingImagesProps): IImageUpload[] => {
     return images.map((img, idx) => ({
         type: 'existing',
         filename: img.filename,
+        title,
         previewUrl: img.thumbnails.small,
         originalUrl: img.original,
-        title,
         main: idx === mainImageIndex,
         markedForDeletion: false
     }));
@@ -247,8 +316,8 @@ const prepareExistingImages = ({
 const prepareNewImages = ({
     files,
     currentImages = [],
-    title = '',
-}) => {
+    title = 'Фото нового товара'
+}: IPrepareNewImagesProps): IImageUpload[] => {
     const hasMainImage = currentImages.some(img => img.main);
 
     return Array.from(files).map((file, idx) => {
@@ -256,10 +325,10 @@ const prepareNewImages = ({
     
         return {
             type: 'new',
-            previewUrl: objectUrl,
-            originalUrl: objectUrl,
             file,
             title,
+            previewUrl: objectUrl,
+            originalUrl: objectUrl,
             main: !hasMainImage && idx === 0,
             markedForDeletion: false,
             invalid: false
@@ -268,39 +337,48 @@ const prepareNewImages = ({
 };
 
 export default function ProductForm(
-    { product, allowedCategories, onSubmit, uiBlocked }
-) {
+    { product, allowedCategories, onSubmit, uiBlocked }: IProductFormProps
+): JSX.Element {
     const isEditMode = Boolean(product);
     const title = formatProductTitle(product?.name, product?.brand); // Если product нет, вернёт ''
 
     const { submitStates, lockedStatuses } = useMemo(() => getSubmitStates(isEditMode), [isEditMode]);
-    const { fieldConfigs, fieldConfigMap } = useMemo(
-        () => getFieldConfigs(isEditMode, product, allowedCategories),
-        [isEditMode, product, allowedCategories]
-    );
-    
+
+    const { fieldConfigs, fieldConfigMap } = useMemo(() => {
+        const configs = getFieldConfigs(isEditMode, product, allowedCategories);
+        const map = createFieldConfigMap<TValidFieldName, TFieldConfig>(configs);
+        
+        return { fieldConfigs: configs, fieldConfigMap: map };
+    }, [isEditMode, product, allowedCategories]);
+
     const [fieldsState, dispatchFieldsState] = useReducer(
         fieldsStateReducer,
         fieldConfigs,
-        initFieldsStateReducer
+        createInitialFieldsState<TValidFieldName>
     );
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
-    const [images, setImages, imagesRef] = useSyncedStateWithRef(() => prepareExistingImages({
-        images: product?.images,
-        title,
-        mainImageIndex: product?.mainImageIndex
-    }));
-    const imagesFileInputRef = useRef(null);
+
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
+
+    const [images, setImages, imagesRef] = useSyncedStateWithRef<IImageUpload[]>(() =>
+        prepareExistingImages({
+            images: product?.images,
+            title,
+            mainImageIndex: product?.mainImageIndex
+        })
+    );
+
+    const imagesFileInputRef = useRef<HTMLInputElement | null>(null);
     const isUnmountedRef = useRef(false);
+    
     const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 
-    const setNewImages = (files) => {
+    const setNewImages = (files: File[]): void => {
         const newImages = prepareNewImages({
             files,
             currentImages: images,
-            title: title || 'Фото нового товара'
+            title
         });
 
         setImages(prevImages => [...prevImages, ...newImages]);
@@ -311,21 +389,22 @@ export default function ProductForm(
         }
     };
 
-    const handleThumbImageClick = (idx) => {
+    const handleThumbImageClick = (idx: number): void => {
         openImageViewerModal({
             images: images.map(img => ({ url: img.originalUrl, title: img.title })),
             initialIndex: idx
         });
     };
 
-    const setMainImage = (targetIdx) => {
+    const setMainImage = (targetIdx: number): void => {
         setImages(prevImages => prevImages.map((img, idx) => ({ ...img, main: idx === targetIdx })));
     };
 
-    const toggleImageDeletion = (targetIdx) => {
+    const toggleImageDeletion = (targetIdx: number): void => {
         setImages(prevImages => {
             const newImages = [...prevImages];
             const targetImage = newImages[targetIdx];
+            if (!targetImage) return prevImages;
     
             const isDeleting = !targetImage.markedForDeletion;
             const isMain = targetImage.main;
@@ -335,7 +414,7 @@ export default function ProductForm(
             targetImage.markedForDeletion = isDeleting;
             
             if (isDeleting) {
-                // При удалении главной картинки - установить главной первую неудалённую
+                // При удалении главной картинки - устанавливается главной первая существующая
                 if (isMain) {
                     targetImage.main = false;
 
@@ -358,22 +437,22 @@ export default function ProductForm(
             } else {
                 // При отмене удаления и отсутствии главной картинки - установить как главную
                 const hasMainImage = newImages.some(img => img.main);
-                if (!hasMainImage && !targetImage.invalid) targetImage.main = true;
+                if (!hasMainImage && !isInvalid) targetImage.main = true;
             }
     
             return newImages;
         });
     };
 
-    const flagInvalidNewImages = (invalidNewImages) => {
+    const flagInvalidNewImages = (invalidNewImageUrls: Set<string>): void => {
         setImages(prevImages => {
             // Установка флага для всех невалидных картинок и снятие с них флага главной
             const newImages = prevImages.map(img => ({
                 ...img,
-                ...(invalidNewImages.has(img.previewUrl) && { invalid: true, main: false })
+                ...(invalidNewImageUrls.has(img.previewUrl) && { invalid: true, main: false })
             }));
 
-            // Проверка, был снят флаг главной картинки с одной из невалидных
+            // Проверка, остался ли флаг главной картинки после изменения невалидных
             const hasMainImage = newImages.some(img => img.main);
 
             // Установка новой главной картинки, если таковой не нашлось
@@ -386,13 +465,23 @@ export default function ProductForm(
         });
     };
 
-    const handleFilesDrop = (files) => {
+    const handleAddFilesClick = (): void => {
+        imagesFileInputRef.current?.click();
+    };
+
+    const handleFilesDrop = (files: File[]): void => {
         setNewImages(files);
     };
 
-    const handleFieldChange = (e) => {
-        const { name, type, files, value, checked } = e.currentTarget;
-        let processedValue;
+    const handleFieldChange = (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
+        const checked = target instanceof HTMLInputElement && target.checked;
+        const isImages = name === 'images';
+        let processedValue: string | number | boolean | undefined;
         
         if (type === 'number' && value !== '') {
             processedValue = Number(value.replace(',', '.'))
@@ -402,20 +491,20 @@ export default function ProductForm(
             processedValue = value;
         }
 
-        if (name === 'images' && files.length) {
+        if (isImages && files.length > 0) {
             setNewImages(files);
         }
 
         dispatchFieldsState({
             type: 'UPDATE',
             payload: { [name]: {
-                ...(type === 'file' ? { files } : { value: processedValue }),
-                ...(name !== 'images' && { uiStatus: '', error: '' })
+                ...(type === 'file' ? { files: [] } : { value: processedValue }),
+                ...(!isImages && { uiStatus: '', error: '' })
             } }
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -426,64 +515,57 @@ export default function ProductForm(
         });
     };
 
-    const revokeNewImageObjectUrls = (images) => {
-        (images ?? []).forEach(img => {
+    const revokeNewImageObjectUrls = (images: IImageUpload[]): void => {
+        images.forEach(img => {
             if (img.type === 'new') {
                 URL.revokeObjectURL(img.previewUrl); // Для originalUrl такой же ObjectURL
             }
         });
     };
-    
-    const areGenericFieldValuesEqual = (a, b) => {
-        if (
-            (a === undefined || a === null || a === '') &&
-            (b === undefined || b === null || b === '')
-        ) return true;
-    
-        const bothAreNumericLike = !isNaN(a) && !isNaN(b);
-    
-        if (bothAreNumericLike) {
-            return Number(a) === Number(b);
-        }
-    
-        return String(a) === String(b);
-    };
 
-    const processImagesField = (config, validation, invalidNewImages) => {
+    const processImagesField = (
+        config: TFieldConfig,
+        validation: TValidationRuleType,
+        invalidNewImageUrls: Set<string>
+    ): IProcessFieldResult => {
         const { filesLimit, allowedTypes, maxSizeMB, optional } = config;
+        const fieldStateValue = { files: [] };
         const activeImages = images.filter(img => !img.markedForDeletion);
 
-        if (activeImages.length > filesLimit) {
-            return { isValid: false };
+        if (activeImages.length > (filesLimit ?? 0)) {
+            return { isValid: false, fieldStateValue, fieldEntries: [], isValueChanged: false };
         }
 
         // Проверка и сбор новых файлов фотографий
         const newImages = activeImages.filter(img => img.type === 'new');
-        const newImageFiles = [];
+        const newImageFiles: File[] = [];
     
         newImages.forEach(img => {
-            const isValid = validation(img.file, allowedTypes, maxSizeMB);
+            if (!(img.file instanceof File)) return;
+
+            const isValid = typeof validation === 'function'
+                ? validation(img.file, allowedTypes, maxSizeMB)
+                : false;
     
             if (isValid) {
                 newImageFiles.push(img.file);
             } else {
-                invalidNewImages.add(img.previewUrl);
+                invalidNewImageUrls.add(img.previewUrl);
             }
         });
     
-        if (invalidNewImages.size > 0 || (!newImageFiles.length && !optional)) {
-            return { isValid: false };
+        if (invalidNewImageUrls.size > 0 || (!newImageFiles.length && !optional)) {
+            return { isValid: false, fieldStateValue, fieldEntries: [], isValueChanged: false };
         }
     
         // Сбор имён существующих файлов фотографий
         const existingImageFilenamesToDelete = images
             .filter(img => img.type === 'existing' && img.markedForDeletion)
-            .map(img => img.filename);
+            .map(img => img.filename as string);
 
         // Установка полей для удаляемых и новых фотографий
-        const fieldEntries = [
+        const fieldEntries: TFieldEntries = [
             ['imageFilenamesToDelete', existingImageFilenamesToDelete],
-            //...newImageFiles.map(file => ['images', file])
             ['images', newImageFiles]
         ];
 
@@ -503,29 +585,43 @@ export default function ProductForm(
             (typeof oldMainImageIndex === 'number' && newMainImageIndex !== oldMainImageIndex)
         );
     
-        return { isValid: true, fieldStateValue: { files: [] }, fieldEntries, isValueChanged };
+        return { isValid: true, fieldStateValue, fieldEntries, isValueChanged };
     };
 
-    const processGenericField = (config, validation, value) => {
-        const { name, trim, optional, allowEmpty } = config;
+    const processGenericField = (
+        config: TFieldConfig,
+        validation: TValidationRuleType,
+        value: TFieldStateValue
+    ): IProcessFieldResult => {
+        const { name, trim, optional } = config;
+
         const initValue = product?.[name];
-        const normalizedValue = trim ? value.trim() : value;
+        const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
         const fieldStateValue = { value: normalizedValue };
+
         const ruleCheck =
             typeof validation === 'function'
                 ? validation(normalizedValue)
-                : validation.test(normalizedValue);
-    
-        const hasValue = !optional || normalizedValue !== ''; // Все опциональные поля текстовые
-        const isValid = (!hasValue && allowEmpty) || ruleCheck;
-        const fieldEntries = hasValue && isValid ? [[name, normalizedValue]] : [];
-        const isValueChanged = !areGenericFieldValuesEqual(normalizedValue, initValue);
+                : typeof normalizedValue === 'string'
+                    ? validation.test(normalizedValue)
+                    : false;
+
+        const hasValue = normalizedValue !== '';
+        const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
+        const fieldEntries: TFieldEntries = (isValid && (!optional || hasValue))
+            ? [[name, normalizedValue]]
+            : [];
+        const isValueChanged = typeof normalizedValue === 'number' 
+            ? normalizedValue !== Number(initValue) 
+            : normalizedValue !== (initValue ?? '');
     
         return { isValid, fieldStateValue, fieldEntries, isValueChanged };
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<TValidFieldName, TProductBody> & {
+        invalidNewImageUrls: Set<string>;
+    } => {
+        const result = (Object.entries(fieldsState) as [TValidFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const config = fieldConfigMap[name];
                 const validation = validationRules.product[name];
@@ -537,7 +633,7 @@ export default function ProductForm(
 
                 // Валидация значений полей, формирование данных на отправку и проверка на изменение
                 const processFieldResult = name === 'images'
-                    ? processImagesField(config, validation, acc.invalidNewImages)
+                    ? processImagesField(config, validation, acc.invalidNewImageUrls)
                     : processGenericField(config, validation, value);
 
                 const { isValid, fieldStateValue, fieldEntries, isValueChanged } = processFieldResult;
@@ -554,7 +650,7 @@ export default function ProductForm(
                 if (isValid) {
                     // Сбор данных для отправки
                     fieldEntries.forEach(([key, val]) => {
-                        acc.formFields[key] = val;
+                        (acc.formFields as TFormFields)[key] = val;
                     });
                         
                     // Запоминание изменённого поля
@@ -567,28 +663,28 @@ export default function ProductForm(
             },
             {
                 allValid: true,
-                invalidNewImages: new Set(),
-                fieldsStateUpdates: {},
-                formFields: {},
-                changedFields: []
+                invalidNewImageUrls: new Set() as Set<string>,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as TProductBody,
+                changedFields: [] as TValidFieldName[]
             }
         );
 
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
         
         const {
             allValid,
-            invalidNewImages,
+            invalidNewImageUrls,
             fieldsStateUpdates,
             formFields,
-            changedFields
+            changedFields = []
         } = processFormFields();
 
-        if (invalidNewImages.size) flagInvalidNewImages(invalidNewImages);
+        if (invalidNewImageUrls.size > 0) flagInvalidNewImages(invalidNewImageUrls);
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
         if (!allValid) {
@@ -597,17 +693,21 @@ export default function ProductForm(
             return setSubmitStatus(FORM_STATUS.UNCHANGED);
         }
 
-        const performFormSubmission = async () => {
+        const performFormSubmission = async (): Promise<
+            TProductPerformFormSubmissionResult | undefined
+        > => {
             setSubmitStatus(FORM_STATUS.SENDING);
             dispatch(setNavigationLock(true));
 
-            const requestThunk = isEditMode
-                ? sendProductUpdateRequest(product.id, formFields)
-                : sendProductCreateRequest(formFields);
+            const requestThunk = (
+                isEditMode && product
+                    ? sendProductUpdateRequest(product.id, formFields as TProductUpdateBodyClient)
+                    : sendProductCreateRequest(formFields as TProductCreateBodyClient)
+            ) as TAppThunk<Promise<TProductCreateResponse | TProductUpdateResponse>> ;
             const responseData = await dispatch(requestThunk);
             if (isUnmountedRef.current) return;
 
-            const { status, message, fieldErrors, newProduct, updatedProduct } = responseData;
+            const { status, message } = responseData;
             const LOG_CTX = `PRODUCT: ${isEditMode ? 'UPDATE SINGLE' : 'CREATE'}`;
 
             switch (status) {
@@ -625,6 +725,7 @@ export default function ProductForm(
                     break;
 
                 case FORM_STATUS.INVALID: {
+                    const { fieldErrors } = responseData;
                     logRequestStatus({
                         context: LOG_CTX,
                         status,
@@ -632,10 +733,13 @@ export default function ProductForm(
                         details: fieldErrors
                     });
     
-                    const fieldsStateUpdates = {};
-                    Object.entries(fieldErrors).forEach(([name, error]) => {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                    });
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
+                    (Object.entries(fieldErrors) as [TValidFieldName, string][])
+                        .forEach(([name, error]) => {
+                            if (name in fieldConfigMap) {
+                                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                            }
+                        });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
                     setSubmitStatus(status);
@@ -646,7 +750,7 @@ export default function ProductForm(
                 case FORM_STATUS.SUCCESS: {
                     logRequestStatus({ context: LOG_CTX, status, message });
 
-                    const fieldsStateUpdates = {};
+                    const fieldsStateUpdates: TFieldsStateUpdates = {};
                     changedFields.forEach(name => {
                         fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                     });
@@ -654,28 +758,34 @@ export default function ProductForm(
 
                     setSubmitStatus(status);
 
-                    await new Promise(resolve => setTimeout(() => {
-                        if (isUnmountedRef.current) return;
+                    await new Promise<void>(resolve => {
+                        setTimeout(() => {
+                            if (isUnmountedRef.current) return;
 
-                        // Очистка состояния фотографий
-                        revokeNewImageObjectUrls(imagesRef.current);
-                        setImages([]);
+                            // Очистка состояния фотографий
+                            revokeNewImageObjectUrls(imagesRef.current);
+                            setImages([]);
 
-                        // Очистка всех полей формы в режиме создания
-                        // (при редактировании компонент формы размонтируется из-за обновления таблицы)
-                        if (!isEditMode) {
-                            dispatchFieldsState({
-                                type: 'RESET',
-                                payload: initFieldsStateReducer(fieldConfigs)
-                            });
-                        }
+                            // Очистка всех полей формы в режиме создания
+                            // (при редактировании компонента формы размонтируется из-за обновления таблицы)
+                            if (!isEditMode) {
+                                dispatchFieldsState({
+                                    type: 'RESET',
+                                    payload: createInitialFieldsState<TValidFieldName>(fieldConfigs)
+                                });
+                            }
 
-                        setSubmitStatus(FORM_STATUS.DEFAULT);
-                        dispatch(setNavigationLock(false));
-                        resolve();
-                    }, SUCCESS_DELAY));
+                            setSubmitStatus(FORM_STATUS.DEFAULT);
+                            dispatch(setNavigationLock(false));
+                            resolve();
+                        }, SUCCESS_DELAY)
+                    });
 
-                    const affected = isEditMode ? updatedProduct : newProduct;
+                    const affected = isEditMode && 'updatedProduct' in responseData
+                        ? responseData.updatedProduct
+                        : 'newProduct' in responseData
+                            ? responseData.newProduct
+                            : null;
                     return { status, affectedProducts: affected ? [affected] : [] };
                 }
             
@@ -703,7 +813,10 @@ export default function ProductForm(
     // Сброс состояния полей при изменении их конфигов
     useEffect(() => {
         setSubmitStatus(FORM_STATUS.DEFAULT);
-        dispatchFieldsState({ type: 'RESET', payload: initFieldsStateReducer(fieldConfigs) });
+        dispatchFieldsState({
+            type: 'RESET',
+            payload: createInitialFieldsState<TValidFieldName>(fieldConfigs)
+        });
     }, [fieldConfigs]);
 
     // Сброс статуса формы при отсутствии ошибок полей
@@ -738,34 +851,34 @@ export default function ProductForm(
                     trim,
                     optional
                 }) => {
+                    const fieldId = `product-${product?.id ?? 'create'}-${toKebabCase(name)}`;
                     const fieldInfoClass = getFieldInfoClass(elem, type, name);
-                    const fieldId = `product-${isEditMode ? product.id : 'create'}-${toKebabCase(name)}`;
                     const isImages = name === 'images';
-                    
-                    const elemProps = {
+
+                    const baseElemProps: TFieldElemProps = {
                         id: fieldId,
                         name,
-                        ref: isImages ? imagesFileInputRef : undefined,
-                        type,
-                        placeholder,
-                        value: fieldsState[name]?.value,
-                        min,
-                        max,
-                        step,
-                        multiple,
-                        accept,
                         autoComplete,
-                        style: isImages ? { display: 'none' } : undefined,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
-                        disabled: isFormLocked
+                        disabled: isFormLocked,
                     };
+    
+                    const fieldElem = (() => {
+                        if (elem === 'textarea') return (
+                            <textarea
+                                {...baseElemProps}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                            >
+                            </textarea>
+                        );
 
-                    let fieldElem;
-
-                    if (elem === 'select') {
-                        fieldElem = (
-                            <select {...elemProps}>
+                        if (elem === 'select') return (
+                            <select
+                                {...baseElemProps}
+                                value={getStringValue(fieldsState[name]?.value)}
+                            >
                                 {options.map((option, idx) => (
                                     <option key={`${idx}-${option.value}`} value={option.value}>
                                         {option.label}
@@ -773,18 +886,32 @@ export default function ProductForm(
                                 ))}
                             </select>
                         );
-                    } else if (elem === 'checkbox') {
-                        fieldElem = (
+                        
+                        if (elem === 'checkbox') return (
                             <DesignedCheckbox
-                                {...elemProps}
+                                {...baseElemProps}
                                 label={checkboxLabel}
-                                checked={fieldsState[name]?.value}
-                                value={undefined}
+                                checked={getBoolValue(fieldsState[name]?.value)}
                             />
                         );
-                    } else {
-                        fieldElem = React.createElement(elem, elemProps);
-                    }
+                    
+                        return (
+                            <input
+                                {...baseElemProps}
+                                ref={isImages ? imagesFileInputRef : undefined}
+                                style={isImages ? { display: 'none' } : undefined}
+                                type={type}
+                                min={min}
+                                max={max}
+                                step={step}
+                                multiple={multiple}
+                                accept={accept}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                            />
+                        );
+                    })();
 
                     return (
                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
@@ -802,7 +929,7 @@ export default function ProductForm(
                                         onZoom={handleThumbImageClick}
                                         onMainSelect={setMainImage}
                                         onDeleteToggle={toggleImageDeletion}
-                                        fileInputRef={imagesFileInputRef}
+                                        onAddFilesClick={handleAddFilesClick}
                                         onFilesDropped={handleFilesDrop}
                                         uiBlocked={isFormLocked}
                                     />

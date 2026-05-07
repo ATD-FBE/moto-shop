@@ -20,7 +20,7 @@ import type {
     ChangeEvent,
     SubmitEvent
 } from 'react';
-import type { TFieldValue, IFieldState, IProcessSingleFormFieldResult } from '@/types/index.js';
+import type { TFieldStateValue, IFieldState, IProcessSingleFormFieldResult } from '@/types/index.js';
 import type { TEntityField, ICustomerDiscountUpdateBody } from '@shared/types/index.js';
 
 //////////////////////////
@@ -49,7 +49,7 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'customer'>>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
-    [K in keyof ICustomerDiscountUpdateBody]: TFieldValue;
+    [K in keyof ICustomerDiscountUpdateBody]: TFieldStateValue;
 };
 
 /////////////////////
@@ -114,14 +114,13 @@ export default function CustomerDiscountForm({
         TValidFieldName,
         ICustomerDiscountUpdateBody
     > => {
-        let allValid = true;
         const fieldsStateUpdates: TFieldsStateUpdates = {};
         const formFields = {} as ICustomerDiscountUpdateBody;
 
         const validation = validationRules.customer[fieldName];
         if (!validation) {
             console.error(`Отсутствует правило валидации для поля: ${fieldName}`);
-            return { allValid: false, fieldsStateUpdates, formFields };
+            return { isValid: false, fieldsStateUpdates, formFields };
         }
 
         const defaultValue = fieldConfig?.defaultValue;
@@ -139,21 +138,19 @@ export default function CustomerDiscountForm({
             if (fieldValue !== defaultValue) {
                 (formFields as TFormFields)[fieldName] = fieldValue;
             }
-        } else {
-            allValid = false;
         }
 
-        return { allValid, fieldsStateUpdates, formFields };
+        return { isValid, fieldsStateUpdates, formFields };
     };
 
     const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
-        const { allValid, fieldsStateUpdates, formFields } = processFormFields();
+        const { isValid, fieldsStateUpdates, formFields } = processFormFields();
 
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
-        if (!allValid || !Object.keys(formFields).length) return;
+        if (!isValid || !Object.keys(formFields).length) return;
 
         setUpdating(true);
 

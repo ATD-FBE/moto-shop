@@ -45,7 +45,8 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldValue,
+    TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
@@ -68,7 +69,7 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'notification'>>;
 
 // Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldApiValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 interface INotificationEditorProps {
@@ -78,17 +79,17 @@ interface INotificationEditorProps {
     setSelectedCustomerIds: Dispatch<SetStateAction<Set<string>>>
 }
 
-type TFieldEntries = [keyof INotificationBody, TFieldValue][];
+type TFieldEntries = [keyof INotificationBody, TFieldApiValue][];
 
 interface IProcessFieldResult {
     isValid: boolean;
-    normalizedValue: TFieldValue;
+    normalizedValue: TFieldStateValue;
     fieldEntries: TFieldEntries;
     isValueChanged: boolean;
 }
 
 type TFormFields = {
-    [K in keyof INotificationBody]: TFieldValue;
+    [K in keyof INotificationBody]: TFieldApiValue;
 };
 
 type TFieldElemProps =
@@ -141,8 +142,8 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     return { submitStates, lockedStatuses };
 };
 
-const getFieldConfigs = (totalSelectedCustomers: number) =>
-    extendFieldConfigs([
+const getFieldConfigs = (totalSelectedCustomers: number) => {
+    const fieldConfigs = [
         {
             name: 'recipients',
             label: `Клиенты-получатели (${totalSelectedCustomers})`,
@@ -178,7 +179,10 @@ const getFieldConfigs = (totalSelectedCustomers: number) =>
             autoComplete: 'on',
             trim: true
         }
-    ] as const);
+    ] as const;
+
+    return extendFieldConfigs(fieldConfigs);
+}
 
 export default function NotificationEditor({
     notificationId,
@@ -305,8 +309,8 @@ export default function NotificationEditor({
     const processGenericField = (
         config: TFieldConfig,
         validation: TValidationRuleType,
-        value: TFieldValue,
-        initValue: TFieldValue
+        value: TFieldStateValue,
+        initValue: TFieldApiValue
     ): IProcessFieldResult => {
         const { name, trim } = config;
         const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
@@ -334,8 +338,8 @@ export default function NotificationEditor({
                 const isRecipientsField =
                     name === 'recipients' &&
                     typeof value === 'string' &&
-                    Array.isArray(initValue)
-                    && initValue.every(r => typeof r === 'string');
+                    Array.isArray(initValue) &&
+                    initValue.every(r => typeof r === 'string');
     
                 const processFieldResult = isRecipientsField
                     ? processRecipientsField(config, validation, value, initValue)
@@ -393,10 +397,9 @@ export default function NotificationEditor({
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isEditMode && notificationId
-            ? sendNotificationUpdateRequest(notificationId, formFields)
-            : sendNotificationCreateRequest(formFields);
-        const responseData = await dispatch(requestThunk);
+        const responseData = isEditMode && notificationId
+            ? await dispatch(sendNotificationUpdateRequest(notificationId, formFields))
+            : await dispatch(sendNotificationCreateRequest(formFields));
         if (isUnmountedRef.current) return;
 
         const { status, message } = responseData;

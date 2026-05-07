@@ -105,11 +105,12 @@ export type TCategoryPerformFormSubmissionResult =
     | ICategoryPerformFormSubmissionErrorResult
     | ICategoryPerformFormSubmissionSuccessResult;
 
+export type TCategoryPerformFormSubmission = () =>
+    Promise<TCategoryPerformFormSubmissionResult | undefined>;
+
 /// Category Form Props ///
 interface ICategoryBaseFormProps {
-    onSubmit: (
-        performFormSubmission: () => Promise<TCategoryPerformFormSubmissionResult | undefined>
-    ) => Promise<void>;
+    onSubmit: (performFormSubmission: TCategoryPerformFormSubmission) => Promise<void>;
     uiBlocked: boolean;
 }
 export interface ICategoryFormCommonData<T extends string = any> {
@@ -149,7 +150,19 @@ export interface IDeletingProduct {
     name: string;
 }
 
-/// Category Perform Form Submission ///
+export interface IImageUpload {
+    type: 'existing' | 'new';
+    filename?: string;
+    file?: File;
+    title: string;
+    previewUrl: string;
+    originalUrl: string;
+    main: boolean;
+    markedForDeletion: boolean;
+    invalid?: boolean;
+}
+
+/// Product Perform Form Submission ///
 interface IProductPerformFormSubmissionErrorResult {
     status: Exclude<
         TProductCreateResponse['status'] | TProductUpdateResponse['status'],
@@ -163,3 +176,6 @@ interface IProductPerformFormSubmissionSuccessResult {
 export type TProductPerformFormSubmissionResult =
     | IProductPerformFormSubmissionErrorResult
     | IProductPerformFormSubmissionSuccessResult;
+
+export type TProductPerformFormSubmission = () =>
+    Promise<TProductPerformFormSubmissionResult | undefined>;

@@ -3,7 +3,7 @@ import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import ProductForm from './ProductForm.jsx';
 import type { JSX } from 'react';
-import type { TLeafCategories, TProductPerformFormSubmissionResult } from '@/types/index.js';
+import type { TLeafCategories, TProductPerformFormSubmission } from '@/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -12,9 +12,7 @@ import type { TLeafCategories, TProductPerformFormSubmissionResult } from '@/typ
 interface IProductCreationPanelProps {
     uiBlocked: boolean;
     allowedCategories: TLeafCategories;
-    onProcessProduct: (
-        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
-    ) => Promise<void>;
+    onProcessProduct: (performFormSubmission: TProductPerformFormSubmission) => Promise<void>;
 }
 
 /////////////////////

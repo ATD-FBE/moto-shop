@@ -221,9 +221,9 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
         if (
             !typeCheck.objectIdString(productId) ||
-            !typeCheck.number(priceSnapshot) ||
+            !typeCheck.float(priceSnapshot) ||
             priceSnapshot < 0 ||
-            !typeCheck.number(appliedDiscountSnapshot) ||
+            !typeCheck.float(appliedDiscountSnapshot) ||
             appliedDiscountSnapshot < 0 ||
             appliedDiscountSnapshot > 100 ||
             !typeCheck.string(appliedDiscountSourceSnapshot) ||

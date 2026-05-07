@@ -28,8 +28,8 @@ const bodyBaseSchema: IValidationInputSchema<TProductEntity>['body'] = {
     description: { type: 'string', optional: true, match: true, formField: true },
     stock: { type: 'integer', min: 0,  formField: true },
     unit: { type: 'string', enum: PRODUCT_UNITS, formField: true },
-    price: { type: 'number', min: 0,  match: true, formField: true },
-    discount: { type: 'integer', min: 0, max: 100, formField: true },
+    price: { type: 'float', min: 0,  match: true, formField: true },
+    discount: { type: 'float', match: true, min: 0, max: 100, formField: true },
     category: { type: 'objectIdString', formField: true },
     tags: { type: 'string', optional: true, match: true, formField: true },
     isActive: { type: 'boolean', formField: true }
@@ -80,7 +80,7 @@ export const bulkProductUpdateSchema: IValidationInputSchema<TProductEntity> = {
             fields: {
                 brand: { type: 'string', optional: true, match: true, formField: true },
                 unit: { type: 'string', optional: true, enum: PRODUCT_UNITS, formField: true },
-                discount: { type: 'integer', optional: true, min: 0, max: 100, formField: true },
+                discount: { type: 'float', optional: true, min: 0, max: 100, formField: true },
                 category: { type: 'objectIdString', optional: true, formField: true },
                 tags: { type: 'string', optional: true, match: true, formField: true },
                 isActive: { type: 'boolean', optional: true, formField: true }

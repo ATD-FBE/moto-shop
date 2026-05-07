@@ -12,7 +12,7 @@ import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type {
     TDataLoadStatus,
-    TProductPerformFormSubmissionResult,
+    TProductPerformFormSubmission,
     IDeletingProduct
 } from '@/types/index.js';
 import type {
@@ -96,12 +96,12 @@ export default function ProductEditor({
     const productLeafCategories = useMemo(() => getLeafCategories(categoryTree), [categoryTree]);
 
     const processProductForm = async (
-        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
-    ) => {
+        performFormSubmission: TProductPerformFormSubmission
+    ): Promise<void> => {
         setOperationBusy(true);
 
         const responseData = await performFormSubmission();
-        if (isUnmountedRef.current) return;
+        if (isUnmountedRef.current || !responseData) return;
 
         if (
             responseData.status === REQUEST_STATUS.SUCCESS ||

@@ -4,7 +4,6 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFormGroupConfig,
-    TFieldValue,
     IFieldConfig,
     IFieldState,
     TFormState,
@@ -71,13 +70,15 @@ export const createInitialFieldsState = <TFieldName extends string>(
 
         if (fieldsToCopy) {
             fieldsToCopy.forEach(key => {
+                if (state[key] !== undefined) return;
+
                 const val = config[key];
 
                 if (
                     val !== undefined &&
                     (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean')
                 ) {
-                    (state as Partial<Record<typeof key, typeof val>>)[key] = val;
+                    (state as Record<string, unknown>)[key] = val;
                 }
             });
         }
@@ -153,10 +154,10 @@ export const fieldsStateReducer = <TFieldName extends string>(
     }
 };
 
-export const getStringValue = (val?: TFieldValue): string =>
+export const getStringValue = (val?: unknown): string =>
     typeof val === 'string' ? val : String(val ?? '');
 
-export const getBoolValue = (val?: TFieldValue, fallback = false): boolean =>
+export const getBoolValue = (val?: unknown, fallback = false): boolean =>
     typeof val === 'boolean' ? val : fallback;
 
 export const createFormData = (data: any): FormData => {

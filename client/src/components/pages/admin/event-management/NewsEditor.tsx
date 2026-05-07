@@ -35,8 +35,9 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldValue,
+    TFieldStateValue,
     IFieldState,
+    TAppThunk,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type {
@@ -47,7 +48,12 @@ import type {
     InputHTMLAttributes,
     TextareaHTMLAttributes
 } from 'react';
-import type { TEntityField, INewsBody } from '@shared/types/index.js';
+import type {
+    TEntityField,
+    INewsBody,
+    TNewsCreateResponse,
+    TNewsUpdateResponse
+} from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -62,7 +68,7 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'news'>>;
 
 // Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldStateValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 interface INewsEditorProps {
@@ -70,7 +76,7 @@ interface INewsEditorProps {
 }
 
 type TFormFields = {
-    [K in keyof INewsBody]: TFieldValue;
+    [K in keyof INewsBody]: TFieldStateValue;
 };
 
 type TFieldElemProps =
@@ -276,9 +282,11 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isEditMode && newsId
-            ? sendNewsUpdateRequest(newsId, formFields)
-            : sendNewsCreateRequest(formFields);
+        const requestThunk = (
+            isEditMode && newsId
+                ? sendNewsUpdateRequest(newsId, formFields)
+                : sendNewsCreateRequest(formFields)
+        ) as TAppThunk<Promise<TNewsCreateResponse | TNewsUpdateResponse>> ;
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 

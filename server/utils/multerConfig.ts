@@ -157,7 +157,7 @@ const createMulterConfig = ({
         throw new TypeError('allowedMimeTypes должен быть непустым массивом непустых строк');
     }
 
-    if (!typeCheck.number(maxSizeMB) || maxSizeMB <= 0) {
+    if (!typeCheck.float(maxSizeMB) || maxSizeMB <= 0) {
         throw new TypeError('maxSizeMB должен быть конечным числом больше 0');
     }
 

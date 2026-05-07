@@ -6,7 +6,7 @@ import type { JSX, ComponentProps } from 'react';
 import type {
     IDeletingProduct,
     TLeafCategories,
-    TProductPerformFormSubmissionResult
+    TProductPerformFormSubmission
 } from '@/types/index.js';
 
 //////////////////////////
@@ -30,12 +30,8 @@ type TProductTableProps = Pick<TParentProps,
     onConfirmDeletion: (product: IDeletingProduct) => void;
     onConfirmBulkDeletion: (productIds: string[]) => void;
     allowedCategories: TLeafCategories;
-    onProcessProduct: (
-        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
-    ) => Promise<void>;
-    onProcessBulkProduct: (
-        performFormSubmission: () => Promise<TProductPerformFormSubmissionResult>
-    ) => Promise<void>;
+    onProcessProduct: (performFormSubmission: TProductPerformFormSubmission) => Promise<void>;
+    onProcessBulkProduct: (performFormSubmission: TProductPerformFormSubmission) => Promise<void>;
 };
 
 /////////////////////

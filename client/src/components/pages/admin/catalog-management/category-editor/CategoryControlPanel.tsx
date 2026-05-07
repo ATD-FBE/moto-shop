@@ -7,7 +7,7 @@ import { buildSafeParentCategoryMap } from '@/helpers/categoryHelpers.js';
 import { CATEGORY_ROOT_LABEL, CATEGORY_FORM_MODE } from '@/config/constants.js';
 import type { JSX, ComponentProps } from 'react';
 import type {
-    TCategoryPerformFormSubmissionResult,
+    TCategoryPerformFormSubmission,
     TCategoryFormMode,
     ICategoryCreateFormData,
     ICategoryEditFormData
@@ -26,9 +26,7 @@ type TCategoryControlPanelProps = Pick<TParentProps,
     | 'selectedCategoryId'
     | 'uiBlocked'
 > & {
-    processCategoryForm: (
-        performFormSubmission: () => Promise<TCategoryPerformFormSubmissionResult | undefined>
-    ) => Promise<void>;
+    processCategoryForm: (performFormSubmission: TCategoryPerformFormSubmission) => Promise<void>;
     confirmCategoryDeletion: () => void;
 };
 

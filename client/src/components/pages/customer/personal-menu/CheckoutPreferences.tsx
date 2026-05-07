@@ -50,7 +50,7 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldValue,
+    TFieldStateValue,
     IFieldState,
     TFormState,
     IProcessFormFieldsResult
@@ -74,11 +74,11 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'checkout'>>;
 
 // Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldStateValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
-    [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldValue;
+    [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldStateValue;
 };
 
 interface IFormGroupEntriesProps {
@@ -317,10 +317,7 @@ const initialFieldsState = createInitialFieldsState<TValidFieldName>(fieldConfig
 export default function CheckoutPreferences(): JSX.Element {
     const user = useAppSelector(state => state.auth.user);
 
-    const [fieldsState, dispatchFieldsState] = useReducer(
-        fieldsStateReducer<TValidFieldName>,
-        initialFieldsState
-    );
+    const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
 
     const initFieldValuesRef = useRef<TInitFieldValues>({} as TInitFieldValues);
@@ -382,14 +379,14 @@ export default function CheckoutPreferences(): JSX.Element {
         };
 
         const initValues = initFieldValuesRef.current;
-        const initValuesEntries = Object.entries(initValues) as [TValidFieldName, TFieldValue][];
+        const initValuesEntries = Object.entries(initValues) as [TValidFieldName, TFieldStateValue][];
 
         if (initValuesEntries.length > 0) {
             dispatchFieldsState({
                 type: 'UPDATE',
                 payload: Object.fromEntries(
                     initValuesEntries.map(([key, value]) => ([key, { value }]))
-                ) as Record<TValidFieldName, { value: TFieldValue }>
+                ) as Record<TValidFieldName, { value: TFieldStateValue }>
             });
         }
         
@@ -547,7 +544,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 initFieldValuesRef.current = Object.fromEntries(
                     (Object.entries(fieldsState) as [TValidFieldName, IFieldState][])
                         .map(([key, { value }]) => ([key, value]))
-                ) as Record<TValidFieldName, TFieldValue>;
+                ) as Record<TValidFieldName, TFieldStateValue>;
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {

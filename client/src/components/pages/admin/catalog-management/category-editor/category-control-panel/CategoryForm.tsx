@@ -30,7 +30,8 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldValue,
+    TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
     IProcessFormFieldsResult,
     ICategoryFormCommonData,
@@ -70,7 +71,7 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'category'>>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
-    [K in keyof ICategoryBody]: TFieldValue;
+    [K in keyof ICategoryBody]: TFieldApiValue;
 };
 
 type TFieldElemProps =
@@ -125,51 +126,55 @@ const getFieldConfigs = (
     safeParentData: ICategoryEditFormData['safeParentData'] | undefined,
     parentName: string | undefined,
     isRestricted: boolean
-) => extendFieldConfigs([
-    {
-        name: 'name',
-        label: 'Название',
-        elem: 'input',
-        type: 'text',
-        defaultValue: initValues.name,
-        placeholder: isEditMode ? 'Укажите новое название категории' : 'Укажите название категории',
-        autoComplete: 'off',
-        trim: true,
-        lock: isRestricted && !isEditMode
-    },
-    {
-        name: 'slug',
-        label: 'URL-адрес',
-        elem: 'input',
-        type: 'text',
-        defaultValue: initValues.slug,
-        placeholder: isEditMode ? 'Укажите новый адрес категории' : 'Укажите адрес категории',
-        autoComplete: 'off',
-        trim: true,
-        lock: isRestricted
-    },
-    {
-        name: 'order',
-        label: 'Порядковый номер',
-        elem: 'input',
-        type: 'number',
-        defaultValue: (isEditMode ? initValues.order : (defaultOrder ?? 0)) + 1,
-        min: 1,
-        max: maxOrder + 1,
-        lock: isRestricted && !isEditMode
-    },
-    {
-        name: 'parent',
-        label: 'Родительская категория',
-        elem: isEditMode ? 'select' : 'output',
-        options: isEditMode && safeParentData
-            ? safeParentData.selectOptions.map(opt => ({ value: opt.id, label: opt.label }))
-            : [],
-        defaultValue: initValues.parent ?? '',
-        outputValue: !isEditMode ? (parentName ?? NO_VALUE_LABEL) : undefined,
-        lock: isRestricted
-    }
-] as const);
+) => {
+    const fieldConfigs = [
+        {
+            name: 'name',
+            label: 'Название',
+            elem: 'input',
+            type: 'text',
+            defaultValue: initValues.name,
+            placeholder: isEditMode ? 'Укажите новое название категории' : 'Укажите название категории',
+            autoComplete: 'off',
+            trim: true,
+            lock: isRestricted && !isEditMode
+        },
+        {
+            name: 'slug',
+            label: 'URL-адрес',
+            elem: 'input',
+            type: 'text',
+            defaultValue: initValues.slug,
+            placeholder: isEditMode ? 'Укажите новый адрес категории' : 'Укажите адрес категории',
+            autoComplete: 'off',
+            trim: true,
+            lock: isRestricted
+        },
+        {
+            name: 'order',
+            label: 'Порядковый номер',
+            elem: 'input',
+            type: 'number',
+            defaultValue: (isEditMode ? initValues.order : (defaultOrder ?? 0)) + 1,
+            min: 1,
+            max: maxOrder + 1,
+            lock: isRestricted && !isEditMode
+        },
+        {
+            name: 'parent',
+            label: 'Родительская категория',
+            elem: isEditMode ? 'select' : 'output',
+            options: isEditMode && safeParentData
+                ? safeParentData.selectOptions.map(opt => ({ value: opt.id, label: opt.label }))
+                : [],
+            defaultValue: initValues.parent ?? '',
+            outputValue: !isEditMode ? (parentName ?? NO_VALUE_LABEL) : undefined,
+            lock: isRestricted
+        }
+    ] as const;
+
+    return extendFieldConfigs(fieldConfigs);
+}
 
 export default function CategoryForm(props: TCategoryFormProps<TValidFieldName>): JSX.Element {
     const {

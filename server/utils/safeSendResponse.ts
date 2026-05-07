@@ -48,13 +48,13 @@ type TNoBodyStatus = typeof NO_BODY_STATUS_ARRAY[number];
 const NO_BODY_STATUS_ARRAY = [204, 205, 304] as const;
 const NO_BODY_STATUSES = new Set(NO_BODY_STATUS_ARRAY);
 
-// Сигнатура 1: Для ответов БЕЗ тела
+// Перегрузка: Сигнатура 1 - Для ответов БЕЗ тела
 export default function safeSendResponse<T extends TBaseResponse>(
     res: Response<T>,
     statusCode: TNoBodyStatus
 ): void;
 
-// Сигнатура 2: Для ответов С телом
+// Перегрузка: Сигнатура 2 - Для ответов С телом
 export default function safeSendResponse<T extends TBaseResponse, C extends number>(
     res: Response<T>,
     statusCode: C,

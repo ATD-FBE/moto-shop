@@ -50,8 +50,8 @@ export interface IFormGroupConfig {
     readonly fieldConfigs?: readonly IFieldConfig[];
 }
 
-export type TFieldValue = string | string[] | number | boolean | File | File[] | null;
-export type TFormDataFieldValue = string | File | File[];
+export type TFieldStateValue = string | number | boolean;
+export type TFieldApiValue = string | number | boolean | string[] | File | File[] | null | undefined;
 
 export interface IFieldConfig {
     readonly name: string;
@@ -61,11 +61,13 @@ export interface IFieldConfig {
     readonly step?: number;
     readonly min?: number;
     readonly max?: number;
+    readonly multiple?: boolean;
+    readonly filesLimit?: number;
     readonly accept?: string;
-    readonly allowedTypes?: string[];
+    readonly allowedTypes?: readonly string[];
     readonly maxSizeMB?: number;
     readonly options?: readonly { value: string; label: string; }[]
-    readonly defaultValue?: TFieldValue;
+    readonly defaultValue?: TFieldStateValue;
     readonly outputValue?: string;
     readonly placeholder?: string;
     readonly autoComplete?: 'on' | 'off';
@@ -81,14 +83,14 @@ export interface IFieldConfig {
 
 export interface IFieldState {
     enabled?: boolean;
-    value: TFieldValue;
+    value: TFieldStateValue;
     files?: File[];
     uiStatus: TFieldUiStatus | '';
     error: string;
-    savedValue?: TFieldValue;
+    savedValue?: TFieldStateValue;
     saveStatus?: TFieldSaveStatus | '';
     saveStatusMessage?: string;
-    [key: string]: TFieldValue | File[] | undefined; // Добавленные поля конфигов в стейт
+    [key: string]: unknown; // Добавленные поля конфигов в стейт
 }
 
 export type TFormState<TFieldName extends string> = Record<TFieldName, IFieldState>;
@@ -113,7 +115,7 @@ export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> 
 }
 
 export interface IProcessSingleFormFieldResult<TFieldName extends string, TFormBody> {
-    allValid: boolean;
+    isValid: boolean;
     fieldsStateUpdates: Partial<Record<TFieldName, Partial<IFieldState>>>;
     formFields: TFormBody;
 }

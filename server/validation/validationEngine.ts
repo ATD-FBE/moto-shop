@@ -42,7 +42,7 @@ const BASE_QUERY_VALIDATION_SCHEMA: Record<string, IValidationSchema> = {
 const baseTypeChecks: TBaseTypeChecks = {
     string: (val: unknown): val is string => typeof val === 'string',
 
-    number: (val: unknown): val is number => typeof val === 'number' && isFinite(val),
+    float: (val: unknown): val is number => typeof val === 'number' && isFinite(val),
 
     integer: (val: unknown): val is number => typeof val === 'number' && Number.isInteger(val),
 
@@ -337,8 +337,8 @@ export const buildQueryValidationSchema = (
     filterOptions.forEach(option => {
         switch (option.type) {
             case 'number':
-                querySchema[option.minParamName] = { type: 'number', optional: true };
-                querySchema[option.maxParamName] = { type: 'number', optional: true };
+                querySchema[option.minParamName] = { type: 'float', optional: true };
+                querySchema[option.maxParamName] = { type: 'float', optional: true };
                 break;
 
             case 'date':

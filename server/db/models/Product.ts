@@ -59,7 +59,7 @@ export const ProductSchema = new Schema({
         type: Number,
         required: true,
         min: 0,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
     discount: { // В процентах
         type: Number,

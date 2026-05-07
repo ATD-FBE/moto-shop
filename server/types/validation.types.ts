@@ -1,7 +1,7 @@
 import type { TEntityType, TEntityField } from '@shared/types/index.js';
 
 export type TCheckType =
-    | 'string' | 'number' | 'integer' | 'boolean' | 'emptyableBoolean' | 'date'
+    | 'string' | 'float' | 'integer' | 'boolean' | 'emptyableBoolean' | 'date'
     | 'objectId' | 'objectIdString' | 'nullableObjectId' | 'nullableObjectIdString' | 'array' | 'object'
     | 'file' | 'files';
 

@@ -886,7 +886,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
         orderId: { value: orderId, type: 'objectIdString' },
         action: { value: action, type: 'string' },
         formFields: { value: formFields, type: 'object', optional: true },
-        shippingCost: { value: shippingCost, type: 'number', optional: true, formField: true },
+        shippingCost: { value: shippingCost, type: 'float', optional: true, formField: true },
         cancellationReason: { value: cancellationReason, type: 'string', optional: true, formField: true }
     };
 

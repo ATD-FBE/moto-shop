@@ -324,7 +324,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', formField: true },
         provider: { value: provider, type: 'string', optional: true, formField: true },
-        amount: { value: amount, type: 'number', formField: true },
+        amount: { value: amount, type: 'float', formField: true },
         transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
         markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
         failureReason: { value: failureReason, type: 'string', optional: true, formField: true }
@@ -502,7 +502,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
         transaction: { value: transaction, type: 'object' },
         method: { value: method, type: 'string', formField: true },
         provider: { value: provider, type: 'string', optional: true, formField: true },
-        amount: { value: amount, type: 'number', formField: true },
+        amount: { value: amount, type: 'float', formField: true },
         transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
         markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
         failureReason: { value: failureReason, type: 'string', optional: true, formField: true },
@@ -674,7 +674,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         paymentToken: { value: paymentToken, type: 'string' },
         transaction: { value: transaction, type: 'object' },
         provider: { value: provider, type: 'string', formField: true },
-        amount: { value: amount, type: 'number', formField: true }
+        amount: { value: amount, type: 'float', formField: true }
     };
 
     const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'financials');

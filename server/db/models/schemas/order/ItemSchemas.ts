@@ -69,7 +69,7 @@ export const FinalItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
     appliedDiscount: { // В процентах
         type: Number,
@@ -86,13 +86,13 @@ export const FinalItemSchema = new Schema({
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
     totalPrice: { // finalUnitPrice * quantity
         type: Number,
         min: 0,
         required: true,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
 }, {
     _id: false

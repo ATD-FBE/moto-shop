@@ -12,7 +12,7 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { UNSORTED_CATEGORY_SLUG, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
-import type { TDataLoadStatus, TCategoryPerformFormSubmissionResult } from '@/types/index.js';
+import type { TDataLoadStatus, TCategoryPerformFormSubmission } from '@/types/index.js';
 import type { TCategoryTree, TCategoryMap } from '@shared/types/index.js';
 
 //////////////////////////
@@ -64,7 +64,7 @@ export default function CategoryEditor({
     );
 
     const processCategoryForm = async (
-        performFormSubmission: () => Promise<TCategoryPerformFormSubmissionResult | undefined>
+        performFormSubmission: TCategoryPerformFormSubmission
     ): Promise<void> => {
         setOperationBusy(true);
 

@@ -1,19 +1,32 @@
 import React, { useMemo, useReducer, useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendBulkProductUpdateRequest } from '@/api/productRequests.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    //fieldsStateReducer,
+    getStringValue,
+    getBoolValue
+} from '@/helpers/formHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { logRequestStatus } from '@/helpers/requestLogger.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import { PRODUCT_UNITS } from '@shared/constants.js';
 
 const getSubmitStates = () => {
@@ -186,7 +199,7 @@ export default function BulkProductForm(
     );
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const isFormLocked = lockedStatuses.has(submitStatus) || uiBlocked;
 

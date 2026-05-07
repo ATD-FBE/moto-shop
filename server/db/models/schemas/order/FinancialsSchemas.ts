@@ -29,12 +29,12 @@ export const FinalFinancialsSchema = new Schema({
     totalPaid: { // Агрегируемая сумма поступления всех траншей оплат
         type: Number,
         default: 0,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
     totalRefunded: { // Агрегируемая сумма поступления всех траншей возвратов
         type: Number,
         default: 0,
-        validate: [(val: number): boolean => currencyValidation(String(val))]
+        validate: [currencyValidation, 'Некорректное валютное значение']
     },
     eventHistory: [EventEntrySchema],
     currentOnlineTransaction: {

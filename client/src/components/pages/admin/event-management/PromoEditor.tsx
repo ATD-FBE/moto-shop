@@ -45,16 +45,19 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldValue,
-    TFormDataFieldValue,
+    TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
+    TAppThunk,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type {
     TEntityField,
     TValidationRuleType,
     TPromoCreateBodyClient,
-    TPromoUpdateBodyClient
+    TPromoUpdateBodyClient,
+    TPromoCreateResponse,
+    TPromoUpdateResponse
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -70,7 +73,7 @@ type TFieldName = TFieldConfig['name'];
 type TValidFieldName = Extract<TFieldName, TEntityField<'promotion'>>;
 
 // Вспомогательные типы
-type TInitFieldValues = Record<TValidFieldName, TFieldValue>;
+type TInitFieldValues = Record<TValidFieldName, TFieldApiValue>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 interface IPromoEditorProps {
@@ -78,21 +81,21 @@ interface IPromoEditorProps {
 }
 
 type TPromoBody = TPromoCreateBodyClient | TPromoUpdateBodyClient;
-type TPromoBodyAllKeys = keyof (TPromoCreateBodyClient & TPromoUpdateBodyClient);
-type TFieldEntries = [TPromoBodyAllKeys, TFormDataFieldValue][];
+type TPromoCommonBodyKeys = keyof (TPromoCreateBodyClient & TPromoUpdateBodyClient);
+type TFieldEntries = [TPromoCommonBodyKeys, TFieldApiValue][];
 
 interface IProcessFieldResult {
     isValid: boolean;
     fieldStateValue: {
         files?: File[];
-        value?: TFieldValue;
+        value?: TFieldStateValue;
     };
     fieldEntries: TFieldEntries;
     isValueChanged: boolean;
 }
 
 type TFormFields = {
-    [K in TPromoBodyAllKeys]: TFormDataFieldValue;
+    [K in TPromoCommonBodyKeys]: TFieldApiValue;
 };
 
 type TFieldElemProps =
@@ -222,7 +225,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
         initFieldValuesRef.current = {
             title,
-            image: image ?? null, // URL или undefined
+            image, // URL или undefined
             description,
             startDate: formattedStartDate,
             endDate: formattedEndDate
@@ -297,7 +300,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         config: TFieldConfig,
         validation: TValidationRuleType,
         files: File[] = [],
-        initValue: TFieldValue,
+        initValue: TFieldApiValue,
         shouldRemoveImage: boolean
     ): IProcessFieldResult => {
         const { name, optional, allowedTypes, maxSizeMB } = config;
@@ -341,22 +344,22 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
     const processGenericField = (
         config: TFieldConfig,
         validation: TValidationRuleType,
-        value: TFieldValue,
-        initValue: TFieldValue
+        value: TFieldStateValue,
+        initValue: TFieldApiValue
     ): IProcessFieldResult => {
         const { name, trim, optional } = config;
-        const normalizedValue = typeof value === 'string' && trim ? value.trim() : String(value);
+        const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
         const fieldStateValue = { value: normalizedValue };
-        const ruleCheck = validation instanceof RegExp
+        const ruleCheck = validation instanceof RegExp && typeof normalizedValue === 'string'
             ? validation.test(normalizedValue)
             : false;
 
-        const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
-        const fieldEntries: TFieldEntries =
-            (isValid && (!optional || normalizedValue !== ''))
-                ? [[name, normalizedValue]]
-                : [];
-        const isValueChanged = normalizedValue !== initValue;
+        const hasValue = normalizedValue !== '';
+        const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
+        const fieldEntries: TFieldEntries = (isValid && (!optional || hasValue))
+            ? [[name, normalizedValue]]
+            : [];
+        const isValueChanged = normalizedValue !== (initValue ?? '');
     
         return { isValid, fieldStateValue, fieldEntries, isValueChanged };
     };
@@ -373,7 +376,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                 const config = fieldConfigMap[name] ?? {};
                 const initValue = initFieldValuesRef.current[name];
         
-                let processFieldResult = name === 'image'
+                const processFieldResult = name === 'image'
                     ? processImageField(config, validation, files, initValue, shouldRemoveImage)
                     : processGenericField(config, validation, value, initValue);
         
@@ -426,9 +429,11 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isEditMode && promoId
-            ? sendPromoUpdateRequest(promoId, formFields)
-            : sendPromoCreateRequest(formFields);
+        const requestThunk = (
+            isEditMode && promoId
+                ? sendPromoUpdateRequest(promoId, formFields as TPromoUpdateBodyClient)
+                : sendPromoCreateRequest(formFields as TPromoCreateBodyClient)
+        ) as TAppThunk<Promise<TPromoCreateResponse | TPromoUpdateResponse>> ;
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
@@ -537,10 +542,10 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                             id: fieldId,
                             name,
                             type,
-                            placeholder,
-                            value: getStringValue(fieldsState[name]?.value),
                             min: name === 'endDate' ? String(fieldsState.startDate.value) : undefined,
                             accept,
+                            placeholder,
+                            value: getStringValue(fieldsState[name]?.value),
                             autoComplete,
                             onChange: handleFieldChange,
                             onBlur: trim ? handleTrimmedFieldBlur : undefined,

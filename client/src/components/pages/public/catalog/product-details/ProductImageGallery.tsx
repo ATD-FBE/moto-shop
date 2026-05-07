@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import ImageSlider from './product-image-gallery/ImageSlider.jsx';
-import ImageThumbnails from './product-image-gallery/ImageThumbnails.js';
+import ImageThumbnails from './product-image-gallery/ImageThumbnails.jsx';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
 import {
     DATA_LOAD_STATUS,

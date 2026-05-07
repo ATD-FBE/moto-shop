@@ -31,7 +31,7 @@ export const EventEntrySchema = new Schema({
             amount: { // Сумма транша/попытки оплаты/возврата
                 type: Number,
                 required: true,
-                validate: [(val: number): boolean => currencyValidation(String(val))]
+                validate: [currencyValidation, 'Некорректное валютное значение']
             },
             provider: { // Банк при переводе/провайдер платёжного шлюза при оплате/возврате картой онлайн
                 type: String,

@@ -61,7 +61,7 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         productId: { value: productId, type: 'objectIdString' },
-        quantity: { value: quantity, type: 'number' }
+        quantity: { value: quantity, type: 'float' }
     };
 
     const { invalidInputPaths } = validateObjectFields(validationConfigMap);
@@ -129,8 +129,8 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
 
     const validationConfigMap = {
         productId: { value: productId, type: 'objectIdString' },
-        quantity: { value: quantity, type: 'number' },
-        position: { value: position, type: 'number' }
+        quantity: { value: quantity, type: 'float' },
+        position: { value: position, type: 'float' }
     };
 
     const { invalidInputPaths } = validateObjectFields(validationConfigMap);

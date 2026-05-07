@@ -11,7 +11,6 @@ import {
     CARD_ONLINE_PROVIDER
 } from './constants.js';
 import type {
-    TAllowedImageMimeType,
     TEntityType,
     TValidationRuleType,
     TFieldErrorMessages
@@ -23,14 +22,15 @@ export const emailValidation = /^[a-zA-Z0-9]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?@[a-zA-
 export const passwordValidation = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9@#$%^&*!?-]{8,30}$/;
 export const adminRegCodeValidation = /^[a-zA-Z0-9@#$%^&*!?-]{1,30}$/;
 export const textValidation = /\S+/;
-export const naturalValidation = /^\d+$/;
-export const decimalValidation = /^\d+(\.\d+)?$/;
-export const currencySignedValidation = /^-?\d+(?:\.\d{1,2})?$/;
 export const dateValidation = /^\d{4}-\d{2}-\d{2}$/;
 export const slugValidation = /^[a-z0-9_-]{2,}$/;
 export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 export const phoneValidation = /^(\+7|8)\d{10}$/;
 export const cvcValidation = /^\d{3,4}$/;
+
+export const naturalValidation = (val: unknown) => /^\d+$/.test(String(val));
+
+export const decimalValidation = (val: unknown) => /^\d+(\.\d+)?$/.test(String(val));
 
 export const currencyValidation = (val: unknown) => /^\d+(?:\.\d{1,2})?$/.test(String(val));
 
@@ -40,8 +40,8 @@ export const booleanRequiredValidation = (val: unknown): boolean => val === true
 
 export const imageValidation = (
     file: File,
-    allowedTypes: TAllowedImageMimeType[],
-    maxSizeMB: number
+    allowedTypes: string[] = [],
+    maxSizeMB: number = 0
 ): boolean => {
     const allowedTypesRegex = new RegExp(allowedTypes.join('|'));
 
@@ -57,10 +57,8 @@ export const productUnitValidation = (val: unknown): boolean =>
     typeof val === 'string' && PRODUCT_UNITS.some(unit => unit === val);
 
 export const discountValidation = (val: unknown): boolean => {
-    if (typeof val !== 'string' && typeof val !== 'number') return false;
-    
-    const num = typeof val === 'string' ? Number(val) : val;
-    return val !== '' && Number.isInteger(num) && num >= 0 && num <= 100;
+    if (typeof val !== 'number') return false;
+    return /^\d+(?:\.\d{1})?$/.test(String(val)) && val >= 0 && val <= 100;
 };
 
 export const deliveryMethodValidation = (val: unknown): boolean =>

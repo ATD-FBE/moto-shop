@@ -32,7 +32,7 @@ import type {
     TFormStatus,
     TSubmitStates,
     IFieldState,
-    TFieldValue,
+    TFieldStateValue,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
@@ -53,7 +53,7 @@ type TValidFieldName = Extract<TFieldName, TEntityField<'auth'>>;
 type TFieldsStateUpdates = Partial<Record<TValidFieldName, Partial<IFieldState>>>;
 
 type TFormFields = {
-    [K in keyof IAuthUserUpdateBody]: TFieldValue;
+    [K in keyof IAuthUserUpdateBody]: TFieldStateValue;
 };
 
 /////////////////////

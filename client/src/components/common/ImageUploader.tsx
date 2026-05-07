@@ -1,27 +1,47 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
+import type { JSX, DragEvent } from 'react';
+import { IImageUpload } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IImageUploaderProps {
+    images: IImageUpload[];
+    onZoom: (idx: number) => void;
+    onMainSelect: (targetIdx: number) => void;
+    onDeleteToggle: (targetIdx: number) => void;
+    onFilesDropped: (files: File[]) => void
+    onAddFilesClick: () => void;
+    uiBlocked: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ImageUploader({
     images,
     onZoom,
     onMainSelect,
     onDeleteToggle,
-    fileInputRef,
     onFilesDropped,
+    onAddFilesClick,
     uiBlocked
-}) {
+}: IImageUploaderProps): JSX.Element {
     const [isDragOver, setIsDragOver] = useState(false);
     const dragCounterRef = useRef(0);
 
-    const handleDragEnter = (e) => {
+    const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         dragCounterRef.current += 1;
         setIsDragOver(true);
     };
     
-    const handleDragLeave = (e) => {
+    const handleDragLeave = (e: DragEvent<HTMLDivElement>): void => {
         e.preventDefault();
         dragCounterRef.current -= 1;
         if (!dragCounterRef.current) {
@@ -29,7 +49,7 @@ export default function ImageUploader({
         }
     };
 
-    const handleDrop = (e) => {
+    const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
         e.preventDefault();
         e.stopPropagation();
         if (uiBlocked) return;
@@ -43,7 +63,7 @@ export default function ImageUploader({
         }
     };
 
-    const handleDragOver = (e) => {
+    const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
         e.preventDefault();
         e.stopPropagation();
     };
@@ -55,7 +75,6 @@ export default function ImageUploader({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            disabled={uiBlocked}
         >
             {/* Показ миниатюр */}
             {images.map((img, idx) => (
@@ -102,7 +121,7 @@ export default function ImageUploader({
                 type="button"
                 className={cn('add-thumb-btn', { 'drag-active': isDragOver && !uiBlocked })}
                 aria-label="Добавить фото товара"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={onAddFilesClick}
                 disabled={uiBlocked}
             >
                 <span className="icon">➕</span>
