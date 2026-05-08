@@ -12,17 +12,21 @@ export default function BlockableLink(
     const location = useAppLocation();
 
     const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-        if (!isNavigationLocked) return;
+        if (to === '#') {
+            e.preventDefault();
+        }
 
-        e.preventDefault();
-        console.warn('Навигация заблокирована в данный момент');
-
-        if (
-            lockedRoute &&
-            location.pathname === lockedRoute.path &&
-            !lockedRoute.isCancelFreeze
-        ) {
-            dispatch(setLockedRouteCancelPath(to));
+        if (isNavigationLocked) {
+            e.preventDefault();
+            console.warn('Навигация заблокирована в данный момент');
+    
+            if (
+                lockedRoute &&
+                location.pathname === lockedRoute.path &&
+                !lockedRoute.isCancelFreeze
+            ) {
+                dispatch(setLockedRouteCancelPath(to));
+            }
         }
 
         if (onClick) onClick(e);

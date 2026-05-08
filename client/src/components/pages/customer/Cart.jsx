@@ -323,20 +323,14 @@ export default function Cart() {
     const showWarningCartItems = (e) => {
         e.preventDefault();
 
-        console.log('+ warning 1');
-
         if (!isCartUiBlocked) {
-            console.log('+ warning 2');
             setFilter('warnings');
             document.activeElement.blur(); // Убрать фокус с уже неактивной кнопки-ссылки, если он был
         }
     };
 
     const clearTextSelection = () => {
-        console.log('+ text 1');
-
         if (filter === 'warnings') {
-            console.log('+ text 2');
             window.getSelection()?.removeAllRanges();
         }
     };
@@ -472,7 +466,7 @@ export default function Cart() {
                                     <>
                                         :&nbsp;
                                         <BlockableLink
-                                            href="#"
+                                            to="#"
                                             role="button"
                                             className="clear-filter-btn text-link-btn"
                                             disabled={isCartUiBlocked}
@@ -488,7 +482,7 @@ export default function Cart() {
                             {cartWarningsCount > 0 && !cartLoading && (
                                 <p>
                                     <BlockableLink
-                                        href="#"
+                                        to="#"
                                         role="button"
                                         tabIndex={filter === 'warnings' ? -1 : 0}
                                         className={cn('warning-cart-filter-btn', 'text-link-btn', {
