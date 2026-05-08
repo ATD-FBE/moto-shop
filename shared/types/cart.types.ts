@@ -1,4 +1,5 @@
 import type { TDiscountSource } from './shared.types.js';
+import type { IProductSnapshot } from './product.types.js';
 
 export interface IBaseCartItem {
     id: string;
@@ -14,6 +15,7 @@ export interface ICartItem {
     outOfStock: boolean;
     inactive: boolean;
     deleted: boolean;
+    productSnapshot: IProductSnapshot | null;
 }
 
 export interface ICartItemSnapshot {

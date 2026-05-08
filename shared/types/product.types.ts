@@ -48,9 +48,8 @@ export type TProductImageThumbs = {
 }
 
 export interface IProductSnapshot {
-    id: string;
     name: string;
-    brand?: string | null;
+    brand?: string;
 }
 
 export type TPurchaseProduct = IProduct | IProductSnapshot;
@@ -114,7 +113,7 @@ export type TProductCreateResponse =
     | TFormFieldsErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IProductCreateSuccessData>;
-    
+
 /// Изменение товара ///
 export type TProductUpdateBodyServer = IProductUpdateBodyBase<Express.Multer.File>;
 export type TProductUpdateBodyClient = IProductUpdateBodyBase<File>;

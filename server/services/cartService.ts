@@ -1,8 +1,32 @@
 import { Types } from 'mongoose';
 import Product from '@server/db/models/Product.js';
-import { prepareProduct, prepareCartProductSnapshot } from './productService.js';
-import type { TDbProduct, TDbCartItem, IGuestCart, ICart, IFixedDbCart } from '@server/types/index.js';
-import type { IGuestCartItem } from '@shared/types/index.js';
+import { prepareProduct, prepareProductSnapshot } from './productService.js';
+import type { TDbProduct, TDbCartItem } from '@server/types/index.js';
+import type { IGuestCartItem, ICartItem, IProduct } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface IGuestCart {
+    purchaseProductList: IProduct[];
+    cartItemList: IGuestCartItem[];
+}
+
+export interface ICart {
+    purchaseProductList: IProduct[];
+    cartItemList: ICartItem[];
+}
+
+export interface IFixedDbCart {
+    fixedDbCart: TDbCartItem[];
+    purchaseProductList: IProduct[];
+    cartItemList: ICartItem[];
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<IGuestCart> => {
     const productIds = cartItemList.map(item => item.id);
@@ -55,14 +79,14 @@ export const prepareCart = async (
             const dbProduct = dbProductMap.get(productId);
 
             if (!dbProduct) {
-                acc.purchaseProductList.push(prepareCartProductSnapshot(dbCartItem));
                 acc.cartItemList.push({
                     id: productId,
                     quantity: dbCartItem.quantity,
                     quantityReduced: true,
                     outOfStock: true,
                     inactive: true,
-                    deleted: true
+                    deleted: true,
+                    productSnapshot: prepareProductSnapshot(dbCartItem)
                 });
                 return acc;
             }
@@ -76,7 +100,8 @@ export const prepareCart = async (
                 quantityReduced: checkoutMode ? false : available < dbCartItem.quantity,
                 outOfStock: checkoutMode ? false : available === 0,
                 inactive: checkoutMode ? false : !dbProduct.isActive,
-                deleted: false
+                deleted: false,
+                productSnapshot: prepareProductSnapshot(dbCartItem)
             });
             return acc;
         },
@@ -186,7 +211,8 @@ export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedD
                 quantityReduced: false,
                 outOfStock: false,
                 inactive: false,
-                deleted: false
+                deleted: false,
+                productSnapshot: prepareProductSnapshot(dbCartItem)
             });
             return acc;
         },

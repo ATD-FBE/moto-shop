@@ -337,8 +337,6 @@ export default function BulkProductForm(
             setSubmitStatus(FORM_STATUS.SENDING);
             dispatch(setNavigationLock(true));
 
-            console.log(formFields);
-
             const responseData = await dispatch(sendBulkProductUpdateRequest({ productIds, formFields }));
             if (isUnmountedRef.current) return;
 

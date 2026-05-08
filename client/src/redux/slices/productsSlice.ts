@@ -1,8 +1,20 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IProduct } from '@shared/types/index.js';
 
-const deepEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
 
-const initialState = {
+export interface IProductsState {
+    byId: Record<string, IProduct>;
+    ids: string[];
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const initialState: IProductsState = {
     byId: {},
     ids: []
 };
@@ -11,24 +23,19 @@ const productsSlice = createSlice({
     name: 'products',
     initialState,
     reducers: {
-        upsertProductsInStore: (state, action) => {
+        upsertProductsInStore: (state, action: PayloadAction<IProduct[]>) => {
             const products = action.payload;
         
             products.forEach(product => {
                 const productId = product.id;
                 const existingProduct = state.byId[productId];
         
-                if (!existingProduct) {
-                    state.byId[productId] = { ...product };
-                    state.ids.push(productId);
-                } else {
-                    const isEqual = deepEqual(existingProduct, product);
-                    if (!isEqual) state.byId[productId] = product;
-                }
+                if (!existingProduct) state.ids.push(productId);
+                state.byId[productId] = product;
             });
         },
 
-        removeProductsFromStore: (state, action) => {
+        removeProductsFromStore: (state, action: PayloadAction<string[]>) => {
             const productIds = action.payload;
             const productIdsSet = new Set(productIds);
 
@@ -37,13 +44,15 @@ const productsSlice = createSlice({
         },
 
         removePrivilegedFieldsFromProducts: (state) => {
-            const privilegedFields = ['stock', 'reserved', 'category', 'tags'];
+            const privilegedFields: (keyof IProduct)[] = ['stock', 'reserved', 'category', 'tags'];
             
             state.ids.forEach(id => {
                 const product = state.byId[id];
                 if (!product) return;
                 
-                privilegedFields.forEach(field => delete product[field]);
+                privilegedFields.forEach(field => {
+                    delete product[field];
+                });
             });
         },
 

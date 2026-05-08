@@ -112,10 +112,9 @@ const prepareProductImages = (productId: string, imageFilenames: string[]): IPro
     }));
 };
 
-export const prepareCartProductSnapshot = (dbCartItem: TDbCartItem): IProductSnapshot => ({
-    id: dbCartItem.productId.toString(),
+export const prepareProductSnapshot = (dbCartItem: TDbCartItem): IProductSnapshot => ({
     name: dbCartItem.nameSnapshot,
-    brand: dbCartItem.brandSnapshot
+    brand: dbCartItem.brandSnapshot ?? undefined
 });
 
 export const cleanupBulkProductFiles = (ids: string[], reqCtx: string): void => {

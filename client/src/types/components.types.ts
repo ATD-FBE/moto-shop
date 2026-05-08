@@ -171,7 +171,7 @@ interface IProductPerformFormSubmissionErrorResult {
 }
 interface IProductPerformFormSubmissionSuccessResult {
     status: TSuccessStatus;
-    affectedProducts?: IProduct[];
+    affectedProducts: IProduct[];
 }
 export type TProductPerformFormSubmissionResult =
     | IProductPerformFormSubmissionErrorResult

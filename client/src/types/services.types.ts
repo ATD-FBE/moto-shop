@@ -54,3 +54,12 @@ export interface IOpenImageViewerModalParams {
 export interface TImageViewerModalActions {
     onClose: TModalAction;
 }
+
+////////////
+/// CART ///
+////////////
+
+export interface ICartTotals {
+    rawTotal: number;
+    discountedTotal: number;
+}

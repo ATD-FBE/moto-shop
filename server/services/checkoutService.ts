@@ -3,7 +3,8 @@ import Product from '@server/db/models/Product.js';
 import {
     buildProductInventoryUpdatePipeline,
     applyProductBulkUpdate,
-    prepareProduct
+    prepareProduct,
+    prepareProductSnapshot
 } from './productService.js';
 import { ORDER_RESERVE_BATCH_SIZE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
@@ -151,12 +152,14 @@ export const syncCart = async (
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
-            acc.fixedDbCart.push({
+            const fixedDbCartItem = {
                 productId: productObjectId,
                 quantity: correctedQuantity,
                 nameSnapshot: dbProduct.name,
                 ...(dbProduct.brand && { brandSnapshot: dbProduct.brand }) // Опционально
-            });
+            };
+
+            acc.fixedDbCart.push(fixedDbCartItem);
             acc.fixedDbOrderItems.push({
                 productId: productObjectId,
                 quantity: correctedQuantity,
@@ -172,7 +175,8 @@ export const syncCart = async (
                 quantityReduced: false,
                 outOfStock: false,
                 inactive: false,
-                deleted: false
+                deleted: false,
+                productSnapshot: prepareProductSnapshot(fixedDbCartItem)
             });
             
             return acc;
@@ -266,12 +270,14 @@ export const syncOrderDraft = async (
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
-            acc.fixedDbCart.push({
+            const fixedDbCartItem = {
                 productId: productObjectId,
                 quantity: orderItem.quantity,
                 nameSnapshot: dbProduct.name,
                 ...(dbProduct.brand && { brandSnapshot: dbProduct.brand }) // Опционально
-            });
+            };
+
+            acc.fixedDbCart.push(fixedDbCartItem);
             acc.fixedDbOrderItems.push({
                 productId: productObjectId,
                 quantity: orderItem.quantity,
@@ -293,7 +299,8 @@ export const syncOrderDraft = async (
                 quantityReduced: false,
                 outOfStock: false,
                 inactive: false,
-                deleted: false
+                deleted: false,
+                productSnapshot: prepareProductSnapshot(fixedDbCartItem)
             });
             
             return acc;

@@ -736,6 +736,7 @@ export default function ProductForm(
                     break;
                 }
             
+                case FORM_STATUS.PARTIAL: // Partial нужен для общей типизации c BulkProductForm
                 case FORM_STATUS.SUCCESS: {
                     logRequestStatus({ context: LOG_CTX, status, message });
 

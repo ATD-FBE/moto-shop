@@ -6,7 +6,7 @@ import type {
     TSuccessResponse
 } from './apiResponse.types.js';
 import type { IGuestCartItem, ICartItem } from './cart.types.js';
-import type { TPurchaseProduct } from './product.types.js';
+import type { IProduct } from './product.types.js';
 import type {
     TRegisteredUserRole,
     TFieldErrors,
@@ -27,7 +27,7 @@ export interface IUser {
 }
 export interface ISession {
     user: IUser;
-    purchaseProductList?: TPurchaseProduct[];
+    purchaseProductList?: IProduct[];
     cartItemList?: ICartItem[];
     cartWasMerged?: boolean;
     orderDraftId?: string | null;

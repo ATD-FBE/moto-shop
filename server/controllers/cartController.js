@@ -113,10 +113,6 @@ export const handleCartItemUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Количество товара ${prodLbl} в корзине изменено` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
@@ -184,10 +180,6 @@ export const handleCartItemRestoreRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Товар ${prodLbl} успешно восстановлен в корзине` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

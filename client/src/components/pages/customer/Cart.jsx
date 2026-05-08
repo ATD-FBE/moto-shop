@@ -94,7 +94,7 @@ export default function Cart() {
         let warningsCount = 0;
 
         const filteredCartItemIds = cartItemList.reduce((acc, cartItem) => {
-            const product = productMap[cartItem.id];
+            const product = productMap[cartItem.id] ?? cartItem.productSnapshot;
             if (!product) return acc;
 
             // Фильтрация по поиску
@@ -108,10 +108,10 @@ export default function Cart() {
     
             // Фильтрация по проблемным товарам
             const isWarning =
-                cartItem.deleted ||
-                cartItem.inactive ||
+                cartItem.quantityReduced ||
                 cartItem.outOfStock ||
-                cartItem.quantityReduced;
+                cartItem.inactive ||
+                cartItem.deleted;
             if (isWarning) warningsCount++;
     
             const matchesFilter = filter === 'warnings' ? isWarning : true;
@@ -323,14 +323,20 @@ export default function Cart() {
     const showWarningCartItems = (e) => {
         e.preventDefault();
 
+        console.log('+ warning 1');
+
         if (!isCartUiBlocked) {
+            console.log('+ warning 2');
             setFilter('warnings');
             document.activeElement.blur(); // Убрать фокус с уже неактивной кнопки-ссылки, если он был
         }
     };
 
     const clearTextSelection = () => {
+        console.log('+ text 1');
+
         if (filter === 'warnings') {
+            console.log('+ text 2');
             window.getSelection()?.removeAllRanges();
         }
     };
@@ -683,7 +689,7 @@ function CartItemList({
         <ul className="cart-item-list">
             {cartItemList.map((cartItem, idx) => {
                 const productId = cartItem.id;
-                const product = productMap[productId];
+                const product = productMap[productId] ?? cartItem.productSnapshot;
                 if (!product) return null;
 
                 return (

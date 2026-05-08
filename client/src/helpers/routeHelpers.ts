@@ -149,7 +149,7 @@ export const parseRouteParams = (
         const parts = rawValue.split(schema.split);
 
         schema.map.forEach((key, idx) => {
-            result[key] = parts[idx];
+            result[key] = parts[idx] || undefined;
         });
     }
 

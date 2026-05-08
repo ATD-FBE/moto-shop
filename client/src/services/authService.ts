@@ -22,14 +22,14 @@ import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
 import type { TAppThunk, IOpenAlertModalParams } from '@/types/index.js';
-import type { IUser, TPurchaseProduct, ICartItem } from '@shared/types/index.js';
+import type { IUser, IProduct, ICartItem } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
 interface IInitCustomerSessionParams {
-    purchaseProductList?: TPurchaseProduct[];
+    purchaseProductList?: IProduct[];
     cartItemList?: ICartItem[];
     customerDiscount?: number;
     orderDraftId?: string | null;

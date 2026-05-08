@@ -2,65 +2,87 @@ import { updateCustomerDiscount } from '@/redux/slices/authSlice.js';
 import { setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/redux/slices/cartSlice.js';
 import { upsertProductsInStore } from '@/redux/slices/productsSlice.js';
 import { saveGuestCartToLocalStorage } from '@/services/guestCartService.js';
+import type { TAppThunk, TRootState, ICartTotals } from '@/types/index.js';
+import type { IBaseCartItem, ICartItem, IProduct } from '@shared/types/index.js';
 
-export const setCartItem = (cartItem, isGuestCart = false) => (dispatch, getState) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICartProductDataEntry {
+    price: number;
+    discount: number;
+    quantity: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export const setCartItem = (
+    cartItem: IBaseCartItem,
+    isGuestCart: boolean = false
+): TAppThunk<void> => (dispatch, getState) => {
     dispatch(upsertCartItem(cartItem));
-    if (isGuestCart) saveGuestCart(getState().cart);
+    if (isGuestCart) saveGuestCart(getState);
 };
 
-export const unsetCartItem = (productId, isGuestCart = false) => (dispatch, getState) => {
+export const unsetCartItem = (
+    productId: string,
+    isGuestCart: boolean = false
+): TAppThunk<void> => (dispatch, getState) => {
     dispatch(removeCartItem(productId));
-    if (isGuestCart) saveGuestCart(getState().cart);
+    if (isGuestCart) saveGuestCart(getState);
 };
 
-export const refreshCartTotals = () => (dispatch, getState) => {
+export const refreshCartTotals = (): TAppThunk<void> => (dispatch, getState) => {
     const state = getState();
-    const cartItemList = state.cart.ids.map(id => state.cart.byId[id]);
+    const cartItemList = getCartItemList(getState);
     const productMap = state.products.byId;
     const customerDiscount = state.auth.user?.discount ?? 0;
 
     const cartProductData = buildCartProductData(cartItemList, productMap);
-    const { rawTotal, discountedTotal } = calculateCartTotals(cartProductData, customerDiscount);
+    const cartTotals = calculateCartTotals(cartProductData, customerDiscount);
 
-    dispatch(updateCartTotals({ rawTotal, discountedTotal }));
+    dispatch(updateCartTotals(cartTotals));
 };
 
-export const applyCartState = (purchaseProductList, cartItemList, customerDiscount = 0) =>
-    (dispatch) => {
-        dispatch(upsertProductsInStore(purchaseProductList)); // До обновления сумм!
-        dispatch(setCart(cartItemList)); // До обновления сумм!
-        dispatch(updateCustomerDiscount(customerDiscount)); // До обновления сумм!
-        dispatch(refreshCartTotals());
-    };
+export const applyCartState = (
+    purchaseProductList: IProduct[],
+    cartItemList: ICartItem[],
+    customerDiscount: number = 0
+): TAppThunk<void> => (dispatch) => {
+    dispatch(upsertProductsInStore(purchaseProductList)); // До обновления сумм!
+    dispatch(setCart(cartItemList)); // До обновления сумм!
+    dispatch(updateCustomerDiscount(customerDiscount)); // До обновления сумм!
+    dispatch(refreshCartTotals());
+};
 
-export const reconcileCartWithProducts = (productList) => (dispatch, getState) => {
+export const reconcileCartWithProducts = (
+    productList: IProduct[]
+): TAppThunk<void> => (dispatch, getState) => {
     const state = getState();
-    const cartItemList = state.cart.ids.map(id => state.cart.byId[id]);
+    const cartItemList = getCartItemList(getState);
     const isGuestCart = !state.auth.isAuthenticated;
     const oldProductMap = state.products.byId;
     const newProductMap = new Map(productList.map(prod => [prod.id, prod]));
     let shouldUpdateCart = false;
     let shouldRefreshTotals = false;
 
-    let updatedCartItemList = cartItemList.map(cartItem => {
+    const updatedCartItemList = cartItemList.map(cartItem => {
         const newProduct = newProductMap.get(cartItem.id);
         if (!newProduct) return cartItem;
 
         // Проверка доступности количества и соответствия флагов товаров в корзине
-        let updatedCartItem = null;
+        let updatedCartItem: ICartItem | null = null;
 
         if (isGuestCart) {
-            if (!newProduct.isActive) {
-                updatedCartItem = { guestDeleted: true };
+            if (!newProduct.isActive || newProduct.available === 0) {
+                shouldUpdateCart = true;
                 shouldRefreshTotals = true;
+                return null;
             } else if (newProduct.available < cartItem.quantity) {
-                if (newProduct.available > 0) {
-                    updatedCartItem = { ...cartItem, quantity: newProduct.available };
-                } else {
-                    updatedCartItem = { guestDeleted: true };
-                }
-                
-                shouldRefreshTotals = true;
+                updatedCartItem = { ...cartItem, quantity: newProduct.available };
             }
         } else {
             if (newProduct.available < cartItem.quantity) {
@@ -85,6 +107,7 @@ export const reconcileCartWithProducts = (productList) => (dispatch, getState) =
             }
         }
 
+
         if (updatedCartItem) shouldUpdateCart = true;
 
         // Проверка изменения цены или скидки
@@ -100,25 +123,32 @@ export const reconcileCartWithProducts = (productList) => (dispatch, getState) =
         }
     
         return updatedCartItem || cartItem;
-    });
+    }).filter((item): item is ICartItem => item !== null);
 
     dispatch(upsertProductsInStore(productList)); // До обновления сумм!
     if (shouldUpdateCart) {
-        if (isGuestCart) {
-            updatedCartItemList = updatedCartItemList.filter(item => !item.guestDeleted);
-            saveGuestCartToLocalStorage(updatedCartItemList);
-        }
+        if (isGuestCart) saveGuestCartToLocalStorage(updatedCartItemList);
         dispatch(setCart(updatedCartItemList)); // До обновления сумм!
     }
     if (shouldRefreshTotals) dispatch(refreshCartTotals());
 };
 
-const saveGuestCart = (cartState) => {
-    const cartItemList = cartState.ids.map(id => cartState.byId[id]);
+const saveGuestCart = (getState: () => TRootState): void => {
+    const cartItemList = getCartItemList(getState);
     saveGuestCartToLocalStorage(cartItemList);
 };
 
-const buildCartProductData = (cartItemList, productMap) =>
+const getCartItemList = (getState: () => TRootState): ICartItem[] => {
+    const cartState = getState().cart;
+    return cartState.ids
+        .map(id => cartState.byId[id])
+        .filter((item: ICartItem | undefined): item is ICartItem => Boolean(item));
+};
+
+const buildCartProductData = (
+    cartItemList: ICartItem[],
+    productMap: Record<string, IProduct>
+): ICartProductDataEntry[] =>
     cartItemList
         .filter(cartItem => !cartItem.deleted)
         .map(cartItem => {
@@ -131,8 +161,11 @@ const buildCartProductData = (cartItemList, productMap) =>
             };
         });
 
-const calculateCartTotals = (cartProductData, customerDiscount) => {
-    const { rawTotal, discountedTotal } =  cartProductData.reduce((acc, cartItem) => {
+const calculateCartTotals = (
+    cartProductData: ICartProductDataEntry[],
+    customerDiscount: number
+): ICartTotals => {
+    const { rawTotal, discountedTotal } = cartProductData.reduce((acc, cartItem) => {
         const { price, quantity, discount: productDiscount } = cartItem;
         acc.rawTotal += price * quantity;
 

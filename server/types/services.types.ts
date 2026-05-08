@@ -4,8 +4,6 @@ import type { Payment, Refund } from '@a2seven/yoo-checkout';
 import type { TDbCartItem, TDbOrderDraftItem, TDbOrderFinalItem, TDbOrderWithTx } from './db.types.js';
 import type {
     IProduct,
-    TPurchaseProduct,
-    IGuestCartItem,
     ICartItem,
     IOrderAdjustments,
     IOrderDraftItem,
@@ -18,26 +16,6 @@ import type {
     TRefundMethod,
     TBankProvider
 } from '@shared/types/index.js';
-
-////////////////////
-/// CART SERVICE ///
-////////////////////
-
-export interface IGuestCart {
-    purchaseProductList: IProduct[];
-    cartItemList: IGuestCartItem[];
-}
-
-export interface ICart {
-    purchaseProductList: TPurchaseProduct[];
-    cartItemList: ICartItem[];
-}
-
-export interface IFixedDbCart {
-    fixedDbCart: TDbCartItem[];
-    purchaseProductList: IProduct[];
-    cartItemList: ICartItem[];
-}
 
 ////////////////////////
 /// CHECKOUT SERVICE ///

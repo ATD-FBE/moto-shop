@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { ICartTotals } from '@/types/index.js';
 import type { IBaseCartItem, IGuestCartItem, ICartItem } from '@shared/types/index.js';
 
 //////////////////////////
@@ -13,11 +14,6 @@ export interface ICartState {
     isAccessible: boolean;
 }
 
-interface IUpdateCartTotalsPayload {
-    rawTotal: number;
-    discountedTotal: number;
-}
-
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
@@ -26,7 +22,8 @@ const defaultCartItemExtendedParams = {
     quantityReduced: false,
     outOfStock: false,
     inactive: false,
-    deleted: false
+    deleted: false,
+    productSnapshot: null
 } as const;
 
 const initialState: ICartState = {
@@ -76,7 +73,7 @@ const cartSlice = createSlice({
             state.ids = state.ids.filter(id => id !== productId);
         },
 
-        updateCartTotals: (state, action: PayloadAction<IUpdateCartTotalsPayload>) => {
+        updateCartTotals: (state, action: PayloadAction<ICartTotals>) => {
             const { rawTotal, discountedTotal } = action.payload;
 
             state.rawTotal = rawTotal;
