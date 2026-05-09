@@ -17,7 +17,7 @@ import {
     clearLockedRoute
 } from '@/redux/slices/uiSlice.js';
 import { applyCartState } from '@/services/cartService.js';
-import { formatOrderAdjustmentLogs } from '@/services/checkoutService.js';
+import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openConfirmModal, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
@@ -153,19 +153,19 @@ export default function Checkout() {
         if (isUnmountedRef.current) return;
 
         const {
-            status, message, purchaseProductList, cartItemList,
-            customerDiscount, orderAdjustments, orderDraft
+            status, message, orderItemAdjustments, tradeProductList,
+            cartItemList, customerDiscount, orderDraft
         } = responseData;
         logRequestStatus({ context: 'CHECKOUT: LOAD DRAFT', status, message });
 
-        const hasAdjustments = orderAdjustments?.length > 0;
+        const hasAdjustments = orderItemAdjustments?.length > 0;
         const adjustmentsMsg = hasAdjustments
             ? '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                formatOrderAdjustmentLogs(orderAdjustments, productMap)
+                formatCheckoutAdjustmentLogs(orderItemAdjustments)
             : '';
             
         if (hasAdjustments) {
-            dispatch(applyCartState(purchaseProductList, cartItemList, customerDiscount));
+            dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         }
 
         if (status !== FORM_STATUS.SUCCESS) {

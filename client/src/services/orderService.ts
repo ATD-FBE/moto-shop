@@ -8,20 +8,52 @@ import {
     CARD_ONLINE_PROVIDER_OPTIONS,
     FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
+import type {
+    TPaymentMethod,
+    TRefundMethod,
+    TBankProvider,
+    TCardOnlineProvider,
+    IOrderStatusEntry,
+    IOrderStatusEntrySummary,
+    IFinancialsEventEntry,
+    IFinancialsEventEntrySummary,
+    IAuditLogEntry,
+    IProductAdjustment,
+    TDeliveryMethod,
+    IDelivery
+} from '@shared/types/index.js';
 
-const METHOD_MAP = [...PAYMENT_METHOD_OPTIONS, ...REFUND_METHOD_OPTIONS]
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFinancialMethodMap = Record<
+    TPaymentMethod | TRefundMethod,
+    typeof PAYMENT_METHOD_OPTIONS[number] | typeof REFUND_METHOD_OPTIONS[number]
+>;
+
+type TProviderMap = Record<
+    TBankProvider | TCardOnlineProvider,
+    typeof BANK_PROVIDER_OPTIONS[number] | typeof CARD_ONLINE_PROVIDER_OPTIONS[number]
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const FINANCIAL_METHOD_MAP = [...PAYMENT_METHOD_OPTIONS, ...REFUND_METHOD_OPTIONS]
     .reduce((map, opt) => {
         map[opt.value] = opt;
         return map;
-    }, {});
+    }, {} as TFinancialMethodMap);
 
 const PROVIDER_MAP = [...BANK_PROVIDER_OPTIONS, ...CARD_ONLINE_PROVIDER_OPTIONS]
     .reduce((map, opt) => {
         map[opt.value] = opt;
         return map;
-    }, {});
+    }, {} as TProviderMap);
 
-export const formatOrderStatusHistoryLogs = (orderStatusHistory = []) =>
+export const formatOrderStatusHistoryLogs = (orderStatusHistory: IOrderStatusEntry[]): string =>
     orderStatusHistory.reduce((acc, entry) => {
         const { status, isRollback, changes, cancellationReason, changedBy, changedAt } = entry;
         let line = '';
@@ -59,7 +91,7 @@ export const formatOrderStatusHistoryLogs = (orderStatusHistory = []) =>
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatFinancialsEventHistoryLogs = (eventHistory = []) =>
+export const formatFinancialsEventHistoryLogs = (eventHistory: IFinancialsEventEntry[]): string =>
     eventHistory.reduce((acc, entry) => {
         const { eventId, event, action, changedBy, changedAt, voided } = entry;
         let line = '';
@@ -85,13 +117,10 @@ export const formatFinancialsEventHistoryLogs = (eventHistory = []) =>
         line += ` — Событие: [${eventLbl.toUpperCase()}] [ID записи: ${eventId}]`;
 
         // Добавление деталей оплаты/возврата
-        const methodLbl = METHOD_MAP[action.method]?.label ?? action.method;
-        const providerLbl = PROVIDER_MAP[action.provider]?.label ?? action.provider;
-
         const details = [
-            `Способ: ${methodLbl}`,
+            `Способ: ${FINANCIAL_METHOD_MAP[action.method]?.label ?? action.method}`,
             `Сумма: ${formatCurrency(action.amount)} ₽`,
-            ...(action.provider ? [`Провайдер: ${providerLbl}`] : []),
+            ...(action.provider ? [`Провайдер: ${PROVIDER_MAP[action.provider].label ?? '---'}`] : []),
             ...(action.transactionId ? [`ID транзакции: ${action.transactionId}`] : []),
             ...(action.originalPaymentId ? [`ID исходного платежа: ${action.originalPaymentId}`] : []),
             ...(action.failureReason ? [`Причина отказа: "${action.failureReason}"`] : []),
@@ -115,7 +144,7 @@ export const formatFinancialsEventHistoryLogs = (eventHistory = []) =>
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatAuditLogs = (auditLog = []) =>
+export const formatAuditLogs = (auditLog: IAuditLogEntry[]): string =>
     auditLog.reduce((acc, entry) => {
         const { changes, reason, changedBy, changedAt } = entry;
 
@@ -143,14 +172,16 @@ export const formatAuditLogs = (auditLog = []) =>
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatOrderItemsAdjustmentLogs = (orderItemsAdjustments = []) => {
-    const logs = [];
+export const formatOrderAdjustmentLogs = (productAdjustments: IProductAdjustment[]): string => {
+    const logs: string[] = [];
     let num = 0;
 
-    const addLog = (message) => logs.push(`<span className="bold">${++num}.</span> ${message}`);
+    const addLog = (message: string): void => {
+        logs.push(`<span className="bold">${++num}.</span> ${message}`);
+    }
 
-    for (const item of orderItemsAdjustments) {
-        const { id, name, brand, adjustments } = item;
+    for (const prod of productAdjustments) {
+        const { id, name, brand, adjustments } = prod;
         const productTitle = formatProductTitle(name, brand) || `Товар (ID: ${id})`;
         const productTitleHtml = `<span className="cursive underline">"${productTitle}"</span>`;
 
@@ -175,11 +206,17 @@ export const formatOrderItemsAdjustmentLogs = (orderItemsAdjustments = []) => {
     return logs.join(TEXT_LOG_LINE_BREAK);
 };
 
-export const buildCustomerFullName = (firstName, lastName, middleName) =>
-    [lastName, firstName, middleName ?? null].filter(Boolean).join(' ');    
+export const buildCustomerFullName = (
+    firstName: string,
+    lastName: string,
+    middleName?: string
+): string => [lastName, firstName, middleName].filter(Boolean).join(' ');    
 
-export const buildShippingAddressDisplay = (deliveryMethod, shippingAddress) =>
-    deliveryMethod === DELIVERY_METHOD.SELF_PICKUP
+export const buildShippingAddressDisplay = (
+    deliveryMethod: TDeliveryMethod,
+    shippingAddress: IDelivery['shippingAddress']
+): string =>
+    deliveryMethod === DELIVERY_METHOD.SELF_PICKUP || !shippingAddress
         ? NO_VALUE_LABEL
         : [
             shippingAddress.postalCode ?? null,                                    // Опционально
@@ -191,7 +228,7 @@ export const buildShippingAddressDisplay = (deliveryMethod, shippingAddress) =>
             shippingAddress.apartment ? `кв. ${shippingAddress.apartment}` : null  // Опционально
         ].filter(Boolean).join(', ');
 
-export const getShippingCostDisplay = (shippingCost) =>
+export const getShippingCostDisplay = (shippingCost?: number | null): string =>
     shippingCost === undefined
         ? NO_VALUE_LABEL
         : shippingCost === null
@@ -199,7 +236,7 @@ export const getShippingCostDisplay = (shippingCost) =>
             : `${formatCurrency(shippingCost)} руб.`;
 
 
-const formatChangeValue = (val, currency) => {
+const formatChangeValue = (val: unknown, currency?: boolean): string => {
     if (val === null) return '<PENDING>';
     if (val === undefined) return '<UNDEFINED>';
     if (typeof val === 'object') return JSON.stringify(val);

@@ -27,12 +27,12 @@ export interface IUser {
 }
 export interface ISession {
     user: IUser;
-    purchaseProductList?: IProduct[];
+    tradeProductList?: IProduct[];
     cartItemList?: ICartItem[];
     cartWasMerged?: boolean;
     orderDraftId?: string | null;
 }
-export type TAuthSuccessData = ISession & {
+export type TAuthBaseSuccessData = ISession & {
     accessTokenExp: number;
     refreshTokenExp: number;
 };
@@ -51,7 +51,7 @@ export interface IAuthRegistrationBody {
 export type TAuthRegistrationResponse =
     | TFormFieldsErrorResponse<'auth'>
     | TGeneralErrorResponse
-    | TSuccessResponse<TAuthSuccessData>;
+    | TSuccessResponse<TAuthBaseSuccessData>;
 
 /// Авторизация ///
 export interface IAuthLoginBody {
@@ -68,7 +68,7 @@ export type TAuthLoginResponse =
     | TLoginAuthError
     | TFormFieldsErrorResponse<'auth'>
     | TGeneralErrorResponse
-    | TSuccessResponse<TAuthSuccessData>;
+    | TSuccessResponse<TAuthBaseSuccessData>;
 
 /// Изменение данных пользователя ///
 export interface IAuthUserUpdateBody {
@@ -98,7 +98,7 @@ export interface IAuthSessionBody {
 export type TAuthSessionResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
-    | TSuccessResponse<TAuthSuccessData>;
+    | TSuccessResponse<TAuthBaseSuccessData>;
 
 /// Обновление токена доступа ///
 interface IAuthRefreshSuccessData {

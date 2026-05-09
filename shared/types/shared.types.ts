@@ -36,60 +36,6 @@ import {
     ordersFilterOptions
 } from '@shared/filterOptions.js';
 
-///////////////////
-/// DATA CHANGE ///
-///////////////////
-
-export interface IDataChange {
-    field: string;
-    oldValue?: unknown;
-    newValue?: unknown;
-}
-
-/////////////
-/// QUERY ///
-/////////////
-
-export interface IBaseQuery<TSort extends string = string> {
-    page?: number;
-    limit?: number;
-    sort?: TSort | `-${TSort}`;
-    search?: string;
-    timestamp?: number;
-    timeZoneOffset?: number;
-}
-
-export type TFilterParamsClient = Record<string, string>;
-export type TFilterParamsServer = Record<string, string | number | boolean | Date | undefined>;
-
-export type TQuery<TModel extends object, TFilter extends TFilterParamsServer = {}> =
-    IBaseQuery<Extract<keyof TModel, string>> &
-    TFilter;
-
-export type TInferFilterParams<T extends TFilterOption> = {
-    [K in T as 
-        K extends { paramName: infer P }
-            ? (P extends string ? P : never)
-            : K extends {
-                minParamName: infer MinP;
-                maxParamName: infer MaxP;
-            }
-                ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
-                : never
-    ]?: K extends { type: 'boolean' }
-        ? boolean | '' // Пустая строка для emptyableBoolean
-        : K extends { type: 'number' }
-            ? number
-        : K extends { type: 'date' }
-            ? Date
-        : K extends {
-            type: 'string';
-            valueOptions: readonly { value: infer V }[];
-        }
-            ? V
-            : string;
-};
-
 /////////////////
 /// CONSTANTS ///
 /////////////////
@@ -288,4 +234,58 @@ export interface ISortOption<TModel = any> {
     dbField: Extract<keyof TModel, string>;
     label: string;
     defaultOrder: 'asc' | 'desc';
+}
+
+/////////////
+/// QUERY ///
+/////////////
+
+export interface IBaseQuery<TSort extends string = string> {
+    page?: number;
+    limit?: number;
+    sort?: TSort | `-${TSort}`;
+    search?: string;
+    timestamp?: number;
+    timeZoneOffset?: number;
+}
+
+export type TFilterParamsClient = Record<string, string>;
+export type TFilterParamsServer = Record<string, string | number | boolean | Date | undefined>;
+
+export type TQuery<TModel extends object, TFilter extends TFilterParamsServer = {}> =
+    IBaseQuery<Extract<keyof TModel, string>> &
+    TFilter;
+
+export type TInferFilterParams<T extends TFilterOption> = {
+    [K in T as 
+        K extends { paramName: infer P }
+            ? (P extends string ? P : never)
+            : K extends {
+                minParamName: infer MinP;
+                maxParamName: infer MaxP;
+            }
+                ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
+                : never
+    ]?: K extends { type: 'boolean' }
+        ? boolean | '' // Пустая строка для emptyableBoolean
+        : K extends { type: 'number' }
+            ? number
+        : K extends { type: 'date' }
+            ? Date
+        : K extends {
+            type: 'string';
+            valueOptions: readonly { value: infer V }[];
+        }
+            ? V
+            : string;
+};
+
+///////////////////
+/// DATA CHANGE ///
+///////////////////
+
+export interface IDataChange {
+    field: string;
+    oldValue?: unknown;
+    newValue?: unknown;
 }

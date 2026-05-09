@@ -1,15 +1,28 @@
 import { useRef, useCallback, useEffect } from 'react';
 
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IUseHoldActionReturn {
+    start: () => void;
+    stop: () => void;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 export default function useHoldAction(
-    callback,
-    startDelay = 400,
-    maxDelay = 70,
-    minDelay = 10,
-    acceleration = 0.96
-) {
+    callback: () => void,
+    startDelay: number = 400,
+    maxDelay: number = 70,
+    minDelay: number = 10,
+    acceleration: number = 0.96
+): IUseHoldActionReturn {
     const isHoldingRef = useRef(false);
     const currentDelayRef = useRef(maxDelay);
-    const timeoutRef = useRef(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const step = useCallback(() => {
         if (!isHoldingRef.current) return;

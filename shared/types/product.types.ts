@@ -13,7 +13,8 @@ import type {
     TProductCatalogSortOption,
     TProductEditorSortOption,
     TProductsFilterOption,
-    TProductUnit
+    TProductUnit,
+    TDiscountSource
 } from './shared.types.js';
 
 export interface IProduct {
@@ -52,7 +53,31 @@ export interface IProductSnapshot {
     brand?: string;
 }
 
-export type TPurchaseProduct = IProduct | IProductSnapshot;
+export type TTradeProduct = IProduct | IProductSnapshot;
+
+export interface IProductAdjustment {
+    id: string;
+    name?: string;
+    brand?: string;
+    adjustments: {
+        deleted?: boolean;
+        inactive?: boolean;
+        outOfStock?: boolean;
+        quantityReduced?: {
+            old: number;
+            corrected: number;
+        };
+        price?: {
+            old: number;
+            corrected: number;
+        };
+        discount?: {
+            old: number;
+            corrected: number;
+            source: TDiscountSource;
+        };
+    };
+}
 
 interface IProductCreateBodyBase<TFile> {
     images: TFile[];

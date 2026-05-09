@@ -1,15 +1,17 @@
 import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
+import type { IProductAdjustment } from '@shared/types/index.js';
 
-export const formatOrderAdjustmentLogs = (orderAdjustments, productMap) => {
-    const logs = [];
+export const formatCheckoutAdjustmentLogs = (productAdjustments: IProductAdjustment[]): string => {
+    const logs: string[] = [];
     let num = 0;
 
-    const addLog = (message) => logs.push(`<span className="bold">${++num}.</span> ${message}`);
+    const addLog = (message: string): void => {
+        logs.push(`<span className="bold">${++num}.</span> ${message}`);
+    }
 
-    for (const item of orderAdjustments) {
-        const { productId, adjustments } = item;
-        const { name, brand } = productMap[productId] ?? {};
-        const productTitle = formatProductTitle(name, brand) || `Товар (ID: ${productId})`;
+    for (const item of productAdjustments) {
+        const { id, name, brand, adjustments } = item;
+        const productTitle = formatProductTitle(name, brand) || `Товар (ID: ${id})`;
         const productTitleHtml = `<span className="cursive underline">"${productTitle}"</span>`;
 
         if (adjustments.deleted) {
@@ -43,19 +45,19 @@ export const formatOrderAdjustmentLogs = (orderAdjustments, productMap) => {
         }
 
         if (adjustments.discount) {
-            const { old, corrected, appliedDiscountSourceSnapshot } = adjustments.discount;
+            const { old, corrected, source } = adjustments.discount;
 
-            const discountSource = ({
+            const sourceLabel = ({
                 customer: 'клиентская скидка',
                 product: 'скидка на товар',
                 none: 'скидка отменена'
-            })[appliedDiscountSourceSnapshot];
+            })[source];
 
             addLog(
                 `<span className="color-red">Изменена скидка</span> на товар ${productTitleHtml}: ` +
                 `с <span className="bold color-blue">${old}%</span> ` +
                 `до <span className="bold color-green">${corrected}%</span>` +
-                `${discountSource ? ` (<span className="color-brown">${discountSource}</span>)` : ''}.`
+                `${sourceLabel ? ` (<span className="color-brown">${sourceLabel}</span>)` : ''}.`
             );
         }
     }

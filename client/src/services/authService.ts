@@ -29,7 +29,7 @@ import type { IUser, IProduct, ICartItem } from '@shared/types/index.js';
 //////////////////////////
 
 interface IInitCustomerSessionParams {
-    purchaseProductList?: IProduct[];
+    tradeProductList?: IProduct[];
     cartItemList?: ICartItem[];
     customerDiscount?: number;
     orderDraftId?: string | null;
@@ -79,7 +79,7 @@ export const loadSession = (): TAppThunk<Promise<void>> =>
         if (status === REQUEST_STATUS.SUCCESS) {
             const {
                 user, accessTokenExp, refreshTokenExp,
-                purchaseProductList, cartItemList, cartWasMerged, orderDraftId
+                tradeProductList, cartItemList, cartWasMerged, orderDraftId
             } = responseData;
 
             dispatch(login({ user, accessTokenExp, refreshTokenExp }));
@@ -87,7 +87,7 @@ export const loadSession = (): TAppThunk<Promise<void>> =>
             if (user.role === USER_ROLE.CUSTOMER) {
                 // При восстановлении сессии для orderDraftId срабатывает глобальный редирект
                 dispatch(initCustomerSession({
-                    purchaseProductList,
+                    tradeProductList,
                     cartItemList,
                     customerDiscount: user.discount,
                     orderDraftId,
@@ -140,7 +140,7 @@ export const loadSession = (): TAppThunk<Promise<void>> =>
     };
 
 export const initCustomerSession = ({
-    purchaseProductList = [],
+    tradeProductList = [],
     cartItemList = [],
     customerDiscount = 0,
     orderDraftId = null,
@@ -150,7 +150,7 @@ export const initCustomerSession = ({
     (dispatch) => {
         removeGuestCartFromLocalStorage();
         
-        dispatch(applyCartState(purchaseProductList, cartItemList, customerDiscount));
+        dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
 
         let redirectTo: string | null = null;
 

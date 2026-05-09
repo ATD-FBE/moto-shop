@@ -1,34 +1,74 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import useHoldAction from '@/hooks/useHoldAction.js';
 import { sendCartItemUpdateRequest } from '@/api/cartRequests.js';
-import { getValidQuantity } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { setCartItem, unsetCartItem, refreshCartTotals } from '@/services/cartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX, Dispatch, SetStateAction, ChangeEvent } from 'react';
+import type { IBaseCartItem } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProductQuantitySelectorProps {
+    productId: string;
+    availableQuantity: number;
+    orderedQuantity: number;
+    quantityReduced?: boolean;
+    isTouchDevice?: boolean;
+    isAuthenticated?: boolean;
+    uiBlocked?: boolean;
+    minQuantity?: number;
+    onLoading?: Dispatch<SetStateAction<boolean>> | null;
+}
+
+interface IUpdateCartParams {
+    cartItem: IBaseCartItem;
+    isGuestCart: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function ProductQuantitySelector({
-    id,
+    productId,
     availableQuantity,
     orderedQuantity,
-    quantityReduced,
-    isTouchDevice,
-    isAuthenticated,
+    quantityReduced = false,
+    isTouchDevice = false,
+    isAuthenticated = false,
     uiBlocked = false,
     minQuantity = 0,
     onLoading = null // Внешний сеттер для индикации загрузки при запросе
-}) {
+}: IProductQuantitySelectorProps): JSX.Element {
     const [quantity, setQuantity] = useState(String(Math.min(orderedQuantity, availableQuantity)));
-    const [productUpserting, setProductUpserting] = useState(false);
+    const [cartItemUpserting, setCartItemUpserting] = useState(false);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const validQty = getValidQuantity(quantity, minQuantity, availableQuantity);
+    const getValidQuantity = (
+        stringVal: string,
+        currentQty: number,
+        min: number,
+        max: number
+    ): number => {
+        const numVal = Number(stringVal);
+    
+        if (!stringVal || isNaN(numVal)) return currentQty;
+        if (numVal < min) return min;
+        if (numVal > max) return max;
+        return Math.round(numVal);
+    };
+
+    const validQty = getValidQuantity(quantity, orderedQuantity, minQuantity, availableQuantity);
 
     const addToCartBtnDisabled =
         uiBlocked ||
-        productUpserting ||
+        cartItemUpserting ||
         (validQty === orderedQuantity && !quantityReduced);
 
     const { start: startIncrease, stop: stopIncrease } = useHoldAction(() => {
@@ -38,14 +78,14 @@ export default function ProductQuantitySelector({
         setQuantity(prev => String(Math.max(minQuantity, Number(prev) - 1)));
     });
 
-    const handleQuantityChange = (e) => {
+    const handleQuantityChange = (e: ChangeEvent<HTMLInputElement>): void => {
         setQuantity(e.currentTarget.value);
     };
-    const handleQuantityBlur = () => {
+    const handleQuantityBlur = (): void => {
         setQuantity(String(validQty))
     };
 
-    const updateCart = ({ cartItem, isGuestCart }) => {
+    const updateCart = ({ cartItem, isGuestCart }: IUpdateCartParams): void => {
         if (cartItem.quantity > 0) {
             dispatch(setCartItem(cartItem, isGuestCart));
         } else {
@@ -55,15 +95,16 @@ export default function ProductQuantitySelector({
         dispatch(refreshCartTotals());
     };
 
-    const handleUpsertCartItem = async () => {
-        const cartItem = { id, quantity: validQty };
+    const handleUpsertCartItem = async (): Promise<void> => {
+        const cartItem: IBaseCartItem = { id: productId, quantity: validQty };
         
         if (isAuthenticated) {
-            setProductUpserting(true);
+            setCartItemUpserting(true);
             onLoading?.(true);
 
-            const cartItemData = { quantity: validQty };
-            const responseData = await dispatch(sendCartItemUpdateRequest(id, cartItemData));
+            const responseData = await dispatch(sendCartItemUpdateRequest(productId, {
+                quantity: validQty
+            }));
             if (isUnmountedRef.current) return;
 
             const { status, message } = responseData;
@@ -71,7 +112,6 @@ export default function ProductQuantitySelector({
             logRequestStatus({ context: 'CART: UPSERT', status, message });
 
             if (status !== REQUEST_STATUS.SUCCESS) {
-                setQuantity(String(Math.min(orderedQuantity, availableQuantity)));
                 openAlertModal({
                     type: 'error',
                     dismissible: false,
@@ -82,7 +122,7 @@ export default function ProductQuantitySelector({
                 updateCart({ cartItem, isGuestCart: false });
             }
 
-            setProductUpserting(false);
+            setCartItemUpserting(false);
             onLoading?.(false);
         } else {
             updateCart({ cartItem, isGuestCart: true });
@@ -98,7 +138,7 @@ export default function ProductQuantitySelector({
 
     // Обработка нажатий на кнопки увеличения/уменьшения количества товара в корзине
     useEffect(() => {
-        const handleRelease = () => {
+        const handleRelease = (): void => {
             stopIncrease();
             stopDecrease();
         };
@@ -125,7 +165,7 @@ export default function ProductQuantitySelector({
                     className="decrease-btn"
                     onMouseDown={isTouchDevice ? undefined : startDecrease}
                     onTouchStart={startDecrease}
-                    disabled={uiBlocked || productUpserting}
+                    disabled={uiBlocked || cartItemUpserting}
                 >
                     −
                 </button>
@@ -137,13 +177,13 @@ export default function ProductQuantitySelector({
                     value={quantity}
                     onChange={handleQuantityChange}
                     onBlur={handleQuantityBlur}
-                    disabled={uiBlocked || productUpserting}
+                    disabled={uiBlocked || cartItemUpserting}
                 />
                 <button
                     className="increase-btn"
                     onMouseDown={isTouchDevice ? undefined : startIncrease}
                     onTouchStart={startIncrease}
-                    disabled={uiBlocked || productUpserting}
+                    disabled={uiBlocked || cartItemUpserting}
                 >
                     +
                 </button>

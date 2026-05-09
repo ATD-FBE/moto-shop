@@ -9,18 +9,18 @@ import type { IGuestCartItem, ICartItem, IProduct } from '@shared/types/index.js
 //////////////////////////
 
 export interface IGuestCart {
-    purchaseProductList: IProduct[];
+    tradeProductList: IProduct[];
     cartItemList: IGuestCartItem[];
 }
 
 export interface ICart {
-    purchaseProductList: IProduct[];
+    tradeProductList: IProduct[];
     cartItemList: ICartItem[];
 }
 
 export interface IFixedDbCart {
     fixedDbCart: TDbCartItem[];
-    purchaseProductList: IProduct[];
+    tradeProductList: IProduct[];
     cartItemList: ICartItem[];
 }
 
@@ -44,7 +44,7 @@ export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<
             const dbProduct = dbProductMap.get(productId);
             if (!dbProduct) return acc;
 
-            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
+            acc.tradeProductList.push(prepareProduct(dbProduct, { now }));
             if (!dbProduct.isActive) return acc;
 
             const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
@@ -56,7 +56,7 @@ export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<
             });
             return acc;
         },
-        { purchaseProductList: [], cartItemList: [] }
+        { tradeProductList: [], cartItemList: [] }
     );
 };
 
@@ -93,7 +93,7 @@ export const prepareCart = async (
 
             const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
 
-            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
+            acc.tradeProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: dbCartItem.quantity,
@@ -105,7 +105,7 @@ export const prepareCart = async (
             });
             return acc;
         },
-        { purchaseProductList: [], cartItemList: [] }
+        { tradeProductList: [], cartItemList: [] }
     );
 };
 
@@ -204,7 +204,7 @@ export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedD
             };
 
             acc.fixedDbCart.push(fixedDbCartItem);
-            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
+            acc.tradeProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: fixedDbCartItem.quantity,
@@ -216,7 +216,7 @@ export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedD
             });
             return acc;
         },
-        { fixedDbCart: [], purchaseProductList: [], cartItemList: [] }
+        { fixedDbCart: [], tradeProductList: [], cartItemList: [] }
     );
 };
 

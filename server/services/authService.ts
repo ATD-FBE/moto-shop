@@ -62,15 +62,15 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
         const cartsAreDifferent = areCartsDifferent(dbUser.cart ?? [], mergedCart);
         
         if (cartsAreDifferent) {
-            dbUser.set('cart', mergedCart);
+            dbUser.cart.splice(0, dbUser.cart.length, ...mergedCart);
             cartWasMerged = true;
         }
     }
 
     // Данные корзины
-    const { purchaseProductList, cartItemList } = await prepareCart(dbUser.cart ?? [], {
+    const { tradeProductList, cartItemList } = await prepareCart(dbUser.cart ?? [], {
         checkoutMode: Boolean(orderDraft)
     });
 
-    return { user, purchaseProductList, cartItemList, cartWasMerged, orderDraftId };
+    return { user, tradeProductList, cartItemList, cartWasMerged, orderDraftId };
 };

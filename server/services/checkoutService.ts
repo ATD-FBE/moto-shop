@@ -12,11 +12,41 @@ import type {
     TDbOrderDraftItem,
     TDbCartItem,
     TDbProduct,
-    IOrderItemRef,
-    ISyncCartResult,
-    ISyncOrderDraftResult
+    IOrderItemRef
 } from '@server/types/index.js';
-import type { ICartItemSnapshot, IOrderAdjustments } from '@shared/types/index.js';
+import type {
+    IProduct,
+    IProductAdjustment,
+    ICartItem,
+    ICartItemSnapshot,
+    IOrderDraftItem
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface ISyncCartResult {
+    fixedDbCart: TDbCartItem[];
+    fixedDbOrderItems: TDbOrderDraftItem[];
+    cartItemAdjustments: IProductAdjustment[];
+    tradeProductList: IProduct[];
+    cartItemList: ICartItem[];
+}
+
+export interface ISyncOrderDraftResult {
+    fixedDbCart: TDbCartItem[];
+    fixedDbOrderItems: TDbOrderDraftItem[];
+    orderItemList: IOrderDraftItem[];
+    orderItemAdjustments: IProductAdjustment[];
+    tradeProductList: IProduct[];
+    cartItemList: ICartItem[];
+    reservedOrderItemList: IOrderItemRef[];
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const reserveProducts = async (
     remainingDbOrderItemsToReserve: TDbOrderDraftItem[],
@@ -84,19 +114,26 @@ export const syncCart = async (
             const productId = productObjectId.toString();
             const productSnapshot = cartItemSnapshotMap.get(productId);
             const dbProduct = dbProductMap.get(productId);
-            const adjustments: IOrderAdjustments['adjustments'] = {};
+            const adjustments: IProductAdjustment['adjustments'] = {};
+
+            const adjustedProductData = {
+                id: productId,
+                name: dbProduct?.name,
+                brand: dbProduct?.brand ?? undefined,
+                adjustments
+            };
 
             // Отсеивание удалённого из магазина товара
             if (!dbProduct) {
                 adjustments.deleted = true;
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.cartItemAdjustments.push(adjustedProductData);
                 return acc;
             }
 
             // Отсеивание неактивного товара
             if (!dbProduct.isActive) {
                 adjustments.inactive = true;
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.cartItemAdjustments.push(adjustedProductData);
                 return acc;
             }
 
@@ -105,7 +142,7 @@ export const syncCart = async (
 
             if (available === 0) {
                 adjustments.outOfStock = true;
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.cartItemAdjustments.push(adjustedProductData);
                 return acc;
             }
 
@@ -143,12 +180,12 @@ export const syncCart = async (
                 adjustments.discount = {
                     old: productSnapshot.appliedDiscountSnapshot,
                     corrected: appliedDiscount,
-                    appliedDiscountSourceSnapshot: appliedDiscountSource
+                    source: appliedDiscountSource
                 };
             }
 
             if (Object.keys(adjustments).length > 0) {
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.cartItemAdjustments.push(adjustedProductData);
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
@@ -168,7 +205,7 @@ export const syncCart = async (
                 appliedDiscountSnapshot: appliedDiscount,
                 appliedDiscountSourceSnapshot: appliedDiscountSource
             });
-            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
+            acc.tradeProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: correctedQuantity,
@@ -184,8 +221,8 @@ export const syncCart = async (
         {
             fixedDbCart: [],
             fixedDbOrderItems: [],
-            orderAdjustments: [],
-            purchaseProductList: [],
+            cartItemAdjustments: [],
+            tradeProductList: [],
             cartItemList: []
         }
     );
@@ -209,26 +246,34 @@ export const syncOrderDraft = async (
             const productObjectId = orderItem.productId;
             const productId = productObjectId.toString();
             const dbProduct = dbProductMap.get(productId);
-            const adjustments: IOrderAdjustments['adjustments'] = {};
+            const adjustments: IProductAdjustment['adjustments'] = {};
+
+            const adjustedProductData = {
+                id: productId,
+                name: dbProduct?.name,
+                brand: dbProduct?.brand ?? undefined,
+                adjustments
+            };
 
             // Отсеивание удалённого из магазина товара
             if (!dbProduct) {
                 adjustments.deleted = true;
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.orderItemAdjustments.push(adjustedProductData);
                 return acc;
             }
 
             // Отсеивание неактивного товара
             if (!dbProduct.isActive) {
                 adjustments.inactive = true;
-                acc.orderAdjustments.push({ productId, adjustments, releaseQuantity: orderItem.quantity });
+                acc.orderItemAdjustments.push(adjustedProductData);
+                acc.reservedOrderItemList.push({ productId, quantity: orderItem.quantity });
                 return acc;
             }
 
             // Отсеивание закончившегося на складе товара
             if (orderItem.quantity <= 0) {
                 adjustments.outOfStock = true;
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.orderItemAdjustments.push(adjustedProductData);
                 return acc;
             }
 
@@ -261,12 +306,12 @@ export const syncOrderDraft = async (
                 adjustments.discount = {
                     old: orderItem.appliedDiscountSnapshot,
                     corrected: appliedDiscount,
-                    appliedDiscountSourceSnapshot: appliedDiscountSource
+                    source: appliedDiscountSource
                 };
             }
 
             if (Object.keys(adjustments).length > 0) {
-                acc.orderAdjustments.push({ productId, adjustments });
+                acc.orderItemAdjustments.push(adjustedProductData);
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
@@ -286,13 +331,7 @@ export const syncOrderDraft = async (
                 appliedDiscountSnapshot: appliedDiscount,
                 appliedDiscountSourceSnapshot: appliedDiscountSource
             });
-            acc.orderItemList.push({
-                productId,
-                quantity: orderItem.quantity,
-                priceSnapshot: dbProduct.price,
-                appliedDiscountSnapshot: appliedDiscount
-            });
-            acc.purchaseProductList.push(prepareProduct(dbProduct, { now }));
+            acc.tradeProductList.push(prepareProduct(dbProduct, { now }));
             acc.cartItemList.push({
                 id: productId,
                 quantity: orderItem.quantity,
@@ -302,16 +341,23 @@ export const syncOrderDraft = async (
                 deleted: false,
                 productSnapshot: prepareProductSnapshot(fixedDbCartItem)
             });
+            acc.orderItemList.push({
+                productId,
+                quantity: orderItem.quantity,
+                priceSnapshot: dbProduct.price,
+                appliedDiscountSnapshot: appliedDiscount
+            });
             
             return acc;
         },
         {
             fixedDbCart: [],
             fixedDbOrderItems: [],
+            orderItemAdjustments: [],
+            tradeProductList: [],
+            cartItemList: [],
             orderItemList: [],
-            orderAdjustments: [],
-            purchaseProductList: [],
-            cartItemList: []
+            reservedOrderItemList: []
         }
     );
 };

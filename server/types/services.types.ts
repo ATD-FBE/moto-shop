@@ -1,12 +1,8 @@
 import { Types } from 'mongoose';
 import type { Request } from 'express';
 import type { Payment, Refund } from '@a2seven/yoo-checkout';
-import type { TDbCartItem, TDbOrderDraftItem, TDbOrderFinalItem, TDbOrderWithTx } from './db.types.js';
+import type { TDbOrderFinalItem, TDbOrderWithTx } from './db.types.js';
 import type {
-    IProduct,
-    ICartItem,
-    IOrderAdjustments,
-    IOrderDraftItem,
     TCurrency,
     TTransactionType,
     TCardOnlineProvider,
@@ -16,27 +12,6 @@ import type {
     TRefundMethod,
     TBankProvider
 } from '@shared/types/index.js';
-
-////////////////////////
-/// CHECKOUT SERVICE ///
-////////////////////////
-
-export interface ISyncCartResult {
-    fixedDbCart: TDbCartItem[];
-    fixedDbOrderItems: TDbOrderDraftItem[];
-    orderAdjustments: IOrderAdjustments[];
-    purchaseProductList: IProduct[];
-    cartItemList: ICartItem[];
-}
-
-export interface ISyncOrderDraftResult {
-    fixedDbCart: TDbCartItem[];
-    fixedDbOrderItems: TDbOrderDraftItem[];
-    orderItemList: IOrderDraftItem[];
-    orderAdjustments: IOrderAdjustments[];
-    purchaseProductList: IProduct[];
-    cartItemList: ICartItem[];
-}
 
 /////////////////////
 /// ORDER SERVICE ///

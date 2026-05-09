@@ -1,4 +1,4 @@
-export default function triggerFileDownload(blob, filename) {
+export default function triggerFileDownload(blob: Blob, filename: string): void {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

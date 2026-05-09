@@ -178,29 +178,6 @@ export interface IOrderDraftItem {
     appliedDiscountSnapshot: number;
 }
 
-export interface IOrderAdjustments {
-    productId: string;
-    adjustments: {
-        deleted?: boolean;
-        inactive?: boolean;
-        outOfStock?: boolean;
-        quantityReduced?: {
-            old: number;
-            corrected: number;
-        };
-        price?: {
-            old: number;
-            corrected: number;
-        };
-        discount?: {
-            old: number;
-            corrected: number;
-            appliedDiscountSourceSnapshot: TDiscountSource;
-        };
-    };
-    releaseQuantity?: number;
-}
-
 export interface IRefundablePayment {
     provider: TCardOnlineProvider;
     transactionId: string;

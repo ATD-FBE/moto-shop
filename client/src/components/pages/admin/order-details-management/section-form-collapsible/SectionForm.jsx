@@ -6,7 +6,7 @@ import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderDetailsUpdateRequest, sendOrderItemsUpdateRequest } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { formatOrderItemsAdjustmentLogs } from '@/services/orderService.js';
+import { formatOrderAdjustmentLogs } from '@/services/orderService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toKebabCase, getFieldInfoClass, formatCurrency } from '@/helpers/textHelpers.js';
@@ -425,8 +425,8 @@ export default function SectionForm({
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
-        const { status, message, orderItemsAdjustments, fieldErrors, itemFieldErrors } = responseData;
-        const hasAdjustments = orderItemsAdjustments?.length > 0;
+        const { status, message, orderItemAdjustments, fieldErrors, itemFieldErrors } = responseData;
+        const hasAdjustments = orderItemAdjustments?.length > 0;
         const LOG_CTX = 'ORDER: UPDATE';
 
         switch (status) {
@@ -459,7 +459,7 @@ export default function SectionForm({
                 const adjustmentsMsg = hasAdjustments
                     ? '<span className="bold underline">' +
                         'Корректировки при изменении товаров в заказе:</span>\n\n' +
-                        formatOrderItemsAdjustmentLogs(orderItemsAdjustments)
+                        formatOrderAdjustmentLogs(orderItemAdjustments)
                     : '';
 
                 openAlertModal({
@@ -486,7 +486,7 @@ export default function SectionForm({
                     type: 'warn',
                     dismissible: false,
                     title: 'Корректировки при изменении товаров в заказе',
-                    message: formatOrderItemsAdjustmentLogs(orderItemsAdjustments),
+                    message: formatOrderAdjustmentLogs(orderItemAdjustments),
                     onClose: () => dispatch(setNavigationLock(false))
                 });
                 break;
@@ -537,7 +537,7 @@ export default function SectionForm({
                             type: 'warn',
                             dismissible: false,
                             title: 'Корректировки при изменении товаров в заказе',
-                            message: formatOrderItemsAdjustmentLogs(orderItemsAdjustments),
+                            message: formatOrderAdjustmentLogs(orderItemAdjustments),
                             onClose: () => dispatch(setNavigationLock(false))
                         });
                     }

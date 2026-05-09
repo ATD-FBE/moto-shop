@@ -12,7 +12,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import { clearLockedRoute } from '@/redux/slices/uiSlice.js';
 import { setCart } from '@/redux/slices/cartSlice.js';
 import { applyCartState, refreshCartTotals } from '@/services/cartService.js';
-import { formatOrderAdjustmentLogs } from '@/services/checkoutService.js';
+import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import {
     formatProductTitle,
@@ -549,8 +549,8 @@ export default function CheckoutForm({
         if (isUnmountedRef.current) return;
 
         const {
-            status, message, fieldErrors, orderAdjustments,
-            purchaseProductList, customerDiscount, orderDraft
+            status, message, fieldErrors, orderItemAdjustments,
+            tradeProductList, customerDiscount, orderDraft
         } = responseData;
         const LOG_CTX = 'CHECKOUT: CONFIRM';
 
@@ -602,7 +602,7 @@ export default function CheckoutForm({
             // Сумма заказа меньше минимальной
             case FORM_STATUS.LIMITATION: {
                 logRequestStatus({ context: LOG_CTX, status, message });
-                dispatch(applyCartState(purchaseProductList, orderDraft.items, customerDiscount));
+                dispatch(applyCartState(tradeProductList, orderDraft.items, customerDiscount));
                 setIsOrderItemsValid(false);
                 setSubmitStatus(status);
 
@@ -617,10 +617,10 @@ export default function CheckoutForm({
                     'Добавьте товаров ещё на ' +
                     `<span className="color-green">${formatCurrency(amountToAdd)}</span> ₽.`;
 
-                const hasAdjustments = orderAdjustments?.length > 0;
+                const hasAdjustments = orderItemAdjustments?.length > 0;
                 const adjustmentsMsg = hasAdjustments
                     ? '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                        formatOrderAdjustmentLogs(orderAdjustments, productMap)
+                        formatCheckoutAdjustmentLogs(orderItemAdjustments)
                     : '';
 
                 openAlertModal({
@@ -644,14 +644,14 @@ export default function CheckoutForm({
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message });
                 updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
-                dispatch(applyCartState(purchaseProductList, orderDraft.items, customerDiscount));
+                dispatch(applyCartState(tradeProductList, orderDraft.items, customerDiscount));
                 setOrderDraft(orderDraft);
                 setIsOrderItemsValid(false);
                 setSubmitStatus(status);
 
                 const adjustmentsMsg =
                     '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                    formatOrderAdjustmentLogs(orderAdjustments, productMap);
+                    formatCheckoutAdjustmentLogs(orderItemAdjustments);
 
                 openAlertModal({
                     openDelay: 1000,

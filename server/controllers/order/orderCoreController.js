@@ -645,7 +645,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     try {
         const imageFilenamesToDelete = [];
 
-        const { orderLbl, orderUpdateData, itemsAdjustments } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             const dbOrder = await Order.findById(orderId).session(session);
             checkTimeout(req);
 
@@ -662,7 +662,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
             const updatedOrder = dbOrder.toObject();
             const updatedItems = [...updatedOrder.items];
 
-            const itemsAdjustments = [];
+            const itemAdjustments = [];
             const changes = [];
 
             const productIds = items.map(item => item.productId);
@@ -676,10 +676,17 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 const dbProduct = dbProductMap.get(productId);
                 const adjustments = {};
 
+                const adjustedProductData = {
+                    id: productId,
+                    name: dbProduct?.name,
+                    brand: dbProduct?.brand ?? undefined,
+                    adjustments
+                };
+
                 // Товар удалён - сбор данных для логов и выход
                 if (!dbProduct) {
                     adjustments.deleted = true;
-                    itemsAdjustments.push({ id: productId, adjustments });
+                    itemAdjustments.push(adjustedProductData);
                     return;
                 }
 
@@ -698,7 +705,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
 
                 if (quantity > currentQuantity && available === 0) {
                     adjustments.outOfStock = true;
-                    itemsAdjustments.push({ id: productId, name, brand, adjustments });
+                    itemAdjustments.push(adjustedProductData);
                     return;
                 }
 
@@ -711,7 +718,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                         old: quantity,
                         corrected: correctedQuantity
                     };
-                    itemsAdjustments.push({ id: productId, name, brand, adjustments });
+                    itemAdjustments.push(adjustedProductData);
                 }
 
                 // Сбор дельты изменения количества для обновления товаров в БД
@@ -763,7 +770,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 if (orderTotals.totalAmount < MIN_ORDER_AMOUNT) {
                     throw createAppError(422, `Сумма заказа ${orderLbl} меньше минимальной`, {
                         reason: REQUEST_STATUS.LIMITATION,
-                        orderItemsAdjustments: itemsAdjustments
+                        orderItemAdjustments: itemAdjustments
                     });
                 }
 
@@ -808,9 +815,9 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 updatedOrder.totals = orderTotals;
                 updatedOrder.items = updatedItems;
             } else { // Нет изменений
-                if (itemsAdjustments.length > 0) { // Есть корректировки изменений
+                if (itemAdjustments.length > 0) { // Есть корректировки изменений
                     throw createAppError(412, `Заказ ${orderLbl} не изменён в связи с корректировками`, {
-                        orderItemsAdjustments: itemsAdjustments
+                        orderItemAdjustments: itemAdjustments
                     });
                 } else { // Нет корректировок изменений
                     throw createAppError(204);
@@ -837,8 +844,10 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
             const newAuditLogEntry = updatedDbOrder.auditLog.at(-1).toObject();
             const orderUpdateData = { orderPatches, newAuditLogEntry };
 
-            return { orderLbl, orderUpdateData, itemsAdjustments };
+            return { orderLbl, orderUpdateData, itemAdjustments };
         });
+
+        const { orderLbl, orderUpdateData, itemAdjustments } = transactionResult;
 
         // Отправка SSE-сообщения админам
         const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
@@ -847,7 +856,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
         // Отправка ответа клиенту
         safeSendResponse(res, 200, {
             message: `Заказ ${orderLbl} успешно изменён`,
-            orderItemsAdjustments: itemsAdjustments
+            orderItemAdjustments: itemAdjustments
         });
 
         // Удаление миниатюр фотографий товаров в заказе при удалении товаров (безопасно)

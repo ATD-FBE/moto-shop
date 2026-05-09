@@ -100,10 +100,11 @@ export const handleOrderDraftRequest = async (req, res, next) => {
             const {
                 fixedDbCart,
                 fixedDbOrderItems,
+                orderItemAdjustments,
+                tradeProductList,
+                cartItemList,
                 orderItemList,
-                orderAdjustments,
-                purchaseProductList,
-                cartItemList
+                reservedOrderItemList
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
@@ -111,7 +112,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
             const isTotalAmountUnderMinimum = orderTotals.totalAmount < MIN_ORDER_AMOUNT;
 
             // Есть изменения в заказываемых товарах (вмешательство админа в каталог)
-            if (orderAdjustments.length > 0) {
+            if (orderItemAdjustments.length > 0) {
                 // Обновление корзины клиента перед выходом
                 dbUser.cart = fixedDbCart;
                 await dbUser.save({ session });
@@ -120,10 +121,6 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                 // Сумма заказа НЕ меньше минимальной => обработка изменений в черновике заказа
                 if (!isTotalAmountUnderMinimum) {
                     // Освобождение резервов для деактивированных товаров в заказе
-                    const reservedOrderItemList = orderAdjustments
-                        .filter(adj => adj.releaseQuantity)
-                        .map(adj => ({ productId: adj.productId, quantity: adj.releaseQuantity }));
-
                     if (reservedOrderItemList.length > 0) {
                         await releaseReservedProducts(reservedOrderItemList, session);
                         checkTimeout(req);
@@ -150,8 +147,8 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                     responseData: {
                         message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
                         reason: REQUEST_STATUS.LIMITATION,
-                        orderAdjustments,
-                        purchaseProductList,
+                        orderItemAdjustments,
+                        tradeProductList,
                         cartItemList,
                         customerDiscount,
                         orderDraft: {
@@ -165,13 +162,13 @@ export const handleOrderDraftRequest = async (req, res, next) => {
             return {
                 statusCode: 200,
                 responseData: {
-                    message: orderAdjustments.length > 0
+                    message: orderItemAdjustments.length > 0
                         ? `Черновик заказа ${orderLbl} синхронизирован с текущими данными каталога`
                         : `Черновик заказа ${orderLbl} успешно загружен`,
-                    purchaseProductList,
+                    tradeProductList,
                     cartItemList,
                     customerDiscount,
-                    orderAdjustments,
+                    orderItemAdjustments,
                     orderDraft: {
                         expiresAt: dbOrderDraft.expiresAt,
                         items: orderItemList,
@@ -267,8 +264,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             let {
                 fixedDbCart,
                 fixedDbOrderItems,
-                orderAdjustments,
-                purchaseProductList,
+                cartItemAdjustments,
+                tradeProductList,
                 cartItemList
             } = await syncCart(dbUser.cart, cartItemSnapshotMap, customerDiscount);
             checkTimeout(req);
@@ -279,7 +276,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             
             if (currentTotal < MIN_ORDER_AMOUNT) {
                 // Сохранение корзины пользователя перед выходом, если были изменения
-                if (orderAdjustments.length > 0) {
+                if (cartItemAdjustments.length > 0) {
                     dbUser.cart = fixedDbCart;
                     await dbUser.save({ session });
                     checkTimeout(req);
@@ -290,8 +287,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                     responseData: {
                         message: 'Сумма заказа меньше минимальной',
                         reason: REQUEST_STATUS.LIMITATION,
-                        orderAdjustments,
-                        purchaseProductList,
+                        cartItemAdjustments,
+                        tradeProductList,
                         cartItemList,
                         customerDiscount,
                         currentTotal,
@@ -321,8 +318,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 const {
                     fixedDbCart: failedFixedDbCart,
                     fixedDbOrderItems: failedFixedDbOrderItems,
-                    orderAdjustments: failedOrderAdjustments,
-                    purchaseProductList: failedPurchaseProductList,
+                    cartItemAdjustments: failedTradeProductAdjustments,
+                    tradeProductList: failedTradeProductList,
                     cartItemList: failedCartItemList
                 } = await syncCart(failedOrderItems, cartItemSnapshotMap, customerDiscount);
                 checkTimeout(req);
@@ -332,11 +329,11 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 fixedDbOrderItems = replaceListItemsByKey(
                     fixedDbOrderItems, failedFixedDbOrderItems, 'productId'
                 );
-                orderAdjustments = replaceListItemsByKey(
-                    orderAdjustments, failedOrderAdjustments, 'productId'
+                cartItemAdjustments = replaceListItemsByKey(
+                    cartItemAdjustments, failedTradeProductAdjustments, 'id'
                 );
-                purchaseProductList = replaceListItemsByKey(
-                    purchaseProductList, failedPurchaseProductList, 'id'
+                tradeProductList = replaceListItemsByKey(
+                    tradeProductList, failedTradeProductList, 'id'
                 );
                 cartItemList = replaceListItemsByKey(cartItemList, failedCartItemList, 'id');
 
@@ -346,7 +343,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
                 if (currentTotal < MIN_ORDER_AMOUNT) {
                     // Сохранение корзины пользователя перед выходом, если были изменения
-                    if (orderAdjustments.length > 0) {
+                    if (cartItemAdjustments.length > 0) {
                         dbUser.cart = fixedDbCart;
                         await dbUser.save({ session });
                         checkTimeout(req);
@@ -357,8 +354,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                         responseData: {
                             message: 'Сумма заказа меньше минимальной',
                             reason: REQUEST_STATUS.LIMITATION,
-                            orderAdjustments,
-                            purchaseProductList,
+                            cartItemAdjustments,
+                            tradeProductList,
                             cartItemList,
                             customerDiscount,
                             currentTotal,
@@ -372,7 +369,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             }
 
             // Сохранение корзины пользователя, если были изменения
-            if (orderAdjustments.length > 0) {
+            if (cartItemAdjustments.length > 0) {
                 dbUser.cart = fixedDbCart;
                 await dbUser.save({ session });
                 checkTimeout(req);
@@ -411,8 +408,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 statusCode: 201,
                 responseData: {
                     message: `Черновик заказа (ID: ${orderId}) успешно создан`,
-                    orderAdjustments,
-                    purchaseProductList,
+                    cartItemAdjustments,
+                    tradeProductList,
                     cartItemList,
                     customerDiscount,
                     currentTotal,
@@ -634,10 +631,11 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             const {
                 fixedDbCart,
                 fixedDbOrderItems,
+                orderItemAdjustments,
+                tradeProductList,
+                cartItemList,
                 orderItemList,
-                orderAdjustments,
-                purchaseProductList,
-                cartItemList
+                reservedOrderItemList
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
@@ -645,7 +643,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             const isTotalAmountUnderMinimum = orderTotals.totalAmount < MIN_ORDER_AMOUNT;
 
             // Есть изменения в заказываемых товарах (вмешательство админа в каталог)
-            if (orderAdjustments.length > 0) {
+            if (orderItemAdjustments.length > 0) {
                 // Обновление корзины клиента перед выходом
                 dbUser.cart = fixedDbCart;
                 await dbUser.save({ session });
@@ -654,10 +652,6 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 // Сумма заказа НЕ меньше минимальной => обработка изменений в черновике заказа и выход
                 if (!isTotalAmountUnderMinimum) {
                     // Освобождение резервов для деактивированных товаров в заказе
-                    const reservedOrderItemList = orderAdjustments
-                        .filter(adj => adj.releaseQuantity)
-                        .map(adj => ({ productId: adj.productId, quantity: adj.releaseQuantity }));
-
                     if (reservedOrderItemList.length > 0) {
                         await releaseReservedProducts(reservedOrderItemList, session);
                         checkTimeout(req);
@@ -673,10 +667,10 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                         statusCode: 412,
                         responseData: {
                             message: `Данные заказа ${orderLbl} изменены после синхронизации с каталогом`,
-                            purchaseProductList,
+                            orderItemAdjustments,
+                            tradeProductList,
                             cartItemList,
                             customerDiscount,
-                            orderAdjustments,
                             orderDraft: {
                                 expiresAt: dbOrderDraft.expiresAt,
                                 items: orderItemList,
@@ -700,10 +694,10 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                     responseData: {
                         message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
                         reason: REQUEST_STATUS.LIMITATION,
-                        purchaseProductList,
+                        orderItemAdjustments,
+                        tradeProductList,
                         cartItemList,
                         customerDiscount,
-                        orderAdjustments,
                         orderDraft: {
                             items: orderItemList,
                             totals: orderTotals
@@ -745,7 +739,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 
             // Подготовка списка товаров подтверждённого заказа
             confirmedOrderId = confirmedOrderDoc._id.toString();
-            const purchaseProductMap = new Map(purchaseProductList.map(prod => [prod.id.toString(), prod]));
+            const tradeProductMap = new Map(tradeProductList.map(prod => [prod.id.toString(), prod]));
             const confirmedOrderItems = [];
 
             for (const orderItem of fixedDbOrderItems) {
@@ -759,8 +753,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 
                 const productId = productObjectId.toString();
                 const prodLbl = `(ID: ${productId})`;
-                const product = purchaseProductMap.get(productId);
-                if (!product) throw new Error(`Товар ${prodLbl} не найден в purchaseProductMap`);
+                const product = tradeProductMap.get(productId);
+                if (!product) throw new Error(`Товар ${prodLbl} не найден в tradeProductMap`);
 
                 const { images, mainImageIndex, sku, name, brand, unit } = product;
                 const imageFilename = images.length > 0

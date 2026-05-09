@@ -3,7 +3,7 @@ import { setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/red
 import { upsertProductsInStore } from '@/redux/slices/productsSlice.js';
 import { saveGuestCartToLocalStorage } from '@/services/guestCartService.js';
 import type { TAppThunk, TRootState, ICartTotals } from '@/types/index.js';
-import type { IBaseCartItem, ICartItem, IProduct } from '@shared/types/index.js';
+import type { IBaseCartItem, IGuestCartItem, ICartItem, IProduct } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -48,11 +48,11 @@ export const refreshCartTotals = (): TAppThunk<void> => (dispatch, getState) => 
 };
 
 export const applyCartState = (
-    purchaseProductList: IProduct[],
-    cartItemList: ICartItem[],
+    tradeProductList: IProduct[],
+    cartItemList: (IGuestCartItem | ICartItem)[],
     customerDiscount: number = 0
 ): TAppThunk<void> => (dispatch) => {
-    dispatch(upsertProductsInStore(purchaseProductList)); // До обновления сумм!
+    dispatch(upsertProductsInStore(tradeProductList)); // До обновления сумм!
     dispatch(setCart(cartItemList)); // До обновления сумм!
     dispatch(updateCustomerDiscount(customerDiscount)); // До обновления сумм!
     dispatch(refreshCartTotals());

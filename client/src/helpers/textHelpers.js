@@ -66,14 +66,6 @@ export const getFieldInfoClass = (elem, type, name) => {
     return `${elem}${type ? '-' + type : ''}-elem ${toKebabCase(name)}-field`;
 };
 
-export const getValidQuantity = (stringVal, min, max) => {
-    const value = Number(stringVal);
-
-    if (isNaN(value) || value < min) return min;
-    if (value > max) return max;
-    return Math.round(value);
-};
-
 export const formatCurrency = (amount) => {
     if (typeof amount !== 'number' || isNaN(amount)) return NO_VALUE_LABEL;
     

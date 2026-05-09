@@ -21,7 +21,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import { clearCart } from '@/redux/slices/cartSlice.js';
 import { setLockedRoute } from '@/redux/slices/uiSlice.js';
 import { applyCartState, refreshCartTotals, unsetCartItem } from '@/services/cartService.js';
-import { formatOrderAdjustmentLogs } from '@/services/checkoutService.js';
+import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import {
@@ -151,13 +151,13 @@ export default function Cart() {
         const responseData = await dispatch(sendCartItemListRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, purchaseProductList, cartItemList, customerDiscount } = responseData;
+        const { status, message, tradeProductList, cartItemList, customerDiscount } = responseData;
         logRequestStatus({ context: 'CART: LOAD', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCartLoadError(true);
         } else {
-            dispatch(applyCartState(purchaseProductList, cartItemList, customerDiscount));
+            dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         }
 
         setCartLoading(false);
@@ -189,19 +189,20 @@ export default function Cart() {
         if (isUnmountedRef.current) return;
 
         const {
-            status, message, orderAdjustments, purchaseProductList, cartItemList: newCartItemList,
-            customerDiscount: newCustomerDiscount, currentTotal, orderId
+            status, message, cartItemAdjustments, tradeProductList,
+            cartItemList: newCartItemList, customerDiscount: newCustomerDiscount,
+            currentTotal, orderId
         } = responseData;
         logRequestStatus({ context: 'CHECKOUT: CREATE DRAFT ORDER', status, message });
 
-        const hasAdjustments = orderAdjustments?.length > 0;
+        const hasAdjustments = cartItemAdjustments?.length > 0;
         const adjustmentsMsg = hasAdjustments
             ? '<span className="bold underline">Изменения товаров в корзине:</span>\n\n' +
-                formatOrderAdjustmentLogs(orderAdjustments, productMap)
+                formatCheckoutAdjustmentLogs(cartItemAdjustments)
             : '';
 
         if (hasAdjustments) {
-            dispatch(applyCartState(purchaseProductList, newCartItemList, newCustomerDiscount));
+            dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));
         }
 
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -302,14 +303,14 @@ export default function Cart() {
         const responseData = await dispatch(sendCartWarningsFixRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, purchaseProductList, cartItemList, customerDiscount } = responseData;
+        const { status, message, tradeProductList, cartItemList, customerDiscount } = responseData;
 
         logRequestStatus({ context: 'CART: FIX', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCartLoadError(true);
         } else {
-            dispatch(applyCartState(purchaseProductList, cartItemList, customerDiscount));
+            dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         }
 
         setCartLoading(false);
@@ -1118,7 +1119,7 @@ function CartItemCard({
                 </div>
             ) : (
                 <ProductQuantitySelector
-                    id={id}
+                    productId={id}
                     availableQuantity={available}
                     orderedQuantity={quantity}
                     quantityReduced={quantityReduced}
@@ -1210,8 +1211,10 @@ function PendingRemovalCartItem({
         setRestoring(true);
         addCartItemInProgress(id);
 
-        const cartItemData = { quantity, position };
-        const { status, message } = await dispatch(sendCartItemRestoreRequest(id, cartItemData));
+        const { status, message } = await dispatch(sendCartItemRestoreRequest(id, {
+            quantity,
+            position
+        }));
         if (isUnmountedRef.current) return;
 
         logRequestStatus({ context: 'CART: RESTORE ITEM', status, message });

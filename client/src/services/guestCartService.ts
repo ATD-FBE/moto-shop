@@ -3,38 +3,41 @@ import { setCartAccessibility } from '@/redux/slices/cartSlice.js';
 import { applyCartState } from '@/services/cartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { TAppThunk } from '@/types/index.js';
+import type { IGuestCartItem, ICartItem } from '@shared/types/index.js';
 
-export const saveGuestCartToLocalStorage = (cartItemList) => {
+export const saveGuestCartToLocalStorage = (cartItemList: ICartItem[]): void => {
     if (!cartItemList) return;
     localStorage.setItem('guestCart', JSON.stringify(cartItemList));
 };
 
-export const loadGuestCartFromLocalStorage = () => {
+export const loadGuestCartFromLocalStorage = (): ICartItem[] => {
     try {
         const guestCartData = localStorage.getItem('guestCart');
         return guestCartData ? JSON.parse(guestCartData) : [];
     } catch (err) {
-        console.error('Ошибка при парсинге локальной корзины:', err);
+        console.error('Ошибка при парсинге локальной корзины:', toError(err));
         return [];
     }
 };
 
-export const removeGuestCartFromLocalStorage = () => {
+export const removeGuestCartFromLocalStorage = (): void => {
     localStorage.removeItem('guestCart');
 };
 
-export const prepareGuestCartPayload = () => {
+export const prepareGuestCartPayload = (): IGuestCartItem[] => {
     const guestCartItemList = loadGuestCartFromLocalStorage();
     return guestCartItemList.map(({ id, quantity }) => ({ id, quantity }));
 };
 
-export const syncGuestCart = () => async (dispatch) => {
+export const syncGuestCart = (): TAppThunk<Promise<void>> => async (dispatch) => {
     const guestCart = prepareGuestCartPayload();
     if (!guestCart.length) return;
 
-    const responseData = await dispatch(sendGuestCartItemListRequest(guestCart));
-    const { status, message, purchaseProductList, cartItemList } = responseData;
+    const responseData = await dispatch(sendGuestCartItemListRequest({ guestCart }));
+    const { status, message } = responseData;
 
     logRequestStatus({ context: 'CART: LOAD GUEST', status, message });
 
@@ -49,5 +52,6 @@ export const syncGuestCart = () => async (dispatch) => {
         return;
     }
 
-    dispatch(applyCartState(purchaseProductList, cartItemList));
+    const { tradeProductList, cartItemList } = responseData;
+    dispatch(applyCartState(tradeProductList, cartItemList));
 };

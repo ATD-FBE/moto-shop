@@ -49,12 +49,12 @@ export type TFormFieldsErrorResponse<E extends TEntityType> = TBaseResponse & {
     fieldErrors: TFieldErrors<E>;
 };
 
-export type TLimitationErrorResponse<T = Record<string, never>> = TBaseResponse & {
+export type TLimitationErrorResponse<T extends Record<string, unknown> = {}> = TBaseResponse & {
     status: typeof REQUEST_STATUS.LIMITATION;
     reason: typeof REQUEST_STATUS.LIMITATION; // reason обязателен, чтобы отличить от INVALID
 } & T;
 
-export type TModifiedErrorResponse<T = Record<string, never>> = TBaseResponse & {
+export type TModifiedErrorResponse<T extends Record<string, unknown> = {}> = TBaseResponse & {
     status: typeof REQUEST_STATUS.MODIFIED;
 } & T;
 

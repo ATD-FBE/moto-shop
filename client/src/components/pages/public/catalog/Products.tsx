@@ -370,7 +370,7 @@ function ProductCard({
 
             {showCartControls && (
                 <ProductQuantitySelector
-                    id={id}
+                    productId={id}
                     availableQuantity={available}
                     orderedQuantity={quantity}
                     quantityReduced={quantityReduced}

@@ -288,7 +288,7 @@ export default function RegistrationForm(): JSX.Element {
             case FORM_STATUS.SUCCESS: {
                 const {
                     user, accessTokenExp, refreshTokenExp,
-                    purchaseProductList, cartItemList, cartWasMerged, orderDraftId
+                    tradeProductList, cartItemList, cartWasMerged, orderDraftId
                 } = responseData;
 
                 logRequestStatus({ context: LOG_CTX, status, message });
@@ -318,7 +318,7 @@ export default function RegistrationForm(): JSX.Element {
 
                     if (user.role === USER_ROLE.CUSTOMER) {
                         const { redirectTo } = dispatch(initCustomerSession({
-                            purchaseProductList,
+                            tradeProductList,
                             cartItemList,
                             customerDiscount: user.discount,
                             orderDraftId,
