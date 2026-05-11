@@ -619,8 +619,8 @@ export default function CheckoutForm({
 
                 const hasAdjustments = orderItemAdjustments?.length > 0;
                 const adjustmentsMsg = hasAdjustments
-                    ? '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                        formatCheckoutAdjustmentLogs(orderItemAdjustments)
+                    ? '\n\n\n<span className="bold underline">Изменения товаров в заказе:</span>' +
+                        `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
                     : '';
 
                 openAlertModal({
@@ -628,7 +628,7 @@ export default function CheckoutForm({
                     type: 'error',
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
-                    message: minOrderAmountMsg + (hasAdjustments ? `\n\n\n${adjustmentsMsg}` : '' ),
+                    message: minOrderAmountMsg + adjustmentsMsg,
                     dismissBtnLabel: 'Перейти в корзину',
                     onClose: () => {
                         dispatch(clearLockedRoute());
@@ -650,8 +650,8 @@ export default function CheckoutForm({
                 setSubmitStatus(status);
 
                 const adjustmentsMsg =
-                    '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                    formatCheckoutAdjustmentLogs(orderItemAdjustments);
+                    '<span className="bold underline">Изменения товаров в заказе:</span>' +
+                    `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`;
 
                 openAlertModal({
                     openDelay: 1000,
@@ -959,7 +959,7 @@ function OrderItems({
 
                 const title = formatProductTitle(name, brand) || `Товар (${productId})`;
                 const slug = generateSlug(title);
-                const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId });
+                const productUrl = routeConfig.productDetails.generatePath({ productId, slug, sku });
 
                 const hasImages = images.length > 0;
                 const thumbImageSrc = hasImages

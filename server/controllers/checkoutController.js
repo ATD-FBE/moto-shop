@@ -104,7 +104,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                 tradeProductList,
                 cartItemList,
                 orderItemList,
-                reservedOrderItemList
+                orderItemsToRelease
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
@@ -121,8 +121,8 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                 // Сумма заказа НЕ меньше минимальной => обработка изменений в черновике заказа
                 if (!isTotalAmountUnderMinimum) {
                     // Освобождение резервов для деактивированных товаров в заказе
-                    if (reservedOrderItemList.length > 0) {
-                        await releaseReservedProducts(reservedOrderItemList, session);
+                    if (orderItemsToRelease.length > 0) {
+                        await releaseReservedProducts(orderItemsToRelease, session);
                         checkTimeout(req);
                     }
 
@@ -200,15 +200,15 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
     const customerDiscount = dbUser.discount;
 
     // Предварительная проверка данных
-    const { cartItemSnapshots } = req.body ?? {};
+    const { initialOrderItemSnapshots } = req.body ?? {};
 
-    if (!typeCheck.array(cartItemSnapshots) || !cartItemSnapshots.length) {
+    if (!typeCheck.array(initialOrderItemSnapshots) || !initialOrderItemSnapshots.length) {
         return safeSendResponse(res, 400, {
-            message: 'Неверный формат данных: cartItemSnapshots'
+            message: 'Неверный формат данных: initialOrderItemSnapshots'
         });
     }
 
-    for (const itemSnapshot of cartItemSnapshots) {
+    for (const itemSnapshot of initialOrderItemSnapshots) {
         const {
             productId,
             priceSnapshot,
@@ -227,7 +227,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             !Object.values(DISCOUNT_SOURCE).includes(appliedDiscountSourceSnapshot)
         ) {
             return safeSendResponse(res, 400, {
-                message: 'Неверный формат данных: cartItemSnapshots'
+                message: 'Неверный формат данных: initialOrderItemSnapshots'
             });
         }
     }
@@ -241,8 +241,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             checkTimeout(req);
 
             if (existingOrderDrafts.length) {
-                const reservedOrderItemList = existingOrderDrafts.flatMap(order => order.items);
-                await releaseReservedProducts(reservedOrderItemList, session);
+                const orderItemsToRelease = existingOrderDrafts.flatMap(order => order.items);
+                await releaseReservedProducts(orderItemsToRelease, session);
                 checkTimeout(req);
 
                 await Order.deleteMany({ customerId, currentStatus: ORDER_STATUS.DRAFT }).session(session);
@@ -255,8 +255,8 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
     // Актуализация данных, резервирование товаров и создание документа черновика заказа
     try {
-        const cartItemSnapshotMap = new Map(
-            cartItemSnapshots.map(itemSnap => [itemSnap.productId, itemSnap])
+        const initialOrderItemSnapshotMap = new Map(
+            initialOrderItemSnapshots.map(itemSnap => [itemSnap.productId, itemSnap])
         );
 
         const { statusCode, responseData } = await runInDbTransaction(async (session) => {
@@ -267,7 +267,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 cartItemAdjustments,
                 tradeProductList,
                 cartItemList
-            } = await syncCart(dbUser.cart, cartItemSnapshotMap, customerDiscount);
+            } = await syncCart(dbUser.cart, initialOrderItemSnapshotMap, customerDiscount);
             checkTimeout(req);
 
             // Проверка итоговой суммы
@@ -321,7 +321,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                     cartItemAdjustments: failedTradeProductAdjustments,
                     tradeProductList: failedTradeProductList,
                     cartItemList: failedCartItemList
-                } = await syncCart(failedOrderItems, cartItemSnapshotMap, customerDiscount);
+                } = await syncCart(failedOrderItems, initialOrderItemSnapshotMap, customerDiscount);
                 checkTimeout(req);
 
                 // Замена в массивах проблемных товаров
@@ -408,12 +408,11 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 statusCode: 201,
                 responseData: {
                     message: `Черновик заказа (ID: ${orderId}) успешно создан`,
+                    orderId,
                     cartItemAdjustments,
                     tradeProductList,
                     cartItemList,
-                    customerDiscount,
-                    currentTotal,
-                    orderId
+                    customerDiscount
                 }
             };
         });
@@ -635,7 +634,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 tradeProductList,
                 cartItemList,
                 orderItemList,
-                reservedOrderItemList
+                orderItemsToRelease
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
 
@@ -652,8 +651,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 // Сумма заказа НЕ меньше минимальной => обработка изменений в черновике заказа и выход
                 if (!isTotalAmountUnderMinimum) {
                     // Освобождение резервов для деактивированных товаров в заказе
-                    if (reservedOrderItemList.length > 0) {
-                        await releaseReservedProducts(reservedOrderItemList, session);
+                    if (orderItemsToRelease.length > 0) {
+                        await releaseReservedProducts(orderItemsToRelease, session);
                         checkTimeout(req);
                     }
 

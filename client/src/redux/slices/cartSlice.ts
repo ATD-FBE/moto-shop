@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { ICartTotals } from '@/types/index.js';
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
+import type { ICartTotals, TRootState } from '@/types/index.js';
 import type { IBaseCartItem, IGuestCartItem, ICartItem } from '@shared/types/index.js';
 
 //////////////////////////
@@ -99,3 +99,15 @@ export const {
 } = cartSlice.actions;
 
 export default cartSlice.reducer;
+
+export const selectCartItemList = createSelector(
+    [
+        (state: TRootState) => state.cart.ids,
+        (state: TRootState) => state.cart.byId
+    ],
+    (ids, byId): ICartItem[] => {
+        return ids
+            .map(id => byId[id])
+            .filter((item): item is ICartItem => Boolean(item));
+    }
+);

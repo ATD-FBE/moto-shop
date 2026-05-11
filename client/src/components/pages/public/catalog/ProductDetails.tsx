@@ -77,7 +77,7 @@ export default function ProductDetails(): JSX.Element {
             const { id, sku, name, brand } = product;
             const title = formatProductTitle(name, brand);
             const slug = generateSlug(title);
-            const updatedUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
+            const updatedUrl = routeConfig.productDetails.generatePath({ productId: id, slug, sku });
 
             if (location.pathname !== updatedUrl) {
                 navigate(updatedUrl, { replace: true });

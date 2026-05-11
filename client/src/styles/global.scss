@@ -6504,15 +6504,21 @@ main {
                         margin-left: 0.4em;
                     }
                     .text-link-btn {
+                        display: inline;
+                        border: none;
+                        background: none;
+                        font: inherit;
                         color: $color-blue;
-                        text-decoration-color: transparent;
+                        text-decoration: underline transparent;
+                        cursor: pointer;
+                        user-select: text;
                         transition:
                             color $transition-fast-set,
                             text-decoration-color $transition-fast-set;
 
                         &.active {
                             color: $color-main-dark;
-                            text-decoration: none;
+                            text-decoration-color: transparent;
                             cursor: text;
                         }
                         &:hover:not(.active) {
@@ -6522,6 +6528,10 @@ main {
                         &[disabled] {
                             color: $color-main-dark-inactive;
                             pointer-events: none;
+
+                            .warning-cart-items-count {
+                                color: $color-main-dark-inactive;
+                            }
                         }
 
                         .warning-cart-items-count {

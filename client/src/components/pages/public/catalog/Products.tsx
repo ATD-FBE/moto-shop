@@ -280,7 +280,7 @@ function ProductCard({
 
     const title = formatProductTitle(name, brand);
     const slug = generateSlug(title);
-    const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
+    const productUrl = routeConfig.productDetails.generatePath({ productId: id, slug, sku });
 
     const hasImages = images.length > 0;
     const mainImage = hasImages ? images[mainImageIndex ?? 0] ?? images[0] : null;

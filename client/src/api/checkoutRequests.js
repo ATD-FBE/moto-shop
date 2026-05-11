@@ -20,12 +20,12 @@ export const sendOrderDraftRequest = (orderId) => async (dispatch) => {
 };
 
 /// Создание черновика заказа ///
-export const sendOrderDraftCreateRequest = (cartItemSnapshots) => async (dispatch) => {
+export const sendOrderDraftCreateRequest = (objData) => async (dispatch) => {
     const url = '/api/checkout/draft-orders';
     const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItemSnapshots })
+        body: JSON.stringify(objData)
     };
     const errorPrefix = 'Не удалось создать черновик заказа';
     const config = {

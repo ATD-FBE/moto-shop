@@ -1,46 +1,105 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import Toolbar from '@/components/common/Toolbar.jsx';
-import TrackedImage from '@/components/common/TrackedImage.jsx';
-import BlockableLink from '@/components/common/BlockableLink.jsx';
-import ProductQuantitySelector from '@/components/common/ProductQuantitySelector.jsx';
-import useMeasureMaxWidth from '@/hooks/useMeasureMaxWidth.js';
+import CartItemCard from './cart/CartItemCard.jsx';
+import PendingRemovalCartItem from './cart/PendingRemovalCartItem.jsx';
+import DeletedCartItem from './cart/DeletedCartItem.jsx';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
+import useMeasureMaxWidth from '@/hooks/useMeasureMaxWidth.js';
 import {
     sendCartItemListRequest,
     sendCartClearRequest,
-    sendCartItemRestoreRequest,
-    sendCartWarningsFixRequest,
-    sendCartItemRemoveRequest
+    sendCartWarningsFixRequest
 } from '@/api/cartRequests.js';
 import { sendOrderDraftCreateRequest } from '@/api/checkoutRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { clearCart } from '@/redux/slices/cartSlice.js';
+import { DATA_LOAD_STATUS, SCREEN_SIZE } from '@/config/constants.js';
+import { selectCartItemList, clearCart } from '@/redux/slices/cartSlice.js';
 import { setLockedRoute } from '@/redux/slices/uiSlice.js';
 import { applyCartState, refreshCartTotals, unsetCartItem } from '@/services/cartService.js';
 import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import {
-    formatProductTitle,
-    formatCurrency,
-    pluralize,
-    highlightText
-} from '@/helpers/textHelpers.js';
-import generateSlug from '@/helpers/generateSlug.js';
+import { formatProductTitle, formatCurrency, pluralize } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { DATA_LOAD_STATUS, SCREEN_SIZE, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 import { MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';
+import type { TDataLoadStatus, TScreenSize, ICartItemElemAnimationState } from '@/types/index.js';
+import type {
+    IInitialOrderItemSnapshot,
+    ICartItem,
+    IProduct,
+    TProductSnapshot
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICartItemListProps {
+    cartItemElemMapRef: RefObject<Record<string, HTMLLIElement>>;
+    screenSize: TScreenSize | null;
+    loadStatus: TDataLoadStatus;
+    onReload: () => Promise<void>;
+    cartItemList: ICartItem[];
+    productMap: Record<string, IProduct>;
+    customerDiscount: number;
+    filteredCartItemIdsSet: Set<string>;
+    checkAllCartItemElemsCollapsed: () => boolean;
+    showCartClearAnimation: boolean;
+    setShowCartClearAnimation: Dispatch<SetStateAction<boolean>>;
+    searchQuery: string;
+    cartClearing: boolean;
+    isTouchDevice: boolean;
+    isAuthenticated: boolean;
+    addCartItemInProgress: (id: string) => void;
+    removeCartItemInProgress: (id: string) => void;
+    checkoutInProgress: boolean;
+}
+
+type TCartItemProps = Pick<ICartItemListProps,
+    | 'customerDiscount'
+    | 'filteredCartItemIdsSet'
+    | 'checkAllCartItemElemsCollapsed'
+    | 'showCartClearAnimation'
+    | 'setShowCartClearAnimation'
+    | 'searchQuery'
+    | 'cartClearing'
+    | 'isTouchDevice'
+    | 'isAuthenticated'
+    | 'addCartItemInProgress'
+    | 'removeCartItemInProgress'
+    | 'checkoutInProgress'
+> & {
+    cartItemElemRef: (elem: HTMLLIElement) => void;
+    cartItem: ICartItem;
+    product: IProduct | TProductSnapshot;
+    position: number;
+    onCartItemVisibilityChange: (productId: string, isVisible: boolean) => void;
+    pricesElemRef: (elem: HTMLDivElement) => void;
+    totalsElemRef: (elem: HTMLDivElement) => void;
+    maxPricesWidth: number;
+    maxTotalsWidth: number;
+
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
-export default function Cart() {
-    const { isTouchDevice, screenSize, isDashboardPanelActive } = useSelector(state => state.ui);
-    const { isAuthenticated, user } = useSelector(state => state.auth);
-    const cartState = useSelector(state => state.cart);
-    const productMap = useSelector(state => state.products.byId);
+export default function Cart(): JSX.Element | null {
+    const { isTouchDevice, screenSize, isDashboardPanelActive } = useAppSelector(state => state.ui);
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
+    const cartItemList = useAppSelector(selectCartItemList);
+    const {
+        rawTotal: originalTotal,
+        discountedTotal: currentTotal
+    } = useAppSelector(state => state.cart);
+    const productMap = useAppSelector(state => state.products.byId);
 
     const [initialized, setInitialized] = useState(false);
     const [search, setSearch] = useState('');
@@ -48,25 +107,21 @@ export default function Cart() {
 
     const [cartLoading, setCartLoading] = useState(true);
     const [cartLoadError, setCartLoadError] = useState(false);
-    const [cartItemIdsInProgress, setCartItemIdsInProgress] = useState(new Set());
+    const [cartItemIdsInProgress, setCartItemIdsInProgress] = useState<Set<string>>(new Set());
     const [checkoutInProgress, setCheckoutInProgress] = useState(false);
     const [cartClearing, setCartClearing] = useState(false);
     const [showCartClearAnimation, setShowCartClearAnimation] = useState(false);
 
-    const cartItemRefs = useRef([]);
+    const cartItemElemMapRef = useRef<Record<string, HTMLLIElement>>({});
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const customerDiscount = user?.discount ?? 0;
-
-    const cartItemList = cartState.ids.map(id => cartState.byId[id]);
     const totalCartItems = cartItemList.length;
 
-    const originalTotal = cartState.rawTotal;
-    const currentTotal = cartState.discountedTotal;
     const savedTotal = originalTotal - currentTotal;
     const hasDiscount = savedTotal > 0;
     
@@ -93,17 +148,21 @@ export default function Cart() {
     const { filteredCartItemIdsSet, cartWarningsCount } = useMemo(() => {
         let warningsCount = 0;
 
-        const filteredCartItemIds = cartItemList.reduce((acc, cartItem) => {
+        const filteredCartItemIds = cartItemList.reduce<string[]>((acc, cartItem) => {
             const product = productMap[cartItem.id] ?? cartItem.productSnapshot;
             if (!product) return acc;
 
             // Фильтрация по поиску
             const searchLower = search?.trim().toLowerCase();
-            const { sku, name, brand } = product;
+            
+            const { name, brand } = product;
             const title = formatProductTitle(name, brand);
+
+            const matchedStrings = [title];
+            if (product._type === 'full' && product.sku) matchedStrings.push(product.sku);
     
             const matchesSearch = searchLower
-                ? [sku, title].some(field => field?.toLowerCase().includes(searchLower))
+                ? matchedStrings.some(str => str.toLowerCase().includes(searchLower))
                 : true;
     
             // Фильтрация по проблемным товарам
@@ -132,11 +191,11 @@ export default function Cart() {
 
     const filteredCartItemsCount = filteredCartItemIdsSet.size;
 
-    const addCartItemInProgress = (id) => {
+    const addCartItemInProgress = (id: string): void => {
         setCartItemIdsInProgress(prev => new Set(prev).add(id));
     };
       
-    const removeCartItemInProgress = (id) => {
+    const removeCartItemInProgress = (id: string): void => {
         setCartItemIdsInProgress(prev => {
             const newSet = new Set(prev);
             newSet.delete(id);
@@ -144,32 +203,36 @@ export default function Cart() {
         });
     };
 
-    const loadCart = async () => {
+    const checkAllCartItemElemsCollapsed = (): boolean =>
+        Object.values(cartItemElemMapRef.current).every(el => el.offsetHeight === 0);
+
+    const loadCart = async (): Promise<void> => {
         setCartLoadError(false);
         setCartLoading(true);
 
         const responseData = await dispatch(sendCartItemListRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, tradeProductList, cartItemList, customerDiscount } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CART: LOAD', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCartLoadError(true);
         } else {
+            const { tradeProductList, cartItemList, customerDiscount } = responseData;
             dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         }
 
         setCartLoading(false);
     };
 
-    const createOrderDraft = async () => {
+    const createOrderDraft = async (): Promise<void> => {
         if (!totalCartItems || cartLoadError) return;
 
         setCheckoutInProgress(true);
 
         // Создание снэпшотов критически важных данных черновика заказа для первой проверки изменений
-        const cartItemSnapshots = cartItemList.map(item => {
+        const initialOrderItemSnapshots: IInitialOrderItemSnapshot[] = cartItemList.map(item => {
             const product = productMap[item.id];
             const productDiscount = product?.discount ?? 0;
             const {
@@ -185,29 +248,22 @@ export default function Cart() {
             };
         });
 
-        const responseData = await dispatch(sendOrderDraftCreateRequest(cartItemSnapshots));
+        const responseData = await dispatch(sendOrderDraftCreateRequest({ initialOrderItemSnapshots }));
         if (isUnmountedRef.current) return;
 
-        const {
-            status, message, cartItemAdjustments, tradeProductList,
-            cartItemList: newCartItemList, customerDiscount: newCustomerDiscount,
-            currentTotal, orderId
-        } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CHECKOUT: CREATE DRAFT ORDER', status, message });
-
-        const hasAdjustments = cartItemAdjustments?.length > 0;
-        const adjustmentsMsg = hasAdjustments
-            ? '<span className="bold underline">Изменения товаров в корзине:</span>\n\n' +
-                formatCheckoutAdjustmentLogs(cartItemAdjustments)
-            : '';
-
-        if (hasAdjustments) {
-            dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));
-        }
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             // Сумма заказа меньше минимальной
             if (status === REQUEST_STATUS.LIMITATION) {
+                const {
+                    currentTotal, cartItemAdjustments, tradeProductList,
+                    cartItemList: newCartItemList, customerDiscount: newCustomerDiscount
+                } = responseData;
+
+                dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));
+
                 const amountToAdd = Math.max(0, MIN_ORDER_AMOUNT - currentTotal);
                 const minOrderAmountMsg =
                     'Сумма заказа после синхронизации с текущими данными каталога ' +
@@ -216,14 +272,19 @@ export default function Cart() {
                     `<span className="color-blue">${formatCurrency(MIN_ORDER_AMOUNT)}</span> ₽. ` +
                     'Добавьте товаров ещё на ' +
                     `<span className="color-green">${formatCurrency(amountToAdd)}</span> ₽.`;
+                const adjustmentsMsg = cartItemAdjustments.length > 0
+                    ? '\n\n\n<span className="bold underline">Изменения товаров в корзине:</span>' +
+                        `\n\n${formatCheckoutAdjustmentLogs(cartItemAdjustments)}`
+                    : '';
                 
                 openAlertModal({
                     type: 'error',
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
-                    message: minOrderAmountMsg + (hasAdjustments ? `\n\n\n${adjustmentsMsg}` : ''),
+                    message: minOrderAmountMsg + adjustmentsMsg,
                     onClose: () => setCheckoutInProgress(false)
                 });
+
                 return;
             }
             
@@ -239,9 +300,20 @@ export default function Cart() {
         }
 
         // Успешный ответ
+        const {
+            orderId, cartItemAdjustments, tradeProductList,
+            cartItemList: newCartItemList, customerDiscount: newCustomerDiscount
+        } = responseData;
+
+        dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));
+
         const checkoutPath = routeConfig.customerCheckout.generatePath({ orderId });
 
-        if (hasAdjustments) {
+        if (cartItemAdjustments.length > 0) {
+            const adjustmentsMsg =
+                '<span className="bold underline">Изменения товаров в корзине:</span>' +
+                `\n\n${formatCheckoutAdjustmentLogs(cartItemAdjustments)}`;
+
             openAlertModal({
                 type: 'warn',
                 dismissible: false,
@@ -254,14 +326,14 @@ export default function Cart() {
         }
     };
 
-    const confirmCartClearing = async () => {
+    const confirmCartClearing = async (): Promise<void> => {
         if (!totalCartItems || cartLoadError) return;
 
         const cartClearingPrompt =
             'Корзина товаров будет полностью очищена без возможности восстановления.\n' +
             'Продолжить выполнение?';
 
-        const proccessCartClearing = async () => {
+        const proccessCartClearing = async (): Promise<void> => {
             setCartClearing(true);
     
             const { status, message } = await dispatch(sendCartClearRequest());
@@ -275,16 +347,16 @@ export default function Cart() {
             }
         };
 
-        const finalizeCartClearing = () => {
+        const finalizeCartClearing = (): void => {
             if (isUnmountedRef.current) return;
             
             setCartClearing(false);
 
-            const allCollapsed = cartItemRefs.current.every(el => el?.offsetHeight === 0);
+            const allCollapsed = checkAllCartItemElemsCollapsed();
 
-            if (allCollapsed) { // Очистить корзину сразу, т. к. все товары уже свёрнуты
+            if (allCollapsed) { // Очистка корзины сразу, т. к. все товары уже свёрнуты
                 dispatch(clearCart());
-            } else { // Включить анимацию сворачивания товаров и затем очистить корзину
+            } else { // Включение флага для анимации сворачивания товаров (очистка корзины после)
                 setShowCartClearAnimation(true);
             }
         };
@@ -296,50 +368,47 @@ export default function Cart() {
         });
     };
 
-    const fixCartWarnings = async () => {
+    const fixCartWarnings = async (): Promise<void> => {
         setCartLoadError(false);
         setCartLoading(true);
 
         const responseData = await dispatch(sendCartWarningsFixRequest());
         if (isUnmountedRef.current) return;
 
-        const { status, message, tradeProductList, cartItemList, customerDiscount } = responseData;
-
+        const { status, message } = responseData;
         logRequestStatus({ context: 'CART: FIX', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setCartLoadError(true);
         } else {
+            const { tradeProductList, cartItemList, customerDiscount } = responseData;
             dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         }
 
         setCartLoading(false);
     };
 
-    const handleShowAllCartItems = (e) => {
-        e.preventDefault();
+    const handleShowAllCartItems = (): void => {
+        if (window.getSelection()?.toString()) return;
         setFilter('');
     };
 
-    const showWarningCartItems = (e) => {
-        e.preventDefault();
+    const showWarningCartItems = (): void => {
+        if (isCartUiBlocked) return;
+        if (window.getSelection()?.toString()) return;
 
-        if (!isCartUiBlocked) {
-            setFilter('warnings');
-            document.activeElement.blur(); // Убрать фокус с уже неактивной кнопки-ссылки, если он был
-        }
-    };
+        setFilter('warnings');
 
-    const clearTextSelection = () => {
-        if (filter === 'warnings') {
-            window.getSelection()?.removeAllRanges();
+        // Очистка фокуса с уже неактивной ссылки, если он был
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
         }
     };
 
     // Установка начальных значений параметров и очистка при размонтировании
     useEffect(() => {
         const params = new URLSearchParams(location.search);
-        setSearch(params.get('search') || '');
+        setSearch(params.get('search') ?? '');
         setFilter(params.get('filter') === 'warnings' ? 'warnings' : '');
 
         setInitialized(true);
@@ -466,31 +535,28 @@ export default function Cart() {
                                 {cartWarningsCount > 0 && filter === 'warnings' && (
                                     <>
                                         :&nbsp;
-                                        <BlockableLink
-                                            to="#"
-                                            role="button"
+                                        <button
+                                            type="button"
                                             className="clear-filter-btn text-link-btn"
                                             disabled={isCartUiBlocked}
                                             onClick={handleShowAllCartItems}
                                             aria-label="Показать все товары"
                                         >
                                             Все товары
-                                        </BlockableLink>
+                                        </button>
                                     </>
                                 )}
                             </p>
 
-                            {cartWarningsCount > 0 && !cartLoading && (
+                            {cartWarningsCount > 0 && (
                                 <p>
-                                    <BlockableLink
-                                        to="#"
-                                        role="button"
+                                    <button
+                                        type="button"
                                         tabIndex={filter === 'warnings' ? -1 : 0}
                                         className={cn('warning-cart-filter-btn', 'text-link-btn', {
                                             'active': filter === 'warnings'
                                         })}
                                         onClick={showWarningCartItems}
-                                        onMouseDown={clearTextSelection}
                                         disabled={isCartUiBlocked}
                                         aria-label="Показать проблемные товары"
                                     >
@@ -499,13 +565,15 @@ export default function Cart() {
                                         </span>
                                         &nbsp;
                                         {pluralize(cartWarningsCount, [
-                                            'позиция требует проверки:',
-                                            'позиции требуют проверки:',
-                                            'позиций требуют проверки:'
+                                            'позиция требует проверки',
+                                            'позиции требуют проверки',
+                                            'позиций требуют проверки'
                                         ])}
-                                    </BlockableLink>
+                                        :
+                                    </button>
                                     
                                     <button
+                                        type="button"
                                         className="fix-cart-items-btn"
                                         onClick={fixCartWarnings}
                                         disabled={isCartUiBlocked}
@@ -532,18 +600,19 @@ export default function Cart() {
                 </header>
 
                 <CartItemList
-                    cartItemRefs={cartItemRefs}
+                    cartItemElemMapRef={cartItemElemMapRef}
                     screenSize={screenSize}
                     loadStatus={cartLoadStatus}
-                    reloadCart={loadCart}
+                    onReload={loadCart}
                     cartItemList={cartItemList}
                     productMap={productMap}
+                    customerDiscount={customerDiscount}
                     filteredCartItemIdsSet={filteredCartItemIdsSet}
-                    searchQuery={search}
-                    cartClearing={cartClearing}
+                    checkAllCartItemElemsCollapsed={checkAllCartItemElemsCollapsed}
                     showCartClearAnimation={showCartClearAnimation}
                     setShowCartClearAnimation={setShowCartClearAnimation}
-                    customerDiscount={customerDiscount}
+                    searchQuery={search}
+                    cartClearing={cartClearing}
                     isTouchDevice={isTouchDevice}
                     isAuthenticated={isAuthenticated}
                     addCartItemInProgress={addCartItemInProgress}
@@ -556,37 +625,34 @@ export default function Cart() {
 }
 
 function CartItemList({
-    cartItemRefs,
+    cartItemElemMapRef,
     screenSize,
     loadStatus,
-    reloadCart,
+    onReload,
     cartItemList,
     productMap,
+    customerDiscount,
     filteredCartItemIdsSet,
-    searchQuery,
-    cartClearing,
+    checkAllCartItemElemsCollapsed,
     showCartClearAnimation,
     setShowCartClearAnimation,
-    customerDiscount,
+    searchQuery,
+    cartClearing,
     isTouchDevice,
     isAuthenticated,
     addCartItemInProgress,
     removeCartItemInProgress,
     checkoutInProgress
-}) {
-    const [visibleCartItems, setVisibleCartItems] = useState({});
-    const pricesContentRefsMap = useRef({});
-    const totalsContentRefsMap = useRef({});
+}: ICartItemListProps): JSX.Element {
+    const [visibleCartItemMap, setVisibleCartItemMap] = useState<Record<string, boolean>>({});
+    const pricesElemMapRef = useRef<Record<string, HTMLDivElement>>({});
+    const totalsElemMapRef = useRef<Record<string, HTMLDivElement>>({});
 
-    const assignRefInArray = (elem, idx, refArray) => {
-        if (elem) {
-            refArray.current[idx] = elem;
-        } else {
-            refArray.current.splice(idx, 1);
-        }
-    };
-
-    const assignRefInMap = (elem, key, refMap) => {
+    const assignRefInMap = <T extends HTMLElement>(
+        elem: T | null,
+        key: string,
+        refMap: RefObject<Record<string, T>>
+    ): void => {
         if (elem) {
             refMap.current[key] = elem;
         } else {
@@ -594,32 +660,34 @@ function CartItemList({
         }
     };
 
-    const onCartItemVisibilityChange = (productId, isVisible) => {
-        setVisibleCartItems(prev => {
+    const onCartItemVisibilityChange = (productId: string, isVisible: boolean): void => {
+        setVisibleCartItemMap(prev => {
             if (prev[productId] === isVisible) return prev;
             return { ...prev, [productId]: isVisible };
         });
     };
 
     const visiblePricesContentElements = useMemo(() => {
-        return Object.entries(pricesContentRefsMap.current)
-            .map(([id, el]) => (visibleCartItems[id] ? el : null))
-            .filter(Boolean);
-    }, [visibleCartItems]);
+        return Object.entries(pricesElemMapRef.current)
+            .map(([id, el]) => (visibleCartItemMap[id] ? el : null))
+            .filter((el): el is HTMLDivElement => Boolean(el));
+    }, [visibleCartItemMap]);
     
     const visibleTotalsContentElements = useMemo(() => {
-        return Object.entries(totalsContentRefsMap.current)
-            .map(([id, el]) => (visibleCartItems[id] ? el : null))
-            .filter(Boolean);
-    }, [visibleCartItems]);
+        return Object.entries(totalsElemMapRef.current)
+            .map(([id, el]) => (visibleCartItemMap[id] ? el : null))
+            .filter((el): el is HTMLDivElement => Boolean(el));
+    }, [visibleCartItemMap]);
 
     // Расчёт максимальной ширины для колонок товара product-prices и product-total-amounts
     const maxPricesWidth = useMeasureMaxWidth(visiblePricesContentElements, {
-        enabled: [SCREEN_SIZE.LARGE].includes(screenSize) && loadStatus === DATA_LOAD_STATUS.READY
+        enabled:
+            screenSize === SCREEN_SIZE.LARGE &&
+            loadStatus === DATA_LOAD_STATUS.READY
     });
     const maxTotalsWidth = useMeasureMaxWidth(visibleTotalsContentElements, {
         enabled:
-            [SCREEN_SIZE.MEDIUM, SCREEN_SIZE.LARGE].includes(screenSize) &&
+            [SCREEN_SIZE.MEDIUM, SCREEN_SIZE.LARGE].some(size => size === screenSize) &&
             loadStatus === DATA_LOAD_STATUS.READY
     });
 
@@ -627,9 +695,9 @@ function CartItemList({
     useEffect(() => {
         if (loadStatus !== DATA_LOAD_STATUS.LOADING) return;
     
-        pricesContentRefsMap.current = {};
-        totalsContentRefsMap.current = {};
-        setVisibleCartItems({});
+        pricesElemMapRef.current = {};
+        totalsElemMapRef.current = {};
+        setVisibleCartItemMap({});
     }, [loadStatus]);
 
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
@@ -650,7 +718,7 @@ function CartItemList({
                     <span className="icon error">❌</span>
                     Ошибка сервера. Товары корзины не доступны.
                 </p>
-                <button className="reload-btn" onClick={reloadCart}>Повторить</button>
+                <button className="reload-btn" onClick={onReload}>Повторить</button>
             </div>
         );
     }
@@ -666,7 +734,7 @@ function CartItemList({
         );
     }
 
-    const allCollapsed = cartItemRefs.current.every(el => el?.offsetHeight === 0);
+    const allCollapsed = checkAllCartItemElemsCollapsed();
     const isSearchResultEmpty = !filteredCartItemIdsSet.size && allCollapsed;
 
     if (isSearchResultEmpty) {
@@ -687,25 +755,35 @@ function CartItemList({
                 const product = productMap[productId] ?? cartItem.productSnapshot;
                 if (!product) return null;
 
+                const cartItemElemRef = (elem: HTMLLIElement): void => {
+                    assignRefInMap(elem, productId, cartItemElemMapRef);
+                }
+                const pricesElemRef = (elem: HTMLDivElement): void => {
+                    assignRefInMap(elem, productId, pricesElemMapRef);
+                }
+                const totalsElemRef = (elem: HTMLDivElement): void => {
+                    assignRefInMap(elem, productId, totalsElemMapRef);
+                }
+
                 return (
                     <CartItem
                         key={productId}
-                        selfRef={(el) => assignRefInArray(el, idx, cartItemRefs)}
-                        cartItemRefs={cartItemRefs}
-                        filteredCartItemIdsSet={filteredCartItemIdsSet}
-                        searchQuery={searchQuery}
-                        cartClearing={cartClearing}
-                        showCartClearAnimation={showCartClearAnimation}
-                        setShowCartClearAnimation={setShowCartClearAnimation}
+                        cartItemElemRef={cartItemElemRef}
                         cartItem={cartItem}
                         product={product}
                         customerDiscount={customerDiscount}
                         position={idx}
+                        filteredCartItemIdsSet={filteredCartItemIdsSet}
+                        checkAllCartItemElemsCollapsed={checkAllCartItemElemsCollapsed}
+                        showCartClearAnimation={showCartClearAnimation}
+                        setShowCartClearAnimation={setShowCartClearAnimation}
                         onCartItemVisibilityChange={onCartItemVisibilityChange}
-                        pricesContentRef={(el) => assignRefInMap(el, productId, pricesContentRefsMap)}
-                        totalsContentRef={(el) => assignRefInMap(el, productId, totalsContentRefsMap)}
+                        pricesElemRef={pricesElemRef}
+                        totalsElemRef={totalsElemRef}
                         maxPricesWidth={maxPricesWidth}
                         maxTotalsWidth={maxTotalsWidth}
+                        searchQuery={searchQuery}
+                        cartClearing={cartClearing}
                         isTouchDevice={isTouchDevice}
                         isAuthenticated={isAuthenticated}
                         addCartItemInProgress={addCartItemInProgress}
@@ -718,40 +796,42 @@ function CartItemList({
     );
 }
 
-const CartItem = ({
-    selfRef,
-    cartItemRefs,
-    filteredCartItemIdsSet,
-    searchQuery,
-    cartClearing,
-    showCartClearAnimation,
-    setShowCartClearAnimation,
+export const CartItem = ({
+    cartItemElemRef,
     cartItem,
     product,
     customerDiscount,
     position,
+    filteredCartItemIdsSet,
+    checkAllCartItemElemsCollapsed,
+    showCartClearAnimation,
+    setShowCartClearAnimation,
     onCartItemVisibilityChange,
-    pricesContentRef,
-    totalsContentRef,
+    pricesElemRef,
+    totalsElemRef,
     maxPricesWidth,
     maxTotalsWidth,
+    searchQuery,
+    cartClearing,
     isTouchDevice,
     isAuthenticated,
     addCartItemInProgress,
     removeCartItemInProgress,
     checkoutInProgress
-}) => {
+}: TCartItemProps): JSX.Element | null => {
     const [isPendingRemoval, setIsPendingRemoval] = useState(false);
-    const [cartItemAnimation, setCartItemAnimation, cartItemAnimationRef] = useSyncedStateWithRef({
-        active: true, // true | false
-        reason: null, // 'filtering' | 'pendingRemoval' | 'restore' | 'remove' | 'clearCart' | null
-        phase: 'expanding' // 'expanding' | 'collapsing' | 'transitioning' | null
+    const [animationState, setAnimationState, animationStateRef] = useSyncedStateWithRef<
+        ICartItemElemAnimationState
+    >({
+        active: true,
+        reason: null,
+        phase: 'expanding'
     });
     const [isHiddenByFilter, setIsHiddenByFilter] = useState(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const isCartItemShown = 
-        (!cartItemAnimation.active || cartItemAnimation.phase !== 'collapsing') &&
+        (!animationState.active || animationState.phase !== 'collapsing') &&
         !isHiddenByFilter &&
         !showCartClearAnimation;
     
@@ -761,16 +841,16 @@ const CartItem = ({
 
     const title = formatProductTitle(product.name, product.brand);
 
-    const resetCartItemAnimation = () => {
-        setCartItemAnimation({ active: false, reason: null, phase: null });
+    const resetCartItemAnimation = (): void => {
+        setAnimationState({ active: false, reason: null, phase: null });
     }
 
-    const handleExpandEnd = () => {
+    const handleExpandEnd = (): void => {
         resetCartItemAnimation();
     };
 
-    const handleCollapseEnd = () => {
-        const animation = cartItemAnimationRef.current;
+    const handleCollapseEnd = (): void => {
+        const animation = animationStateRef.current;
 
         switch (animation.reason) {
             case 'filtering':
@@ -788,7 +868,7 @@ const CartItem = ({
                 break;
         
             case 'clearCart':
-                const allCollapsed = cartItemRefs.current.every(el => el?.offsetHeight === 0);
+                const allCollapsed = checkAllCartItemElemsCollapsed();
 
                 if (allCollapsed) {
                     dispatch(clearCart());
@@ -813,18 +893,18 @@ const CartItem = ({
     useEffect(() => {
         const isInFilteredList = filteredCartItemIdsSet.has(cartItem.id);
 
-        const { active: animActive, reason: animReason } = cartItemAnimation;
+        const { active: animActive, reason: animReason } = animationState;
         const isFilterAnimation = animActive && animReason === 'filtering';
-        const isRemoveAnimation = animActive && ['remove', 'clearCart'].includes(animReason);
+        const isRemoveAnimation = animActive && ['remove', 'clearCart'].some(r => r === animReason);
 
         if (isInFilteredList) {
             if (isFilterAnimation || isHiddenByFilter) {
                 setIsHiddenByFilter(false);
-                setCartItemAnimation({ active: true, reason: null, phase: 'expanding' });
+                setAnimationState({ active: true, reason: null, phase: 'expanding' });
             }
         } else {
             if (!isFilterAnimation && !isRemoveAnimation) {
-                setCartItemAnimation({ active: true, reason: 'filtering', phase: 'collapsing' });
+                setAnimationState({ active: true, reason: 'filtering', phase: 'collapsing' });
             }
         }
     }, [filteredCartItemIdsSet]);
@@ -832,12 +912,12 @@ const CartItem = ({
     // Установка анимации схлопывания при очистке корзины
     useEffect(() => {
         if (!showCartClearAnimation) return;
-        setCartItemAnimation({ active: true, reason: 'clearCart', phase: 'collapsing' });
+        setAnimationState({ active: true, reason: 'clearCart', phase: 'collapsing' });
     }, [showCartClearAnimation]);
 
     if (cartItem.deleted) {
         return (
-            <li ref={selfRef} className="cart-item">
+            <li ref={cartItemElemRef} className="cart-item">
                 <Collapsible
                     isExpanded={showDeletedCartItem}
                     className="cart-item-card-collapsible"
@@ -850,19 +930,21 @@ const CartItem = ({
                         title={title}
                         searchQuery={searchQuery}
                         cartClearing={cartClearing}
-                        isAnimationActive={cartItemAnimation.active}
-                        setCartItemAnimation={setCartItemAnimation}
                         addCartItemInProgress={addCartItemInProgress}
                         removeCartItemInProgress={removeCartItemInProgress}
                         checkoutInProgress={checkoutInProgress}
+                        isAnimationActive={animationState.active}
+                        setAnimationState={setAnimationState}
                     />
                 </Collapsible>
             </li>
         );
     }
 
+    if (product._type === 'snapshot') return null;
+
     return (
-        <li ref={selfRef} className="cart-item">
+        <li ref={cartItemElemRef} className="cart-item">
             <Collapsible
                 isExpanded={showCartItem}
                 className="cart-item-card-collapsible"
@@ -881,25 +963,25 @@ const CartItem = ({
                     price={product.price}
                     productDiscount={product.discount}
                     customerDiscount={customerDiscount}
-                    searchQuery={searchQuery}
                     quantity={cartItem.quantity}
                     quantityReduced={cartItem.quantityReduced}
                     outOfStock={cartItem.outOfStock}
                     inactive={cartItem.inactive}
-                    pricesContentRef={pricesContentRef}
-                    totalsContentRef={totalsContentRef}
+                    pricesElemRef={pricesElemRef}
+                    totalsElemRef={totalsElemRef}
                     maxPricesWidth={maxPricesWidth}
                     maxTotalsWidth={maxTotalsWidth}
+                    searchQuery={searchQuery}
                     cartClearing={cartClearing}
                     isTouchDevice={isTouchDevice}
                     isAuthenticated={isAuthenticated}
-                    isPendingRemoval={isPendingRemoval}
-                    setIsPendingRemoval={setIsPendingRemoval}
-                    isAnimationActive={cartItemAnimation.active}
-                    setCartItemAnimation={setCartItemAnimation}
                     addCartItemInProgress={addCartItemInProgress}
                     removeCartItemInProgress={removeCartItemInProgress}
                     checkoutInProgress={checkoutInProgress}
+                    isPendingRemoval={isPendingRemoval}
+                    setIsPendingRemoval={setIsPendingRemoval}
+                    isAnimationActive={animationState.active}
+                    setAnimationState={setAnimationState}
                 />
             </Collapsible>
 
@@ -914,509 +996,19 @@ const CartItem = ({
                     id={cartItem.id}
                     sku={product.sku}
                     title={title}
-                    searchQuery={searchQuery}
                     quantity={cartItem.quantity}
                     position={position}
+                    searchQuery={searchQuery}
                     cartClearing={cartClearing}
-                    isPendingRemoval={isPendingRemoval}
-                    setIsPendingRemoval={setIsPendingRemoval}
-                    isAnimationActive={cartItemAnimation.active}
-                    setCartItemAnimation={setCartItemAnimation}
                     addCartItemInProgress={addCartItemInProgress}
                     removeCartItemInProgress={removeCartItemInProgress}
                     checkoutInProgress={checkoutInProgress}
+                    isPendingRemoval={isPendingRemoval}
+                    setIsPendingRemoval={setIsPendingRemoval}
+                    isAnimationActive={animationState.active}
+                    setAnimationState={setAnimationState}
                 />
             </Collapsible>
         </li>
-    );
-}
-
-function CartItemCard({
-    pricesContentRef,
-    totalsContentRef,
-    maxPricesWidth,
-    maxTotalsWidth,
-    id,
-    images,
-    mainImageIndex,
-    sku,
-    title,
-    available,
-    unit,
-    price,
-    productDiscount,
-    customerDiscount,
-    searchQuery,
-    quantity,
-    quantityReduced,
-    outOfStock,
-    inactive,
-    cartClearing,
-    isTouchDevice,
-    isAuthenticated,
-    isPendingRemoval,
-    setIsPendingRemoval,
-    isAnimationActive,
-    setCartItemAnimation,
-    addCartItemInProgress,
-    removeCartItemInProgress,
-    checkoutInProgress
-}) {
-    const [upserting, setUpserting] = useState(false);
-    const [removing, setRemoving] = useState(false);
-    const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
-
-    const slug = generateSlug(title);
-    const productUrl = routeConfig.productDetails.generatePath({ slug, sku, productId: id });
-
-    const hasImages = images.length > 0;
-    const thumbImageSrc = hasImages
-        ? (images[mainImageIndex] ?? images[0]).thumbnails.small
-        : PRODUCT_IMAGE_PLACEHOLDER;
-    const thumbImageAlt = hasImages ? title : '';
-
-    const effectiveDiscount = Math.max(productDiscount, customerDiscount);
-    const hasDiscount = effectiveDiscount > 0;
-    const currentPrice = hasDiscount ? price * (1 - effectiveDiscount / 100) : price;
-    const originalTotal = price * quantity;
-    const currentTotal = currentPrice * quantity;
-    const savedTotal = originalTotal - currentTotal;
-
-    const formattedOriginalPrice = formatCurrency(price);
-    const formattedCurrentPrice = formatCurrency(currentPrice)
-    const formattedOriginalTotal = formatCurrency(originalTotal);
-    const formattedCurrentTotal = formatCurrency(currentTotal)
-    const formattedSavedTotal = formatCurrency(savedTotal);
-
-    const isUnavailable =
-        isAnimationActive ||
-        removing ||
-        isPendingRemoval ||
-        cartClearing ||
-        checkoutInProgress;
-    const isCartItemUiBlocked = upserting || isUnavailable;
-
-    const handleRemove = async () => {
-        setRemoving(true);
-        addCartItemInProgress(id);
-
-        const { status, message } = await dispatch(sendCartItemRemoveRequest(id));
-        if (isUnmountedRef.current) return;
-
-        logRequestStatus({ context: 'CART: REMOVE ITEM', status, message });
-
-        if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
-                type: 'error',
-                dismissible: false,
-                title: 'Не удалось удалить товар из корзины',
-                message: 'Ошибка при удалении товара.\nПодробности ошибки в консоли.'
-            });
-        } else {
-            setIsPendingRemoval(true);
-            setCartItemAnimation({ active: true, reason: 'pendingRemoval', phase: 'transitioning' });
-        }
-
-        setRemoving(false);
-        removeCartItemInProgress(id);
-    };
-
-    // Очистка при размонтировании
-    useEffect(() => {
-        return () => {
-            isUnmountedRef.current = true;
-        };
-    }, []);
-
-    return (
-        <article
-            data-id={id}
-            data-message={removing ? '⏳ Удаление товара из корзины...' : ''}
-            className={cn('cart-item-card', {
-                'unavailable': isUnavailable,
-                'quantity-reduced': quantityReduced,
-                'out-of-stock': outOfStock,
-                'inactive': inactive
-            })}
-        >
-            <div className="product-thumb">
-                <BlockableLink to={productUrl}>
-                    <TrackedImage
-                        className="product-thumb-img"
-                        src={thumbImageSrc}
-                        alt={thumbImageAlt}
-                    />
-                </BlockableLink>
-            </div>
-
-            <div className="product-info">
-                <h4 className="product-title">
-                    <BlockableLink to={productUrl}>
-                        {highlightText(title, searchQuery)}
-                    </BlockableLink>
-                </h4>
-                {sku && (
-                    <p className="product-info-item">
-                        <span className="label">Артикул:</span>
-                        <span className="value">
-                            {highlightText(sku, searchQuery)}
-                        </span>
-                    </p>
-                )}
-                {hasDiscount && (
-                    <p className="product-info-item">
-                        <span className="label">Применённая скидка:</span>
-                        <span className="value">
-                            {effectiveDiscount}%
-                            {productDiscount > customerDiscount
-                                ? ' (скидка на товар)'
-                                : ' (клиентская скидка)'}
-                        </span>
-                    </p>
-                )}
-            </div>
-
-            <div className="product-prices" style={{ minWidth: maxPricesWidth || 'auto' }}>
-                <div ref={pricesContentRef} className="measured-content">
-                    {hasDiscount && (
-                        <p className="original-price">{formattedOriginalPrice} руб.</p>
-                    )}
-                    <p className="current-price">{formattedCurrentPrice} руб.</p>
-                    <p className="unit-info">(цена за 1 {unit})</p>
-                </div>
-            </div>
-
-            <div className="math-symbol multiply">×</div>
-
-            {outOfStock ? (
-                <div className="out-of-stock">
-                    <p className="stock-info">
-                        <span className="icon">❌</span>
-                        Нет в наличии
-                    </p>
-                    <p className="quantity-info">
-                        {'В корзине: '}
-                        <span className="quantity-unit">
-                            <span className="quantity">{quantity}</span>
-                            {` ${unit}`}
-                        </span>
-                    </p>
-                </div>
-            ) : inactive ? (
-                <div className="inactive">
-                    <p className="stock-info">
-                        <span className="icon">🔒</span>
-                        Не продаётся
-                    </p>
-                    <p className="quantity-info">
-                        {'В корзине: '}
-                        <span className="quantity-unit">
-                            <span className="quantity">{quantity}</span>
-                            {` ${unit}`}
-                        </span>
-                    </p>
-                </div>
-            ) : (
-                <ProductQuantitySelector
-                    productId={id}
-                    availableQuantity={available}
-                    orderedQuantity={quantity}
-                    quantityReduced={quantityReduced}
-                    isTouchDevice={isTouchDevice}
-                    isAuthenticated={isAuthenticated}
-                    uiBlocked={isCartItemUiBlocked}
-                    minQuantity={1}
-                    onLoading={setUpserting}
-                />
-            )}
-
-            <div className="math-symbol equal">=</div>
-
-            <div className="product-total-amounts" style={{ minWidth: maxTotalsWidth || 'auto' }}>
-                <div ref={totalsContentRef} className="measured-content">
-                    {hasDiscount && (
-                        <p className="product-original-total">{formattedOriginalTotal} руб.</p>
-                    )}
-                    <p className="product-current-total">{formattedCurrentTotal} руб.</p>
-                    {hasDiscount && (
-                        <p className="product-saved-total">Экономия: {formattedSavedTotal} руб.</p>
-                    )}
-                </div>
-            </div>
-
-            <div className="remove-product-box">
-                <button
-                    className="remove-product-btn"
-                    onClick={handleRemove}
-                    disabled={isCartItemUiBlocked}
-                    aria-label="Удалить товар из корзины"
-                >
-                    ❌
-                </button>
-            </div>
-        </article>
-    );
-}
-
-function PendingRemovalCartItem({
-    id,
-    sku,
-    title,
-    searchQuery,
-    quantity,
-    position,
-    cartClearing,
-    isPendingRemoval,
-    setIsPendingRemoval,
-    isAnimationActive,
-    setCartItemAnimation,
-    addCartItemInProgress,
-    removeCartItemInProgress,
-    checkoutInProgress
-}) {
-    const [restoring, setRestoring] = useState(false);
-    const [restoreError, setRestoreError] = useState(false);
-    const [isStatusTextVisible, setIsStatusTextVisible] = useState(false);
-    const [secondsLeftToRemove, setSecondsLeftToRemove] = useState(10);
-
-    const removeTimerRef = useRef(null);
-    const isUnmountedRef = useRef(false);
-
-    const dispatch = useDispatch();
-
-    const statusText =
-        restoring
-            ? '⏳ Восстановление...'
-            : restoreError
-                ? '❌ Не удалось восстановить товар... Попробуйте снова.'
-                : `⏲ Удаление через ${secondsLeftToRemove} сек.`;
-
-    const isCartItemUiBlocked =
-        !isPendingRemoval ||
-        isAnimationActive ||
-        restoring ||
-        cartClearing ||
-        checkoutInProgress;
-
-    const clearRemoveTimer = () => {
-        clearTimeout(removeTimerRef.current);
-        removeTimerRef.current = null;
-    };
-    
-    const handleRestore = async () => {
-        clearRemoveTimer();
-        setIsStatusTextVisible(true);
-        setRestoreError(false);
-        setRestoring(true);
-        addCartItemInProgress(id);
-
-        const { status, message } = await dispatch(sendCartItemRestoreRequest(id, {
-            quantity,
-            position
-        }));
-        if (isUnmountedRef.current) return;
-
-        logRequestStatus({ context: 'CART: RESTORE ITEM', status, message });
-
-        if (status !== REQUEST_STATUS.SUCCESS) {
-            setRestoreError(true);
-        } else {
-            setIsStatusTextVisible(false);
-            setIsPendingRemoval(false);
-            setCartItemAnimation({ active: true, reason: 'restore', phase: 'transitioning' });
-        }
-        
-        setRestoring(false);
-        removeCartItemInProgress(id);
-    };
-
-    const handleRemove = () => {
-        clearRemoveTimer();
-        setIsStatusTextVisible(false);
-        setCartItemAnimation({ active: true, reason: 'remove', phase: 'collapsing' });
-    };
-
-    // Очистка при размонтировании
-    useEffect(() => {
-        return () => {
-            isUnmountedRef.current = true;
-
-            if (removeTimerRef.current) {
-                clearRemoveTimer();
-                dispatch(unsetCartItem(id));
-                dispatch(refreshCartTotals());
-            }
-        };
-    }, []);
-
-    // Запуск таймера автоудаления
-    useEffect(() => {
-        if (!isPendingRemoval || isAnimationActive) return;
-    
-        setSecondsLeftToRemove(10);
-        setIsStatusTextVisible(true);
-
-        const tick = () => {
-            setSecondsLeftToRemove(prev => {
-                const next = prev - 1;
-
-                // Задержка перед удалением товара
-                if (next <= 0) {
-                    removeTimerRef.current = setTimeout(handleRemove, 500);
-                    return 0;
-                }
-
-                removeTimerRef.current = setTimeout(tick, 1000);
-                return next;
-            });
-        };
-        
-        removeTimerRef.current = setTimeout(tick, 1000);
-
-        return () => clearRemoveTimer();
-    }, [isPendingRemoval, isAnimationActive]);
-
-    // Остановка таймера при анимации или очистке корзины
-    useEffect(() => {
-        if (!isAnimationActive && !cartClearing) return;
-
-        clearRemoveTimer();
-        setIsStatusTextVisible(false);
-    }, [isAnimationActive, cartClearing]);
-
-    return (
-        <div className="cart-item-pending-removal"> 
-            <div className="cart-item-info">
-                <strong>{highlightText(title, searchQuery)}</strong><br />
-                {sku && (
-                    <>
-                        <small>Артикул: {highlightText(sku, searchQuery)}</small><br />
-                    </>
-                )}
-                <span className="cart-item-warning">
-                    Товар был удалён из корзины.
-                    Вы можете восстановить его или удалить окончательно.
-                </span>
-            </div>
-
-            <div className="cart-item-controls-box">
-                <p className={cn('cart-item-status-text', {
-                    'visible': isStatusTextVisible,
-                    'error': restoreError
-                })}>
-                    {statusText}
-                </p>
-
-                <div className="cart-item-buttons-box">
-                    <button
-                        className="restore-cart-item-btn"
-                        onClick={handleRestore}
-                        disabled={isCartItemUiBlocked}
-                        aria-label="Восстановить товар в корзине"
-                    >
-                        Восстановить
-                    </button>
-
-                    <button
-                        className="remove-cart-item-btn"
-                        onClick={handleRemove}
-                        disabled={isCartItemUiBlocked}
-                        aria-label="Удалить товар из корзины"
-                    >
-                        Удалить
-                    </button>
-                </div>
-            </div>
-            
-        </div>
-    );
-}
-
-function DeletedCartItem({
-    id,
-    title,
-    searchQuery,
-    cartClearing,
-    isAnimationActive,
-    setCartItemAnimation,
-    addCartItemInProgress,
-    removeCartItemInProgress,
-    checkoutInProgress
-}) {
-    const [removing, setRemoving] = useState(false);
-    const [removeError, setRemoveError] = useState(false);
-    const [isStatusTextVisible, setIsStatusTextVisible] = useState(true);
-    const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
-
-    const statusText =
-        removing
-            ? '⏳ Удаление...'
-            : removeError
-                ? '❌ Не удалось удалить товар... Попробуйте снова.'
-                : '⚠️ Удалить эту позицию из корзины?';
-
-    const isCartItemUiBlocked = isAnimationActive || removing || cartClearing || checkoutInProgress;
-
-    const handleRemove = async () => {
-        setIsStatusTextVisible(true);
-        setRemoveError(false);
-        setRemoving(true);
-        addCartItemInProgress(id);
-
-        const { status, message } = await dispatch(sendCartItemRemoveRequest(id));
-        if (isUnmountedRef.current) return;
-
-        logRequestStatus({ context: 'CART: REMOVE ITEM', status, message });
-
-        if (status !== REQUEST_STATUS.SUCCESS) {
-            setRemoveError(true);
-        } else {
-            setIsStatusTextVisible(false);
-            setCartItemAnimation({ active: true, reason: 'remove', phase: 'collapsing' });
-        }
-
-        setRemoving(false);
-        removeCartItemInProgress(id);
-    };
-
-    // Очистка при размонтировании
-    useEffect(() => {
-        return () => {
-            isUnmountedRef.current = true;
-        };
-    }, []);
-
-    return (
-        <div className="cart-item-deleted">
-            <div className="cart-item-info">
-                <strong>{highlightText(title, searchQuery)}</strong><br />
-                <span className="cart-item-warning">
-                    Этот товар был удалён из магазина и больше недоступен.
-                </span>
-            </div>
-
-            <div className="cart-item-controls-box">
-                <p className={cn('cart-item-status-text', {
-                    'visible': isStatusTextVisible,
-                    'error': removeError
-                })}>
-                    {statusText}
-                </p>
-
-                <div className="cart-item-buttons-box">
-                    <button
-                        className="remove-cart-item-btn"
-                        onClick={handleRemove}
-                        aria-label="Удалить товар из корзины"
-                        disabled={isCartItemUiBlocked}
-                    >
-                        Удалить
-                    </button>
-                </div>
-            </div>
-            
-        </div>
     );
 }

@@ -1,5 +1,5 @@
 import { updateCustomerDiscount } from '@/redux/slices/authSlice.js';
-import { setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/redux/slices/cartSlice.js';
+import { selectCartItemList, setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/redux/slices/cartSlice.js';
 import { upsertProductsInStore } from '@/redux/slices/productsSlice.js';
 import { saveGuestCartToLocalStorage } from '@/services/guestCartService.js';
 import type { TAppThunk, TRootState, ICartTotals } from '@/types/index.js';
@@ -37,7 +37,7 @@ export const unsetCartItem = (
 
 export const refreshCartTotals = (): TAppThunk<void> => (dispatch, getState) => {
     const state = getState();
-    const cartItemList = getCartItemList(getState);
+    const cartItemList = selectCartItemList(state);
     const productMap = state.products.byId;
     const customerDiscount = state.auth.user?.discount ?? 0;
 
@@ -62,7 +62,7 @@ export const reconcileCartWithProducts = (
     productList: IProduct[]
 ): TAppThunk<void> => (dispatch, getState) => {
     const state = getState();
-    const cartItemList = getCartItemList(getState);
+    const cartItemList = selectCartItemList(state);
     const isGuestCart = !state.auth.isAuthenticated;
     const oldProductMap = state.products.byId;
     const newProductMap = new Map(productList.map(prod => [prod.id, prod]));
@@ -134,15 +134,8 @@ export const reconcileCartWithProducts = (
 };
 
 const saveGuestCart = (getState: () => TRootState): void => {
-    const cartItemList = getCartItemList(getState);
+    const cartItemList = selectCartItemList(getState());
     saveGuestCartToLocalStorage(cartItemList);
-};
-
-const getCartItemList = (getState: () => TRootState): ICartItem[] => {
-    const cartState = getState().cart;
-    return cartState.ids
-        .map(id => cartState.byId[id])
-        .filter((item: ICartItem | undefined): item is ICartItem => Boolean(item));
 };
 
 const buildCartProductData = (

@@ -18,6 +18,7 @@ import type {
 } from './shared.types.js';
 
 export interface IProduct {
+    _type: 'full';
     id: string;
     images: IProductImage[];
     mainImageIndex?: number;
@@ -38,6 +39,10 @@ export interface IProduct {
     tags?: string;
 }
 
+export type TProductSnapshot = Pick<IProduct, 'name' | 'brand'> & {
+    _type: 'snapshot';
+};
+
 export interface IProductImage {
     filename: string;
     original: string;
@@ -47,13 +52,6 @@ export interface IProductImage {
 export type TProductImageThumbs = {
     [K in TProductThumbnailKey]: string;
 }
-
-export interface IProductSnapshot {
-    name: string;
-    brand?: string;
-}
-
-export type TTradeProduct = IProduct | IProductSnapshot;
 
 export interface IProductAdjustment {
     id: string;

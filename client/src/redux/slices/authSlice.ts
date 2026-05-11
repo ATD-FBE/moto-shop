@@ -35,7 +35,7 @@ const initialState: IAuthState = {
     user: null,
     accessTokenExpiresAt: 0,
     refreshTokenExpiresAt: 0
-} as const;
+};
 
 const authSlice = createSlice({
     name: 'auth',

@@ -5,17 +5,13 @@ import type { JSX, MouseEvent } from 'react';
 import type { LinkProps } from 'react-router-dom';
 
 export default function BlockableLink(
-    { to, children, onClick, ...props }: LinkProps
+    { to, onClick, children, ...props }: LinkProps
 ): JSX.Element {
     const { isNavigationLocked, lockedRoute } = useAppSelector(state => state.ui);
     const dispatch = useAppDispatch();
     const location = useAppLocation();
 
     const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-        if (to === '#') {
-            e.preventDefault();
-        }
-
         if (isNavigationLocked) {
             e.preventDefault();
             console.warn('Навигация заблокирована в данный момент');
@@ -29,7 +25,7 @@ export default function BlockableLink(
             }
         }
 
-        if (onClick) onClick(e);
+        onClick?.(e);
     };
 
     return (

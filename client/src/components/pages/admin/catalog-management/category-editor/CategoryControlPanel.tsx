@@ -139,7 +139,7 @@ export default function CategoryControlPanel({
                 </button>
 
                 <Collapsible
-                    isExpanded={activeForm === CATEGORY_FORM_MODE.EDIT && selectedCategoryId}
+                    isExpanded={activeForm === CATEGORY_FORM_MODE.EDIT && Boolean(selectedCategoryId)}
                     className="category-form-collapsible"
                     showContextIndicator={false}
                 >

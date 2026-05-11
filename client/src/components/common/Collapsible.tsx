@@ -1,5 +1,24 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import cn from 'classnames';
+import type { JSX, ReactNode } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICollapsibleProps {
+    isExpanded: boolean;
+    className?: string;
+    showContextIndicator?: boolean;
+    onExpandEnd?: (() => void) | null;
+    onCollapseEnd?: (() => void) | null;
+    children: ReactNode;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 
 export default function Collapsible({
     isExpanded,
@@ -8,9 +27,9 @@ export default function Collapsible({
     onExpandEnd = null,
     onCollapseEnd = null,
     children
-}) {
+}: ICollapsibleProps): JSX.Element {
     const [fullyExpanded, setFullyExpanded] = useState(false);
-    const wrapperRef = useRef(null);
+    const wrapperRef = useRef<HTMLDivElement | null>(null);
     const isExpandedRef = useRef(isExpanded);
 
     // Подключение слушателей
@@ -18,7 +37,7 @@ export default function Collapsible({
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
 
-        const onTransitionEnd = (e) => {
+        const onTransitionEnd = (e: TransitionEvent): void => {
             if (e.target !== wrapper || e.propertyName !== 'height') return;
 
             // Установка auto для высоты при раскрытии и выполнение коллбэков

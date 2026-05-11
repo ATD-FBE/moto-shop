@@ -160,8 +160,8 @@ export default function Checkout() {
 
         const hasAdjustments = orderItemAdjustments?.length > 0;
         const adjustmentsMsg = hasAdjustments
-            ? '<span className="bold underline">Изменения товаров в заказе:</span>\n\n' +
-                formatCheckoutAdjustmentLogs(orderItemAdjustments)
+            ? '<span className="bold underline">Изменения товаров в заказе:</span>' +
+                `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
             : '';
             
         if (hasAdjustments) {

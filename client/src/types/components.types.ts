@@ -179,3 +179,13 @@ export type TProductPerformFormSubmissionResult =
 
 export type TProductPerformFormSubmission = () =>
     Promise<TProductPerformFormSubmissionResult | undefined>;
+
+////////////
+/// CART ///
+////////////
+
+export interface ICartItemElemAnimationState {
+    active: boolean;
+    reason: 'filtering' | 'pendingRemoval' | 'restore' | 'remove' | 'clearCart' | null;
+    phase: 'expanding' | 'collapsing' | 'transitioning' | null;
+}

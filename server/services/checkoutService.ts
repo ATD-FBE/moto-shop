@@ -18,7 +18,7 @@ import type {
     IProduct,
     IProductAdjustment,
     ICartItem,
-    ICartItemSnapshot,
+    IInitialOrderItemSnapshot,
     IOrderDraftItem
 } from '@shared/types/index.js';
 
@@ -37,11 +37,11 @@ export interface ISyncCartResult {
 export interface ISyncOrderDraftResult {
     fixedDbCart: TDbCartItem[];
     fixedDbOrderItems: TDbOrderDraftItem[];
-    orderItemList: IOrderDraftItem[];
     orderItemAdjustments: IProductAdjustment[];
+    orderItemList: IOrderDraftItem[];
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
-    reservedOrderItemList: IOrderItemRef[];
+    orderItemsToRelease: IOrderItemRef[];
 }
 
 /////////////////////
@@ -96,7 +96,7 @@ export const commitProductPurchase = async (
 
 export const syncCart = async (
     cartItemList: TDbCartItem[],
-    cartItemSnapshotMap: Map<string, ICartItemSnapshot>,
+    initialOrderItemSnapshotMap: Map<string, IInitialOrderItemSnapshot>,
     customerDiscount: number
 ): Promise<ISyncCartResult> => {
     const productIds = cartItemList.map(item => item.productId);
@@ -108,11 +108,11 @@ export const syncCart = async (
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return cartItemList.reduce(
-        (acc: ISyncCartResult, cartItem: TDbCartItem): ISyncCartResult => {
+    return cartItemList.reduce<ISyncCartResult>(
+        (acc, cartItem) => {
             const productObjectId = cartItem.productId;
             const productId = productObjectId.toString();
-            const productSnapshot = cartItemSnapshotMap.get(productId);
+            const productSnapshot = initialOrderItemSnapshotMap.get(productId);
             const dbProduct = dbProductMap.get(productId);
             const adjustments: IProductAdjustment['adjustments'] = {};
 
@@ -241,8 +241,8 @@ export const syncOrderDraft = async (
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return dbOrderItemList.reduce(
-        (acc: ISyncOrderDraftResult, orderItem: TDbOrderDraftItem): ISyncOrderDraftResult => {
+    return dbOrderItemList.reduce<ISyncOrderDraftResult>(
+        (acc, orderItem) => {
             const productObjectId = orderItem.productId;
             const productId = productObjectId.toString();
             const dbProduct = dbProductMap.get(productId);
@@ -266,7 +266,7 @@ export const syncOrderDraft = async (
             if (!dbProduct.isActive) {
                 adjustments.inactive = true;
                 acc.orderItemAdjustments.push(adjustedProductData);
-                acc.reservedOrderItemList.push({ productId, quantity: orderItem.quantity });
+                acc.orderItemsToRelease.push({ productId, quantity: orderItem.quantity });
                 return acc;
             }
 
@@ -357,7 +357,7 @@ export const syncOrderDraft = async (
             tradeProductList: [],
             cartItemList: [],
             orderItemList: [],
-            reservedOrderItemList: []
+            orderItemsToRelease: []
         }
     );
 };

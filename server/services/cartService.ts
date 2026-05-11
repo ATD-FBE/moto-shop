@@ -8,17 +8,17 @@ import type { IGuestCartItem, ICartItem, IProduct } from '@shared/types/index.js
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-export interface IGuestCart {
+export interface IPrepareGuestCartResult {
     tradeProductList: IProduct[];
     cartItemList: IGuestCartItem[];
 }
 
-export interface ICart {
+export interface IPrepareCartResult {
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
 }
 
-export interface IFixedDbCart {
+export interface IPrepareFixedDbCartCart {
     fixedDbCart: TDbCartItem[];
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
@@ -28,7 +28,7 @@ export interface IFixedDbCart {
 /// FUNCTIONALITY ///
 /////////////////////
 
-export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<IGuestCart> => {
+export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<IPrepareGuestCartResult> => {
     const productIds = cartItemList.map(item => item.id);
     const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
@@ -38,8 +38,8 @@ export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return cartItemList.reduce(
-        (acc: IGuestCart, cartItem: IGuestCartItem): IGuestCart => {
+    return cartItemList.reduce<IPrepareGuestCartResult>(
+        (acc, cartItem) => {
             const productId = cartItem.id;
             const dbProduct = dbProductMap.get(productId);
             if (!dbProduct) return acc;
@@ -63,7 +63,7 @@ export const prepareGuestCart = async (cartItemList: IGuestCartItem[]): Promise<
 export const prepareCart = async (
     dbCartItemList: TDbCartItem[],
     { checkoutMode = false }: { checkoutMode?: boolean } = {}
-): Promise<ICart> => {
+): Promise<IPrepareCartResult> => {
     const productIds = dbCartItemList.map(item => item.productId);
     const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
@@ -73,8 +73,8 @@ export const prepareCart = async (
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return dbCartItemList.reduce(
-        (acc: ICart, dbCartItem: TDbCartItem): ICart => {
+    return dbCartItemList.reduce<IPrepareCartResult>(
+        (acc, dbCartItem) => {
             const productId = dbCartItem.productId.toString();
             const dbProduct = dbProductMap.get(productId);
 
@@ -175,7 +175,7 @@ export const areCartsDifferent = (aCart: TDbCartItem[], bCart: TDbCartItem[]): b
     return false;
 };
 
-export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedDbCart> => {
+export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IPrepareFixedDbCartCart> => {
     const productIds = dbCart.map(item => item.productId);
     const dbProducts = productIds.length > 0
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
@@ -185,8 +185,8 @@ export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IFixedD
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
     const now = Date.now();
 
-    return dbCart.reduce(
-        (acc: IFixedDbCart, dbCartItem: TDbCartItem): IFixedDbCart => {
+    return dbCart.reduce<IPrepareFixedDbCartCart>(
+        (acc, dbCartItem) => {
             const productId = dbCartItem.productId.toString();
             const dbProduct = dbProductMap.get(productId);
             if (!dbProduct) return acc;

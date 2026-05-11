@@ -1,6 +1,9 @@
 import { useState, useLayoutEffect } from 'react';
 
-export default function useMeasureMaxWidth(elements, options = {}) {
+export default function useMeasureMaxWidth(
+    elements: HTMLElement[],
+    options: { enabled?: boolean } = {}
+): number {
     const { enabled = true } = options;
 
     const [maxWidth, setMaxWidth] = useState(0);
@@ -12,11 +15,11 @@ export default function useMeasureMaxWidth(elements, options = {}) {
         }
         if (!elements.length) return;
 
-        let rafId = null;
+        const getMax = (): number => Math.max(0, ...elements.map(el => el.offsetWidth));
 
-        const getMax = () => Math.max(0, ...elements.map(el => el.offsetWidth));
+        let rafId: number | null = null;
 
-        const update = () => {
+        const update = (): void => {
             rafId = requestAnimationFrame(() => {
                 setMaxWidth(getMax());
             });
@@ -29,7 +32,7 @@ export default function useMeasureMaxWidth(elements, options = {}) {
 
         return () => {
             observer.disconnect();
-            cancelAnimationFrame(rafId);
+            if (rafId) cancelAnimationFrame(rafId);
         };
     }, [enabled, elements]);
 

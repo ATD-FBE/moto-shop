@@ -34,7 +34,7 @@ import type {
     TProductImageThumbs,
     TProductThumbnailKey,
     TProductThumbnailSize,
-    IProductSnapshot,
+    TProductSnapshot,
     TQuery
 } from '@shared/types/index.js';
 
@@ -46,6 +46,7 @@ interface IProductFilterQuery<TModel extends object> extends TQuery<TModel> {
     inStock?: boolean | '';
     brandNew?: boolean | '';
     restocked?: boolean | '';
+    reserved?: boolean | '';
 }
 
 /////////////////////
@@ -60,6 +61,7 @@ export const prepareProduct = (
     const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
 
     return {
+        _type: 'full',
         id: productId,
         images: prepareProductImages(productId, dbProduct.imageFilenames),
         mainImageIndex: dbProduct.mainImageIndex ?? undefined,
@@ -112,7 +114,8 @@ const prepareProductImages = (productId: string, imageFilenames: string[]): IPro
     }));
 };
 
-export const prepareProductSnapshot = (dbCartItem: TDbCartItem): IProductSnapshot => ({
+export const prepareProductSnapshot = (dbCartItem: TDbCartItem): TProductSnapshot => ({
+    _type: 'snapshot',
     name: dbCartItem.nameSnapshot,
     brand: dbCartItem.brandSnapshot ?? undefined
 });
@@ -315,8 +318,9 @@ export const buildProductsComputedFields = (
     const needInStockFilter = query.inStock !== undefined && query.inStock !== '';
     const needBrandNewFilter = query.brandNew !== undefined && query.brandNew !== '';
     const needRestockedFilter = query.restocked !== undefined && query.restocked !== '';
+    const needReservedFilter = query.reserved !== undefined && query.reserved !== '';
 
-    if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter) return [];
+    if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter && !needReservedFilter) return [];
 
     const fields: FilterQuery<TDbProductView> = {};
     const now = Date.now();
@@ -355,6 +359,10 @@ export const buildProductsComputedFields = (
                 false
             ]
         };
+    }
+
+    if (needReservedFilter) {
+        fields.isReserved = { $cond: [{ $gt: ['$reserved', 0] }, true, false] };
     }
 
     return [{ $addFields: fields }];

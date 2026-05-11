@@ -32,7 +32,7 @@ export function OrderCardOverview({
     const userRole = useSelector(state => state.auth.user?.role ?? 'guest');
 
     const orderUrl = routeConfig[`${userRole}OrderDetails`]
-        ?.generatePath({ orderNumber, orderId: id }) || '/';
+        ?.generatePath({ orderId: id, orderNumber }) || '/';
 
     const confirmedDateTime = new Date(confirmedAt).toLocaleString();
 

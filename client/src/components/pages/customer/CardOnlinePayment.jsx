@@ -232,7 +232,7 @@ export default function CardOnlinePayment() {
                 payload: { amount: { value: remainingAmount, uiStatus: '', error: '' } }
             });
             navigate(
-                routeConfig.customerOrderCardOnlinePayment.generatePath({ orderNumber, orderId }),
+                routeConfig.customerOrderCardOnlinePayment.generatePath({ orderId, orderNumber }),
                 { replace: true }
             );
         }
@@ -534,7 +534,7 @@ export default function CardOnlinePayment() {
                         if (isUnmountedRef.current) return;
                         
                         navigate(
-                            routeConfig.customerOrderDetails.generatePath({ orderNumber, orderId })
+                            routeConfig.customerOrderDetails.generatePath({ orderId, orderNumber })
                         );
                     }
                 }, SUCCESS_DELAY);

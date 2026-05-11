@@ -87,6 +87,13 @@ export const productsFilterOptions = [
         label: 'В продаже',
         type: 'boolean',
         paramName: 'active',
+        contexts: ['catalog', 'editor']
+    },
+    {
+        dbField: 'isReserved',
+        label: 'Зарезервированные',
+        type: 'boolean',
+        paramName: 'reserved',
         contexts: ['editor']
     }
 ] as const;

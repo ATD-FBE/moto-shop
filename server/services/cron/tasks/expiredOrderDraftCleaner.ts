@@ -23,8 +23,8 @@ export const startExpiredOrderDraftCleaner = (): void => {
         
                     if (!expiredOrderDrafts.length) return;
         
-                    const reservedOrderItemList = expiredOrderDrafts.flatMap(order => order.items);
-                    await releaseReservedProducts(reservedOrderItemList, session);
+                    const orderItemsToRelease = expiredOrderDrafts.flatMap(order => order.items);
+                    await releaseReservedProducts(orderItemsToRelease, session);
         
                     const expiredOrderIds = expiredOrderDrafts.map(order => order._id);
                     await Order.deleteMany({ _id: { $in: expiredOrderIds } }).session(session);

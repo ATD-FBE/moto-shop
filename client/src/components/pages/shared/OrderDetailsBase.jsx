@@ -85,7 +85,7 @@ export default function OrderDetailsBase({
             setOrder(order);
 
             const { id, orderNumber } = order;
-            const updatedUrl = routeConfig[routeKey].generatePath({ orderNumber, orderId: id });
+            const updatedUrl = routeConfig[routeKey].generatePath({ orderId: id, orderNumber });
 
             if (location.pathname !== updatedUrl) {
                 navigate(updatedUrl, { replace: true });

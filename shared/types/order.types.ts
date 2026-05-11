@@ -178,6 +178,13 @@ export interface IOrderDraftItem {
     appliedDiscountSnapshot: number;
 }
 
+export interface IInitialOrderItemSnapshot {
+    productId: string;
+    priceSnapshot: number;
+    appliedDiscountSnapshot: number;
+    appliedDiscountSourceSnapshot: TDiscountSource;
+}
+
 export interface IRefundablePayment {
     provider: TCardOnlineProvider;
     transactionId: string;

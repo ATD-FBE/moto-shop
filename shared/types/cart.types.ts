@@ -1,5 +1,5 @@
 import type { TDiscountSource } from './shared.types.js';
-import type { IProduct, IProductSnapshot } from './product.types.js';
+import type { IProduct, TProductSnapshot } from './product.types.js';
 import type {
     TAuthErrorResponse,
     TGeneralErrorResponse,
@@ -21,14 +21,7 @@ export interface ICartItem {
     outOfStock: boolean;
     inactive: boolean;
     deleted: boolean;
-    productSnapshot: IProductSnapshot | null;
-}
-
-export interface ICartItemSnapshot {
-    productId: string;
-    priceSnapshot: number;
-    appliedDiscountSnapshot: number;
-    appliedDiscountSourceSnapshot: TDiscountSource;
+    productSnapshot: TProductSnapshot | null;
 }
 
 interface ICartBaseSuccessData {
