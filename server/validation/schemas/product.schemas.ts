@@ -3,23 +3,13 @@ import { productsFilterOptions } from '@shared/filterOptions.js';
 import { PRODUCT_UNITS } from '@shared/constants.js';
 import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TProductEntity = typeof productEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const productEntity = 'product';
 
-const paramsBaseSchema: IValidationInputSchema<TProductEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     productId: 'objectIdString'
 } as const;
 
-const bodyBaseSchema: IValidationInputSchema<TProductEntity>['body'] = {
+const bodyBaseSchema: IValidationInputSchema['body'] = {
     images: { type: 'files', formField: true },
     mainImageIndex: { type: 'integer', min: 0, optional: true },
     sku: { type: 'string', optional: true, match: true, formField: true },
@@ -29,7 +19,7 @@ const bodyBaseSchema: IValidationInputSchema<TProductEntity>['body'] = {
     stock: { type: 'integer', min: 0,  formField: true },
     unit: { type: 'string', enum: PRODUCT_UNITS, formField: true },
     price: { type: 'float', min: 0,  match: true, formField: true },
-    discount: { type: 'float', match: true, min: 0, max: 100, formField: true },
+    discount: { type: 'float', min: 0, max: 100, match: true, formField: true },
     category: { type: 'objectIdString', formField: true },
     tags: { type: 'string', optional: true, match: true, formField: true },
     isActive: { type: 'boolean', formField: true }
@@ -40,7 +30,7 @@ const productIdsSchema: IValidationSchema = {
     items: { type: 'objectIdString' }
 } as const;
 
-export const productListSchema: IValidationInputSchema<TProductEntity> = {
+export const productListSchema: IValidationInputSchema = {
     entityType: productEntity,
     query: {
         ...buildQueryValidationSchema(productsFilterOptions),
@@ -49,17 +39,17 @@ export const productListSchema: IValidationInputSchema<TProductEntity> = {
     }
 } as const;
 
-export const productSchema: IValidationInputSchema<TProductEntity> = {
+export const productSchema: IValidationInputSchema = {
     entityType: productEntity,
     params: paramsBaseSchema
 } as const;
 
-export const productCreateSchema: IValidationInputSchema<TProductEntity> = {
+export const productCreateSchema: IValidationInputSchema = {
     entityType: productEntity,
     body: bodyBaseSchema
 } as const;
 
-export const productUpdateSchema: IValidationInputSchema<TProductEntity> = {
+export const productUpdateSchema: IValidationInputSchema = {
     entityType: productEntity,
     params: paramsBaseSchema,
     body: {
@@ -71,7 +61,7 @@ export const productUpdateSchema: IValidationInputSchema<TProductEntity> = {
     }
 } as const;
 
-export const bulkProductUpdateSchema: IValidationInputSchema<TProductEntity> = {
+export const bulkProductUpdateSchema: IValidationInputSchema = {
     entityType: productEntity,
     body: {
         productIds: productIdsSchema,
@@ -89,12 +79,12 @@ export const bulkProductUpdateSchema: IValidationInputSchema<TProductEntity> = {
     }
 } as const;
 
-export const productDeleteSchema: IValidationInputSchema<TProductEntity> = {
+export const productDeleteSchema: IValidationInputSchema = {
     entityType: productEntity,
     params: paramsBaseSchema
 } as const;
 
-export const bulkProductDeleteSchema: IValidationInputSchema<TProductEntity> = {
+export const bulkProductDeleteSchema: IValidationInputSchema = {
     entityType: productEntity,
     body: {
         productIds: productIdsSchema

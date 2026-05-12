@@ -3,9 +3,9 @@ import apiResponse from './core/apiResponse.js';
 
 const CHECKOUT_TIMEOUT = 35000;
 
-/// Загрузка черновика заказа ///
-export const sendOrderDraftRequest = (orderId) => async (dispatch) => {
-    const url = `/api/checkout/draft-orders/${orderId}/prepare`;
+/// Синхронизация и загрузка черновика заказа ///
+export const sendOrderDraftSyncRequest = (orderId) => async (dispatch) => {
+    const url = `/api/checkout/draft-orders/${orderId}/sync`;
     const options = { method: 'POST' };
     const errorPrefix = 'Не удалось загрузить черновик заказа';
     const config = {

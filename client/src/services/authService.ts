@@ -21,7 +21,7 @@ import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
-import type { TAppThunk, IOpenAlertModalParams } from '@/types/index.js';
+import type { TAppThunk, TOpenAlertModalParams } from '@/types/index.js';
 import type { IUser, IProduct, ICartItem } from '@shared/types/index.js';
 
 //////////////////////////
@@ -246,7 +246,7 @@ const isValidUser = (data: any): data is IUser => {
     return data && typeof data === 'object' && 'id' in data && 'email' in data && 'role' in data;
 };
 
-const delayAndShowAlert = (alertOptions: IOpenAlertModalParams, delay = 1000) => {
+const delayAndShowAlert = (alertOptions: TOpenAlertModalParams, delay = 1000) => {
     setTimeout(() => {
         const isAuthenticated = AppStore.getState().auth.isAuthenticated;
         if (isAuthenticated) openAlertModal(alertOptions);

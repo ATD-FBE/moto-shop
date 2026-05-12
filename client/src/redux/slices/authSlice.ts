@@ -1,19 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IAuthState } from '@/types/index.js';
 import type { IUser } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
-
-export interface IAuthState {
-    isAuthenticated: boolean;
-    isLocalSession: boolean;
-    suppressAuthRedirect: boolean;
-    forceRedirectToLogin: boolean;
-    user: IUser | null;
-    accessTokenExpiresAt: number;
-    refreshTokenExpiresAt: number;
-}
 
 interface ILoginPayload {
     user: IUser;

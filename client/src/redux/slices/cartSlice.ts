@@ -1,22 +1,6 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
-import type { ICartTotals, TRootState } from '@/types/index.js';
+import type { ICartState, ICartTotals, TRootState } from '@/types/index.js';
 import type { IBaseCartItem, IGuestCartItem, ICartItem } from '@shared/types/index.js';
-
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-export interface ICartState {
-    byId: Record<string, ICartItem>;
-    ids: string[];
-    rawTotal: number;
-    discountedTotal: number;
-    isAccessible: boolean;
-}
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
 
 const defaultCartItemExtendedParams = {
     quantityReduced: false,

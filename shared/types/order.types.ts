@@ -1,7 +1,6 @@
+import { USER_ROLE } from '@shared/constants.js';
 import type {
     IDataChange,
-    TUserRole,
-    TRegisteredUserRole,
     TDiscountSource,
     TDeliveryMethod,
     TPaymentMethod,
@@ -15,6 +14,7 @@ import type {
     TTransactionStatus
 } from './shared.types.js';
 
+/// Общие типы ///
 export interface IOrderDataChange extends IDataChange {
     currency?: boolean;
 }
@@ -25,7 +25,7 @@ export interface IOrder {
     confirmedAt: string;
     lastActivityAt?: string;
     statusHistory: (IOrderStatusEntry | IOrderStatusEntrySummary)[];
-    totals: IOrderTotals;
+    totals: IOrderTotals | Pick<IOrderTotals, 'totalAmount'>;
     items?: IOrderItem[];
     totalItems?: number;
     customerInfo?: ICustomerInfo;
@@ -37,8 +37,8 @@ export interface IOrder {
 }
 
 export interface IOrderTotals {
-    subtotalAmount?: number;
-    totalSavings?: number;
+    subtotalAmount: number;
+    totalSavings: number;
     totalAmount: number;
 }
 
@@ -50,7 +50,7 @@ export interface IOrderStatusEntry {
     changedBy: {
         id: string;
         name: string;
-        role: TRegisteredUserRole;
+        role: typeof USER_ROLE.CUSTOMER | typeof USER_ROLE.ADMIN;
     };
     changedAt: string;
     lastActiveStatus?: TOrderStatus;
@@ -119,7 +119,7 @@ export interface IFinancialsEventEntry {
     changedBy: {
         id?: string;
         name: string;
-        role: TUserRole;
+        role: typeof USER_ROLE.ADMIN | typeof USER_ROLE.SYSTEM;
     };
     changedAt: string;
     voided?: IFinancialsEventVoided;
@@ -147,7 +147,7 @@ export interface IFinancialsEventVoided {
     changedBy: {
         id: string;
         name: string;
-        role: TRegisteredUserRole;
+        role: typeof USER_ROLE.ADMIN;
     };
     changedAt: string;
 }
@@ -166,23 +166,9 @@ export interface IAuditLogEntry {
     changedBy: {
         id: string;
         name: string;
-        role: TRegisteredUserRole;
+        role: typeof USER_ROLE.ADMIN;
     };
     changedAt: string;
-}
-
-export interface IOrderDraftItem {
-    productId: string;
-    quantity: number;
-    priceSnapshot: number;
-    appliedDiscountSnapshot: number;
-}
-
-export interface IInitialOrderItemSnapshot {
-    productId: string;
-    priceSnapshot: number;
-    appliedDiscountSnapshot: number;
-    appliedDiscountSourceSnapshot: TDiscountSource;
 }
 
 export interface IRefundablePayment {

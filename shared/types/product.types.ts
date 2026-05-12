@@ -17,6 +17,7 @@ import type {
     TDiscountSource
 } from './shared.types.js';
 
+/// Общие типы ///
 export interface IProduct {
     _type: 'full';
     id: string;
@@ -92,6 +93,7 @@ interface IProductCreateBodyBase<TFile> {
     tags?: string;
     isActive: boolean;
 }
+
 interface IProductUpdateBodyBase<TFile> extends IProductCreateBodyBase<TFile> {
     imageFilenamesToDelete: string[];
 }
@@ -105,51 +107,55 @@ export type TProductListQuery =
         category?: string;
     };
 
+export type TProductListResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<IProductListSuccessData>;
+
 interface IProductListSuccessData {
     filteredProductIdList?: string[];
     productsCount?: number;
     paginatedProductList: IProduct[];
 }
-export type TProductListResponse =
-    | TAuthErrorResponse
-    | TGeneralErrorResponse
-    | TSuccessResponse<IProductListSuccessData>;
     
 /// Загрузка отдельного товара на его странице ///
-interface IProductSuccessData {
-    product: IProduct;
-}
 export type TProductResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<IProductSuccessData>;
+
+interface IProductSuccessData {
+    product: IProduct;
+}
     
 /// Создание товара ///
 export type TProductCreateBodyServer = IProductCreateBodyBase<Express.Multer.File>;
 export type TProductCreateBodyClient = IProductCreateBodyBase<File>;
 
-interface IProductCreateSuccessData {
-    newProduct: IProduct;
-}
 export type TProductCreateResponse =
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IProductCreateSuccessData>;
 
+interface IProductCreateSuccessData {
+    newProduct: IProduct;
+}
+
 /// Изменение товара ///
 export type TProductUpdateBodyServer = IProductUpdateBodyBase<Express.Multer.File>;
 export type TProductUpdateBodyClient = IProductUpdateBodyBase<File>;
 
-interface IProductUpdateSuccessData {
-    updatedProduct: IProduct;
-}
 export type TProductUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IProductUpdateSuccessData>;
+
+interface IProductUpdateSuccessData {
+    updatedProduct: IProduct;
+}
 
 /// Изменение группы товаров ///
 export interface IBulkProductUpdateBody {
@@ -164,15 +170,16 @@ export interface IBulkProductUpdateBody {
     };
 }
 
-interface IBulkProductUpdateSuccessData {
-    updatedProducts: IProduct[];
-}
 export type TBulkProductUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IBulkProductUpdateSuccessData>;
+
+interface IBulkProductUpdateSuccessData {
+    updatedProducts: IProduct[];
+}
     
 /// Удаление товара ///
 export type TProductDeleteResponse =
@@ -184,6 +191,7 @@ export type TProductDeleteResponse =
 export interface IBulkProductDeleteBody {
     productIds: string[];
 }
+
 export type TBulkProductDeleteResponse =
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'product'>

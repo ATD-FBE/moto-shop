@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import Order from '@server/db/models/Order.js';
+import { OrderFinal } from '@server/db/models/Order.js';
 import { ONLINE_TRANSACTION_INIT_EXPIRATION } from '@server/config/constants.js';
 import {
     orderDotNotationMap,
@@ -54,8 +54,7 @@ export const startInitOnlineTransactionCleaner = (): void => {
 
             try {
                 // Поиск зависших транзакций с установленным сроком истечения
-                const stuckDbOrders = await Order.find({
-                    currentStatus: { $ne: ORDER_STATUS.DRAFT },
+                const stuckDbOrders = await OrderFinal.find({
                     'financials.currentOnlineTransaction.status': { 
                         $in: [TRANSACTION_STATUS.INIT, TRANSACTION_STATUS.PROCESSING] 
                     },
@@ -170,32 +169,13 @@ const processStuckTransactionGroup = async (
         orderUpdateData: IOrderUpdateData | null;
     }>(async (session) => {
         // Обновление данных заказа
-        const dbOrder = await Order.findById<TDbOrderFinalDoc>(orderId).session(session);
+        const dbOrder = await OrderFinal.findById(orderId).session(session);
 
         // Проверка, не обработан ли заказ к этому времени
         const currentOnlineTx = dbOrder?.financials.currentOnlineTransaction;
 
         if (!currentOnlineTx || currentOnlineTx.status !== stuckOnlineTxStatus) {
             return { shouldClearTransaction: false, orderUpdateData: null };
-        }
-        if (dbOrder.currentStatus === ORDER_STATUS.DRAFT) {
-            logCriticalEvent({
-                logContext: LOG_CTX,
-                category: 'financials',
-                reason:
-                    `Найдены онлайн-транзакции для заказа №${dbOrder.orderNumber} ` +
-                    `в статусе ${ORDER_STATUS.DRAFT}`,
-                data: transactionGroup
-            });
-            return {
-                shouldClearTransaction: true,
-                orderUpdateData: {
-                    orderPatches: [{
-                        path: orderDotNotationMap.currentOnlineTransaction,
-                        value: undefined
-                    }]
-                }
-            };
         }
         
         // Обновление данных онлайн транзакции в заказе
@@ -275,7 +255,7 @@ const processStuckTransactionGroup = async (
 
         // Удаление данных онлайн транзакции, если массив ID транзакций в ожидании опустел
         if (!currentOnlineTx.transactionIds.length) {
-            (dbOrder as TDbOrderFinal).financials.currentOnlineTransaction = undefined;
+            dbOrder.financials.currentOnlineTransaction = undefined;
         }
 
         // Сохранение обновлённого заказа

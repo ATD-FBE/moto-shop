@@ -49,16 +49,16 @@ const NO_BODY_STATUS_ARRAY = [204, 205, 304] as const;
 const NO_BODY_STATUSES = new Set(NO_BODY_STATUS_ARRAY);
 
 // Перегрузка: Сигнатура 1 - Для ответов БЕЗ тела
-export default function safeSendResponse<T extends TBaseResponse>(
-    res: Response<T>,
+export default function safeSendResponse<BaseR extends TBaseResponse>(
+    res: Response<BaseR>,
     statusCode: TNoBodyStatus
 ): void;
 
 // Перегрузка: Сигнатура 2 - Для ответов С телом
-export default function safeSendResponse<T extends TBaseResponse, C extends number>(
-    res: Response<T>,
-    statusCode: C,
-    data: TInferPayload<T, C>
+export default function safeSendResponse<BaseR extends TBaseResponse, N extends number>(
+    res: Response<BaseR>,
+    statusCode: N,
+    data: TInferPayload<BaseR, N>
 ): void;
 
 // Главная реализация ответа

@@ -1,9 +1,11 @@
-import Order from '@server/db/models/Order.js';
+import Order, { OrderDraft } from '@server/db/models/Order.js';
 import Counter from '@server/db/models/Counter.js';
+import { ORDER_MODEL_TYPE, ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
+    prepareOrderDraft,
     syncCart,
     syncOrderDraft,
     reserveProducts,
@@ -17,17 +19,16 @@ import {
     orderDotNotationMap,
     prepareShippingCost
 } from '@server/services/orderService.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { ORDER_MODEL_TYPE, ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import {
     DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
@@ -35,36 +36,74 @@ import {
     ORDER_STATUS,
     REQUEST_STATUS
 } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { TDbOrderDraft, TProjectionValue } from '@server/types/index.js';
+import type {
+    TOrderDraftSyncResponse,
+    IOrderDraftCreateBody,
+    TOrderDraftCreateResponse,
+} from '@shared/types/index.js';
 
-/// Загрузка черновика заказа ///
-export const handleOrderDraftRequest = async (req, res, next) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICheckoutParams extends ParamsDictionary {
+    orderId: string;
+}
+
+interface IOrderDraftSyncTransactionResult {
+    statusCode: 403 | 404 | 409 | 422 | 200;
+    responseData: Omit<TOrderDraftSyncResponse, 'status'>
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+/// Синхронизация и загрузка черновика заказа ///
+export const handleOrderDraftSyncRequest: RequestHandler<
+    ICheckoutParams,
+    TOrderDraftSyncResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const customerDiscount = dbUser.discount;
     const orderId = req.params.orderId;
-
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
+    const orderLbl = `(ID: ${orderId})`;
 
     try {
-        const orderLbl = `(ID: ${orderId})`;
-
-        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
-            const dbOrderDraft = await Order.findById(orderId).session(session);
+        const transactionResult = await runInDbTransaction(async (session) => {
+            const dbOrderDraft = await OrderDraft.findById(orderId).session(session);
             checkTimeout(req);
 
             if (!dbOrderDraft) {
-                throw createAppError(404, `Черновик заказа ${orderLbl} не найден`);
+                return {
+                    statusCode: 404,
+                    responseData: {
+                        message: `Черновик заказа ${orderLbl} не найден`
+                    }
+                };
             }
             if (dbUser._id.toString() !== dbOrderDraft.customerId.toString()) {
-                throw createAppError(403, `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`, {
-                    reason: REQUEST_STATUS.DENIED
-                });
+                return {
+                    statusCode: 403,
+                    responseData: {
+                        message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
+                        reason: REQUEST_STATUS.DENIED
+                    }
+                };
             }
             if (dbOrderDraft.currentStatus !== ORDER_STATUS.DRAFT) {
-                throw createAppError(403, `Заказ ${orderLbl} уже оформлен, загрузка невозможна`, {
-                    reason: REQUEST_STATUS.DENIED
-                });
+                return {
+                    statusCode: 403,
+                    responseData: {
+                        message: `Запрещено: заказ ${orderLbl} уже оформлен, загрузка невозможна`,
+                        reason: REQUEST_STATUS.DENIED
+                    }
+                };
             }
 
             // Заказ просрочен => освобождение резервов и удаление заказа
@@ -100,9 +139,9 @@ export const handleOrderDraftRequest = async (req, res, next) => {
             const {
                 fixedDbCart,
                 fixedDbOrderItems,
-                orderItemAdjustments,
                 tradeProductList,
                 cartItemList,
+                orderItemAdjustments,
                 orderItemList,
                 orderItemsToRelease
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
@@ -114,7 +153,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
             // Есть изменения в заказываемых товарах (вмешательство админа в каталог)
             if (orderItemAdjustments.length > 0) {
                 // Обновление корзины клиента перед выходом
-                dbUser.cart = fixedDbCart;
+                dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
                 await dbUser.save({ session });
                 checkTimeout(req);
                 
@@ -127,7 +166,7 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                     }
 
                     // Обновление черновика заказа с последующим выходом
-                    dbOrderDraft.items = fixedDbOrderItems;
+                    dbOrderDraft.items.splice(0, dbOrderDraft.items.length, ...fixedDbOrderItems);
                     dbOrderDraft.totals = orderTotals;
                     await dbOrderDraft.save({ session });
                     checkTimeout(req);
@@ -147,17 +186,26 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                     responseData: {
                         message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
                         reason: REQUEST_STATUS.LIMITATION,
-                        orderItemAdjustments,
                         tradeProductList,
                         cartItemList,
                         customerDiscount,
                         orderDraft: {
                             items: orderItemList,
                             totals: orderTotals
-                        }
+                        },
+                        orderItemAdjustments
                     }
                 };
             }
+
+            /*safeSendResponse(res, 200, {
+                message: 'Test',
+                tradeProductList,
+                cartItemList,
+                customerDiscount,
+                orderDraft: prepareOrderDraft(dbOrderDraft.toObject(), orderItemList),
+                orderItemAdjustments
+            });*/
 
             return {
                 statusCode: 200,
@@ -168,84 +216,50 @@ export const handleOrderDraftRequest = async (req, res, next) => {
                     tradeProductList,
                     cartItemList,
                     customerDiscount,
-                    orderItemAdjustments,
-                    orderDraft: {
-                        expiresAt: dbOrderDraft.expiresAt,
-                        items: orderItemList,
-                        totals: dbOrderDraft.totals,
-                        customerInfo: dbOrderDraft.customerInfo,
-                        delivery: dbOrderDraft.delivery,
-                        financials: dbOrderDraft.financials,
-                        customerComment: dbOrderDraft.customerComment
-                    }
+                    orderDraft: prepareOrderDraft(dbOrderDraft.toObject(), orderItemList),
+                    orderItemAdjustments
                 }
             };
         });
 
+        const { statusCode, responseData } = transactionResult;
+
         safeSendResponse(res, statusCode, responseData);
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
 
 /// Создание черновика заказа ///
-export const handleOrderDraftCreateRequest = async (req, res, next) => {
+export const handleOrderDraftCreateRequest: RequestHandler<
+    {},
+    TOrderDraftCreateResponse,
+    IOrderDraftCreateBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const customerId = dbUser._id;
     const customerDiscount = dbUser.discount;
-
-    // Предварительная проверка данных
-    const { initialOrderItemSnapshots } = req.body ?? {};
-
-    if (!typeCheck.array(initialOrderItemSnapshots) || !initialOrderItemSnapshots.length) {
-        return safeSendResponse(res, 400, {
-            message: 'Неверный формат данных: initialOrderItemSnapshots'
-        });
-    }
-
-    for (const itemSnapshot of initialOrderItemSnapshots) {
-        const {
-            productId,
-            priceSnapshot,
-            appliedDiscountSnapshot,
-            appliedDiscountSourceSnapshot
-        } = itemSnapshot ?? {};
-
-        if (
-            !typeCheck.objectIdString(productId) ||
-            !typeCheck.float(priceSnapshot) ||
-            priceSnapshot < 0 ||
-            !typeCheck.float(appliedDiscountSnapshot) ||
-            appliedDiscountSnapshot < 0 ||
-            appliedDiscountSnapshot > 100 ||
-            !typeCheck.string(appliedDiscountSourceSnapshot) ||
-            !Object.values(DISCOUNT_SOURCE).includes(appliedDiscountSourceSnapshot)
-        ) {
-            return safeSendResponse(res, 400, {
-                message: 'Неверный формат данных: initialOrderItemSnapshots'
-            });
-        }
-    }
+    const { initialOrderItemSnapshots } = req.body;
 
     // Поиск существующих черновиков, возврат зарезервированных товаров и удаление заказов
     try {
         await runInDbTransaction(async (session) => {
-            const existingOrderDrafts = await Order
-                .find({ customerId, currentStatus: ORDER_STATUS.DRAFT })
+            const selectedFields: Partial<Record<keyof TDbOrderDraft, TProjectionValue>> = { items: 1 };
+            const existingOrderDrafts = await OrderDraft
+                .find({ customerId })
+                .select(selectedFields)
+                .lean<TDbOrderDraft[]>()
                 .session(session);
             checkTimeout(req);
 
-            if (existingOrderDrafts.length) {
+            if (existingOrderDrafts.length > 0) {
                 const orderItemsToRelease = existingOrderDrafts.flatMap(order => order.items);
                 await releaseReservedProducts(orderItemsToRelease, session);
                 checkTimeout(req);
 
-                await Order.deleteMany({ customerId, currentStatus: ORDER_STATUS.DRAFT }).session(session);
+                await OrderDraft.deleteMany({ customerId }).session(session);
                 checkTimeout(req);
             }
         });
@@ -255,11 +269,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
     // Актуализация данных, резервирование товаров и создание документа черновика заказа
     try {
-        const initialOrderItemSnapshotMap = new Map(
-            initialOrderItemSnapshots.map(itemSnap => [itemSnap.productId, itemSnap])
-        );
-
-        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Автоисправление товаров в заказе, корзине и получение актуальных данных
             let {
                 fixedDbCart,
@@ -267,7 +277,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 cartItemAdjustments,
                 tradeProductList,
                 cartItemList
-            } = await syncCart(dbUser.cart, initialOrderItemSnapshotMap, customerDiscount);
+            } = await syncCart(dbUser.cart, initialOrderItemSnapshots, customerDiscount);
             checkTimeout(req);
 
             // Проверка итоговой суммы
@@ -277,7 +287,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             if (currentTotal < MIN_ORDER_AMOUNT) {
                 // Сохранение корзины пользователя перед выходом, если были изменения
                 if (cartItemAdjustments.length > 0) {
-                    dbUser.cart = fixedDbCart;
+                    dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
                     await dbUser.save({ session });
                     checkTimeout(req);
                 }
@@ -287,12 +297,11 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                     responseData: {
                         message: 'Сумма заказа меньше минимальной',
                         reason: REQUEST_STATUS.LIMITATION,
-                        cartItemAdjustments,
                         tradeProductList,
                         cartItemList,
                         customerDiscount,
                         currentTotal,
-                        orderId: null
+                        cartItemAdjustments
                     }
                 };
             }
@@ -311,7 +320,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 checkTimeout(req);
 
                 // Не все товары зарезервированы => Повтор сбора данных, проверки суммы и резервирования
-                const failedOrderItems = remainingDbOrderItemsToReserve
+                const failedCartItems = dbUser.cart
                     .filter(i => failedItemIdsSet.has(i.productId.toString()));
 
                 // Повтор подготовки данных заказа, только для провальных при резервировании товаров
@@ -321,7 +330,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                     cartItemAdjustments: failedTradeProductAdjustments,
                     tradeProductList: failedTradeProductList,
                     cartItemList: failedCartItemList
-                } = await syncCart(failedOrderItems, initialOrderItemSnapshotMap, customerDiscount);
+                } = await syncCart(failedCartItems, initialOrderItemSnapshots, customerDiscount);
                 checkTimeout(req);
 
                 // Замена в массивах проблемных товаров
@@ -344,7 +353,7 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                 if (currentTotal < MIN_ORDER_AMOUNT) {
                     // Сохранение корзины пользователя перед выходом, если были изменения
                     if (cartItemAdjustments.length > 0) {
-                        dbUser.cart = fixedDbCart;
+                        dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
                         await dbUser.save({ session });
                         checkTimeout(req);
                     }
@@ -354,12 +363,11 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
                         responseData: {
                             message: 'Сумма заказа меньше минимальной',
                             reason: REQUEST_STATUS.LIMITATION,
-                            cartItemAdjustments,
                             tradeProductList,
                             cartItemList,
                             customerDiscount,
                             currentTotal,
-                            orderId: null
+                            cartItemAdjustments
                         }
                     };
                 }
@@ -370,14 +378,13 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
             // Сохранение корзины пользователя, если были изменения
             if (cartItemAdjustments.length > 0) {
-                dbUser.cart = fixedDbCart;
+                dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
                 await dbUser.save({ session });
                 checkTimeout(req);
             }
 
             // Создание черновика заказа
-            const { customerInfo, delivery = {}, financials } = dbUser.checkoutPrefs ?? {};
-            if (!delivery.allowCourierExtra) delivery.allowCourierExtra = false;
+            const { customerInfo, delivery, financials } = dbUser.checkoutPrefs ?? {};
             const now = new Date();
 
             const [orderDraft] = await Order.create(
@@ -402,20 +409,26 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
             );
             checkTimeout(req);
 
+            if (!orderDraft) {
+                throw createAppError(500, 'Ошибка создания черновика заказа: документ не был возвращен');
+            }
+
             const orderId = orderDraft._id.toString();
 
             return {
                 statusCode: 201,
                 responseData: {
                     message: `Черновик заказа (ID: ${orderId}) успешно создан`,
-                    orderId,
-                    cartItemAdjustments,
                     tradeProductList,
                     cartItemList,
-                    customerDiscount
+                    customerDiscount,
+                    orderId,
+                    cartItemAdjustments
                 }
             };
         });
+
+        const { statusCode, responseData } = transactionResult;
 
         // Черновик заказа создан - ответ клиенту об успехе
         safeSendResponse(res, statusCode, responseData);
@@ -426,9 +439,9 @@ export const handleOrderDraftCreateRequest = async (req, res, next) => {
 
 /// Изменение черновика заказа ///
 export const handleOrderDraftUpdateRequest = async (req, res, next) => {
-    const dbUser = req.dbUser;
+    if (!requireDbUser(req, next)) return;
 
-    // Предварительная проверка формата данных
+    const dbUser = req.dbUser;
     const orderId = req.params.orderId;
     const {
         firstName, lastName, middleName, email, phone,
@@ -471,7 +484,9 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
     // Заполнение данных только для пришедших полей через дот-нотационные названия полей
     const updateFields = Object.fromEntries(
         Object.entries(validationConfigMap)
-            .filter(([key, { form, value }]) => form && orderDotNotationMap[key] && value !== undefined)
+            .filter(([key, { formField, value }]) =>
+                formField && orderDotNotationMap[key] && value !== undefined
+            )
             .map(([key, { value }]) => [orderDotNotationMap[key], value])
     );
 
@@ -511,22 +526,18 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Черновик заказа ${orderLbl} обновлён` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
 
 /// Подтверждение оформления заказа ///
 export const handleOrderDraftConfirmRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
     const customerId = dbUser._id;
     const customerDiscount = dbUser.discount;
-    
-    // Предварительная проверка формата данных
     const orderId = req.params.orderId;
     const {
         firstName, lastName, middleName, email, phone,
@@ -666,7 +677,6 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                         statusCode: 412,
                         responseData: {
                             message: `Данные заказа ${orderLbl} изменены после синхронизации с каталогом`,
-                            orderItemAdjustments,
                             tradeProductList,
                             cartItemList,
                             customerDiscount,
@@ -674,7 +684,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                                 expiresAt: dbOrderDraft.expiresAt,
                                 items: orderItemList,
                                 totals: orderTotals
-                            }
+                            },
+                            orderItemAdjustments
                         }
                     };
                 }
@@ -693,14 +704,14 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                     responseData: {
                         message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
                         reason: REQUEST_STATUS.LIMITATION,
-                        orderItemAdjustments,
                         tradeProductList,
                         cartItemList,
                         customerDiscount,
                         orderDraft: {
                             items: orderItemList,
                             totals: orderTotals
-                        }
+                        },
+                        orderItemAdjustments
                     }
                 };
             }
@@ -793,10 +804,10 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             const newOrderNumber = dbCounter.seq.toString().padStart(5, '0');
 
             // Установка номера, списка, статусов и дат
+            const now = new Date();
+            
             confirmedOrderDoc.orderNumber = newOrderNumber;
             confirmedOrderDoc.items = confirmedOrderItems;
-            
-            const now = new Date();
             confirmedOrderDoc.confirmedAt = now;
             confirmedOrderDoc.lastActivityAt = now;
             confirmedOrderDoc.statusHistory.push({
@@ -837,27 +848,14 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
         // Очистка файлов миниатюр товаров в заказе (безопасно)
         storageService.cleanupOrderFiles(confirmedOrderId, reqCtx);
 
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей при сохранении в MongoDB
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'checkout');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Отмена оформления заказа ///
 export const handleOrderDraftDeleteRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
@@ -895,10 +893,6 @@ export const handleOrderDraftDeleteRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Черновик заказа ${orderLbl} успешно удалён` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };

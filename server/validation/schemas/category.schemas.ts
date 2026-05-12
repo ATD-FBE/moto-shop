@@ -1,38 +1,28 @@
 import type { IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TCategoryEntity = typeof categoryEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const categoryEntity = 'category';
-const paramsBaseSchema: IValidationInputSchema<TCategoryEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     categoryId: 'objectIdString'
 } as const;
-const bodyBaseSchema: IValidationInputSchema<TCategoryEntity>['body'] = {
+const bodyBaseSchema: IValidationInputSchema['body'] = {
     name: { type: 'string', match: true, formField: true },
     slug: { type: 'string', match: true, formField: true },
     order: { type: 'integer', min: 0, formField: true },
     parent: { type: 'objectIdString', nullable: true, formField: true }
 } as const;
 
-export const categoryCreateSchema: IValidationInputSchema<TCategoryEntity> = {
+export const categoryCreateSchema: IValidationInputSchema = {
     entityType: categoryEntity,
     body: bodyBaseSchema
 } as const;
 
-export const categoryUpdateSchema: IValidationInputSchema<TCategoryEntity> = {
+export const categoryUpdateSchema: IValidationInputSchema = {
     entityType: categoryEntity,
     params: paramsBaseSchema,
     body: bodyBaseSchema
 } as const;
 
-export const categoryDeleteSchema: IValidationInputSchema<TCategoryEntity> = {
+export const categoryDeleteSchema: IValidationInputSchema = {
     entityType: categoryEntity,
     params: paramsBaseSchema
 } as const;

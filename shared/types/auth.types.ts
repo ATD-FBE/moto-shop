@@ -14,7 +14,7 @@ import type {
     TDeliveryMethod,
     TPaymentMethod
 } from './shared.types.js';
-import type { TDbUser } from '@server/types/index.js';
+import type { ICheckoutDetails } from './checkout.types.js';
 
 /// Общие типы ///
 export interface IUser {
@@ -25,6 +25,7 @@ export interface IUser {
     unreadNotificationsCount?: number;
     activeOrdersCount?: number;
 }
+
 export interface ISession {
     user: IUser;
     tradeProductList?: IProduct[];
@@ -32,7 +33,8 @@ export interface ISession {
     cartWasMerged?: boolean;
     orderDraftId?: string | null;
 }
-export type TAuthBaseSuccessData = ISession & {
+
+type TAuthBaseSuccessData = ISession & {
     accessTokenExp: number;
     refreshTokenExp: number;
 };
@@ -63,12 +65,13 @@ export interface IAuthLoginBody {
     guestCart: IGuestCartItem[];
 }
 
-type TLoginAuthError = TAuthErrorResponse & { fieldErrors: TFieldErrors<'auth'> };
 export type TAuthLoginResponse =
     | TLoginAuthError
     | TFormFieldsErrorResponse<'auth'>
     | TGeneralErrorResponse
     | TSuccessResponse<TAuthBaseSuccessData>;
+
+type TLoginAuthError = TAuthErrorResponse & { fieldErrors: TFieldErrors<'auth'> };
 
 /// Изменение данных пользователя ///
 export interface IAuthUserUpdateBody {
@@ -78,17 +81,18 @@ export interface IAuthUserUpdateBody {
     newPassword?: string;
 }
 
-interface IAuthUserUpdateSuccessData {
-    fieldErrors?: TFieldErrors<'auth'>;
-    updatedFormFields: TEntityField<'auth'>[];
-    updatedUser: IUser;
-}
 export type TAuthUserUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'auth'>
     | TGeneralErrorResponse
     | TSuccessResponse<IAuthUserUpdateSuccessData>;
+
+interface IAuthUserUpdateSuccessData {
+    fieldErrors?: TFieldErrors<'auth'>;
+    updatedFormFields: TEntityField<'auth'>[];
+    updatedUser: IUser;
+}
 
 /// Загрузка данных сессии пользователя ///
 export interface IAuthSessionBody {
@@ -101,22 +105,24 @@ export type TAuthSessionResponse =
     | TSuccessResponse<TAuthBaseSuccessData>;
 
 /// Обновление токена доступа ///
-interface IAuthRefreshSuccessData {
-    accessTokenExp: number;
-}
 export type TAuthRefreshResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<IAuthRefreshSuccessData>;
 
-/// Загрузка настроек заказа ///
-interface IAuthCheckoutPrefsSuccessData {
-    checkoutPrefs?: TDbUser['checkoutPrefs'];
+interface IAuthRefreshSuccessData {
+    accessTokenExp: number;
 }
+
+/// Загрузка настроек заказа ///
 export type TAuthCheckoutPrefsResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<IAuthCheckoutPrefsSuccessData>;
+
+interface IAuthCheckoutPrefsSuccessData {
+    checkoutPrefs?: ICheckoutDetails;
+}
 
 /// Изменение настроек заказа ///
 export interface IAuthCheckoutPrefsUpdateBody {

@@ -1,24 +1,20 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IAlertModalState, TOpenAlertModalParams } from '@/types/index.js';
 
-const initialState = {
-    isOpen: false,
-    type: '',
-    dismissible: true,
-    title: '',
-    message: '',
-    dismissBtnLabel: ''
+const initialState: IAlertModalState = {
+    isOpen: false
 };
 
 const modalAlertSlice = createSlice({
     name: 'modalAlert',
     initialState,
     reducers: {
-        showAlertModal: (state, action) => {
+        showAlertModal: (state, action: PayloadAction<TOpenAlertModalParams>) => {
             return { ...state, ...action.payload, isOpen: true };
         },
 
         hideAlertModal: () => {
-            return initialState;
+            return { ...initialState };
         }
     }
 });

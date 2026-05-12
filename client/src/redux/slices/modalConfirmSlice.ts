@@ -1,23 +1,20 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IConfirmModalState, TOpenConfirmModalParams } from '@/types/index.js';
 
-const initialState = {
-    isOpen: false,
-    dismissible: true,
-    prompt: '',
-    confirmBtnLabel: '',
-    cancelBtnLabel: ''
+const initialState: IConfirmModalState = {
+    isOpen: false
 };
 
 const modalConfirmSlice = createSlice({
     name: 'modalConfirm',
     initialState,
     reducers: {
-        showConfirmModal: (state, action) => {
+        showConfirmModal: (state, action: PayloadAction<TOpenConfirmModalParams>) => {
             return { ...state, ...action.payload, isOpen: true };
         },
 
         hideConfirmModal: () => {
-            return initialState;
+            return { ...initialState };
         }
     }
 });

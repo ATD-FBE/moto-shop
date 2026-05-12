@@ -7,7 +7,7 @@ import CheckoutSummary from './checkout/CheckoutSummary.jsx';
 import OrderDraftExpirationTimer from './checkout/OrderDraftExpirationTimer.jsx';
 import { useStructureRefs } from '@/context/StructureRefsContext.js';
 import {
-    sendOrderDraftRequest,
+    sendOrderDraftSyncRequest,
     sendOrderDraftDeleteRequest
 } from '@/api/checkoutRequests.js';
 import {
@@ -149,7 +149,7 @@ export default function Checkout() {
     const loadOrderDraft = async (orderId) => {
         setSubmitStatus(FORM_STATUS.LOADING);
 
-        const responseData = await dispatch(sendOrderDraftRequest(orderId));
+        const responseData = await dispatch(sendOrderDraftSyncRequest(orderId));
         if (isUnmountedRef.current) return;
 
         const {

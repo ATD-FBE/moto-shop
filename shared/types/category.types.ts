@@ -34,31 +34,34 @@ interface ICategoryBaseSuccessData {
 }
 
 /// Загрузка списка категорий ///
-interface ICategoryListSuccessData {
-    categoryList: ICategory[];
-}
 export type TCategoryListResponse =
     | TGeneralErrorResponse
     | TSuccessResponse<ICategoryListSuccessData>;
 
-/// Создание категории ///
-interface ICategoryCreateSuccessData extends ICategoryBaseSuccessData {
-    newCategoryId: string;
+interface ICategoryListSuccessData {
+    categoryList: ICategory[];
 }
+
+/// Создание категории ///
 export type TCategoryCreateResponse =
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'category'>
     | TGeneralErrorResponse
     | TSuccessResponse<ICategoryCreateSuccessData>;
+
+interface ICategoryCreateSuccessData extends ICategoryBaseSuccessData {
+    newCategoryId: string;
+}
     
 /// Изменение категории ///
-interface ICategoryUpdateSuccessData extends ICategoryBaseSuccessData {}
 export type TCategoryUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'category'>
     | TGeneralErrorResponse
     | TSuccessResponse<ICategoryUpdateSuccessData>;
+
+interface ICategoryUpdateSuccessData extends ICategoryBaseSuccessData {}
     
 /// Удаление категории ///
 export type TCategoryDeleteResponse =

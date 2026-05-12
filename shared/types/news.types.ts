@@ -22,22 +22,24 @@ export interface INewsBody {
 }
 
 /// Загрузка списка новостей ///
-interface INewsListSuccessData {
-    newsList: INews[];
-}
 export type TNewsListResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<INewsListSuccessData>;
 
-/// Загрузка отдельной новости для редактирования ///
-interface INewsSuccessData {
-    news: INews;
+interface INewsListSuccessData {
+    newsList: INews[];
 }
+
+/// Загрузка отдельной новости для редактирования ///
 export type TNewsResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<INewsSuccessData>;
+
+interface INewsSuccessData {
+    news: INews;
+}
 
 /// Создание новости ///
 export type TNewsCreateResponse =

@@ -9,6 +9,8 @@ import {
 import { ORDER_RESERVE_BATCH_SIZE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 import type {
+    TDbUser,
+    TDbOrderDraft,
     TDbOrderDraftItem,
     TDbCartItem,
     TDbProduct,
@@ -19,7 +21,8 @@ import type {
     IProductAdjustment,
     ICartItem,
     IInitialOrderItemSnapshot,
-    IOrderDraftItem
+    IOrderDraft,
+    ICheckoutDetails
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -29,24 +32,81 @@ import type {
 export interface ISyncCartResult {
     fixedDbCart: TDbCartItem[];
     fixedDbOrderItems: TDbOrderDraftItem[];
-    cartItemAdjustments: IProductAdjustment[];
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
+    cartItemAdjustments: IProductAdjustment[];
 }
 
 export interface ISyncOrderDraftResult {
     fixedDbCart: TDbCartItem[];
     fixedDbOrderItems: TDbOrderDraftItem[];
-    orderItemAdjustments: IProductAdjustment[];
-    orderItemList: IOrderDraftItem[];
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
+    orderItemList: IOrderDraft['items'];
+    orderItemAdjustments: IProductAdjustment[];
     orderItemsToRelease: IOrderItemRef[];
 }
 
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
+
+export const prepareOrderDraft = (
+    dbOrderDraft: TDbOrderDraft,
+    orderItemList: IOrderDraft['items']
+): IOrderDraft => ({
+    expiresAt: dbOrderDraft.expiresAt,
+    items: orderItemList,
+    totals: dbOrderDraft.totals,
+    customerInfo: prepareOrderDraftCustomerInfo(dbOrderDraft.customerInfo),
+    delivery: prepareOrderDraftDelivery(dbOrderDraft.delivery),
+    financials: prepareOrderDraftFinancials(dbOrderDraft.financials),
+    customerComment: dbOrderDraft.customerComment ?? undefined
+});
+
+export const prepareOrderDraftCustomerInfo = (
+    dbCustomerInfo: TDbOrderDraft['customerInfo'] | NonNullable<TDbUser['checkoutPrefs']>['customerInfo']
+): ICheckoutDetails['customerInfo'] => {
+    if (!dbCustomerInfo) return undefined;
+
+    return {
+        firstName: dbCustomerInfo.firstName ?? undefined,
+        lastName: dbCustomerInfo.lastName ?? undefined,
+        middleName: dbCustomerInfo.middleName ?? undefined,
+        email: dbCustomerInfo.email ?? undefined,
+        phone: dbCustomerInfo.phone ?? undefined
+    };
+};
+
+export const prepareOrderDraftDelivery = (
+    dbDelivery: TDbOrderDraft['delivery'] | NonNullable<TDbUser['checkoutPrefs']>['delivery']
+): ICheckoutDetails['delivery'] => {
+    if (!dbDelivery) return undefined;
+
+    return {
+        deliveryMethod: dbDelivery.deliveryMethod ?? undefined,
+        allowCourierExtra: dbDelivery.allowCourierExtra ?? undefined,
+        shippingAddress: dbDelivery.shippingAddress ? {
+            region: dbDelivery.shippingAddress.region ?? undefined,
+            district: dbDelivery.shippingAddress.district ?? undefined,
+            city: dbDelivery.shippingAddress.city ?? undefined,
+            street: dbDelivery.shippingAddress.street ?? undefined,
+            house: dbDelivery.shippingAddress.house ?? undefined,
+            apartment: dbDelivery.shippingAddress.apartment ?? undefined,
+            postalCode: dbDelivery.shippingAddress.postalCode ?? undefined,
+        } : undefined
+    };
+};
+
+export const prepareOrderDraftFinancials = (
+    dbFinancials: TDbOrderDraft['financials'] | NonNullable<TDbUser['checkoutPrefs']>['financials']
+): ICheckoutDetails['financials'] => {
+    if (!dbFinancials) return undefined;
+
+    return {
+        defaultPaymentMethod: dbFinancials.defaultPaymentMethod ?? undefined,
+    };
+};
 
 export const reserveProducts = async (
     remainingDbOrderItemsToReserve: TDbOrderDraftItem[],
@@ -96,7 +156,7 @@ export const commitProductPurchase = async (
 
 export const syncCart = async (
     cartItemList: TDbCartItem[],
-    initialOrderItemSnapshotMap: Map<string, IInitialOrderItemSnapshot>,
+    initialOrderItemSnapshots: IInitialOrderItemSnapshot[],
     customerDiscount: number
 ): Promise<ISyncCartResult> => {
     const productIds = cartItemList.map(item => item.productId);
@@ -104,16 +164,17 @@ export const syncCart = async (
         ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
         : [];
 
-    // Сбор актуальных данных, исправление корзины и заказа, сбор изменений для логов 
+    // Сбор актуальных данных, исправление корзины и заказа, сбор изменений для логов
     const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
+    const initialOrderItemSnapshotMap = new Map(initialOrderItemSnapshots.map(item => [item.productId, item]));
     const now = Date.now();
 
     return cartItemList.reduce<ISyncCartResult>(
         (acc, cartItem) => {
             const productObjectId = cartItem.productId;
             const productId = productObjectId.toString();
-            const productSnapshot = initialOrderItemSnapshotMap.get(productId);
             const dbProduct = dbProductMap.get(productId);
+            const snapshot = initialOrderItemSnapshotMap.get(productId);
             const adjustments: IProductAdjustment['adjustments'] = {};
 
             const adjustedProductData = {
@@ -157,9 +218,9 @@ export const syncCart = async (
             }
 
             // Изменение цены товара
-            if (productSnapshot && dbProduct.price !== productSnapshot.priceSnapshot) {
+            if (snapshot && dbProduct.price !== snapshot.priceSnapshot) {
                 adjustments.price = {
-                    old: productSnapshot.priceSnapshot,
+                    old: snapshot.priceSnapshot,
                     corrected: dbProduct.price
                 };
             }
@@ -171,21 +232,17 @@ export const syncCart = async (
             } = getAppliedDiscountData(dbProduct.discount, customerDiscount);
 
             if (
-                productSnapshot &&
+                snapshot &&
                 (
-                    appliedDiscount !== productSnapshot.appliedDiscountSnapshot ||
-                    appliedDiscountSource !== productSnapshot.appliedDiscountSourceSnapshot
+                    appliedDiscount !== snapshot.appliedDiscountSnapshot ||
+                    appliedDiscountSource !== snapshot.appliedDiscountSourceSnapshot
                 )
             ) {
                 adjustments.discount = {
-                    old: productSnapshot.appliedDiscountSnapshot,
+                    old: snapshot.appliedDiscountSnapshot,
                     corrected: appliedDiscount,
                     source: appliedDiscountSource
                 };
-            }
-
-            if (Object.keys(adjustments).length > 0) {
-                acc.cartItemAdjustments.push(adjustedProductData);
             }
 
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
@@ -215,15 +272,19 @@ export const syncCart = async (
                 deleted: false,
                 productSnapshot: prepareProductSnapshot(fixedDbCartItem)
             });
+
+            if (Object.keys(adjustments).length > 0) {
+                acc.cartItemAdjustments.push(adjustedProductData);
+            }
             
             return acc;
         },
         {
             fixedDbCart: [],
             fixedDbOrderItems: [],
-            cartItemAdjustments: [],
             tradeProductList: [],
-            cartItemList: []
+            cartItemList: [],
+            cartItemAdjustments: []
         }
     );
 };
@@ -310,10 +371,6 @@ export const syncOrderDraft = async (
                 };
             }
 
-            if (Object.keys(adjustments).length > 0) {
-                acc.orderItemAdjustments.push(adjustedProductData);
-            }
-
             // Сбор данных для сохранения корзины и заказа, а также для отправки клиенту
             const fixedDbCartItem = {
                 productId: productObjectId,
@@ -347,16 +404,20 @@ export const syncOrderDraft = async (
                 priceSnapshot: dbProduct.price,
                 appliedDiscountSnapshot: appliedDiscount
             });
+
+            if (Object.keys(adjustments).length > 0) {
+                acc.orderItemAdjustments.push(adjustedProductData);
+            }
             
             return acc;
         },
         {
             fixedDbCart: [],
             fixedDbOrderItems: [],
-            orderItemAdjustments: [],
             tradeProductList: [],
             cartItemList: [],
             orderItemList: [],
+            orderItemAdjustments: [],
             orderItemsToRelease: []
         }
     );

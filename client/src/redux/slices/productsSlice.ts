@@ -1,18 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { IProductsState } from '@/types/index.js';
 import type { IProduct } from '@shared/types/index.js';
-
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-export interface IProductsState {
-    byId: Record<string, IProduct>;
-    ids: string[];
-}
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
 
 const initialState: IProductsState = {
     byId: {},
@@ -56,9 +44,8 @@ const productsSlice = createSlice({
             });
         },
 
-        clearProductStore: (state) => {
-            state.byId = {};
-            state.ids = [];
+        clearProductStore: () => {
+            return { ...initialState };
         }
     }
 });

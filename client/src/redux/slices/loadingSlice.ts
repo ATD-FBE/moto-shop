@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
+import type { ILoadingState } from '@/types/index.js';
 
-const initialState = {
+const initialState: ILoadingState = {
     activeApiRequests: 0,
     activeMediaRequests: 0
 };

@@ -1,6 +1,6 @@
 import AppStore from '@/redux/Store.js';
 import { showConfirmModal, hideConfirmModal } from '@/redux/slices/modalConfirmSlice.js';
-import type { IOpenConfirmModalParams, TConfirmModalActions } from '@/types/index.js';
+import type { TOpenConfirmModalParams, TConfirmModalActions } from '@/types/index.js';
 
 // Передача функций, которые нельзя хранить в Redux Store
 let confirmModalActions: TConfirmModalActions = {
@@ -20,7 +20,7 @@ export const openConfirmModal = ({
     onFinalize = null,
     onCancel = null,
     onClose = null
-}: IOpenConfirmModalParams): void => {
+}: TOpenConfirmModalParams): void => {
     setTimeout(() => {
         confirmModalActions = { onConfirm, onCancel, onClose, onFinalize };
         AppStore.dispatch(showConfirmModal({ dismissible, prompt, confirmBtnLabel, cancelBtnLabel }));

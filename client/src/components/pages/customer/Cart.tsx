@@ -258,8 +258,9 @@ export default function Cart(): JSX.Element | null {
             // Сумма заказа меньше минимальной
             if (status === REQUEST_STATUS.LIMITATION) {
                 const {
-                    currentTotal, cartItemAdjustments, tradeProductList,
-                    cartItemList: newCartItemList, customerDiscount: newCustomerDiscount
+                    tradeProductList,
+                    cartItemList: newCartItemList, customerDiscount: newCustomerDiscount,
+                    currentTotal, cartItemAdjustments
                 } = responseData;
 
                 dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));
@@ -301,8 +302,8 @@ export default function Cart(): JSX.Element | null {
 
         // Успешный ответ
         const {
-            orderId, cartItemAdjustments, tradeProductList,
-            cartItemList: newCartItemList, customerDiscount: newCustomerDiscount
+            tradeProductList, cartItemList: newCartItemList, customerDiscount: newCustomerDiscount,
+            orderId, cartItemAdjustments
         } = responseData;
 
         dispatch(applyCartState(tradeProductList, newCartItemList, newCustomerDiscount));

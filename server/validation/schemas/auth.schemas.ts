@@ -1,17 +1,6 @@
 import { DELIVERY_METHOD, PAYMENT_METHOD } from '@shared/constants.js';
 import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TAuthEntity = typeof authEntity;
-type TCheckoutEntity = typeof checkoutEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const authEntity = 'auth';
 const checkoutEntity = 'checkout';
 
@@ -26,7 +15,7 @@ const guestCartSchema: IValidationSchema = {
     }
 } as const;
 
-export const authRegistrationSchema: IValidationInputSchema<TAuthEntity> = {
+export const authRegistrationSchema: IValidationInputSchema = {
     entityType: authEntity,
     body: {
         formFields: {
@@ -42,7 +31,7 @@ export const authRegistrationSchema: IValidationInputSchema<TAuthEntity> = {
     }
 } as const;
 
-export const authLoginSchema: IValidationInputSchema<TAuthEntity> = {
+export const authLoginSchema: IValidationInputSchema = {
     entityType: authEntity,
     body: {
         formFields: {
@@ -57,7 +46,7 @@ export const authLoginSchema: IValidationInputSchema<TAuthEntity> = {
     }
 } as const;
 
-export const authUserUpdateSchema: IValidationInputSchema<TAuthEntity> = {
+export const authUserUpdateSchema: IValidationInputSchema = {
     entityType: authEntity,
     body: {
         newName: { type: 'string', optional: true, match: true, formField: true },
@@ -67,14 +56,14 @@ export const authUserUpdateSchema: IValidationInputSchema<TAuthEntity> = {
     }
 } as const;
 
-export const authSessionSchema: IValidationInputSchema<TAuthEntity> = {
+export const authSessionSchema: IValidationInputSchema = {
     entityType: authEntity,
     body: {
         guestCart: guestCartSchema
     }
 } as const;
 
-export const authCheckoutPrefsUpdateSchema: IValidationInputSchema<TCheckoutEntity> = {
+export const authCheckoutPrefsUpdateSchema: IValidationInputSchema = {
     entityType: checkoutEntity,
     body: {
         firstName: { type: 'string', optional: true, match: true, formField: true },

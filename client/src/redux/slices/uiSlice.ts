@@ -1,31 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { To } from 'react-router-dom';
+import type { IUiState } from '@/types/index.js';
 import type { TScreenSize } from '@/types/index.js';
-
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-export interface IUiState {
-    isTouchDevice: boolean;
-    screenSize: TScreenSize | null;
-    isDashboardPanelActive: boolean;
-    isNavigationLocked: boolean;
-    lockedRoute: ILockedRoute | null;
-    isSessionReady: boolean;
-    newNotificationsCount: number;
-    newActiveOrdersCount: number;
-}
-
-interface ILockedRoute {
-    path: To;
-    cancelPath: To | null;
-    isCancelFreeze: boolean;
-}
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
 
 const initialState: IUiState = {
     isTouchDevice: false,

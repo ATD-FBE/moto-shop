@@ -154,15 +154,6 @@ export type TFieldErrors<E extends TEntityType = TEntityType> =
     Partial<Record<TEntityField<E>, string>>;
 
 //////////////////////
-/// COMMON HELPERS ///
-//////////////////////
-
-export interface IDotNotationPatch {
-    path: string;
-    value: any;
-}
-
-//////////////////////
 /// FILTER OPTIONS ///
 //////////////////////
 
@@ -280,12 +271,17 @@ export type TInferFilterParams<T extends TFilterOption> = {
             : string;
 };
 
-///////////////////
-/// DATA CHANGE ///
-///////////////////
+//////////////
+/// SHARED ///
+//////////////
 
 export interface IDataChange {
     field: string;
     oldValue?: unknown;
     newValue?: unknown;
+}
+
+export interface IDotNotationPatch {
+    path: string;
+    value: any;
 }

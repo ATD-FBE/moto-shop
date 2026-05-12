@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { REGISTERED_USER_ROLES } from '@shared/constants.js';
+import { USER_ROLE } from '@shared/constants.js';
 
 export const AuditLogSchema = new Schema({
     changes: [{
@@ -28,7 +28,7 @@ export const AuditLogSchema = new Schema({
             },
             role: {
                 type: String,
-                enum: REGISTERED_USER_ROLES,
+                enum: [USER_ROLE.ADMIN],
                 required: true
             }
         },

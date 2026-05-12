@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '@server/db/models/User.js';
 import config from '@server/config/config.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
-import { prepareUser, prepareSession } from '@server/services/authService.js';
+import { prepareUser, prepareSession, prepareCheckoutPrefs } from '@server/services/authService.js';
 import { generateToken, getTokenExpiryFromCookie } from '@server/utils/tokenUtils.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
@@ -65,7 +65,7 @@ export const handleAuthRegistrationRequest: RequestHandler<
             });
 
             // Дополнение документа пользователя данными о сессии
-            const sessionData = await prepareSession(newDbUser, guestCart);
+            const sessionData = await prepareSession(newDbUser.toObject(), guestCart);
             checkTimeout(req);
     
             // Сохранение дкоумента нового пользователя
@@ -131,7 +131,7 @@ export const handleAuthLoginRequest: RequestHandler<
             }
 
             // Получение данных сессии
-            const sessionData = await prepareSession(dbUser, guestCart);
+            const sessionData = await prepareSession(dbUser.toObject(), guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {
@@ -348,7 +348,7 @@ export const handleAuthSessionRequest: RequestHandler<
 
     try {
         const { sessionData } = await runInDbTransaction(async (session) => {
-            const sessionData = await prepareSession(dbUser, guestCart);
+            const sessionData = await prepareSession(dbUser.toObject(), guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {
@@ -420,7 +420,7 @@ export const handleAuthCheckoutPrefsRequest: RequestHandler<
 
     safeSendResponse(res, 200, {
         message: 'Настройки заказа успешно загружены',
-        checkoutPrefs: req.dbUser.checkoutPrefs
+        checkoutPrefs: prepareCheckoutPrefs(req.dbUser.checkoutPrefs)
     });
 };
 

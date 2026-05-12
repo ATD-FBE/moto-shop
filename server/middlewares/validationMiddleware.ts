@@ -8,15 +8,22 @@ import type {
     IValidationConfig
 } from '@server/types/index.js';
 import { ensureArray } from '@shared/commonHelpers.js';
-import type { TEntityType } from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
 
 interface IMulterContext {
     file?: Express.Multer.File; // req.file
     files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>; // req.files
 }
 
-export const validateInput = <E extends TEntityType = TEntityType>(
-    schema: IValidationInputSchema<E>
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export const validateInput = (
+    schema: IValidationInputSchema
 ): RequestHandler => (req, res, next) => {
     const { entityType, params, body, query } = schema;
     req.entityType = entityType;
@@ -57,7 +64,7 @@ export const validateInput = <E extends TEntityType = TEntityType>(
         isValid,
         fieldErrors,
         invalidInputPaths
-    } = validateObjectFields<E>(validationConfigMap, entityType);
+    } = validateObjectFields(validationConfigMap, entityType);
 
     // Установка значений, трансформированных при парсинге
     if (isValid) {

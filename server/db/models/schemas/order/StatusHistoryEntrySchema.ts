@@ -1,6 +1,6 @@
 import { Schema } from 'mongoose';
 import { validationRules } from '@shared/fieldRules.js';
-import { ORDER_STATUS, REGISTERED_USER_ROLES } from '@shared/constants.js';
+import { ORDER_STATUS, USER_ROLE } from '@shared/constants.js';
 
 export const StatusHistoryEntrySchema = new Schema({
     status: {
@@ -40,7 +40,7 @@ export const StatusHistoryEntrySchema = new Schema({
             },
             role: {
                 type: String,
-                enum: REGISTERED_USER_ROLES,
+                enum: [USER_ROLE.CUSTOMER, USER_ROLE.ADMIN],
                 required: true
             }
         },

@@ -442,7 +442,7 @@ export const calculateOrderFinancials = (
 };
 
 export const getFinancialsState = (
-    orderStatus: TOrderStatus,
+    orderStatus: Omit<TOrderStatus, typeof ORDER_STATUS.DRAFT>,
     netPaid: number,
     totalAmount: number,
     eventHistory: TDbOrderFinancialsEventEntry[]

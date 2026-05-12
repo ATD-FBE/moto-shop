@@ -1,21 +1,11 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TNotificationEntity = typeof notificationEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const notificationEntity = 'notification';
-const paramsBaseSchema: IValidationInputSchema<TNotificationEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     notificationId: 'objectIdString'
 } as const;
-const bodyBaseSchema: IValidationInputSchema<TNotificationEntity>['body'] = {
+const bodyBaseSchema: IValidationInputSchema['body'] = {
     recipients: {
         type: 'array',
         items: { type: 'objectIdString' },
@@ -27,38 +17,38 @@ const bodyBaseSchema: IValidationInputSchema<TNotificationEntity>['body'] = {
     signature: { type: 'string', match: true, formField: true }
 } as const;
 
-export const notificationListSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationListSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     query: buildQueryValidationSchema()
 } as const;
 
-export const notificationSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     params: paramsBaseSchema
 } as const;
 
-export const notificationCreateSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationCreateSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     body: bodyBaseSchema
 } as const;
 
-export const notificationUpdateSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationUpdateSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     params: paramsBaseSchema,
     body: bodyBaseSchema
 } as const;
 
-export const notificationSendingSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationSendingSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     params: paramsBaseSchema
 } as const;
 
-export const notificationMarkAsReadSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationMarkAsReadSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     params: paramsBaseSchema
 } as const;
 
-export const notificationDeleteSchema: IValidationInputSchema<TNotificationEntity> = {
+export const notificationDeleteSchema: IValidationInputSchema = {
     entityType: notificationEntity,
     params: paramsBaseSchema
 } as const;

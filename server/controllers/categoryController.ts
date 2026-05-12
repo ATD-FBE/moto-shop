@@ -107,7 +107,7 @@ export const handleCategoryCreateRequest: RequestHandler<
             checkTimeout(req);
 
             if (!createdCategory) {
-                throw createAppError(500, 'Ошибка создания: документ не был возвращен');
+                throw createAppError(500, 'Ошибка создания категории товаров: документ не был возвращен');
             }
 
             // Перемещение товаров родительской категории, если она была листовой

@@ -1,19 +1,16 @@
-import type { TDiscountSource } from './shared.types.js';
-import type { IProduct, TProductSnapshot } from './product.types.js';
 import type {
     TAuthErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
+import type { IProduct, TProductSnapshot } from './product.types.js';
 
 /// Общие типы ///
 export interface IBaseCartItem {
     id: string;
     quantity: number;
 }
-
 export interface IGuestCartItem extends IBaseCartItem {}
-
 export interface ICartItem {
     id: string;
     quantity: number;
@@ -23,7 +20,6 @@ export interface ICartItem {
     deleted: boolean;
     productSnapshot: TProductSnapshot | null;
 }
-
 interface ICartBaseSuccessData {
     tradeProductList: IProduct[];
     cartItemList: IGuestCartItem[];
@@ -35,13 +31,14 @@ export interface IGuestCartItemListBody {
     guestCart: IGuestCartItem[];
 }
 
+export type TGuestCartItemListResponse =
+    | TGeneralErrorResponse
+    | TSuccessResponse<IGuestCartItemListSuccessData>;
+
 interface IGuestCartItemListSuccessData {
     tradeProductList: IProduct[];
     cartItemList: IGuestCartItem[];
 }
-export type TGuestCartItemListResponse =
-    | TGeneralErrorResponse
-    | TSuccessResponse<IGuestCartItemListSuccessData>;
     
 /// Загрузка серверной корзины ///
 export type TCartItemListResponse =

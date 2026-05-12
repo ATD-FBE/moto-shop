@@ -34,7 +34,7 @@ import { NotificationSchema } from '@server/db/models/Notification.js';
 import { ProductSchema } from '@server/db/models/Product.js';
 import { PromoSchema } from '@server/db/models/Promo.js';
 import { UserSchema } from '@server/db/models/User.js';
-import { BaseOrderSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
+import { OrderBaseSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
 import {
     BASE_DB_NEWS_FIELDS,
     MANAGED_DB_NEWS_FIELDS,
@@ -64,7 +64,7 @@ export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnl
 export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
 
 // Типизация методов моделей
-export interface TDbUserMethods {
+interface IDbUserMethods {
     comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -77,14 +77,14 @@ type TBaseDocument<T extends Schema> = InferSchemaType<T> & {
 
 export type TDbCriticalEvent = TBaseDocument<typeof CriticalEventSchema>;
 export type TDbCounter = TBaseDocument<typeof CounterSchema>;
-export type TDbUser = TBaseDocument<typeof UserSchema> & TDbUserMethods;
+export type TDbUser = TBaseDocument<typeof UserSchema> & IDbUserMethods;
 export type TDbNews = TBaseDocument<typeof NewsSchema>;
 export type TDbPromo = TBaseDocument<typeof PromoSchema>;
 export type TDbNotification = TBaseDocument<typeof NotificationSchema>;
 export type TDbCategory = TBaseDocument<typeof CategorySchema>;
 export type TDbProduct = TBaseDocument<typeof ProductSchema>;
 
-export type TDbBaseOrder = TBaseDocument<typeof BaseOrderSchema>;
+export type TDbBaseOrder = TBaseDocument<typeof OrderBaseSchema>;
 export type TDbOrderDraft = TDbBaseOrder & InferSchemaType<typeof OrderDraftSchema>;
 export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSchema>;
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
@@ -129,3 +129,6 @@ export type TDbOrderWithTx = TDbOrderFinal & {
         currentOnlineTransaction: NonNullable<TDbOrderFinal['financials']['currentOnlineTransaction']>;
     };
 };
+
+// Прочие типы
+export type TProjectionValue = true | false | 1 | 0;

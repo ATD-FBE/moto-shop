@@ -2,27 +2,17 @@ import { buildQueryValidationSchema } from '@server/validation/validationEngine.
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TCustomerEntity = typeof customerEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const customerEntity = 'customer';
-const paramsBaseSchema: IValidationInputSchema<TCustomerEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     customerId: 'objectIdString'
 } as const;
 
-export const customerListSchema: IValidationInputSchema<TCustomerEntity> = {
+export const customerListSchema: IValidationInputSchema = {
     entityType: customerEntity,
     query: buildQueryValidationSchema(customersFilterOptions)
 } as const;
 
-export const customerOrderListSchema: IValidationInputSchema<TCustomerEntity> = {
+export const customerOrderListSchema: IValidationInputSchema = {
     entityType: customerEntity,
     params: paramsBaseSchema,
     query: {
@@ -32,7 +22,7 @@ export const customerOrderListSchema: IValidationInputSchema<TCustomerEntity> = 
     }
 } as const;
 
-export const customerDiscountUpdateSchema: IValidationInputSchema<TCustomerEntity> = {
+export const customerDiscountUpdateSchema: IValidationInputSchema = {
     entityType: customerEntity,
     params: paramsBaseSchema,
     body: {
@@ -40,7 +30,7 @@ export const customerDiscountUpdateSchema: IValidationInputSchema<TCustomerEntit
     }
 } as const;
 
-export const customerBanStatusUpdateSchema: IValidationInputSchema<TCustomerEntity> = {
+export const customerBanStatusUpdateSchema: IValidationInputSchema = {
     entityType: customerEntity,
     params: paramsBaseSchema,
     body: {

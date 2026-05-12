@@ -1,41 +1,31 @@
 import type { IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TNewsEntity = typeof newsEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const newsEntity = 'news';
-const paramsBaseSchema: IValidationInputSchema<TNewsEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     newsId: 'objectIdString'
 } as const;
-const bodyBaseSchema: IValidationInputSchema<TNewsEntity>['body'] = {
+const bodyBaseSchema: IValidationInputSchema['body'] = {
     title: { type: 'string', match: true, formField: true },
     content: { type: 'string', match: true, formField: true }
 } as const;
 
-export const newsSchema: IValidationInputSchema<TNewsEntity> = {
+export const newsSchema: IValidationInputSchema = {
     entityType: newsEntity,
     params: paramsBaseSchema
 } as const;
 
-export const newsCreateSchema: IValidationInputSchema<TNewsEntity> = {
+export const newsCreateSchema: IValidationInputSchema = {
     entityType: newsEntity,
     body: bodyBaseSchema
 } as const;
 
-export const newsUpdateSchema: IValidationInputSchema<TNewsEntity> = {
+export const newsUpdateSchema: IValidationInputSchema = {
     entityType: newsEntity,
     params: paramsBaseSchema,
     body: bodyBaseSchema
 } as const;
 
-export const newsDeleteSchema: IValidationInputSchema<TNewsEntity> = {
+export const newsDeleteSchema: IValidationInputSchema = {
     entityType: newsEntity,
     params: paramsBaseSchema
 } as const;

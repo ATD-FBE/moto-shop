@@ -5,9 +5,14 @@ import {
     areCartsDifferent,
     prepareCart
 } from '@server/services/cartService.js';
+import {
+    prepareOrderDraftCustomerInfo,
+    prepareOrderDraftDelivery,
+    prepareOrderDraftFinancials
+} from '@server/services/checkoutService.js';
 import { USER_ROLE, ORDER_STATUS, ORDER_ACTIVE_STATUSES } from '@shared/constants.js';
-import type { TDbUser, TDbUserDoc, TDbOrderDraft } from '@server/types/index.js';
-import type { IUser, IGuestCartItem, ISession } from '@shared/types/index.js';
+import type { TDbUser, TDbOrderDraft } from '@server/types/index.js';
+import type { IUser, IGuestCartItem, ISession, ICheckoutDetails } from '@shared/types/index.js';
 
 export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
     const baseUserData = {
@@ -38,7 +43,7 @@ export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
     throw new Error(`Неизвестная роль пользователя: ${dbUser.role}`);
 };
 
-export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartItem[]): Promise<ISession> => {
+export const prepareSession = async (dbUser: TDbUser, guestCart: IGuestCartItem[]): Promise<ISession> => {
     // Данные пользователя
     const user = await prepareUser(dbUser);
 
@@ -73,4 +78,16 @@ export const prepareSession = async (dbUser: TDbUserDoc, guestCart: IGuestCartIt
     });
 
     return { user, tradeProductList, cartItemList, cartWasMerged, orderDraftId };
+};
+
+export const prepareCheckoutPrefs = (
+    dbCheckoutPrefs: TDbUser['checkoutPrefs']
+): ICheckoutDetails | undefined => {
+    if (!dbCheckoutPrefs) return undefined;
+
+    return {
+        customerInfo: prepareOrderDraftCustomerInfo(dbCheckoutPrefs.customerInfo),
+        delivery: prepareOrderDraftDelivery(dbCheckoutPrefs.delivery),
+        financials: prepareOrderDraftFinancials(dbCheckoutPrefs.financials)
+    };
 };

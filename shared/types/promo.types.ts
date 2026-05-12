@@ -27,6 +27,7 @@ interface IPromoCreateBodyBase<TFile> {
     startDate: string;
     endDate: string;
 }
+
 interface IPromoUpdateBodyBase<TFile> extends IPromoCreateBodyBase<TFile> {
     removeImage?: string;
 }
@@ -34,22 +35,24 @@ interface IPromoUpdateBodyBase<TFile> extends IPromoCreateBodyBase<TFile> {
 /// Загрузка списка акций ///
 export type TPromoListQuery = IBaseQuery;
 
-interface IPromoListSuccessData {
-    promoList: IPromo[];
-}
 export type TPromoListResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<IPromoListSuccessData>;
 
-/// Загрузка отдельной акции для редактирования ///
-interface IPromoSuccessData {
-    promo: IPromo;
+interface IPromoListSuccessData {
+    promoList: IPromo[];
 }
+
+/// Загрузка отдельной акции для редактирования ///
 export type TPromoResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<IPromoSuccessData>;
+
+interface IPromoSuccessData {
+    promo: IPromo;
+}
 
 /// Создание акции ///
 export type TPromoCreateBodyServer = IPromoCreateBodyBase<Express.Multer.File>;

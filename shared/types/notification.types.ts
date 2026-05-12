@@ -39,23 +39,25 @@ export interface INotificationBody {
 /// Загрузка списка уведомлений для одной страницы (управление админом или просмотр клиентом) ///
 export type TNotificationListQuery = IBaseQuery<TNotificationsSortOption['dbField']>;
 
-interface INotificationListSuccessData {
-    notificationsCount: number;
-    paginatedNotificationList: INotification[];
-}
 export type TNotificationListResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<INotificationListSuccessData>;
 
-/// Загрузка черновика уведомления для редактирования ///
-interface INotificationSuccessData {
-    notification: INotification;
+interface INotificationListSuccessData {
+    notificationsCount: number;
+    paginatedNotificationList: INotification[];
 }
+
+/// Загрузка черновика уведомления для редактирования ///
 export type TNotificationResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse<INotificationSuccessData>;
+
+interface INotificationSuccessData {
+    notification: INotification;
+}
 
 /// Создание черновика уведомления ///
 export type TNotificationCreateResponse =
@@ -73,6 +75,11 @@ export type TNotificationUpdateResponse =
     | TSuccessResponse;
 
 /// Отправка уведомления ///
+export type TNotificationSendingResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<INotificationSendingSuccessData>;
+
 interface INotificationSendingSuccessData {
     notificationUpdateData: {
         status: TNotificationStatus;
@@ -80,23 +87,20 @@ interface INotificationSendingSuccessData {
         sentBy: string;
     }
 }
-export type TNotificationSendingResponse =
-    | TAuthErrorResponse
-    | TGeneralErrorResponse
-    | TSuccessResponse<INotificationSendingSuccessData>;
 
 /// Отметка уведомления как прочитанного ///
+export type TNotificationMarkAsReadResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<INotificationMarkAsReadSuccessData>;
+
 interface INotificationMarkAsReadSuccessData {
     notificationUpdateData: {
         isRead: boolean;
         readAt: string;
     }
 }
-export type TNotificationMarkAsReadResponse =
-    | TEmptyResponse
-    | TAuthErrorResponse
-    | TGeneralErrorResponse
-    | TSuccessResponse<INotificationMarkAsReadSuccessData>;
     
 /// Удаление черновика уведомления ///
 export type TNotificationDeleteResponse =

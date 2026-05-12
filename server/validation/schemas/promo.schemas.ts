@@ -1,21 +1,11 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
-//////////////////////////
-/// TYPES & INTERFACES ///
-//////////////////////////
-
-type TPromoEntity = typeof promoEntity;
-
-/////////////////////
-/// FUNCTIONALITY ///
-/////////////////////
-
 const promoEntity = 'promotion';
-const paramsBaseSchema: IValidationInputSchema<TPromoEntity>['params'] = {
+const paramsBaseSchema: IValidationInputSchema['params'] = {
     promoId: 'objectIdString'
 } as const;
-const bodyBaseSchema: IValidationInputSchema<TPromoEntity>['body'] = {
+const bodyBaseSchema: IValidationInputSchema['body'] = {
     image: { type: 'file', optional: true, formField: true },
     title: { type: 'string', match: true, formField: true },
     description: { type: 'string', match: true, formField: true },
@@ -23,22 +13,22 @@ const bodyBaseSchema: IValidationInputSchema<TPromoEntity>['body'] = {
     endDate: { type: 'date', match: true, formField: true }
 } as const;
 
-export const promoListSchema: IValidationInputSchema<TPromoEntity> = {
+export const promoListSchema: IValidationInputSchema = {
     entityType: promoEntity,
     query: buildQueryValidationSchema()
 } as const;
 
-export const promoSchema: IValidationInputSchema<TPromoEntity> = {
+export const promoSchema: IValidationInputSchema = {
     entityType: promoEntity,
     params: paramsBaseSchema
 } as const;
 
-export const promoCreateSchema: IValidationInputSchema<TPromoEntity> = {
+export const promoCreateSchema: IValidationInputSchema = {
     entityType: promoEntity,
     body: bodyBaseSchema
 } as const;
 
-export const promoUpdateSchema: IValidationInputSchema<TPromoEntity> = {
+export const promoUpdateSchema: IValidationInputSchema = {
     entityType: promoEntity,
     params: paramsBaseSchema,
     body: {
@@ -47,7 +37,7 @@ export const promoUpdateSchema: IValidationInputSchema<TPromoEntity> = {
     }
 } as const;
 
-export const promoDeleteSchema: IValidationInputSchema<TPromoEntity> = {
+export const promoDeleteSchema: IValidationInputSchema = {
     entityType: promoEntity,
     params: paramsBaseSchema
 } as const;

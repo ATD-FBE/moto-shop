@@ -1,12 +1,7 @@
 import mongoose from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
-import type {
-    TCheckType,
-    IValidationSchema,
-    IValidationConfig,
-    TValidationConfigMap
-} from '@server/types/index.js';
+import type { TCheckType, IValidationSchema, IValidationConfig } from '@server/types/index.js';
 import type { TEntityType, TValidationRuleType, TFieldErrors, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
@@ -104,6 +99,21 @@ export const validateByType = (
     const validator = typeCheck[type];
     let isValid = validator?.(value) ?? false;
 
+    // min/max для чисел
+    if (isValid && ['float', 'integer'].includes(type) && typeof value === 'number') {
+        if (min !== undefined && value < min) isValid = false;
+        if (max !== undefined && value > max) isValid = false;
+    }
+
+    // enum для примитивов
+    if (isValid && enumValues?.length) {
+        const isEnumSupported = ['string', 'float', 'integer', 'boolean'].includes(type);
+    
+        if (isEnumSupported) {
+            isValid = enumValues.some(val => val === value);
+        }
+    }
+
     // match -> булево значение для поля формы, регулярное выражение - для любого поля
     if (isValid && match) {
         let rule: TValidationRuleType | undefined;
@@ -115,37 +125,21 @@ export const validateByType = (
             isValidEntityField(entityType, fieldName)
         ) {
             rule = validationRules[entityType][fieldName];
-        } else if (match instanceof RegExp) {
+        } else if (match instanceof RegExp || typeof match === 'function') {
             rule = match;
         }
 
         if (rule instanceof RegExp && typeof value === 'string') {
-            const trimmedValue = value.trim();
-            isValid = rule.test(trimmedValue);
+            isValid = rule.test(value.trim());
         } else if (typeof rule === 'function') {
             isValid = rule(value);
-        }
-    }
-
-    // min/max для чисел
-    if (isValid && ['number', 'integer'].includes(type) && typeof value === 'number') {
-        if (min !== undefined && value < min) isValid = false;
-        if (max !== undefined && value > max) isValid = false;
-    }
-
-    // enum для примитивов
-    if (isValid && enumValues?.length) {
-        const isEnumSupported = ['string', 'number', 'integer', 'boolean'].includes(type);
-    
-        if (isEnumSupported) {
-            isValid = enumValues.includes(value as 'string' | 'number' | 'boolean');
         }
     }
 
     return isValid;
 };
 
-export const validateArrayItems = <E extends TEntityType>(
+export const validateArrayItems = <E extends TEntityType = TEntityType>(
     config: IValidationConfig,
     entityType?: E,
     parentPath: string = ''
@@ -188,7 +182,7 @@ export const validateArrayItems = <E extends TEntityType>(
 
         // OBJECT + fields
         if (itemConfig.type === 'object' && itemConfig.fields) {
-            const result = validateObjectFields<E>(itemConfig.fields, entityType, currentPath);
+            const result = validateObjectFields(itemConfig.fields, entityType, currentPath);
 
             invalidInputPaths.push(...result.invalidInputPaths);
             fieldErrors = { ...fieldErrors, ...result.fieldErrors };
@@ -197,7 +191,7 @@ export const validateArrayItems = <E extends TEntityType>(
 
         // ARRAY + items
         if (itemConfig.type === 'array' && itemConfig.items) {
-            const result = validateArrayItems<E>(itemConfig, entityType, currentPath);
+            const result = validateArrayItems(itemConfig, entityType, currentPath);
 
             invalidInputPaths.push(...result.invalidInputPaths);
             fieldErrors = { ...fieldErrors, ...result.fieldErrors };
@@ -216,8 +210,8 @@ export const validateArrayItems = <E extends TEntityType>(
     };
 };
 
-export const validateObjectFields = <E extends TEntityType>(
-    configMap: TValidationConfigMap<E>,
+export const validateObjectFields = <E extends TEntityType = TEntityType>(
+    configMap: Record<string, IValidationConfig>,
     entityType?: E,
     pathPrefix: string = ''
 ): IValidationResult<E> => {
@@ -241,7 +235,7 @@ export const validateObjectFields = <E extends TEntityType>(
                 continue;
             }
 
-            const result = validateObjectFields<E>(fields, entityType, fullPath);
+            const result = validateObjectFields(fields, entityType, fullPath);
 
             if (!result.isValid) {
                 invalidInputPaths.push(...result.invalidInputPaths);
