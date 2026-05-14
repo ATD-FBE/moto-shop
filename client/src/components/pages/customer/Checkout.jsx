@@ -6,10 +6,7 @@ import CheckoutForm from './checkout/CheckoutForm.jsx';
 import CheckoutSummary from './checkout/CheckoutSummary.jsx';
 import OrderDraftExpirationTimer from './checkout/OrderDraftExpirationTimer.jsx';
 import { useStructureRefs } from '@/context/StructureRefsContext.js';
-import {
-    sendOrderDraftSyncRequest,
-    sendOrderDraftDeleteRequest
-} from '@/api/checkoutRequests.js';
+import { sendOrderDraftSyncRequest, sendOrderDraftDeleteRequest } from '@/api/checkoutRequests.js';
 import {
     setNavigationLock,
     setLockedRouteCancelPath,

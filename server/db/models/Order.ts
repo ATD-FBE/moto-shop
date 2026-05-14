@@ -9,14 +9,25 @@ import { DraftFinancialsSchema, FinalFinancialsSchema } from './schemas/order/Fi
 import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { ORDER_STATUS } from '@shared/constants.js';
-import type { TDbOrder } from '@server/types/index.js';
+import type { TDbOrder, TDbOrderDraft, TDbOrderFinal } from '@server/types/index.js';
 
 export const OrderBaseSchema = new Schema({
+    _modelType: { // Поле ключа дискриминатора для подсхем OrderDraftSchema/OrderFinalSchema
+        type: String,
+        enum: [ORDER_MODEL_TYPE.DRAFT, ORDER_MODEL_TYPE.FINAL],
+        required: true,
+        immutable: true
+    },
     customerId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true,
         immutable: true
+    },
+    currentStatus: {
+        type: String,
+        enum: Object.values(ORDER_STATUS),
+        required: true
     },
     lastActivityAt: { // Дубликат для сортировки по дате изменения статуса заказа или финансового события
         type: Date,
@@ -38,12 +49,6 @@ export const OrderBaseSchema = new Schema({
 
 // Черновик — без required на полях в схемах customerInfo/delivery/financials
 export const OrderDraftSchema = new Schema({
-    _modelType: { // Поле ключа дискриминатора для подсхемы OrderDraftSchema
-        type: String,
-        enum: [ORDER_MODEL_TYPE.DRAFT],
-        default: ORDER_MODEL_TYPE.DRAFT,
-        immutable: true
-    },
     currentStatus: { // Дубликат для поиска в базе и проверок
         type: String,
         enum: [ORDER_STATUS.DRAFT],
@@ -59,20 +64,13 @@ export const OrderDraftSchema = new Schema({
         required: true,
         immutable: true
     }
-}); // { _id: false } - Для дискриминаторов не нужно отключать _id для стабильности
+}); // { _id: false } - Для дискриминатора не нужно отключать _id для стабильности
   
 // Подтверждённый/рабочий заказ — с required на полях в схемах customerInfo/delivery/financials
 export const OrderFinalSchema = new Schema({
-    _modelType: { // Поле ключа дискриминатора для подсхемы OrderFinalSchema
-        type: String,
-        enum: [ORDER_MODEL_TYPE.FINAL],
-        default: ORDER_MODEL_TYPE.FINAL,
-        immutable: true
-    },
     orderNumber: {
         type: String,
         required: true,
-        unique: true,
         immutable: true
     },
     currentStatus: { // Дубликат для поиска в базе и проверок
@@ -107,19 +105,28 @@ export const OrderFinalSchema = new Schema({
         type: [AuditLogSchema],
         default: undefined // Пустой массив не создаётся
     }
-}); // { _id: false } - Для дискриминаторов не нужно отключать _id для стабильности
-
-// Индекс для поиска черовика заказа по ID покупателя
-OrderDraftSchema.index({ customerId: 1 });
-
-// Ограничительный индекс для создания черновика заказа (только 1 для каждого клиента)
-OrderDraftSchema.index({ customerId: 1 }, { unique: true });
+}); // { _id: false } - Для дискриминатора не нужно отключать _id для стабильности
 
 // Составной индекс для поиска подтверждённого заказа по ID покупателя и статусу
-OrderFinalSchema.index({ customerId: 1, currentStatus: 1 });
+OrderBaseSchema.index({ customerId: 1, currentStatus: 1 });
 
-// Индекс для поиска по номеру подтверждённого заказа
-OrderFinalSchema.index({ orderNumber: 1 }, { unique: true });
+// Ограничительный индекс для создания черновика заказа (только 1 для каждого клиента)
+OrderDraftSchema.index(
+    { customerId: 1 },
+    { unique: true, partialFilterExpression: { _modelType: ORDER_MODEL_TYPE.DRAFT } }
+);
+
+// Индекс для поиска истёкших черновиков заказа
+OrderDraftSchema.index(
+    { expiresAt: 1 },
+    { partialFilterExpression: { _modelType: ORDER_MODEL_TYPE.DRAFT } }
+);
+
+// Индекс для поиска по уникальному номеру подтверждённого заказа
+OrderFinalSchema.index(
+    { orderNumber: 1 },
+    { unique: true, partialFilterExpression: { _modelType: ORDER_MODEL_TYPE.FINAL } }
+);
 
 // Индекс для поиска просроченных онлайн-оплат подтверждённого заказа
 OrderFinalSchema.index(
@@ -129,6 +136,7 @@ OrderFinalSchema.index(
     },
     {
         partialFilterExpression: { // Индексация только того, что реально нужно чистить
+            _modelType: ORDER_MODEL_TYPE.FINAL,
             'financials.currentOnlineTransaction.status': 'PENDING'
         }
     }
@@ -136,9 +144,9 @@ OrderFinalSchema.index(
 
 const Order = model<TDbOrder>('Order', OrderBaseSchema);
 
-// Подключение схем OrderDraftSchema/OrderFinalSchema через дискриминатор модели
-export const OrderDraft = Order.discriminator(ORDER_MODEL_TYPE.DRAFT, OrderDraftSchema);
-export const OrderFinal = Order.discriminator(ORDER_MODEL_TYPE.FINAL, OrderFinalSchema);
+// Подключение виртуальных моделей OrderDraftSchema/OrderFinalSchema через дискриминатор
+export const OrderDraft = Order.discriminator<TDbOrderDraft>(ORDER_MODEL_TYPE.DRAFT, OrderDraftSchema);
+export const OrderFinal = Order.discriminator<TDbOrderFinal>(ORDER_MODEL_TYPE.FINAL, OrderFinalSchema);
 export default Order;
 
 

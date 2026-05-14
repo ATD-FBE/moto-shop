@@ -1,4 +1,3 @@
-import { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
 import { UpdateHistoryItemSchema } from '@server/db/models/schemas/UpdateHistoryItemSchema.js';
 import { NotificationItemSchema } from '@server/db/models/schemas/user/NotificationItemSchema.js';
 import { CartItemSchema } from '@server/db/models/schemas/user/CartItemSchema.js';
@@ -36,6 +35,7 @@ import { PromoSchema } from '@server/db/models/Promo.js';
 import { UserSchema } from '@server/db/models/User.js';
 import { OrderBaseSchema, OrderDraftSchema, OrderFinalSchema } from '@server/db/models/Order.js';
 import {
+    ORDER_MODEL_TYPE,
     BASE_DB_NEWS_FIELDS,
     MANAGED_DB_NEWS_FIELDS,
     BASE_DB_PROMO_FIELDS,
@@ -43,6 +43,7 @@ import {
     BASE_DB_NOTIFICATION_FIELDS,
     MANAGED_DB_NOTIFICATION_FIELDS,
 } from '@server/config/constants.js';
+import type { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
 
 // Типизация подсхем моделей
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
@@ -64,8 +65,8 @@ export type TDbOrderCurrentOnlineTransaction = InferSchemaType<typeof CurrentOnl
 export type TDbOrderAuditLogEntry = InferSchemaType<typeof AuditLogSchema>;
 
 // Типизация методов моделей
-interface IDbUserMethods {
-    comparePassword(candidatePassword: string): Promise<boolean>;
+export interface IDbUserMethods {
+    comparePassword: (candidatePassword: string) => Promise<boolean>;
 }
 
 // Типизация схем моделей
@@ -84,9 +85,13 @@ export type TDbNotification = TBaseDocument<typeof NotificationSchema>;
 export type TDbCategory = TBaseDocument<typeof CategorySchema>;
 export type TDbProduct = TBaseDocument<typeof ProductSchema>;
 
-export type TDbBaseOrder = TBaseDocument<typeof OrderBaseSchema>;
-export type TDbOrderDraft = TDbBaseOrder & InferSchemaType<typeof OrderDraftSchema>;
-export type TDbOrderFinal = TDbBaseOrder & InferSchemaType<typeof OrderFinalSchema>;
+type TDbBaseOrder = TBaseDocument<typeof OrderBaseSchema>;
+export type TDbOrderDraft = TDbBaseOrder & TBaseDocument<typeof OrderDraftSchema> & {
+    _modelType: typeof ORDER_MODEL_TYPE.DRAFT; 
+};
+export type TDbOrderFinal = TDbBaseOrder & TBaseDocument<typeof OrderFinalSchema> & {
+    _modelType: typeof ORDER_MODEL_TYPE.FINAL;
+};
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
 // Типизация схем моделей как документов (с методами и другими встроенными данными)
@@ -131,4 +136,5 @@ export type TDbOrderWithTx = TDbOrderFinal & {
 };
 
 // Прочие типы
-export type TProjectionValue = true | false | 1 | 0;
+export type TSelectedFields<T> = Partial<Record<keyof T, TProjectionValue>>
+type TProjectionValue = true | false | 1 | 0;

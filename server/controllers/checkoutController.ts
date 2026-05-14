@@ -1,4 +1,4 @@
-import Order, { OrderDraft } from '@server/db/models/Order.js';
+import { OrderDraft, OrderFinal } from '@server/db/models/Order.js';
 import Counter from '@server/db/models/Counter.js';
 import { ORDER_MODEL_TYPE, ORDER_DRAFT_EXPIRATION } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
@@ -19,7 +19,7 @@ import {
     orderDotNotationMap,
     prepareShippingCost
 } from '@server/services/orderService.js';
-import { requireDbUser } from '@server/utils/typeGuards.js';
+import { requireDbUser, isObjectKey } from '@server/utils/typeGuards.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
@@ -28,9 +28,7 @@ import {
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import {
-    DISCOUNT_SOURCE,
     MIN_ORDER_AMOUNT,
     DELIVERY_METHOD,
     ORDER_STATUS,
@@ -38,11 +36,16 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { TDbOrderDraft, TProjectionValue } from '@server/types/index.js';
+import type { TDbOrderDraft, TDbOrderFinal, TDbOrderFinalItem, TSelectedFields } from '@server/types/index.js';
 import type {
     TOrderDraftSyncResponse,
     IOrderDraftCreateBody,
     TOrderDraftCreateResponse,
+    IOrderDraftUpdateBody,
+    TOrderDraftUpdateResponse,
+    IOrderDraftConfirmBody,
+    TOrderDraftConfirmResponse,
+    TOrderDraftDeleteResponse
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -52,6 +55,16 @@ import type {
 interface ICheckoutParams extends ParamsDictionary {
     orderId: string;
 }
+
+type TOrderDotNotationMapValues = typeof orderDotNotationMap[keyof typeof orderDotNotationMap];
+type TOrderDraftUpdateBodyValues = IOrderDraftUpdateBody[keyof IOrderDraftUpdateBody];
+
+type TOrderDraftUpdateDotNotatedFields = {
+    [K in TOrderDotNotationMapValues]?: TOrderDraftUpdateBodyValues; 
+};
+type TOrderDraftUpdateNormalizedFields = {
+    [K in TOrderDotNotationMapValues]?: TOrderDraftUpdateBodyValues | null; 
+};
 
 interface IOrderDraftSyncTransactionResult {
     statusCode: 403 | 404 | 409 | 422 | 200;
@@ -92,15 +105,6 @@ export const handleOrderDraftSyncRequest: RequestHandler<
                     statusCode: 403,
                     responseData: {
                         message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
-                        reason: REQUEST_STATUS.DENIED
-                    }
-                };
-            }
-            if (dbOrderDraft.currentStatus !== ORDER_STATUS.DRAFT) {
-                return {
-                    statusCode: 403,
-                    responseData: {
-                        message: `Запрещено: заказ ${orderLbl} уже оформлен, загрузка невозможна`,
                         reason: REQUEST_STATUS.DENIED
                     }
                 };
@@ -246,7 +250,7 @@ export const handleOrderDraftCreateRequest: RequestHandler<
     // Поиск существующих черновиков, возврат зарезервированных товаров и удаление заказов
     try {
         await runInDbTransaction(async (session) => {
-            const selectedFields: Partial<Record<keyof TDbOrderDraft, TProjectionValue>> = { items: 1 };
+            const selectedFields: TSelectedFields<TDbOrderDraft> = { items: 1 };
             const existingOrderDrafts = await OrderDraft
                 .find({ customerId })
                 .select(selectedFields)
@@ -387,7 +391,7 @@ export const handleOrderDraftCreateRequest: RequestHandler<
             const { customerInfo, delivery, financials } = dbUser.checkoutPrefs ?? {};
             const now = new Date();
 
-            const [orderDraft] = await Order.create(
+            const [dbOrderDraft] = await OrderDraft.create(
                 [
                     {
                         customerId,
@@ -409,11 +413,11 @@ export const handleOrderDraftCreateRequest: RequestHandler<
             );
             checkTimeout(req);
 
-            if (!orderDraft) {
+            if (!dbOrderDraft) {
                 throw createAppError(500, 'Ошибка создания черновика заказа: документ не был возвращен');
             }
 
-            const orderId = orderDraft._id.toString();
+            const orderId = dbOrderDraft._id.toString();
 
             return {
                 statusCode: 201,
@@ -438,59 +442,39 @@ export const handleOrderDraftCreateRequest: RequestHandler<
 };
 
 /// Изменение черновика заказа ///
-export const handleOrderDraftUpdateRequest = async (req, res, next) => {
+export const handleOrderDraftUpdateRequest: RequestHandler<
+    ICheckoutParams,
+    TOrderDraftUpdateResponse,
+    IOrderDraftUpdateBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const dbUser = req.dbUser;
+    const userId = req.dbUser._id;
     const orderId = req.params.orderId;
-    const {
-        firstName, lastName, middleName, email, phone,
-        deliveryMethod, allowCourierExtra,
-        region, district, city, street, house, apartment, postalCode,
-        defaultPaymentMethod,
-        customerComment
-    } = req.body ?? {};
 
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        firstName: { value: firstName, type: 'string', optional: true, formField: true },
-        lastName: { value: lastName, type: 'string', optional: true, formField: true },
-        middleName: { value: middleName, type: 'string', optional: true, formField: true },
-        email: { value: email, type: 'string', optional: true, formField: true },
-        phone: { value: phone, type: 'string', optional: true, formField: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, formField: true },
-        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, formField: true },
-        region: { value: region, type: 'string', optional: true, formField: true },
-        district: { value: district, type: 'string', optional: true, formField: true },
-        city: { value: city, type: 'string', optional: true, formField: true },
-        street: { value: street, type: 'string', optional: true, formField: true },
-        house: { value: house, type: 'string', optional: true, formField: true },
-        apartment: { value: apartment, type: 'string', optional: true, formField: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, formField: true },
-        customerComment: { value: customerComment, type: 'string', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'checkout');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
+    // Проверка на согласованность данных для метода курьерской доставки
+    const { deliveryMethod, allowCourierExtra } = req.body;
+    const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
+    const isAllowCourierExtra = allowCourierExtra !== undefined;
+    
+    if (
+        (isCourierMethod && !isAllowCourierExtra) ||
+        (deliveryMethod !== undefined && !isCourierMethod && isAllowCourierExtra)
+    ) {
+        return safeSendResponse(res, 400, { message: 'Несогласованные данные для метода доставки' });
     }
 
-    // Заполнение данных только для пришедших полей через дот-нотационные названия полей
-    const updateFields = Object.fromEntries(
-        Object.entries(validationConfigMap)
-            .filter(([key, { formField, value }]) =>
-                formField && orderDotNotationMap[key] && value !== undefined
-            )
-            .map(([key, { value }]) => [orderDotNotationMap[key], value])
-    );
+    // Создание объекта с дотнотационными путями в ключах для обновляемых полей
+    const dotNotatedUpdateFields: TOrderDraftUpdateDotNotatedFields = {};
 
-    if (!Object.keys(updateFields).length) {
+    for (const [key, value] of (Object.entries(req.body) as [string, TOrderDraftUpdateBodyValues][])) {
+        if (isObjectKey(key, orderDotNotationMap) && value !== undefined) {
+            dotNotatedUpdateFields[orderDotNotationMap[key]] = value;
+        }
+    }
+
+    // Проверка, есть ли хоть одно обновляемое поле
+    if (!Object.keys(dotNotatedUpdateFields).length) {
         return safeSendResponse(res, 204);
     }
     
@@ -498,28 +482,45 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
         const orderLbl = `(ID: ${orderId})`;
 
         await runInDbTransaction(async (session) => {
-            // Поиск черновика, полностью удовлетворяющего условиям
-            const dbOrderDraft = await Order.findOne({
+            // Поиск черновика заказа, полностью удовлетворяющего условиям
+            const dbOrderDraft = await OrderDraft.findOne({
                 _id: orderId,
-                customerId: dbUser._id,
-                currentStatus: ORDER_STATUS.DRAFT,
+                customerId: userId,
                 expiresAt: { $gt: new Date() }
             }).session(session);
             checkTimeout(req);
-            
+
             if (!dbOrderDraft) {
                 throw createAppError(404, `Черновик заказа ${orderLbl} не найден или просрочен`);
             }
 
             // Объединение нормализованных изменённых полей с существующими через дот-нотацию в их названиях
             const currentOrderDraft = dbOrderDraft.toObject();
-            const normalizedUpdateFields = normalizeInputDataToNull(updateFields);
-            const newOrderDraftData = dotNotationToObject(normalizedUpdateFields);
-            const mergedOrderDraft = deepMergeNewNullable(currentOrderDraft, newOrderDraftData);
+            const normalizedDotNotatedUpdateFields =
+                normalizeInputDataToNull(dotNotatedUpdateFields) as TOrderDraftUpdateNormalizedFields;
+            const newOrderDraftData =
+                dotNotationToObject(normalizedDotNotatedUpdateFields) as Partial<TDbOrderDraft>;
+            const mergedOrderDraft =
+                deepMergeNewNullable(currentOrderDraft, newOrderDraftData) as TDbOrderDraft;
 
-            // Проверка на изменение полей не нужна
+            // Очистка данных для методов доставки
+            if (mergedOrderDraft.delivery) {
+                if (deliveryMethod === '') {
+                    mergedOrderDraft.delivery = {};
+                }
+                if (deliveryMethod === DELIVERY_METHOD.SELF_PICKUP) {
+                    mergedOrderDraft.delivery.allowCourierExtra = null;
+                    mergedOrderDraft.delivery.shippingAddress = {};
+                }
+                if (deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY) {
+                    mergedOrderDraft.delivery.allowCourierExtra = null;
+                }
+            }
+
+            // Проверка на изменение полей в этом обработчике не нужна
             // Установка через set и сохранение через save для удаления null-полей и пустых объектов
             dbOrderDraft.set(mergedOrderDraft);
+
             await dbOrderDraft.save({ session });
             checkTimeout(req);
         });
@@ -531,7 +532,11 @@ export const handleOrderDraftUpdateRequest = async (req, res, next) => {
 };
 
 /// Подтверждение оформления заказа ///
-export const handleOrderDraftConfirmRequest = async (req, res, next) => {
+export const handleOrderDraftConfirmRequest: RequestHandler<
+    ICheckoutParams,
+    TOrderDraftConfirmResponse,
+    IOrderDraftConfirmBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const reqCtx = req.reqCtx;
@@ -540,42 +545,9 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
     const customerDiscount = dbUser.discount;
     const orderId = req.params.orderId;
     const {
-        firstName, lastName, middleName, email, phone,
-        deliveryMethod, allowCourierExtra,
-        region, district, city, street, house, apartment, postalCode,
-        defaultPaymentMethod,
-        customerComment
-    } = req.body ?? {};
-
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        firstName: { value: firstName, type: 'string', formField: true },
-        lastName: { value: lastName, type: 'string', formField: true },
-        middleName: { value: middleName, type: 'string', optional: true, formField: true },
-        email: { value: email, type: 'string', formField: true },
-        phone: { value: phone, type: 'string', formField: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', formField: true },
-        allowCourierExtra: { value: allowCourierExtra, type: 'boolean', optional: true, formField: true },
-        region: { value: region, type: 'string', optional: true, formField: true },
-        district: { value: district, type: 'string', optional: true, formField: true },
-        city: { value: city, type: 'string', optional: true, formField: true },
-        street: { value: street, type: 'string', optional: true, formField: true },
-        house: { value: house, type: 'string', optional: true, formField: true },
-        apartment: { value: apartment, type: 'string', optional: true, formField: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', formField: true },
-        customerComment: { value: customerComment, type: 'string', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'checkout');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+        firstName, lastName, middleName, email, phone, deliveryMethod, allowCourierExtra, region,
+        district, city, street, house, apartment, postalCode, defaultPaymentMethod, customerComment
+    } = req.body;
 
     // Проверка на согласованность данных для метода курьерской доставки
     const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
@@ -585,27 +557,52 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
         return safeSendResponse(res, 400, { message: 'Несогласованные данные для метода доставки' });
     }
 
-    let confirmedOrderId;
+    // Проверка на обязательность полей для адресных методов доставки
+    const isAddressDelivery = [
+        DELIVERY_METHOD.COURIER,
+        DELIVERY_METHOD.TRANSPORT_COMPANY
+    ].some(method => method === deliveryMethod);
+
+    if (isAddressDelivery) {
+        const requiredAddressFields = { city, street, house };
+        const missingAddressFields = Object.entries(requiredAddressFields)
+            .filter(([_, value]) => !value)
+            .map(([field]) => field);
+
+        if (missingAddressFields.length > 0) {
+            return safeSendResponse(res, 400, {
+                message:
+                    'Для выбранного метода доставки отсутствуют обязательные поля адреса: ' +
+                    `[${missingAddressFields.join(', ')}]`
+            });
+        }
+    }
+
+    let confirmedOrderId: string | null = null;
 
     try {
         const orderLbl = `(ID: ${orderId})`;
         
         const { statusCode, responseData } = await runInDbTransaction(async (session) => {
-            const dbOrderDraft = await Order.findById(orderId).session(session);
+            const dbOrderDraft = await OrderDraft.findById(orderId).session(session);
             checkTimeout(req);
 
             if (!dbOrderDraft) {
-                throw createAppError(404, `Черновик заказа ${orderLbl} не найден`);
+                return {
+                    statusCode: 404,
+                    responseData: {
+                        message: `Черновик заказа ${orderLbl} не найден`
+                    }
+                };
             }
             if (customerId.toString() !== dbOrderDraft.customerId.toString()) {
-                throw createAppError(403, `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`, {
-                    reason: REQUEST_STATUS.DENIED
-                });
-            }
-            if (dbOrderDraft.currentStatus !== ORDER_STATUS.DRAFT) {
-                throw createAppError(403, `Заказ ${orderLbl} уже оформлен, подтверждение невозможно`, {
-                    reason: REQUEST_STATUS.DENIED
-                });
+                return {
+                    statusCode: 403,
+                    responseData: {
+                        message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
+                        reason: REQUEST_STATUS.DENIED
+                    }
+                };
             }
 
             // Заказ просрочен => освобождение резервов и удаление заказа
@@ -641,10 +638,10 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             const {
                 fixedDbCart,
                 fixedDbOrderItems,
-                orderItemAdjustments,
                 tradeProductList,
                 cartItemList,
                 orderItemList,
+                orderItemAdjustments,
                 orderItemsToRelease
             } = await syncOrderDraft(dbOrderDraft.items, customerDiscount);
             checkTimeout(req);
@@ -655,7 +652,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             // Есть изменения в заказываемых товарах (вмешательство админа в каталог)
             if (orderItemAdjustments.length > 0) {
                 // Обновление корзины клиента перед выходом
-                dbUser.cart = fixedDbCart;
+                dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
                 await dbUser.save({ session });
                 checkTimeout(req);
                 
@@ -668,7 +665,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                     }
 
                     // Обновление черновика заказа с последующим выходом
-                    dbOrderDraft.items = fixedDbOrderItems;
+                    dbOrderDraft.items.splice(0, dbOrderDraft.items.length, ...fixedDbOrderItems);
                     dbOrderDraft.totals = orderTotals;
                     await dbOrderDraft.save({ session });
                     checkTimeout(req);
@@ -681,9 +678,9 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                             cartItemList,
                             customerDiscount,
                             orderDraft: {
-                                expiresAt: dbOrderDraft.expiresAt,
                                 items: orderItemList,
-                                totals: orderTotals
+                                totals: orderTotals,
+                                expiresAt: dbOrderDraft.expiresAt
                             },
                             orderItemAdjustments
                         }
@@ -717,8 +714,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             }
 
             // Подготовка данных для нового документа
-            const currentOrderDraft = dbOrderDraft.toObject();
-            delete currentOrderDraft._id; // Удаление поля для пересоздания в новом документе
+            const { _id: orderDraftId, ...currentOrderDraft } = dbOrderDraft.toObject();
 
             const shippingCost = prepareShippingCost(deliveryMethod, allowCourierExtra);
             const submittedOrderData = normalizeInputDataToNull({
@@ -733,7 +729,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 },
                 financials: { defaultPaymentMethod },
                 customerComment
-            });
+            }) as Partial<TDbOrderFinal>;
+
             const confirmedOrderData = {
                 _modelType: ORDER_MODEL_TYPE.FINAL,
                 currentStatus: ORDER_STATUS.CONFIRMED,
@@ -741,8 +738,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             };
 
             // Создание нового документа для дискриминатора final модели Order
-            const confirmedOrderDoc = new Order({ ...currentOrderDraft, ...confirmedOrderData });
-
+            const confirmedOrderDoc = new OrderFinal({ ...currentOrderDraft, ...confirmedOrderData });
+            
             // Предварительная валидация до работы с файловой системой и создания номера заказа
             await confirmedOrderDoc.validate({ pathsToSkip: ['orderNumber', 'items', 'confirmedAt'] });
             checkTimeout(req);
@@ -750,7 +747,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             // Подготовка списка товаров подтверждённого заказа
             confirmedOrderId = confirmedOrderDoc._id.toString();
             const tradeProductMap = new Map(tradeProductList.map(prod => [prod.id.toString(), prod]));
-            const confirmedOrderItems = [];
+            const confirmedOrderItems: TDbOrderFinalItem[] = [];
 
             for (const orderItem of fixedDbOrderItems) {
                 const {
@@ -768,7 +765,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 
                 const { images, mainImageIndex, sku, name, brand, unit } = product;
                 const imageFilename = images.length > 0
-                    ? (images[mainImageIndex] ?? images[0]).filename
+                    ? (images[mainImageIndex ?? 0] ?? images[0])?.filename
                     : undefined;
                 const finalUnitPrice = priceSnapshot * (1 - appliedDiscountSnapshot / 100);
                 const totalPrice = finalUnitPrice * quantity;
@@ -790,7 +787,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             }
 
             // Сохранение (копирование) файлов миниатюр товара для заказа
-            await storageService.saveOrderItemsImages(confirmedOrderId, confirmedOrderItems, req);
+            await storageService.saveOrderItemsImages(confirmedOrderId, confirmedOrderItems);
             checkTimeout(req);
 
             // Получение документа с новым номером заказа (без session: счётчик откатывать нельзя!)
@@ -807,7 +804,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             const now = new Date();
             
             confirmedOrderDoc.orderNumber = newOrderNumber;
-            confirmedOrderDoc.items = confirmedOrderItems;
+            confirmedOrderDoc.items.splice(0, confirmedOrderDoc.items.length, ...confirmedOrderItems);
             confirmedOrderDoc.confirmedAt = now;
             confirmedOrderDoc.lastActivityAt = now;
             confirmedOrderDoc.statusHistory.push({
@@ -815,6 +812,8 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
                 changedBy: { id: customerId, name: dbUser.name, role: dbUser.role },
                 changedAt: now
             });
+
+            console.log(confirmedOrderDoc);
 
             // Сохранение документа подтверждённого заказа
             await confirmedOrderDoc.save({ session });
@@ -829,7 +828,7 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
             checkTimeout(req);
 
             // Очистка корзины клиента
-            dbUser.cart = [];
+            dbUser.cart.splice(0);
             await dbUser.save({ session });
             checkTimeout(req);
 
@@ -853,21 +852,20 @@ export const handleOrderDraftConfirmRequest = async (req, res, next) => {
 };
 
 /// Отмена оформления заказа ///
-export const handleOrderDraftDeleteRequest = async (req, res, next) => {
+export const handleOrderDraftDeleteRequest: RequestHandler<
+    ICheckoutParams,
+    TOrderDraftDeleteResponse
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-
     try {
         const orderLbl = `(ID: ${orderId})`;
 
         await runInDbTransaction(async (session) => {
-            const dbOrderDraft = await Order.findById(orderId).session(session);
+            const dbOrderDraft = await OrderDraft.findById(orderId).session(session);
             checkTimeout(req);
 
             if (!dbOrderDraft) {

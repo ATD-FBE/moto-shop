@@ -128,58 +128,67 @@ const parseValues = (
     };
 
     const parseArray = (arr: any[], itemSchema: IValidationSchema): any[] => {
+        const { type, fields, items, nullable, emptyable } = itemSchema;
+
         return arr.map(item => {
-            if (itemSchema.type === 'object' && itemSchema.fields) {
-                return parseValues(item, itemSchema.fields, multerContext);
+            if (type === 'object' && fields) {
+                return parseValues(item, fields, multerContext);
             }
 
-            if (itemSchema.type === 'array' && itemSchema.items && Array.isArray(item)) {
-                return parseArray(item, itemSchema.items);
+            if (type === 'array' && items && Array.isArray(item)) {
+                return parseArray(item, items);
             }
 
-            return parseFieldValue(item, itemSchema.type, itemSchema.nullable);
+            return parseFieldValue(item, type, nullable, emptyable);
         });
     };
 
     for (const [key, fieldSchema] of Object.entries(schema)) {
+        const { type, fields, items, nullable, emptyable } = fieldSchema;
         const value = data[key];
 
         // FILE
-        if (fieldSchema.type === 'file') {
+        if (type === 'file') {
             result[key] = extractFile(key);
             continue;
         }
 
         // FILES
-        if (fieldSchema.type === 'files') {
+        if (type === 'files') {
             result[key] = extractFiles(key);
             continue;
         }
 
         // OBJECT
-        if (fieldSchema.type === 'object' && fieldSchema.fields) {
-            result[key] = parseValues(value, fieldSchema.fields, multerContext);
+        if (type === 'object' && fields) {
+            result[key] = parseValues(value, fields, multerContext);
             continue;
         }
 
         // ARRAY
-        if (fieldSchema.type === 'array' && fieldSchema.items) {
+        if (type === 'array' && items) {
             const arrayValue = ensureArray(value);
-            result[key] = parseArray(arrayValue, fieldSchema.items);
+            result[key] = parseArray(arrayValue, items);
             continue;
         }
 
         // PRIMITIVE
-        result[key] = parseFieldValue(value, fieldSchema.type, fieldSchema.nullable);
+        result[key] = parseFieldValue(value, type, nullable, emptyable);
     }
 
     return result;
 };
 
-const parseFieldValue = (value: unknown, type: TCheckType, nullable?: boolean): unknown => {
+const parseFieldValue = (
+    value: unknown,
+    type: TCheckType,
+    nullable?: boolean,
+    emptyable?: boolean
+): unknown => {
     if (typeof value !== 'string') return value;
     if (value === '' && nullable) return null;
-    if (value === '' && type !== 'emptyableBoolean') return undefined;
+    if (value === '' && emptyable) return '';
+    if (value === '') return undefined;
     if (value === 'null' && type !== 'string') return null;
 
     if (type === 'float') {
@@ -193,13 +202,6 @@ const parseFieldValue = (value: unknown, type: TCheckType, nullable?: boolean): 
     }
 
     if (type === 'boolean') {
-        if (value === 'true') return true;
-        if (value === 'false') return false;
-        return value;
-    }
-
-    if (type === 'emptyableBoolean') {
-        if (value === '') return '';
         if (value === 'true') return true;
         if (value === 'false') return false;
         return value;

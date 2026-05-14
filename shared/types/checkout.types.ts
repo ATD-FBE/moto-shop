@@ -3,6 +3,7 @@ import type {
     TAuthErrorResponse,
     TFormFieldsErrorResponse,
     TLimitationErrorResponse,
+    TModifiedErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -14,7 +15,7 @@ import type {
     IFinancials,
     IOrderTotals
 } from './order.types.js';
-import { TDiscountSource } from './shared.types.js';
+import { TDiscountSource, TDeliveryMethod, TPaymentMethod } from './shared.types.js';
 
 /// Общие типы ///
 export interface ICheckoutDetails {
@@ -58,7 +59,6 @@ interface ICheckoutBaseResponseData {
     tradeProductList: IProduct[];
     cartItemList: ICartItem[];
     customerDiscount: number;
-    orderItemAdjustments: IProductAdjustment[];
 }
 
 /// Синхронизация и загрузка черновика заказа ///
@@ -70,10 +70,11 @@ export type TOrderDraftSyncResponse =
 
 interface IOrderDraftSyncLimitationErrorData extends ICheckoutBaseResponseData {
     orderDraft: Pick<IOrderDraft, 'items' | 'totals'>;
+    orderItemAdjustments: IProductAdjustment[];
 }
-
 interface IOrderDraftSyncSuccessData extends ICheckoutBaseResponseData {
     orderDraft: IOrderDraft;
+    orderItemAdjustments: IProductAdjustment[];
 }
 
 /// Создание черновика заказа ///
@@ -89,8 +90,80 @@ export type TOrderDraftCreateResponse =
 
 interface IOrderDraftCreateLimitationErrorData extends ICheckoutBaseResponseData {
     currentTotal: number;
+    cartItemAdjustments: IProductAdjustment[];
 }
-
 interface IOrderDraftCreateSuccessData extends ICheckoutBaseResponseData {
     orderId: string;
+    cartItemAdjustments: IProductAdjustment[];
 }
+
+/// Изменение черновика заказа ///
+export interface IOrderDraftUpdateBody {
+    firstName?: string;
+    lastName?: string;
+    middleName?: string;
+    email?: string;
+    phone?: string;
+    deliveryMethod?: TDeliveryMethod | '';
+    allowCourierExtra?: boolean;
+    region?: string;
+    district?: string;
+    city?: string;
+    street?: string;
+    house?: string;
+    apartment?: string;
+    postalCode?: string;
+    defaultPaymentMethod?: TPaymentMethod | '';
+    customerComment?: string;
+}
+
+export type TOrderDraftUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFormFieldsErrorResponse<'checkout'>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+
+/// Подтверждение оформления заказа ///
+export interface IOrderDraftConfirmBody {
+    firstName: string;
+    lastName: string;
+    middleName?: string;
+    email: string;
+    phone: string;
+    deliveryMethod: TDeliveryMethod;
+    allowCourierExtra?: boolean;
+    region?: string;
+    district?: string;
+    city?: string;
+    street?: string;
+    house?: string;
+    apartment?: string;
+    postalCode?: string;
+    defaultPaymentMethod: TPaymentMethod;
+    customerComment?: string;
+}
+
+export type TOrderDraftConfirmResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFormFieldsErrorResponse<'checkout'>
+    | TModifiedErrorResponse<IOrderDraftConfirmModifiedErrorData>
+    | TLimitationErrorResponse<IOrderDraftConfirmLimitationErrorData>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+
+interface IOrderDraftConfirmLimitationErrorData extends ICheckoutBaseResponseData {
+    orderDraft: Pick<IOrderDraft, 'items' | 'totals'>;
+    orderItemAdjustments: IProductAdjustment[];
+}
+interface IOrderDraftConfirmModifiedErrorData extends ICheckoutBaseResponseData {
+    orderDraft: Pick<IOrderDraft, 'items' | 'totals' | 'expiresAt'>;
+    orderItemAdjustments: IProductAdjustment[];
+}
+
+/// Отмена оформления заказа ///
+export type TOrderDraftDeleteResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;

@@ -401,6 +401,28 @@ export default function CheckoutForm({
         });
 
         const updateFields = Object.fromEntries(updateFieldEntries);
+
+        // Дополнительные поля для методов доставки
+        if ('deliveryMethod' in updateFields) {
+            const deliveryMethod = updateFields.deliveryMethod;
+            const isTransportCompanyMethod = deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY;
+            const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
+            const isAllowCourierExtra = 'allowCourierExtra' in updateFields;
+            
+            if (isCourierMethod && !isAllowCourierExtra) {
+                updateFields.allowCourierExtra = fieldsState.allowCourierExtra.value;
+            }
+            if (isTransportCompanyMethod || isCourierMethod) {
+                updateFields.region = fieldsState.region.value;
+                updateFields.district = fieldsState.district.value;
+                updateFields.city = fieldsState.city.value;
+                updateFields.street = fieldsState.street.value;
+                updateFields.house = fieldsState.house.value;
+                updateFields.apartment = fieldsState.apartment.value;
+                updateFields.postalCode = fieldsState.postalCode.value;
+            }
+        }
+
         dispatchFieldsState({
             type: 'SAVE',
             payload: { fields: updateFields, status: FIELD_SAVE_STATUS.SAVING }

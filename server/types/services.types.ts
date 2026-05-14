@@ -87,7 +87,7 @@ export interface TStorageProvider {
     cleanupProductFiles: (productId: string | null, reqCtx: string) => Promise<void>;
     saveOrderItemsImages: (orderId: string, orderItems: TDbOrderFinalItem[]) => Promise<void>;
     deleteOrderItemsImages: (orderId: string, filenames: string[], reqCtx: string) => Promise<void>;
-    cleanupOrderFiles: (orderId: string, reqCtx: string) => Promise<void>;
+    cleanupOrderFiles: (orderId: string | null, reqCtx: string) => Promise<void>;
 }
 
 ///////////////////////////////////

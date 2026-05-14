@@ -52,7 +52,7 @@ export type TCategoryCreateResponse =
 interface ICategoryCreateSuccessData extends ICategoryBaseSuccessData {
     newCategoryId: string;
 }
-    
+
 /// Изменение категории ///
 export type TCategoryUpdateResponse =
     | TEmptyResponse
@@ -62,7 +62,7 @@ export type TCategoryUpdateResponse =
     | TSuccessResponse<ICategoryUpdateSuccessData>;
 
 interface ICategoryUpdateSuccessData extends ICategoryBaseSuccessData {}
-    
+
 /// Удаление категории ///
 export type TCategoryDeleteResponse =
     | TAuthErrorResponse

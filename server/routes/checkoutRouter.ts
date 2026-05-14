@@ -5,6 +5,8 @@ import {
     orderDraftSyncSchema,
     orderDraftCreateSchema,
     orderDraftUpdateSchema,
+    orderDraftConfirmSchema,
+    orderDraftDeleteSchema
 } from '@server/validation/schemas/checkout.schemas.js';
 import {
     handleOrderDraftSyncRequest,
@@ -31,6 +33,7 @@ router.post(
     verifyAuth,
     verifyUser,
     verifyRole(CUSTOMER),
+    validateInput(orderDraftConfirmSchema),
     handleOrderDraftConfirmRequest
 );
 router.post(
@@ -54,6 +57,7 @@ router.delete(
     verifyAuth,
     verifyUser,
     verifyRole(CUSTOMER),
+    validateInput(orderDraftDeleteSchema),
     handleOrderDraftDeleteRequest
 );
 

@@ -1,4 +1,4 @@
-export const isObject = (val: unknown): val is Record<string, unknown> =>
+export const isObject = (val: unknown): val is Record<string | number | symbol, unknown> =>
     typeof val === 'object' && val !== null && !Array.isArray(val) && !(val instanceof Date);
 
 export const normalizeInputDataToNull = (data: unknown): any => {
@@ -23,23 +23,20 @@ export const dotNotationToObject = (flatObj: Record<string, unknown>): Record<st
 
     for (const [key, value] of Object.entries(flatObj)) {
         const parts = key.split('.');
-        let target: any = result;
+        if (parts.some(p => !p)) continue;
 
-        for (let i = 0; i < parts.length - 1; i++) {
+        let target = result;
+
+        partsCycle: for (let i = 0; i < parts.length - 1; i++) {
             const part = parts[i];
-            if (!part) continue;
+            if (!part) break partsCycle;
 
-            if (typeof target[part] !== 'object' || target[part] === null) {
-                target[part] = {};
-            }
-            
-            target = target[part];
+            if (!isObject(target[part])) target[part] = {};
+            if (isObject(target[part])) target = target[part];
         }
 
         const lastKey = parts.at(-1);
-        if (!lastKey) continue;
-        
-        target[lastKey] = value;
+        if (lastKey) target[lastKey] = value;
     }
 
     return result;
@@ -55,22 +52,22 @@ export const deepMergeNewNullable = (target: unknown, source: unknown): any => {
     if (Array.isArray(source)) return [...source];
 
     // target и source - объекты
-    const t = target as Record<string, any>;
-    const s = source as Record<string, any>;
+    const trg = target as Record<string, any>;
+    const src = source as Record<string, any>;
 
     const keys = new Set([...Object.keys(target), ...Object.keys(source)]);
     const resultObj: Record<string, unknown> = {};
 
     for (const key of keys) {
-        const tVal = t[key];
-        const sVal = s[key];
+        const trgVal = trg[key];
+        const srcVal = src[key];
 
-        if (isObject(sVal)) {
-            resultObj[key] = deepMergeNewNullable(tVal || {}, sVal);
-        } else if (sVal !== undefined) {
-            resultObj[key] = sVal;
-        } else if (tVal !== undefined) {
-            resultObj[key] = tVal;
+        if (isObject(srcVal)) {
+            resultObj[key] = deepMergeNewNullable(trgVal || {}, srcVal);
+        } else if (srcVal !== undefined) {
+            resultObj[key] = srcVal;
+        } else if (trgVal !== undefined) {
+            resultObj[key] = trgVal;
         }
     }
 

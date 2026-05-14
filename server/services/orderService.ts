@@ -372,7 +372,7 @@ const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] =>
 
 export const prepareShippingCost = (
     deliveryMethod: TDeliveryMethod,
-    allowCourierExtra: boolean
+    allowCourierExtra?: boolean
 ): IDelivery['shippingCost'] =>
     deliveryMethod === DELIVERY_METHOD.COURIER && !allowCourierExtra
         ? 0

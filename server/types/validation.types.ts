@@ -10,6 +10,7 @@ export interface IValidationSchema {
     items?: IValidationSchema;                     // Для проверки содержимого массивов -> тип array
     optional?: boolean;                            // Для опционального поля -> значение undefined
     nullable?: boolean;                            // Для nullable поля -> значение null
+    emptyable?: boolean;                           // Для валидной пустой строки -> значение ''
     match?: boolean | TValidationRuleType;         // Для типа string
     min?: number;                                  // Для типов float и integer
     max?: number;                                  // Для типов float и integer

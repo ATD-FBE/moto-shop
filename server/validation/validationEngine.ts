@@ -53,10 +53,11 @@ const baseTypeChecks: TBaseTypeChecks = {
 
     array: (val: unknown): val is unknown[] => Array.isArray(val),
 
-    object: (val: unknown): val is Record<string | number, unknown> =>
+    object: (val: unknown): val is Record<string | number | symbol, unknown> =>
         typeof val === 'object' &&
         val !== null &&
-        !Array.isArray(val),
+        !Array.isArray(val) &&
+        !(val instanceof Date),
 
     file: (val: unknown): val is Express.Multer.File =>
         typeof val === 'object' &&
@@ -92,9 +93,10 @@ export const validateByType = (
     entityType?: TEntityType, 
     fieldName?: string
 ): boolean => {
-    const { value, type, optional, nullable, match, min, max, enum: enumValues } = config;
+    const { value, type, optional, nullable, emptyable, match, min, max, enum: enumValues } = config;
     if (optional && value === undefined) return true;
     if (nullable && value === null) return true;
+    if (emptyable && value === '') return true;
 
     const validator = typeCheck[type];
     let isValid = validator?.(value) ?? false;
