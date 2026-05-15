@@ -36,7 +36,12 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { TDbOrderDraft, TDbOrderFinal, TDbOrderFinalItem, TSelectedFields } from '@server/types/index.js';
+import type {
+    TDbOrderDraft,
+    TDbOrderFinal,
+    TDbOrderFinalItem,
+    TSelectedFields
+} from '@server/types/index.js';
 import type {
     TOrderDraftSyncResponse,
     IOrderDraftCreateBody,
@@ -66,11 +71,6 @@ type TOrderDraftUpdateNormalizedFields = {
     [K in TOrderDotNotationMapValues]?: TOrderDraftUpdateBodyValues | null; 
 };
 
-interface IOrderDraftSyncTransactionResult {
-    statusCode: 403 | 404 | 409 | 422 | 200;
-    responseData: Omit<TOrderDraftSyncResponse, 'status'>
-}
-
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
@@ -93,21 +93,12 @@ export const handleOrderDraftSyncRequest: RequestHandler<
             checkTimeout(req);
 
             if (!dbOrderDraft) {
-                return {
-                    statusCode: 404,
-                    responseData: {
-                        message: `Черновик заказа ${orderLbl} не найден`
-                    }
-                };
+                throw createAppError(404, `Черновик заказа ${orderLbl} не найден`);
             }
             if (dbUser._id.toString() !== dbOrderDraft.customerId.toString()) {
-                return {
-                    statusCode: 403,
-                    responseData: {
-                        message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
-                        reason: REQUEST_STATUS.DENIED
-                    }
-                };
+                throw createAppError(403, `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`, {
+                    reason: REQUEST_STATUS.DENIED,
+                });
             }
 
             // Заказ просрочен => освобождение резервов и удаление заказа
@@ -118,10 +109,7 @@ export const handleOrderDraftSyncRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 404,
-                    responseData: { message: `Черновик заказа ${orderLbl} просрочен` }
-                };
+                throw createAppError(404, `Черновик заказа ${orderLbl} просрочен`);
             }
 
             // Товары в корзине и в заказе отличаются => освобождение резервов и удаление заказа
@@ -132,12 +120,7 @@ export const handleOrderDraftSyncRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 409,
-                    responseData: {
-                        message: `Состав корзины не совпадает с черновиком заказа ${orderLbl}`
-                    }
-                };
+                throw createAppError(409, `Состав корзины не совпадает с черновиком заказа ${orderLbl}`);
             }
 
             const {
@@ -185,10 +168,10 @@ export const handleOrderDraftSyncRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 422,
-                    responseData: {
-                        message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
+                throw createAppError<TOrderDraftSyncResponse, 422>(
+                    422,
+                    `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
+                    {
                         reason: REQUEST_STATUS.LIMITATION,
                         tradeProductList,
                         cartItemList,
@@ -199,36 +182,34 @@ export const handleOrderDraftSyncRequest: RequestHandler<
                         },
                         orderItemAdjustments
                     }
-                };
+                );
             }
 
-            /*safeSendResponse(res, 200, {
-                message: 'Test',
+            return {
                 tradeProductList,
                 cartItemList,
-                customerDiscount,
                 orderDraft: prepareOrderDraft(dbOrderDraft.toObject(), orderItemList),
                 orderItemAdjustments
-            });*/
-
-            return {
-                statusCode: 200,
-                responseData: {
-                    message: orderItemAdjustments.length > 0
-                        ? `Черновик заказа ${orderLbl} синхронизирован с текущими данными каталога`
-                        : `Черновик заказа ${orderLbl} успешно загружен`,
-                    tradeProductList,
-                    cartItemList,
-                    customerDiscount,
-                    orderDraft: prepareOrderDraft(dbOrderDraft.toObject(), orderItemList),
-                    orderItemAdjustments
-                }
             };
         });
 
-        const { statusCode, responseData } = transactionResult;
+        const {
+            tradeProductList,
+            cartItemList,
+            orderDraft,
+            orderItemAdjustments
+        } = transactionResult;
 
-        safeSendResponse(res, statusCode, responseData);
+        safeSendResponse(res, 200, {
+            message: orderItemAdjustments.length > 0
+                ? `Черновик заказа ${orderLbl} синхронизирован с текущими данными каталога`
+                : `Черновик заказа ${orderLbl} успешно загружен`,
+            tradeProductList,
+            cartItemList,
+            customerDiscount,
+            orderDraft,
+            orderItemAdjustments
+        });
     } catch (err) {
         next(err);
     }
@@ -296,10 +277,10 @@ export const handleOrderDraftCreateRequest: RequestHandler<
                     checkTimeout(req);
                 }
 
-                return {
-                    statusCode: 422,
-                    responseData: {
-                        message: 'Сумма заказа меньше минимальной',
+                throw createAppError<TOrderDraftCreateResponse, 422>(
+                    422,
+                    'Сумма заказа меньше минимальной',
+                    {
                         reason: REQUEST_STATUS.LIMITATION,
                         tradeProductList,
                         cartItemList,
@@ -307,7 +288,7 @@ export const handleOrderDraftCreateRequest: RequestHandler<
                         currentTotal,
                         cartItemAdjustments
                     }
-                };
+                );
             }
 
             // Резервирование товаров АТОМАРНО, с избежанием гонки при сохранении данных
@@ -362,10 +343,10 @@ export const handleOrderDraftCreateRequest: RequestHandler<
                         checkTimeout(req);
                     }
 
-                    return {
-                        statusCode: 422,
-                        responseData: {
-                            message: 'Сумма заказа меньше минимальной',
+                    throw createAppError<TOrderDraftCreateResponse, 422>(
+                        422,
+                        'Сумма заказа меньше минимальной',
+                        {
                             reason: REQUEST_STATUS.LIMITATION,
                             tradeProductList,
                             cartItemList,
@@ -373,7 +354,7 @@ export const handleOrderDraftCreateRequest: RequestHandler<
                             currentTotal,
                             cartItemAdjustments
                         }
-                    };
+                    );
                 }
 
                 // Замена массива остатков для их повторного резервирования
@@ -417,25 +398,25 @@ export const handleOrderDraftCreateRequest: RequestHandler<
                 throw createAppError(500, 'Ошибка создания черновика заказа: документ не был возвращен');
             }
 
-            const orderId = dbOrderDraft._id.toString();
-
             return {
-                statusCode: 201,
-                responseData: {
-                    message: `Черновик заказа (ID: ${orderId}) успешно создан`,
-                    tradeProductList,
-                    cartItemList,
-                    customerDiscount,
-                    orderId,
-                    cartItemAdjustments
-                }
+                tradeProductList,
+                cartItemList,
+                orderId: dbOrderDraft._id.toString(),
+                cartItemAdjustments
             };
         });
 
-        const { statusCode, responseData } = transactionResult;
+        const { tradeProductList, cartItemList, orderId, cartItemAdjustments } = transactionResult;
 
         // Черновик заказа создан - ответ клиенту об успехе
-        safeSendResponse(res, statusCode, responseData);
+        safeSendResponse(res, 201, {
+            message: `Черновик заказа (ID: ${orderId}) успешно создан`,
+            tradeProductList,
+            cartItemList,
+            customerDiscount,
+            orderId,
+            cartItemAdjustments
+        });
     } catch (err) {
         next(err);
     }
@@ -583,26 +564,17 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
     try {
         const orderLbl = `(ID: ${orderId})`;
         
-        const { statusCode, responseData } = await runInDbTransaction(async (session) => {
+        await runInDbTransaction(async (session) => {
             const dbOrderDraft = await OrderDraft.findById(orderId).session(session);
             checkTimeout(req);
 
             if (!dbOrderDraft) {
-                return {
-                    statusCode: 404,
-                    responseData: {
-                        message: `Черновик заказа ${orderLbl} не найден`
-                    }
-                };
+                throw createAppError(404, `Черновик заказа ${orderLbl} не найден`);
             }
             if (customerId.toString() !== dbOrderDraft.customerId.toString()) {
-                return {
-                    statusCode: 403,
-                    responseData: {
-                        message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
-                        reason: REQUEST_STATUS.DENIED
-                    }
-                };
+                throw createAppError(403, `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`, {
+                    reason: REQUEST_STATUS.DENIED,
+                });
             }
 
             // Заказ просрочен => освобождение резервов и удаление заказа
@@ -613,10 +585,7 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 404,
-                    responseData: { message: `Черновик заказа ${orderLbl} просрочен` }
-                };
+                throw createAppError(404, `Черновик заказа ${orderLbl} просрочен`);
             }
 
             // Товары в корзине и в заказе отличаются => освобождение резервов и удаление заказа
@@ -627,12 +596,7 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 409,
-                    responseData: {
-                        message: `Состав корзины не совпадает с черновиком заказа ${orderLbl}`
-                    }
-                };
+                throw createAppError(409, `Состав корзины не совпадает с черновиком заказа ${orderLbl}`);
             }
 
             const {
@@ -670,10 +634,10 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                     await dbOrderDraft.save({ session });
                     checkTimeout(req);
 
-                    return {
-                        statusCode: 412,
-                        responseData: {
-                            message: `Данные заказа ${orderLbl} изменены после синхронизации с каталогом`,
+                    throw createAppError<TOrderDraftConfirmResponse, 412>(
+                        412,
+                        `Данные заказа ${orderLbl} изменены после синхронизации с каталогом`,
+                        {
                             tradeProductList,
                             cartItemList,
                             customerDiscount,
@@ -684,10 +648,10 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                             },
                             orderItemAdjustments
                         }
-                    };
+                    );
                 }
             }
-                
+            
             // Сумма заказа меньше минимальной => освобождение резервов и удаление заказа
             if (isTotalAmountUnderMinimum) {
                 await releaseReservedProducts(dbOrderDraft.items, session);
@@ -696,10 +660,10 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                 await dbOrderDraft.deleteOne({ session });
                 checkTimeout(req);
 
-                return {
-                    statusCode: 422,
-                    responseData: {
-                        message: `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
+                throw createAppError<TOrderDraftConfirmResponse, 422, typeof REQUEST_STATUS.LIMITATION>(
+                    422,
+                    `Сумма заказа ${orderLbl} после синхронизации меньше минимальной`,
+                    {
                         reason: REQUEST_STATUS.LIMITATION,
                         tradeProductList,
                         cartItemList,
@@ -710,7 +674,7 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                         },
                         orderItemAdjustments
                     }
-                };
+                );
             }
 
             // Подготовка данных для нового документа
@@ -831,18 +795,13 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
             dbUser.cart.splice(0);
             await dbUser.save({ session });
             checkTimeout(req);
-
-            return {
-                statusCode: 200,
-                responseData: { message: `Заказ ${orderLbl} успешно подтверждён` }
-            };
         });
 
         // Отправка SSE-сообщения админам
         sseOrderManagement.sendToAllClients({ newActiveOrdersChange: 1 });
 
         // Отправка ответа заказчику
-        safeSendResponse(res, statusCode, responseData);
+        safeSendResponse(res, 200, { message: `Заказ ${orderLbl} успешно подтверждён` });
     } catch (err) {
         // Очистка файлов миниатюр товаров в заказе (безопасно)
         storageService.cleanupOrderFiles(confirmedOrderId, reqCtx);
@@ -873,11 +832,6 @@ export const handleOrderDraftDeleteRequest: RequestHandler<
             }
             if (dbUser._id.toString() !== dbOrderDraft.customerId.toString()) {
                 throw createAppError(403, `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`, {
-                    reason: REQUEST_STATUS.DENIED
-                });
-            }
-            if (dbOrderDraft.currentStatus !== ORDER_STATUS.DRAFT) {
-                throw createAppError(403, `Заказ ${orderLbl} уже оформлен, удаление невозможно`, {
                     reason: REQUEST_STATUS.DENIED
                 });
             }

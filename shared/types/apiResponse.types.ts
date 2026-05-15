@@ -17,7 +17,7 @@ export type TGeneralErrorStatus =
     | typeof REQUEST_STATUS.TIMEOUT
     | typeof REQUEST_STATUS.ABORTED;
 
-export type TValidationStatuses = 
+export type TValidationStatus = 
     | typeof REQUEST_STATUS.INVALID 
     | typeof REQUEST_STATUS.LIMITATION;
 
@@ -31,6 +31,8 @@ export type TBaseResponse = {
     status: TRequestStatus;
     reason?: TRequestStatus;
 };
+
+export type TPlainErrorResponse = TEmptyResponse | TAuthErrorResponse | TGeneralErrorResponse;
 
 export type TEmptyResponse = TBaseResponse & {
     status: typeof REQUEST_STATUS.UNCHANGED;

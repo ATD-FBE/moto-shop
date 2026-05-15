@@ -148,8 +148,8 @@ export type TOrderDraftConfirmResponse =
     | TEmptyResponse
     | TAuthErrorResponse
     | TFormFieldsErrorResponse<'checkout'>
-    | TModifiedErrorResponse<IOrderDraftConfirmModifiedErrorData>
     | TLimitationErrorResponse<IOrderDraftConfirmLimitationErrorData>
+    | TModifiedErrorResponse<IOrderDraftConfirmModifiedErrorData>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

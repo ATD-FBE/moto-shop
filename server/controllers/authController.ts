@@ -118,7 +118,7 @@ export const handleAuthLoginRequest: RequestHandler<
 
             if (!dbUser) {
                 fieldErrors.name = fieldErrorMessages.auth.name.login;
-                throw createAppError(401, INVALID_AUTH_MSG, { fieldErrors });
+                throw createAppError<TAuthLoginResponse, 401>(401, INVALID_AUTH_MSG, { fieldErrors });
             }
 
             // Проверка пароля
@@ -127,7 +127,7 @@ export const handleAuthLoginRequest: RequestHandler<
 
             if (!isPasswordCorrect) {
                 fieldErrors.password = fieldErrorMessages.auth.password.login;
-                throw createAppError(401, INVALID_AUTH_MSG, { fieldErrors });
+                throw createAppError<TAuthLoginResponse, 401>(401, INVALID_AUTH_MSG, { fieldErrors });
             }
 
             // Получение данных сессии

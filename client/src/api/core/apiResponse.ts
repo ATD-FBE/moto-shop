@@ -18,10 +18,10 @@ type TParsedResponse = TBaseResponse & {
 /// FUNCTIONALITY ///
 /////////////////////
 
-const apiResponse = async <T extends TParsedResponse >(
+const apiResponse = async <R extends TParsedResponse >(
     response: Response,
     extra: IApiResponseExtraConfig = {}
-): Promise<T> => {
+): Promise<R> => {
     const { errorPrefix = '', asFile = false, ...extraRest } = extra;
 
     // Пустое тело запроса 204 (No Content)
@@ -30,7 +30,7 @@ const apiResponse = async <T extends TParsedResponse >(
             status: REQUEST_STATUS.UNCHANGED,
             message: 'Данные не изменены, сохранять нечего',
             ...extraRest
-        } as T;
+        } as R;
     }
 
     const contentType = response.headers.get('Content-Type') || '';
@@ -38,7 +38,7 @@ const apiResponse = async <T extends TParsedResponse >(
 
     // JSON-ответ (при ошибке загрузки файла содержит данные ошибки)
     if (isJsonResponse) {
-        let data: Partial<T> = {};
+        let data: Partial<R> = {};
 
         try { 
             data = await response.json(); 
@@ -61,7 +61,7 @@ const apiResponse = async <T extends TParsedResponse >(
             message: !response.ok && errorPrefix ? `${errorPrefix}: ${safeMessage}` : safeMessage,
             ...dataRest,
             ...extraRest
-        } as T;
+        } as R;
     }
 
     // Бинарные данные в ответе
@@ -74,7 +74,7 @@ const apiResponse = async <T extends TParsedResponse >(
                 status: resolveRequestStatus(response.status),
                 message: errorPrefix ? `${errorPrefix}: ${errorMessage}` : errorMessage,
                 ...extraRest
-            } as T;
+            } as R;
         }
         
         const contentDisposition = response.headers.get('Content-Disposition') || '';
@@ -94,7 +94,7 @@ const apiResponse = async <T extends TParsedResponse >(
             blob,
             filename,
             ...extraRest
-        } as T;
+        } as R;
     }
 
     // Текстовый ответ
@@ -113,7 +113,7 @@ const apiResponse = async <T extends TParsedResponse >(
         message: !response.ok && errorPrefix ? `${errorPrefix}: ${safeMessage}` : safeMessage,
         text,
         ...extraRest
-    } as T;
+    } as R;
 };
 
 export default apiResponse;

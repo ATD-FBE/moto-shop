@@ -44,6 +44,15 @@ export const USER_ROLE = {
 
 export const REGISTERED_USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.CUSTOMER] as const;
 
+export const HTTP_STATUS_CODE_MAP = {
+    UNCHANGED: [204, 205, 304],
+    AUTH: [401, 403, 410],
+    VALIDATION: [422],
+    MODIFIED: [412],
+    GENERAL: [400, 402, 404, 408, 409, 499, 500],
+    SUCCESS: [200, 201, 207],
+} as const;
+
 export const CURRENCY = {
     RUB: 'rub'
 } as const;

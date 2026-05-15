@@ -3,18 +3,41 @@ import { typeCheck } from '../validation/validationEngine.js';
 import { isValidEntityField } from './typeGuards.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import { GENERIC_FILE_FIELD, ENTITY_FILE_FIELDS } from '@server/config/constants.js';
-import type { TEntityType, TFieldErrors } from '@shared/types/index.js';
+import type {
+    TRequestStatus,
+    TBaseResponse,
+    TPlainErrorResponse,
+    TEntityType,
+    TFieldErrors
+} from '@shared/types/index.js';
+import type { THttpStatusCode, TCodeToStatusMap, TInferPayload } from '@server/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-export interface IAppErrorData {
+type TAppErrorDetails<
+    R extends TBaseResponse,
+    N extends number,
+    S extends TRequestStatus
+> = Omit<TInferPayload<R, N, S>, 'message'>;
+
+interface IAppError<
+    R extends TBaseResponse,
+    N extends number,
+    S extends TRequestStatus
+> extends Error {
+    isAppError: true;
+    statusCode: N;
+    details?: TAppErrorDetails<R, N, S>;
+}
+
+interface IAppErrorData {
     message: string;
     [key: string]: unknown;
 }
 
-export interface IParseValidationErrorsResult<E extends TEntityType = TEntityType> {
+interface IParseValidationErrorsResult<E extends TEntityType = TEntityType> {
     fieldErrors: TFieldErrors<E>;
     systemFieldErrors: string[];
 }
@@ -31,12 +54,16 @@ export const isCriticalError = (error: Error): boolean => {
     );
 };
 
-export const createAppError = (
-    statusCode: number,
+export const createAppError = <
+    R extends TBaseResponse = TPlainErrorResponse,
+    N extends number = number,
+    S extends TRequestStatus = TCodeToStatusMap<N>
+>(
+    statusCode: N,
     message: string = '',
-    details?: Record<string, unknown>
-): Error => {
-    const error = new Error(message);
+    details?: TAppErrorDetails<R, N, S>
+): IAppError<R, N, S> => {
+    const error = new Error(message) as IAppError<R, N, S>;
     error.isAppError = true;
     error.statusCode = statusCode;
     if (details) error.details = details;

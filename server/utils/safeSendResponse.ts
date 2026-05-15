@@ -1,64 +1,32 @@
+import { HTTP_STATUS_CODE_MAP } from '@shared/constants.js';
 import { resolveRequestStatus } from '@shared/statusResolver.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
 import type { Response } from 'express';
-import type {
-    TBaseResponse,
-    TRequestStatus,
-    TAuthErrorStatus,
-    TValidationStatuses,
-    TGeneralErrorStatus,
-    TSuccessStatus
-} from '@shared/types/index.js';
+import type { TInferPayload } from '@server/types/index.js';
+import type { TBaseResponse } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-// Карта типов статусов по кодам
-type TCodeToStatusMap<C extends number> =
-    C extends 204 | 205 | 304
-        ? typeof REQUEST_STATUS.UNCHANGED
-    : C extends 401 | 403 | 410
-        ? TAuthErrorStatus
-    : C extends 422
-        ? TValidationStatuses
-    : C extends 400 | 404 | 408 | 409 | 500
-        ? TGeneralErrorStatus
-    : C extends 412
-        ? typeof REQUEST_STATUS.MODIFIED
-    : C extends 200 | 201 | 207
-        ? TSuccessStatus
-    : TRequestStatus;
-
-// Экстрактор нужного типа интерфейса по типу статус-кода с вырезанием статуса
-type TInferPayload<
-    T extends TBaseResponse,
-    C extends number
-> = Omit<
-    Extract<T, { status: TCodeToStatusMap<C> }>, 
-    'status'
->;
-
-type TNoBodyStatus = typeof NO_BODY_STATUS_ARRAY[number];
+type TNoBodyStatus = typeof HTTP_STATUS_CODE_MAP.UNCHANGED[number];
 
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
 
-const NO_BODY_STATUS_ARRAY = [204, 205, 304] as const;
-const NO_BODY_STATUSES = new Set(NO_BODY_STATUS_ARRAY);
+const NO_BODY_STATUSES = new Set(HTTP_STATUS_CODE_MAP.UNCHANGED);
 
 // Перегрузка: Сигнатура 1 - Для ответов БЕЗ тела
-export default function safeSendResponse<BaseR extends TBaseResponse>(
-    res: Response<BaseR>,
+export default function safeSendResponse<R extends TBaseResponse>(
+    res: Response<R>,
     statusCode: TNoBodyStatus
 ): void;
 
 // Перегрузка: Сигнатура 2 - Для ответов С телом
-export default function safeSendResponse<BaseR extends TBaseResponse, N extends number>(
-    res: Response<BaseR>,
+export default function safeSendResponse<R extends TBaseResponse, N extends number>(
+    res: Response<R>,
     statusCode: N,
-    data: TInferPayload<BaseR, N>
+    data: TInferPayload<R, N>
 ): void;
 
 // Главная реализация ответа

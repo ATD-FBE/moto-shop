@@ -285,7 +285,10 @@ export const handleNotificationUpdateRequest: RequestHandler<
                 throw createAppError(404, `Уведомление ${notifLbl} не найдено`);
             }
             if (dbNotification.status !== NOTIFICATION_STATUS.DRAFT) {
-                throw createAppError(400, `Уведомление ${notifLbl} уже отправлено, редактирование невозможно`);
+                throw createAppError(
+                    400,
+                    `Уведомление ${notifLbl} уже отправлено, редактирование невозможно`
+                );
             }
 
             // Установка новых данных и проверка их изменений
@@ -294,7 +297,9 @@ export const handleNotificationUpdateRequest: RequestHandler<
             const isRecipientsChanged = isArrayContentDifferent(currentRecipients, preparedRecipients);
             
             if (isRecipientsChanged) {
-                dbNotification.recipients = preparedRecipients.map(r => Types.ObjectId.createFromHexString(r));
+                dbNotification.recipients = preparedRecipients.map(r =>
+                    Types.ObjectId.createFromHexString(r)
+                );
             }
 
             dbNotification.set({
