@@ -273,6 +273,7 @@ export default function Cart(): JSX.Element | null {
                     `<span className="color-blue">${formatCurrency(MIN_ORDER_AMOUNT)}</span> ₽. ` +
                     'Добавьте товаров ещё на ' +
                     `<span className="color-green">${formatCurrency(amountToAdd)}</span> ₽.`;
+                    
                 const adjustmentsMsg = cartItemAdjustments.length > 0
                     ? '\n\n\n<span className="bold underline">Изменения товаров в корзине:</span>' +
                         `\n\n${formatCheckoutAdjustmentLogs(cartItemAdjustments)}`

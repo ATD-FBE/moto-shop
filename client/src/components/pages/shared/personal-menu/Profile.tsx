@@ -31,8 +31,8 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
+    TFieldApiValue,
     IFieldState,
-    TFieldStateValue,
     IProcessFormFieldsResult
 } from '@/types/index.js';
 import type { TEntityField, IAuthUserUpdateBody } from '@shared/types/index.js';
@@ -47,8 +47,8 @@ type TFieldName = Extract<TFieldConfig['name'], TEntityField<'auth'>>;
 
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
-type TFormFields = {
-    [K in keyof IAuthUserUpdateBody]: TFieldStateValue;
+type TApiFormFields = {
+    [K in keyof IAuthUserUpdateBody]: TFieldApiValue;
 };
 
 /////////////////////
@@ -209,7 +209,7 @@ export default function Profile(): JSX.Element | null {
                 };
         
                 if (isValid && !isConfirmNewPassword) {
-                    (acc.formFields as TFormFields)[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
                 }
         
                 if (!isValid) acc.allValid = false;

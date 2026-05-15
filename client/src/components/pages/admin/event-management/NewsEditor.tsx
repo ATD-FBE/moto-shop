@@ -36,6 +36,7 @@ import type {
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
     TAppThunk,
     IProcessFormFieldsResult
@@ -70,8 +71,8 @@ interface INewsEditorProps {
     newsId: string | null;
 }
 
-type TFormFields = {
-    [K in keyof INewsBody]: TFieldStateValue;
+type TApiFormFields = {
+    [K in keyof INewsBody]: TFieldApiValue;
 };
 
 type TFieldElemProps =
@@ -240,7 +241,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                 };
         
                 if (isValid) {
-                    (acc.formFields as TFormFields)[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
 
                     const initValue = initFieldValuesRef.current[name];
                     if (normalizedValue !== initValue) acc.changedFields.push(name);

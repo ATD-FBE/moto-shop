@@ -47,7 +47,7 @@ export interface IFormGroupConfig {
     readonly title?: string;
     readonly description?: string;
     readonly collapsible?: boolean;
-    readonly fieldConfigs?: readonly IFieldConfig[];
+    readonly fieldConfigs: readonly IFieldConfig[];
 }
 
 export type TFieldStateValue = string | number | boolean;
@@ -101,7 +101,7 @@ export type TFieldsAction<TFieldName extends string> =
     | { 
         type: 'SAVE'; 
         payload: { 
-            fields: Partial<Record<TFieldName, Partial<IFieldState>>>;
+            fields: Partial<Record<TFieldName, TFieldStateValue>>;
             status: TFieldSaveStatus | ''; 
         } 
     }

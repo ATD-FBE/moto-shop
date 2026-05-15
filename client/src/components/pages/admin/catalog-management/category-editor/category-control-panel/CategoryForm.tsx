@@ -30,7 +30,6 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldStateValue,
     TFieldApiValue,
     IFieldState,
     IProcessFormFieldsResult,
@@ -65,7 +64,7 @@ type TFieldName = Extract<TFieldConfig['name'], TEntityField<'category'>>;
 
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
-type TFormFields = {
+type TApiFormFields = {
     [K in keyof ICategoryBody]: TFieldApiValue;
 };
 
@@ -269,7 +268,7 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
                 };
         
                 if (isValid) {
-                    (acc.formFields as TFormFields)[name] = submittedValue;
+                    (acc.formFields as TApiFormFields)[name] = submittedValue;
                     
                     const initValue = initValues[name];
                     const isValueChanged = isEditMode

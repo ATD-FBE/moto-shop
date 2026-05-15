@@ -20,7 +20,7 @@ import type {
     ChangeEvent,
     SubmitEvent
 } from 'react';
-import type { TFieldStateValue, IFieldState, IProcessSingleFormFieldResult } from '@/types/index.js';
+import type { TFieldApiValue, IFieldState, IProcessSingleFormFieldResult } from '@/types/index.js';
 import type { TEntityField, ICustomerDiscountUpdateBody } from '@shared/types/index.js';
 
 //////////////////////////
@@ -43,8 +43,8 @@ type TFieldName = Extract<TFieldConfig['name'], TEntityField<'customer'>>;
 
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
-type TFormFields = {
-    [K in keyof ICustomerDiscountUpdateBody]: TFieldStateValue;
+type TApiFormFields = {
+    [K in keyof ICustomerDiscountUpdateBody]: TFieldApiValue;
 };
 
 /////////////////////
@@ -131,7 +131,7 @@ export default function CustomerDiscountForm({
 
         if (isValid) {
             if (fieldValue !== defaultValue) {
-                (formFields as TFormFields)[fieldName] = fieldValue;
+                (formFields as TApiFormFields)[fieldName] = fieldValue;
             }
         }
 

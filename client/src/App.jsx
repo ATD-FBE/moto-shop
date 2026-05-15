@@ -9,7 +9,7 @@ import GlobalLoader from '@/components/GlobalLoader.jsx';
 import Layout from '@/components/Layout.jsx';
 import RouteGuard from '@/components/RouteGuard.jsx';
 import AppStore from '@/redux/Store.js';
-import { StructureRefsProvider } from '@/context/StructureRefsContext.js';
+import StructureRefsProvider from '@/components/StructureRefsContext.jsx';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
 
 const App = () => {

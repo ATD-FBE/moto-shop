@@ -83,7 +83,7 @@ interface IProcessFieldResult {
     isValueChanged: boolean;
 }
 
-type TFormFields = {
+type TApiFormFields = {
     [K in keyof INotificationBody]: TFieldApiValue;
 };
 
@@ -352,7 +352,7 @@ export default function NotificationEditor({
     
                 if (isValid) {
                     fieldEntries.forEach(([key, val]) => {
-                        (acc.formFields as TFormFields)[key] = val;
+                        (acc.formFields as TApiFormFields)[key] = val;
                     });
                     
                     if (isValueChanged) acc.changedFields.push(name);

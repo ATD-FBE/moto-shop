@@ -1,5 +1,4 @@
 import React, { useReducer, useState, useRef, useMemo, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
@@ -7,13 +6,35 @@ import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderDraftUpdateRequest, sendOrderDraftConfirmRequest } from '@/api/checkoutRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
+import {
+    COLLAPSIBLE_ANIMATION_DURATION,
+    FORM_STATUS,
+    NO_VALUE_LABEL,
+    PRODUCT_IMAGE_PLACEHOLDER,
+    FIELD_UI_STATUS,
+    FIELD_SAVE_STATUS,
+    FIELD_SAVE_STATUS_MESSAGES,
+    SUCCESS_DELAY
+} from '@/config/constants.js';
 import { clearLockedRoute } from '@/redux/slices/uiSlice.js';
 import { setCart } from '@/redux/slices/cartSlice.js';
 import { applyCartState, refreshCartTotals } from '@/services/cartService.js';
 import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
+import {
+    getLockedStatuses,
+    extractCollapsibleFormGroupNames,
+    extractFieldConfigs,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue,
+    getBoolValue
+} from '@/helpers/formHelpers.js';
 import {
     formatProductTitle,
     formatCurrency,
@@ -24,23 +45,108 @@ import {
 import generateSlug from '@/helpers/generateSlug.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import {
-    FORM_STATUS,
-    NO_VALUE_LABEL,
-    PRODUCT_IMAGE_PLACEHOLDER,
-    FIELD_UI_STATUS,
-    FIELD_SAVE_STATUS,
-    FIELD_SAVE_STATUS_MESSAGES,
-    SUCCESS_DELAY
-} from '@/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import {
     DELIVERY_METHOD,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD_OPTIONS,
     MIN_ORDER_AMOUNT
 } from '@shared/constants.js';
+import type {
+    JSX,
+    Dispatch,
+    SetStateAction,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes,
+    HTMLAttributes
+} from 'react';
+import type {
+    IFormGroupConfig,
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    TFieldStateValue,
+    TFieldApiValue,
+    IFieldState,
+    TFormState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type {
+    TDeliveryMethod,
+    TEntityField,
+    IOrderDraftUpdateBody,
+    IOrderDraftConfirmBody,
+    IOrderDraft,
+    IProduct
+} from '@shared/types/index.js';
 
-const isDeliveryRequired = (deliveryMethod) =>
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'checkout'>>;
+
+type TCollapsibleFormGroupName = typeof collapsibleFormGroupNames[number];
+
+type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+type TOrderDraftCommonBodyKeys = keyof (IOrderDraftUpdateBody & IOrderDraftConfirmBody);
+
+type TApiFormFields = {
+    [K in TOrderDraftCommonBodyKeys]: TFieldApiValue;
+};
+
+interface ICheckoutFormProps {
+    orderId: string;
+    orderDraft: IOrderDraft | null;
+    setOrderDraft: Dispatch<SetStateAction<IOrderDraft | null>>;
+    submitStates: TSubmitStates;
+    lockedStatuses: Set<TFormStatus>;
+    submitStatus: TFormStatus;
+    setSubmitStatus: Dispatch<SetStateAction<TFormStatus>>;
+    reloadOrderDraft: () => void;
+    topStickyOffset: number;
+    registrationEmail: string;
+    cartPath: string;
+    productMap: Record<string, IProduct>
+}
+
+interface IUpdatedField {
+    name: TFieldName;
+    value: TFieldStateValue;
+}
+
+interface IFormGroupEntriesProps {
+    fieldConfigs: TFieldConfigs;
+    fieldsState: TFormState<TFieldName>;
+    applicabilityMap: Record<TFieldName, boolean>;
+    isFormLocked: boolean;
+    handleFieldChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
+    fillRegistrationEmail: () => void;
+}
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement> &
+    HTMLAttributes<HTMLSpanElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const CLEAR_SAVE_STATUS_DELAY = 3000;
+
+const isDeliveryRequired = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
     deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 
 const formGroupConfigs = [
@@ -48,7 +154,8 @@ const formGroupConfigs = [
         name: 'orderItemsGroup',
         title: 'Товары в заказе',
         description: 'Основные данные товаров в заказе',
-        collapsible: true
+        collapsible: true,
+        fieldConfigs: []
     },
     {
         name: 'customerGroup',
@@ -127,7 +234,8 @@ const formGroupConfigs = [
                 tooltip:
                     'При удалении свыше 10 км от магазина возможен выезд курьера с доплатой. ' +
                     'Стоимость рассчитывается индивидуально.',
-                canApply: ({ deliveryMethod }) => deliveryMethod === DELIVERY_METHOD.COURIER
+                canApply: ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
+                    deliveryMethod === DELIVERY_METHOD.COURIER
             },
             {
                 name: 'region',
@@ -138,7 +246,7 @@ const formGroupConfigs = [
                 autocomplete: 'address-level1',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'district',
@@ -149,7 +257,7 @@ const formGroupConfigs = [
                 autocomplete: 'address-level2',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'city',
@@ -159,7 +267,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите город',
                 autocomplete: 'address-level2',
                 trim: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'street',
@@ -169,7 +277,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите улицу',
                 autocomplete: 'street-address',
                 trim: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'house',
@@ -179,7 +287,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите номер дома',
                 autocomplete: 'address-line1',
                 trim: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'apartment',
@@ -190,7 +298,7 @@ const formGroupConfigs = [
                 autocomplete: 'address-line2',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             },
             {
                 name: 'postalCode',
@@ -201,7 +309,7 @@ const formGroupConfigs = [
                 autocomplete: 'postal-code',
                 trim: true,
                 optional: true,
-                canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
+                canApply: isDeliveryRequired
             }
         ]
     },
@@ -236,97 +344,44 @@ const formGroupConfigs = [
             }
         ]
     }
-];
+] as const;
 
-const collapsibleFormGroupNames = formGroupConfigs
-    .map(groupConfig => groupConfig.collapsible && groupConfig.name)
-    .filter(Boolean);
-
-const fieldConfigs = formGroupConfigs
-    .flatMap(groupConfig => groupConfig.fieldConfigs ?? null)
-    .filter(Boolean);
-
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
-
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = {
-        value: '',
-        uiStatus: '',
-        error: '',
-        savedValue: '',
-        saveStatus: '',
-        saveStatusMessage: ''
-    };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE': {
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-        }
-
-        case 'SAVE': {
-            const { fields, status } = payload;
-            const saveState = { ...state };
-
-            for (const name in fields) {
-                saveState[name] = {
-                    ...state[name],
-                    savedValue: status === 'success' ? fields[name] : state[name].savedValue,
-                    saveStatus: status,
-                    saveStatusMessage: status
-                        ? FIELD_SAVE_STATUS_MESSAGES[status]
-                        : state[name].saveStatusMessage
-                };
-            }
-            
-            return saveState;
-        }
-
-        default:
-            return state;
-    }
-};
+const collapsibleFormGroupNames = extractCollapsibleFormGroupNames(formGroupConfigs);
+const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs, { autoSave: true });
 
 export default function CheckoutForm({
-    registrationEmail,
-    productMap,
-    topStickyOffset,
-    cartPath,
     orderId,
     orderDraft,
+    setOrderDraft,
     submitStates,
     lockedStatuses,
     submitStatus,
     setSubmitStatus,
-    setOrderDraft,
-    reloadOrderDraft
-}) {
+    reloadOrderDraft,
+    topStickyOffset,
+    registrationEmail,
+    cartPath,
+    productMap
+}: ICheckoutFormProps): JSX.Element {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     
     const [initializedValues, setInitializedValues] = useState(false);
-    const [expandedFormGroup, setExpandedFormGroup] = useState('');
-    const [visitedFormGroups, setVisitedFormGroups] = useState(new Set());
+    const [expandedFormGroup, setExpandedFormGroup] = useState<TCollapsibleFormGroupName | ''>('');
+    const [visitedFormGroups, setVisitedFormGroups] = useState<
+        Set<TCollapsibleFormGroupName>
+    >(new Set());
     const [isAllGroupsVisited, setIsAllGroupsVisited] = useState(false);
     const [isOrderItemsValid, setIsOrderItemsValid] = useState(false);
     
-    const formGroupRefs = useRef({});
-    const updateDebounceTimerRef = useRef(null);
-    const saveStatusTimersRef = useRef({});
+    const formGroupRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const updateDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const saveStatusTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     const submitInProgressRef = useRef(false);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const applicabilityMap = useMemo(
@@ -344,13 +399,13 @@ export default function CheckoutForm({
     const isFormLocked = lockedStatuses.has(submitStatus);
     const orderItemList = orderDraft?.items ?? null;
 
-    const scrollToFormGroup = (groupName) => {
+    const scrollToFormGroup = (groupName: TCollapsibleFormGroupName): void => {
         const groupTop = formGroupRefs.current[groupName]?.getBoundingClientRect().top ?? 0;
         const scrollY = window.scrollY + groupTop - topStickyOffset;
         window.scrollTo({ top: scrollY, behavior: 'smooth' });
     };
 
-    const toggleFormGroupExpansion = (groupName) => {
+    const toggleFormGroupExpansion = (groupName: TCollapsibleFormGroupName): void => {
         setVisitedFormGroups(prev => new Set(prev).add(groupName));
         setExpandedFormGroup(prev => (prev === groupName ? '' : groupName));
 
@@ -361,11 +416,11 @@ export default function CheckoutForm({
             setTimeout(() => {
                 if (isUnmountedRef.current) return;
                 scrollToFormGroup(groupName);
-            }, 320);
+            }, COLLAPSIBLE_ANIMATION_DURATION);
         }
     };
 
-    const scheduleClearSaveStatus = (fieldName) => {
+    const scheduleClearSaveStatus = (fieldName: TFieldName): void => {
         saveStatusTimersRef.current[fieldName] = setTimeout(() => {
             if (isUnmountedRef.current) return;
 
@@ -374,22 +429,24 @@ export default function CheckoutForm({
                 type: 'SAVE',
                 payload: { fields: { [fieldName]: true }, status: '' }
             });
-        }, 3000);
+        }, CLEAR_SAVE_STATUS_DELAY);
     };
 
-    const updateOrderDraft = async (updatedField = null) => {
-        const updateFieldEntries = Object.entries(fieldsState).reduce((acc, [name, state]) => {
-            const value = name === updatedField?.name ? updatedField.value : state.value;
-            const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
+    const updateOrderDraft = async (updatedField?: IUpdatedField): Promise<void> => {
+        const updateFieldEntries = (Object.entries(fieldsState) as [TFieldName, IFieldState][])
+            .reduce<[TFieldName, TFieldStateValue][]>((acc, [name, state]) => {
+                const value = name === updatedField?.name ? updatedField.value : state.value;
+                const { trim } = fieldConfigMap[name] ?? {};
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
 
-            if (
-                normalizedValue !== state.savedValue &&
-                state.saveStatus !== FIELD_SAVE_STATUS.SAVING
-            ) {
-                acc.push([name, normalizedValue]);
-            }
-            return acc;
-        }, []);
+                if (
+                    normalizedValue !== state.savedValue &&
+                    state.saveStatus !== FIELD_SAVE_STATUS.SAVING
+                ) {
+                    acc.push([name, normalizedValue]);
+                }
+                return acc;
+            }, []);
 
         if (!updateFieldEntries.length) return;
 
@@ -400,7 +457,7 @@ export default function CheckoutForm({
             }
         });
 
-        const updateFields = Object.fromEntries(updateFieldEntries);
+        const updateFields: IOrderDraftUpdateBody = Object.fromEntries(updateFieldEntries);
 
         // Дополнительные поля для методов доставки
         if ('deliveryMethod' in updateFields) {
@@ -408,18 +465,19 @@ export default function CheckoutForm({
             const isTransportCompanyMethod = deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY;
             const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
             const isAllowCourierExtra = 'allowCourierExtra' in updateFields;
+            const typedUpdateFields = updateFields as TApiFormFields;
             
             if (isCourierMethod && !isAllowCourierExtra) {
-                updateFields.allowCourierExtra = fieldsState.allowCourierExtra.value;
+                typedUpdateFields.allowCourierExtra = fieldsState.allowCourierExtra.value;
             }
             if (isTransportCompanyMethod || isCourierMethod) {
-                updateFields.region = fieldsState.region.value;
-                updateFields.district = fieldsState.district.value;
-                updateFields.city = fieldsState.city.value;
-                updateFields.street = fieldsState.street.value;
-                updateFields.house = fieldsState.house.value;
-                updateFields.apartment = fieldsState.apartment.value;
-                updateFields.postalCode = fieldsState.postalCode.value;
+                typedUpdateFields.region = fieldsState.region.value;
+                typedUpdateFields.district = fieldsState.district.value;
+                typedUpdateFields.city = fieldsState.city.value;
+                typedUpdateFields.street = fieldsState.street.value;
+                typedUpdateFields.house = fieldsState.house.value;
+                typedUpdateFields.apartment = fieldsState.apartment.value;
+                typedUpdateFields.postalCode = fieldsState.postalCode.value;
             }
         }
 
@@ -447,7 +505,7 @@ export default function CheckoutForm({
             payload: { fields: updateFields, status: saveStatus }
         });
 
-        Object.keys(updateFields).forEach(scheduleClearSaveStatus);
+        (Object.keys(updateFields) as TFieldName[]).forEach(scheduleClearSaveStatus);
     };
 
     const handleFieldChange = (e) => {
@@ -463,15 +521,15 @@ export default function CheckoutForm({
     
         updateDebounceTimerRef.current = setTimeout(() => {
             if (isUnmountedRef.current) return;
-            updateDebounceTimerRef.current = null;
 
+            updateDebounceTimerRef.current = undefined;
             updateOrderDraft({ name, value: fieldValue });
         }, 1250);
     };
 
     const handleFieldBlur = (e) => {
         clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = null;
+        updateDebounceTimerRef.current = undefined;
 
         const { type, name, value, checked } = e.currentTarget;
         const fieldValue = type === 'checkbox' ? checked : value;
@@ -551,7 +609,7 @@ export default function CheckoutForm({
         submitInProgressRef.current = true;
 
         clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = null;
+        updateDebounceTimerRef.current = undefined;
 
         const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
@@ -828,7 +886,7 @@ export default function CheckoutForm({
                     return (
                         <div
                             key={name}
-                            ref={(elem) => (formGroupRefs.current[name] = elem)}
+                            ref={(elem) => { formGroupRefs.current[name] = elem; }}
                             className={cn('form-group', toKebabCase(name))}
                         >
                             {name === 'orderItemsGroup' ? (
@@ -953,7 +1011,7 @@ function OrderItems({
     formGroupName,
     collapsibleFormGroupNames,
     toggleFormGroupExpansion
-}) {
+}): JSX.Element | null {
     if (!orderItemList) return null;
 
     return (
@@ -1062,7 +1120,7 @@ function OrderItems({
     );
 }
 
-function FormGroupSummary({ fieldConfigs, fieldsState }) {
+function FormGroupSummary({ fieldConfigs, fieldsState }): JSX.Element {
     return (
         <div className="form-group-summary">
             {fieldConfigs.map(fieldConfig => {
@@ -1100,7 +1158,7 @@ function FormGroupEntries({
     formGroupName,
     collapsibleFormGroupNames,
     toggleFormGroupExpansion
-}) {
+}): JSX.Element {
     return (
         <div className="form-group-entries">
             {fieldConfigs.map(({
@@ -1225,7 +1283,11 @@ function FormGroupEntries({
     );
 }
 
-function FormGroupControls({ formGroupName, collapsibleFormGroupNames, toggleFormGroupExpansion }) {
+function FormGroupControls({
+    formGroupName,
+    collapsibleFormGroupNames,
+    toggleFormGroupExpansion
+}): JSX.Element | null {
     const fromGroupIdx = collapsibleFormGroupNames.indexOf(formGroupName);
     if (fromGroupIdx === -1) return null;
 

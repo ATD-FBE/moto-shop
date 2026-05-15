@@ -67,7 +67,7 @@ interface IBulkProductFormProps {
     uiBlocked: boolean;
 }
 
-type TFormFields = {
+type TApiFormFields = {
     [K in keyof IBulkProductUpdateBody['formFields']]: TFieldApiValue;
 };
 
@@ -295,7 +295,7 @@ export default function BulkProductForm(
                 };
 
                 if (isValid) {
-                    (acc.formFields as TFormFields)[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
                     acc.changedFields.push(name);
                 } else {
                     acc.allValid = false;

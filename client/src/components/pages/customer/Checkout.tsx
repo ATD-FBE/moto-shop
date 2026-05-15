@@ -1,12 +1,14 @@
-import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import { useNavigate, useParams, To } from 'react-router-dom';
 import cn from 'classnames';
 import CheckoutForm from './checkout/CheckoutForm.jsx';
 import CheckoutSummary from './checkout/CheckoutSummary.jsx';
 import OrderDraftExpirationTimer from './checkout/OrderDraftExpirationTimer.jsx';
-import { useStructureRefs } from '@/context/StructureRefsContext.js';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
+import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 import { sendOrderDraftSyncRequest, sendOrderDraftDeleteRequest } from '@/api/checkoutRequests.js';
+import { routeConfig } from '@/config/appRouting.js';
+import { FORM_STATUS, BASE_SUBMIT_STATES, SUCCESS_DELAY } from '@/config/constants.js';
 import {
     setNavigationLock,
     setLockedRouteCancelPath,
@@ -17,13 +19,17 @@ import { applyCartState } from '@/services/cartService.js';
 import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openConfirmModal, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
+import { getLockedStatuses } from '@/helpers/formHelpers.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { routeConfig } from '@/config/appRouting.js';
-import { FORM_STATUS, BASE_SUBMIT_STATES, SUCCESS_DELAY } from '@/config/constants.js';
 import { MIN_ORDER_AMOUNT } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { IGetSubmitStatesResult, TFormStatus, TSubmitStates } from '@/types/index.js';
+import type { IOrderDraft } from '@shared/types/index.js';
 
-const getSubmitStates = (isCancelPath) => {
+const CHECKOUT_UI_LAYOUT_OFFSET = 6;
+
+const getSubmitStates = (isCancelPath: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, CANCELING, CANCEL_ERROR, CANCEL_SUCCESS, FORBIDDEN,
@@ -32,7 +38,7 @@ const getSubmitStates = (isCancelPath) => {
     const submitActionLabel = 'Оформить заказ';
     const cancelActionLabel = 'Отменить заказ';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: submitActionLabel, cancelBtnLabel: cancelActionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка заказа...' },
@@ -105,35 +111,33 @@ const getSubmitStates = (isCancelPath) => {
             addMessage: 'Вы будете перенаправлены на страницу заказов.',
             submitBtnLabel: 'Перенаправление...'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-export default function Checkout() {
-    const user = useSelector(state => state.auth.user);
-    const { isDashboardPanelActive, lockedRoute } = useSelector(state => state.ui);
-    const productMap = useSelector(state => state.products.byId);
+export default function Checkout(): JSX.Element | null {
+    const user = useAppSelector(state => state.auth.user);
+    const { lockedRoute, isDashboardPanelActive } = useAppSelector(state => state.ui);
+    const productMap = useAppSelector(state => state.products.byId);
 
     const [frozenSubmitStates, setFrozenSubmitStates] = useState(() => getSubmitStates(false));
     const { submitStates, lockedStatuses } = frozenSubmitStates;
 
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.LOADING);
-    const [orderDraft, setOrderDraft] = useState(null);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
+    const [orderDraft, setOrderDraft] = useState<IOrderDraft | null>(null);
 
-    const checkoutSidebarRef = useRef(null);
+    const checkoutSidebarRef = useRef<HTMLElement | null>(null);
     const isUnmountedRef = useRef(false);
-    const { mainHeaderRef } = useStructureRefs();
-
-    const dispatch = useDispatch();
-    const location = useLocation();
-    const navigate = useNavigate();
 
     const { orderId } = useParams();
+    const { mainHeaderRef } = useStructureRefs();
+
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
+    const navigate = useNavigate();
 
     const cartPath = routeConfig.customerCart.paths[0];
     const cancelPath = lockedRoute?.cancelPath ?? null;
@@ -141,36 +145,24 @@ export default function Checkout() {
     const topStickyOffset = 
         (mainHeaderRef.current?.offsetHeight ?? 0) +
         (isDashboardPanelActive ? 0 : checkoutSidebarRef.current?.offsetHeight ?? 0) +
-        6; // Дополнительный отступ сверху
+        CHECKOUT_UI_LAYOUT_OFFSET; // Дополнительный отступ сверху
 
-    const loadOrderDraft = async (orderId) => {
+    const loadOrderDraft = async (): Promise<void> => {
+        if (!orderId) return;
+
         setSubmitStatus(FORM_STATUS.LOADING);
 
         const responseData = await dispatch(sendOrderDraftSyncRequest(orderId));
         if (isUnmountedRef.current) return;
 
-        const {
-            status, message, orderItemAdjustments, tradeProductList,
-            cartItemList, customerDiscount, orderDraft
-        } = responseData;
+        const {status, message } = responseData;
         logRequestStatus({ context: 'CHECKOUT: LOAD DRAFT', status, message });
-
-        const hasAdjustments = orderItemAdjustments?.length > 0;
-        const adjustmentsMsg = hasAdjustments
-            ? '<span className="bold underline">Изменения товаров в заказе:</span>' +
-                `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
-            : '';
-            
-        if (hasAdjustments) {
-            dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
-        }
 
         if (status !== FORM_STATUS.SUCCESS) {
             const finalStatus = lockedStatuses.has(status) ? status : FORM_STATUS.LOAD_ERROR;
-
             if (finalStatus === status) dispatch(clearLockedRoute()); // Закрытый статус
 
-            if (finalStatus === FORM_STATUS.CONFLICT) { // Товары в корзине и заказе не совпадают
+            if (status === FORM_STATUS.CONFLICT) { // Товары в корзине и заказе не совпадают
                 const conflictMsg =
                     'Товары в корзине и черновике заказа не совпадают.\n' +
                     '<span className="color-red">Заказ отменён!</span> ' +
@@ -188,7 +180,13 @@ export default function Checkout() {
                         navigate(cartPath);
                     }
                 });
-            } else if (finalStatus === FORM_STATUS.LIMITATION) { // Сумма заказа меньше минимальной
+            } else if (status === FORM_STATUS.LIMITATION) { // Сумма заказа меньше минимальной
+                const {
+                    tradeProductList, cartItemList, customerDiscount, orderDraft, orderItemAdjustments
+                } = responseData;
+
+                dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
+
                 const amountToAdd = Math.max(0, MIN_ORDER_AMOUNT - orderDraft.totals.totalAmount);
                 const minOrderAmountMsg =
                     'Сумма заказа после синхронизации с текущими данными каталога ' +
@@ -200,12 +198,17 @@ export default function Checkout() {
                     'Добавьте товаров ещё на ' +
                     `<span className="color-green">${formatCurrency(amountToAdd)}</span> ₽.`;
 
+                const adjustmentsMsg = orderItemAdjustments.length > 0
+                    ? '\n\n\n<span className="bold underline">Изменения товаров в заказе:</span>' +
+                        `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
+                    : '';
+
                 openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
-                    message: minOrderAmountMsg + (hasAdjustments ? `\n\n\n${adjustmentsMsg}` : ''),
+                    message: minOrderAmountMsg + adjustmentsMsg,
                     dismissBtnLabel: 'Перейти в корзину',
                     onClose: () => {
                         dispatch(clearLockedRoute());
@@ -218,10 +221,19 @@ export default function Checkout() {
         }
 
         // Успешный ответ
+        const {
+            tradeProductList, cartItemList, customerDiscount, orderDraft, orderItemAdjustments
+        } = responseData;
+
+        dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
         setOrderDraft(orderDraft);
         setSubmitStatus(FORM_STATUS.DEFAULT);
 
-        if (hasAdjustments) {
+        if (orderItemAdjustments.length > 0) {
+            const adjustmentsMsg =
+                '<span className="bold underline">Изменения товаров в заказе:</span>' +
+                `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`;
+
             openAlertModal({
                 openDelay: 1000,
                 type: 'warn',
@@ -232,19 +244,23 @@ export default function Checkout() {
         }
     };
 
-    const reloadOrderDraft = () => loadOrderDraft(orderId);
+    const reloadOrderDraft = (): void => {
+        loadOrderDraft();
+    }
 
-    const cancelOrderDraft = async (orderId) => {
+    const cancelOrderDraft = async (): Promise<void> => {
+        if (!orderId) return;
+
         setSubmitStatus(FORM_STATUS.CANCELING);
 
-        const { status, message } = await dispatch(sendOrderDraftDeleteRequest(orderId));
+        const responseData = await dispatch(sendOrderDraftDeleteRequest(orderId));
         if (isUnmountedRef.current) return;
     
+        const {status, message } = responseData;
         logRequestStatus({ context: 'CHECKOUT: CANCEL', status, message });
     
-        if (![FORM_STATUS.SUCCESS, FORM_STATUS.NOT_FOUND].includes(status)) {
+        if (status !== FORM_STATUS.SUCCESS && status !== FORM_STATUS.NOT_FOUND) {
             const finalStatus = lockedStatuses.has(status) ? status : FORM_STATUS.CANCEL_ERROR;
-
             if (finalStatus === status) dispatch(clearLockedRoute()); // Закрытый статус
             setSubmitStatus(finalStatus);
             throw new Error(message);
@@ -254,7 +270,7 @@ export default function Checkout() {
         setSubmitStatus(FORM_STATUS.CANCEL_SUCCESS);
     };
 
-    const redirectOnCancelSuccess = (cancelPath = null) => {
+    const redirectOnCancelSuccess = (cancelPath?: To): void => {
         setTimeout(() => {
             if (isUnmountedRef.current) return;
 
@@ -263,14 +279,14 @@ export default function Checkout() {
         }, SUCCESS_DELAY);
     };
 
-    const cancelOrderDraftAndRedirect = async () => {
+    const cancelOrderDraftAndRedirect = async (): Promise<void> => {
         try {
-            await cancelOrderDraft(orderId); // Статус запроса не SUCCESS => редирект не выполнится
+            await cancelOrderDraft(); // Статус запроса не SUCCESS => редирект не выполнится
             redirectOnCancelSuccess();
         } catch {}
     };
 
-    const handleDraftExpiration = () => {
+    const handleDraftExpiration = (): void => {
         closeConfirmModal();
         cancelOrderDraftAndRedirect();
     };
@@ -284,18 +300,18 @@ export default function Checkout() {
 
     // Стартовая загрузка заказа и очистка при размонтировании
     useEffect(() => {
-        loadOrderDraft(orderId);
+        loadOrderDraft();
 
         return () => {
             isUnmountedRef.current = true;
         };
-    }, [orderId]);
+    }, []);
 
     // Обновление конфигов состояния формы
     useEffect(() => {
         if (submitStatus === FORM_STATUS.CANCEL_SUCCESS) return; // Заморозка состояний формы при отмене
-        setFrozenSubmitStates(getSubmitStates(!!cancelPath));
-    }, [submitStatus, !!cancelPath]);
+        setFrozenSubmitStates(getSubmitStates(Boolean(cancelPath)));
+    }, [submitStatus, Boolean(cancelPath)]);
 
     // Попытка ухода со страницы
     useEffect(() => {
@@ -308,11 +324,13 @@ export default function Checkout() {
             prompt: 'Вы точно хотите покинуть страницу оформления заказа?',
             confirmBtnLabel: 'Отменить заказ',
             cancelBtnLabel: 'Остаться',
-            onConfirm: () => cancelOrderDraft(orderId),
+            onConfirm: () => cancelOrderDraft(),
             onFinalize: () => redirectOnCancelSuccess(cancelPath),
             onCancel: () => dispatch(setLockedRouteCancelPath(null))
         });
-    }, [cancelPath, submitStatus, orderId, openConfirmModal, dispatch]);
+    }, [cancelPath, submitStatus, openConfirmModal, dispatch]);
+
+    if (!user || !orderId) return null;
 
     return (
         <div className="checkout-page">
@@ -324,18 +342,18 @@ export default function Checkout() {
 
             <div className="checkout-main">
                 <CheckoutForm
-                    registrationEmail={user.email}
-                    productMap={productMap}
-                    topStickyOffset={topStickyOffset}
-                    cartPath={cartPath}
                     orderId={orderId}
                     orderDraft={orderDraft}
+                    setOrderDraft={setOrderDraft}
                     submitStates={submitStates}
                     lockedStatuses={lockedStatuses}
                     submitStatus={submitStatus}
                     setSubmitStatus={setSubmitStatus}
-                    setOrderDraft={setOrderDraft}
                     reloadOrderDraft={reloadOrderDraft}
+                    topStickyOffset={topStickyOffset}
+                    registrationEmail={user.email}
+                    cartPath={cartPath}
+                    productMap={productMap}
                 />
 
                 <aside

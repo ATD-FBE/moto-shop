@@ -4,15 +4,21 @@ import type { RefObject, Dispatch, SetStateAction } from 'react';
 import type {
     INotification,
     IProduct,
-    TAuthErrorStatus,
-    TGeneralErrorStatus,
     TSuccessStatus,
-    TRequestStatus,
     TCategoryCreateResponse,
     TCategoryUpdateResponse,
     TProductCreateResponse,
     TProductUpdateResponse
 } from '@shared/types/index.js';
+
+/////////////////////////////
+/// STRUCTUR REFS CONTEXT ///
+/////////////////////////////
+
+export interface IStructureRefsContext {
+    mainHeaderRef: RefObject<HTMLElement | null>;
+    mainFooterRef: RefObject<HTMLElement | null>;
+}
 
 ///////////////
 /// TOOLBAR ///

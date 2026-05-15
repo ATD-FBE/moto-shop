@@ -8,6 +8,7 @@ import type {
     TBaseResponse
 } from '@shared/types/index.js';
 
+// Сигналы для логов при ошибках подключения сервера
 export type TShutdownSignal = 
     | 'SIGINT' 
     | 'SIGTERM' 

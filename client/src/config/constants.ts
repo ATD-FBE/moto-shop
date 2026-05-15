@@ -23,6 +23,10 @@ export const MODAL_ANIMATION_DURATION = parseInt(
     getComputedStyle(document.documentElement).getPropertyValue('--modal-animation-duration'),
     10
 );
+export const COLLAPSIBLE_ANIMATION_DURATION = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--collapsible-animation-duration'),
+    10
+);
 
 export const SCREEN_SIZE = {
     XS: 540,

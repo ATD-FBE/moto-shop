@@ -50,7 +50,7 @@ export const HTTP_STATUS_CODE_MAP = {
     VALIDATION: [422],
     MODIFIED: [412],
     GENERAL: [400, 402, 404, 408, 409, 499, 500],
-    SUCCESS: [200, 201, 207],
+    SUCCESS: [200, 201, 207]
 } as const;
 
 export const CURRENCY = {

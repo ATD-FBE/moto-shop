@@ -1,9 +1,9 @@
 import { useReducer, useState, useRef, useMemo, useEffect } from 'react';
 import cn from 'classnames';
-import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import {
     sendAuthCheckoutPrefsRequest,
     sendAuthCheckoutPrefsUpdateRequest
@@ -51,6 +51,7 @@ import type {
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
     TFormState,
     IProcessFormFieldsResult
@@ -72,8 +73,8 @@ type TFieldName = Extract<TFieldConfig['name'], TEntityField<'checkout'>>;
 type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
-type TFormFields = {
-    [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldStateValue;
+type TApiFormFields = {
+    [K in keyof IAuthCheckoutPrefsUpdateBody]: TFieldApiValue;
 };
 
 interface IFormGroupEntriesProps {
@@ -457,7 +458,7 @@ export default function CheckoutPreferences(): JSX.Element {
         
                 if (isValid) {
                     if (normalizedValue !== '') {
-                        (acc.formFields as TFormFields)[name] = normalizedValue;
+                        (acc.formFields as TApiFormFields)[name] = normalizedValue;
                     }
 
                     const initValue = initFieldValuesRef.current[name];

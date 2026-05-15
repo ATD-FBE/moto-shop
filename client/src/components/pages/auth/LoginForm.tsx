@@ -37,7 +37,7 @@ import type {
     IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
-    TFieldStateValue,
+    TFieldApiValue,
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
@@ -53,8 +53,8 @@ type TFieldName = Extract<TFieldConfig['name'], TEntityField<'auth'>>;
 
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
-type TFormFields = {
-    [K in keyof IAuthLoginBody['formFields']]: TFieldStateValue;
+type TApiFormFields = {
+    [K in keyof IAuthLoginBody['formFields']]: TFieldApiValue;
 };
 
 /////////////////////
@@ -188,7 +188,7 @@ export default function LoginForm(): JSX.Element {
                 };
         
                 if (isValid) {
-                    (acc.formFields as TFormFields)[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
                 } else {
                     acc.allValid = false;
                 }

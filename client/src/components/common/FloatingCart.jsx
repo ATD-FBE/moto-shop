@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import CartBadge from '@/components/common/badges/CartBadge.jsx';
 import { routeConfig } from '@/config/appRouting.js';
-import { useStructureRefs } from '@/context/StructureRefsContext.js';
+import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 
 const MIN_BOTTOM_OFFSET = 20;
 

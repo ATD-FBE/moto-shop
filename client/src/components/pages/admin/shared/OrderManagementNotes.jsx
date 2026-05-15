@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useStructureRefs } from '@/context/StructureRefsContext.js';
+import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 
 const MIN_BOTTOM_OFFSET = 30;
 

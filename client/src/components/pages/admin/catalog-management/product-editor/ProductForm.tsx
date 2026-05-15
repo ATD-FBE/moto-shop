@@ -102,8 +102,8 @@ interface IProductFormProps {
 }
 
 type TProductBody = TProductCreateBodyClient | TProductUpdateBodyClient;
-type TProductBodyAllKeys = keyof (TProductCreateBodyClient & TProductUpdateBodyClient);
-type TFieldEntries = [TProductBodyAllKeys, TFieldApiValue][];
+type TProductCommonBodyKeys = keyof (TProductCreateBodyClient & TProductUpdateBodyClient);
+type TFieldEntries = [TProductCommonBodyKeys, TFieldApiValue][];
 
 interface IProcessFieldResult {
     isValid: boolean;
@@ -115,8 +115,8 @@ interface IProcessFieldResult {
     isValueChanged: boolean;
 }
 
-type TFormFields = {
-    [K in TProductBodyAllKeys]: TFieldApiValue;
+type TApiFormFields = {
+    [K in TProductCommonBodyKeys]: TFieldApiValue;
 };
 
 type TFieldElemProps =
@@ -639,7 +639,7 @@ export default function ProductForm(
                 if (isValid) {
                     // Сбор данных для отправки
                     fieldEntries.forEach(([key, val]) => {
-                        (acc.formFields as TFormFields)[key] = val;
+                        (acc.formFields as TApiFormFields)[key] = val;
                     });
                         
                     // Запоминание изменённого поля

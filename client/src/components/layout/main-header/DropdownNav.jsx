@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import cn from 'classnames';
-import { useStructureRefs } from '@/context/StructureRefsContext.js';
+import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 
 const dropdownPortalRoot = document.getElementById('dropdown-root') || document.body;
 

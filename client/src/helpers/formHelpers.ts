@@ -20,9 +20,15 @@ export const getLockedStatuses = (submitStates: TSubmitStates): Set<TFormStatus>
     return new Set(lockedArray);
 };
 
+export const extractCollapsibleFormGroupNames = <T extends readonly IFormGroupConfig[]>(
+    formGroupConfigs: T
+) => formGroupConfigs.filter(cfg => cfg.collapsible).map(cfg => cfg.name) as {
+    [K in keyof T]: T[K] extends { collapsible: true; name: infer N } ? N : never
+}[number][];
+
 export const extractFieldConfigs = <T extends readonly IFormGroupConfig[]>(
     formGroupConfigs: T
-) => formGroupConfigs.flatMap(cfg => cfg.fieldConfigs || []) as T[number]['fieldConfigs'];
+) => formGroupConfigs.flatMap(cfg => cfg.fieldConfigs) as readonly T[number]['fieldConfigs'][number][];
 
 // Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
 export const extendFieldConfigs = <T extends readonly IFieldConfig[]>(
@@ -128,10 +134,10 @@ export const fieldsStateReducer = <TFieldName extends string>(
 
         case 'SAVE': {
             const { fields, status } = action.payload;
-            const saveState = { ...state };
+            const newState = { ...state };
 
             for (const name in fields) {
-                saveState[name] = {
+                newState[name] = {
                     ...state[name],
                     savedValue: status === FIELD_SAVE_STATUS.SUCCESS
                         ? fields[name]
@@ -143,7 +149,7 @@ export const fieldsStateReducer = <TFieldName extends string>(
                 };
             }
             
-            return saveState;
+            return newState;
         }
 
         case 'RESET':

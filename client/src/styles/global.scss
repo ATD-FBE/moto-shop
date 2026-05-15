@@ -21,6 +21,8 @@
     --load-status-min-height: 120px;
     --fast-animation-duration: 160ms;
     --medium-animation-duration: 320ms;
+    --modal-animation-duration: var(--fast-animation-duration);
+    --collapsible-animation-duration: var(--medium-animation-duration);
 }
 
 $color-main-light: rgb(230, 235, 240);
@@ -814,7 +816,7 @@ ul {
     z-index: 9999;
     background-color: rgba($color-main-dark, 0.8);
     opacity: 0;
-    transition: opacity $transition-fast-set;
+    transition: opacity var(--modal-animation-duration) ease;
 
     &.visible {
         opacity: 1;
@@ -841,8 +843,8 @@ ul {
         transform: scale(0.9);
         opacity: 0;
         transition:
-            transform $transition-fast-set,
-            opacity $transition-fast-set;
+            transform var(--modal-animation-duration) ease,
+            opacity var(--modal-animation-duration) ease;
     }
 
     .confirm-modal {
@@ -1580,7 +1582,7 @@ ul {
 .collapsible {
     height: 0;
     overflow-y: hidden;
-    transition: height $transition-medium-set;
+    transition: height var(--collapsible-animation-duration) ease-in-out;
 
     &.fully-expanded {
         overflow-y: visible;

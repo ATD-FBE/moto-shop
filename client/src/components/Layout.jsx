@@ -10,7 +10,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.jsx';
 import ImageViewerModal from '@/components/common/ImageViewerModal.jsx';
 import SseNotifications from '@/components/sse/SseNotifications.jsx';
 import SseOrderManagement from '@/components/sse/SseOrderManagement.jsx';
-import { useStructureRefs } from '@/context/StructureRefsContext.js';
+import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { setKeyboardInput, setPointerInput } from '@/helpers/inputMethod.js';
 import { handleLogout } from '@/services/authService.js';

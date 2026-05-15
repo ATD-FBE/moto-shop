@@ -68,7 +68,7 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = Extract<TFieldConfig['name'], TEntityField<'promotion'>>;
 
-type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
+type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface IPromoEditorProps {
@@ -89,7 +89,7 @@ interface IProcessFieldResult {
     isValueChanged: boolean;
 }
 
-type TFormFields = {
+type TApiFormFields = {
     [K in TPromoCommonBodyKeys]: TFieldApiValue;
 };
 
@@ -220,7 +220,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
         initFieldValuesRef.current = {
             title,
-            image, // URL или undefined
+            image: image ?? '', // URL или undefined
             description,
             startDate: formattedStartDate,
             endDate: formattedEndDate
@@ -387,7 +387,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         
                 if (isValid) {
                     fieldEntries.forEach(([key, val]) => {
-                        (acc.formFields as TFormFields)[key] = val;
+                        (acc.formFields as TApiFormFields)[key] = val;
                     });
 
                     if (isValueChanged) acc.changedFields.push(name);
