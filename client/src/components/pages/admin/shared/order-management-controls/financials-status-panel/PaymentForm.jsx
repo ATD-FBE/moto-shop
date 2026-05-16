@@ -227,7 +227,7 @@ export default function PaymentForm({
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleFieldBlur = (e) => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -446,7 +446,7 @@ export default function PaymentForm({
                         value: fieldsState[name]?.value,
                         autoComplete,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                        onBlur: trim ? handleFieldBlur : undefined,
                         disabled: isFormLocked || !isApplicable || isDisabled
                     };
 

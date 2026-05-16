@@ -183,7 +183,7 @@ export default function OrderStatusSteps({
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleFieldBlur = (e) => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -385,7 +385,7 @@ export default function OrderStatusSteps({
                                         value: fieldsState[name]?.value,
                                         autoComplete: 'off',
                                         onChange: handleFieldChange,
-                                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                                        onBlur: trim ? handleFieldBlur : undefined,
                                         disabled: orderStatusLoading || !isApplicable
                                     };
 

@@ -303,7 +303,7 @@ export default function CardOnlinePayment() {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleFieldBlur = (e) => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -605,7 +605,7 @@ export default function CardOnlinePayment() {
                             autoComplete,
                             onKeyDown: handleFieldKeyDown,
                             onChange: handleFieldChange,
-                            onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                            onBlur: trim ? handleFieldBlur : undefined,
                             disabled: isFormLocked
                         };
 

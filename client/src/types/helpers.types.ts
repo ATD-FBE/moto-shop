@@ -70,9 +70,9 @@ export interface IFieldConfig {
     readonly defaultValue?: TFieldStateValue;
     readonly outputValue?: string;
     readonly placeholder?: string;
-    readonly autoComplete?: 'on' | 'off';
+    readonly autoComplete?: string;
     readonly trim?: boolean;
-    readonly isPassword?: boolean;
+    readonly address?: boolean;
     readonly checkboxLabel?: string;
     readonly tooltip?: string;
     readonly enabled?: boolean;

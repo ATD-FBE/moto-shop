@@ -20,7 +20,12 @@ import type {
     ChangeEvent,
     SubmitEvent
 } from 'react';
-import type { TFieldApiValue, IFieldState, IProcessSingleFormFieldResult } from '@/types/index.js';
+import type {
+    IFieldConfig,
+    TFieldApiValue,
+    IFieldState,
+    IProcessSingleFormFieldResult
+} from '@/types/index.js';
 import type { TEntityField, ICustomerDiscountUpdateBody } from '@shared/types/index.js';
 
 //////////////////////////
@@ -59,7 +64,7 @@ const getFieldConfig = (customerDiscount: number) => ({
     min: 0,
     max: 100,
     defaultValue: customerDiscount
-} as const);
+} as const satisfies IFieldConfig);
 
 export default function CustomerDiscountForm({
     uiBlocked,
@@ -97,6 +102,8 @@ export default function CustomerDiscountForm({
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, type, value } = e.currentTarget;
+        if (name !== fieldName) return;
+
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
         dispatchFieldsState({

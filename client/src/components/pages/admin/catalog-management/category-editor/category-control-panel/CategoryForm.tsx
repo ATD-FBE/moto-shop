@@ -21,6 +21,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -28,6 +29,7 @@ import {
 } from '@shared/fieldRules.js';
 import type {
     IGetSubmitStatesResult,
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
     TFieldApiValue,
@@ -165,7 +167,7 @@ const getFieldConfigs = (
             outputValue: !isEditMode ? (parentName ?? NO_VALUE_LABEL) : undefined,
             lock: isRestricted
         }
-    ] as const;
+    ] as const satisfies readonly IFieldConfig[];
 
     return extendFieldConfigs(fieldConfigs);
 }
@@ -217,6 +219,8 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { name, type, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const processedValue = type === 'number' && value !== '' ? Number(value) : value;
 
         dispatchFieldsState({
@@ -225,8 +229,10 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLSelectElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -353,11 +359,10 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
                     });
     
                     const fieldsStateUpdates: TFieldsStateUpdates = {};
-                    (Object.entries(fieldErrors) as [TFieldName, string][])
+                    Object.entries(fieldErrors)
                         .forEach(([name, error]) => {
-                            if (name in fieldConfigMap) {
-                                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                            }
+                            if (!isObjectKey(name, fieldConfigMap)) return;
+                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                         });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
@@ -422,7 +427,7 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
         setSubmitStatus(FORM_STATUS.DEFAULT);
         dispatchFieldsState({
             type: 'RESET',
-            payload: createInitialFieldsState(fieldConfigs, initialStateOptions)
+            payload: createInitialFieldsState<TFieldName>(fieldConfigs, initialStateOptions)
         });
     }, [fieldConfigs]);
 
@@ -513,7 +518,7 @@ export default function CategoryForm(props: TCategoryFormProps<TFieldName>): JSX
                                 value={getStringValue(fieldsState[name]?.value)}
                                 min={min}
                                 max={getStringValue(fieldsState[name]?.max)}
-                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                onBlur={trim ? handleFieldBlur : undefined}
                                 autoComplete={autoComplete}
                             />
                         );

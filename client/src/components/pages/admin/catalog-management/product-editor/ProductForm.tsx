@@ -25,6 +25,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -54,6 +55,7 @@ import type {
     TSubmitStates,
     TFieldStateValue,
     TFieldApiValue,
+    IFieldConfig,
     IFieldState,
     IImageUpload,
     TAppThunk,
@@ -285,7 +287,7 @@ const getFieldConfigs = (
             checkboxLabel: 'Доступен для продажи',
             defaultValue: product?.isActive ?? true
         }
-    ] as const;
+    ] as const satisfies readonly IFieldConfig[];
 
     return extendFieldConfigs(fieldConfigs);
 };
@@ -475,6 +477,8 @@ export default function ProductForm(
     ): void => {
         const target = e.currentTarget;
         const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
         const checked = target instanceof HTMLInputElement && target.checked;
         const isImages = name === 'images';
@@ -494,15 +498,19 @@ export default function ProductForm(
 
         dispatchFieldsState({
             type: 'UPDATE',
-            payload: { [name]: {
-                ...(type === 'file' ? { files: [] } : { value: processedValue }),
-                ...(!isImages && { uiStatus: '', error: '' })
-            } }
+            payload: {
+                [name]: {
+                    ...(type === 'file' ? { files: [] } : { value: processedValue }),
+                    ...(!isImages && { uiStatus: '', error: '' })
+                }
+            }
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -723,11 +731,10 @@ export default function ProductForm(
                     });
     
                     const fieldsStateUpdates: TFieldsStateUpdates = {};
-                    (Object.entries(fieldErrors) as [TFieldName, string][])
+                    Object.entries(fieldErrors)
                         .forEach(([name, error]) => {
-                            if (name in fieldConfigMap) {
-                                fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                            }
+                            if (!isObjectKey(name, fieldConfigMap)) return;
+                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                         });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     
@@ -859,7 +866,7 @@ export default function ProductForm(
                                 {...baseElemProps}
                                 placeholder={placeholder}
                                 value={getStringValue(fieldsState[name]?.value)}
-                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                onBlur={trim ? handleFieldBlur : undefined}
                             >
                             </textarea>
                         );
@@ -898,7 +905,7 @@ export default function ProductForm(
                                 accept={accept}
                                 placeholder={placeholder}
                                 value={getStringValue(fieldsState[name]?.value)}
-                                onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                onBlur={trim ? handleFieldBlur : undefined}
                             />
                         );
                     })();

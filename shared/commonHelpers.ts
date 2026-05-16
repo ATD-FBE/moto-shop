@@ -254,3 +254,35 @@ export const makeOrderItemQuantityFieldName = (productId: string): string =>
 
 export const getCustomerOrderDetailsPath = (orderNumber: string, orderId: string): string =>
     `/customer/orders/${orderNumber ?? ''}~${orderId}`;
+
+//////////////////////////
+/// COMMON TYPE GUARDS ///
+//////////////////////////
+
+export const isObjectKey = <T extends object>(
+    key: PropertyKey,
+    obj: T
+): key is keyof T => {
+    return key in obj;
+};
+
+export const isArrayItem = <T>(
+    item: unknown,
+    arr: readonly T[]
+): item is T => {
+    return arr.includes(item as T);
+};
+
+export const isSetMember = <T>(
+    value: unknown,
+    set: ReadonlySet<T>
+): value is T => {
+    return set.has(value as T);
+};
+
+export const isMapKey = <K, V>(
+    key: unknown,
+    map: ReadonlyMap<K, V>
+): key is K => {
+    return map.has(key as K);
+};

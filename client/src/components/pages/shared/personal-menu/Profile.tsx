@@ -21,6 +21,7 @@ import {
     getStringValue
 } from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -29,6 +30,7 @@ import {
 import type { JSX, ChangeEvent, FocusEvent, SubmitEvent } from 'react';
 import type {
     IGetSubmitStatesResult,
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
     TFieldApiValue,
@@ -111,26 +113,23 @@ const fieldConfigs = extendFieldConfigs([
         elem: 'input',
         type: 'password',
         placeholder: 'Укажите текущий пароль',
-        autoComplete: 'off',
-        isPassword: true
+        autoComplete: 'off'
     },
     {
         name: 'newPassword',
         label: 'Новый пароль',
         elem: 'input',
         type: 'password',
-        placeholder: 'Укажите новый пароль',
-        isPassword: true
+        placeholder: 'Укажите новый пароль'
     },
     {
         name: 'confirmNewPassword',
         label: 'Новый пароль (повтор)',
         elem: 'input',
         type: 'password',
-        placeholder: 'Подтвердите новый пароль',
-        isPassword: true
+        placeholder: 'Подтвердите новый пароль'
     }
-] as const);
+] as const satisfies readonly IFieldConfig[]);
 
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
@@ -146,6 +145,7 @@ export default function Profile(): JSX.Element | null {
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
         
         dispatchFieldsState({
             type: 'UPDATE',
@@ -153,8 +153,10 @@ export default function Profile(): JSX.Element | null {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -168,12 +170,13 @@ export default function Profile(): JSX.Element | null {
         const fieldsStateEntries = (Object.entries(fieldsState) as [TFieldName, IFieldState][]);
 
         const isAnyPasswordFieldFilled = fieldsStateEntries
-            .some(([name, { value }]) => fieldConfigMap[name]?.isPassword && value !== '');
+            .some(([name, { value }]) => fieldConfigMap[name]?.type === 'password' && value !== '');
       
         const result = fieldsStateEntries.reduce(
             (acc, [name, { value }]) => {
-                const { trim, isPassword } = fieldConfigMap[name] ?? {};
+                const { trim, type } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const isPassword = type === 'password';
                 const isNonPasswordFieldEmpty = !isPassword && normalizedValue === '';
                 const isPasswordFieldInEmptyGroup = isPassword && !isAnyPasswordFieldFilled;
 
@@ -266,12 +269,10 @@ export default function Profile(): JSX.Element | null {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -301,12 +302,10 @@ export default function Profile(): JSX.Element | null {
                 fieldsToUpdate.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 saveUserToLocalStorage(updatedUser);
@@ -391,7 +390,7 @@ export default function Profile(): JSX.Element | null {
                                         value={getStringValue(fieldsState.newName.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
-                                        onBlur={handleTrimmedFieldBlur}
+                                        onBlur={handleFieldBlur}
                                         disabled={isFormLocked}
                                     />
                                     
@@ -435,7 +434,7 @@ export default function Profile(): JSX.Element | null {
                                         value={getStringValue(fieldsState.newEmail.value)}
                                         autoComplete="off"
                                         onChange={handleFieldChange}
-                                        onBlur={handleTrimmedFieldBlur}
+                                        onBlur={handleFieldBlur}
                                         disabled={isFormLocked}
                                     />
                                     

@@ -30,10 +30,37 @@ export const extractFieldConfigs = <T extends readonly IFormGroupConfig[]>(
     formGroupConfigs: T
 ) => formGroupConfigs.flatMap(cfg => cfg.fieldConfigs) as readonly T[number]['fieldConfigs'][number][];
 
-// Расширение конфигов полей, позволяет обращаться к полям, которых нет в конфигах (напр. trim)
+// Расширение конфигов групп полей, позволяет обращаться к опциональным полям (напр. title)
+export const extendFormGroupConfigs = <T extends readonly IFormGroupConfig[]>(
+    formGroupConfigs: T
+) => formGroupConfigs as { [K in keyof T]: T[K] & IFormGroupConfig };
+
+// Расширение конфигов полей, позволяет обращаться к опциональным полям (напр. trim)
 export const extendFieldConfigs = <T extends readonly IFieldConfig[]>(
-    configs: T
-) => configs as { [K in keyof T]: T[K] & IFieldConfig };
+    fieldConfigs: T
+) => fieldConfigs as { [K in keyof T]: T[K] & IFieldConfig };
+
+export const castFormGroupFields = <T extends readonly IFieldConfig[]>(
+    fieldConfigs: T
+) => fieldConfigs as readonly (T[number] & IFieldConfig)[];
+
+export const extractFieldConfigNamesByKey = <
+    T extends readonly IFieldConfig[],
+    K extends keyof IFieldConfig
+>(
+    fieldConfigs: T,
+    key: K
+) => fieldConfigs.filter(cfg => cfg[key] != null).map((cfg) => cfg.name) as {
+    [I in keyof T]: T[I] extends infer Cfg       // I - индекс элемента кортежа/массива T
+        ? Cfg extends IFieldConfig
+            ? Cfg[K] extends NonNullable<Cfg[K]>
+                ? Cfg extends { name: infer N }
+                    ? N
+                    : never
+                : never
+            : never
+        : never
+}[number][];
 
 export const createFieldConfigMap = <
     TFieldName extends string, 
@@ -148,6 +175,8 @@ export const fieldsStateReducer = <TFieldName extends string>(
                         : state[name].saveStatusMessage
                 };
             }
+
+            console.log(newState);
             
             return newState;
         }

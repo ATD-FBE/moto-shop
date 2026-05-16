@@ -19,7 +19,7 @@ import {
     orderDotNotationMap,
     prepareShippingCost
 } from '@server/services/orderService.js';
-import { requireDbUser, isObjectKey } from '@server/utils/typeGuards.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import {
     normalizeInputDataToNull,
     dotNotationToObject,
@@ -28,6 +28,7 @@ import {
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     MIN_ORDER_AMOUNT,
     DELIVERY_METHOD,
@@ -668,10 +669,7 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                         tradeProductList,
                         cartItemList,
                         customerDiscount,
-                        orderDraft: {
-                            items: orderItemList,
-                            totals: orderTotals
-                        },
+                        currentTotal: orderTotals.totalAmount,
                         orderItemAdjustments
                     }
                 );

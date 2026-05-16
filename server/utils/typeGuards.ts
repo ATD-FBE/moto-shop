@@ -1,6 +1,5 @@
 import mongoose, { Types } from 'mongoose';
 import { JwtPayload } from 'jsonwebtoken';
-import { orderDotNotationMap } from '@server/services/orderService.js';
 import { validationRules } from '@shared/fieldRules.js';
 import { REGISTERED_USER_ROLES } from '@shared/constants.js';
 import type { Request, NextFunction } from 'express';
@@ -62,11 +61,4 @@ export const isValidEntityField = <E extends TEntityType>(
 
 export const isMongooseValidationError = (err: Error): err is mongoose.Error.ValidationError => {
     return err instanceof mongoose.Error.ValidationError || err.name === 'ValidationError';
-};
-
-export const isObjectKey = <T extends object>(
-    key: string | number | symbol,
-    obj: T
-): key is keyof T => {
-    return key in obj;
 };

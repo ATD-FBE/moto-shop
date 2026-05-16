@@ -28,7 +28,9 @@ import {
     getLockedStatuses,
     extractCollapsibleFormGroupNames,
     extractFieldConfigs,
-    extendFieldConfigs,
+    extendFormGroupConfigs,
+    castFormGroupFields,
+    extractFieldConfigNamesByKey,
     createFieldConfigMap,
     createInitialFieldsState,
     fieldsStateReducer,
@@ -44,12 +46,14 @@ import {
 } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey, isSetMember } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
     DEFAULT_FIELD_ERROR_MESSAGE
 } from '@shared/fieldRules.js';
 import {
+    PRODUCT_UNITS,
     DELIVERY_METHOD,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD_OPTIONS,
@@ -63,6 +67,7 @@ import type {
     FocusEvent,
     SubmitEvent,
     InputHTMLAttributes,
+    TextareaHTMLAttributes,
     SelectHTMLAttributes,
     HTMLAttributes
 } from 'react';
@@ -73,6 +78,7 @@ import type {
     TSubmitStates,
     TFieldStateValue,
     TFieldApiValue,
+    IFieldConfig,
     IFieldState,
     TFormState,
     IProcessFormFieldsResult
@@ -94,9 +100,6 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = Extract<TFieldConfig['name'], TEntityField<'checkout'>>;
 
-type TCollapsibleFormGroupName = typeof collapsibleFormGroupNames[number];
-
-type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TOrderDraftCommonBodyKeys = keyof (IOrderDraftUpdateBody & IOrderDraftConfirmBody);
@@ -104,6 +107,8 @@ type TOrderDraftCommonBodyKeys = keyof (IOrderDraftUpdateBody & IOrderDraftConfi
 type TApiFormFields = {
     [K in TOrderDraftCommonBodyKeys]: TFieldApiValue;
 };
+
+type TCollapsibleFormGroupName = typeof collapsibleFormGroupNames[number];
 
 interface ICheckoutFormProps {
     orderId: string;
@@ -125,18 +130,41 @@ interface IUpdatedField {
     value: TFieldStateValue;
 }
 
-interface IFormGroupEntriesProps {
-    fieldConfigs: TFieldConfigs;
+type TOrderItemsProps = Pick<ICheckoutFormProps, 'productMap'> & {
+    orderItemList: IOrderDraft['items'] | null;
+    toggleFormGroupExpansion: (groupName: TCollapsibleFormGroupName) => void;
+}
+
+interface IFormGroupControlsProps {
+    formGroupName: TCollapsibleFormGroupName;
+    toggleFormGroupExpansion: (groupName: TCollapsibleFormGroupName) => void;
+};
+
+type TFormGroupEntriesProps = Partial<Pick<IFormGroupControlsProps,
+    | 'formGroupName'
+    | 'toggleFormGroupExpansion'
+>> & {
+    fieldConfigs: readonly TFieldConfig[];
     fieldsState: TFormState<TFieldName>;
     applicabilityMap: Record<TFieldName, boolean>;
+    handleFieldChange: (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => void;
+    handleFieldBlur: (
+        e: FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => void;
     isFormLocked: boolean;
-    handleFieldChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-    handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
-    fillRegistrationEmail: () => void;
+    isSubmitInProgress: boolean;
+    fillRegistrationEmail?: () => void;
+    formGroupName?: TCollapsibleFormGroupName;
+    toggleFormGroupExpansion?: (groupName: TCollapsibleFormGroupName) => void;
 }
+
+type TFormGroupSummaryProps = Pick<TFormGroupEntriesProps, 'fieldConfigs' | 'fieldsState'>;
 
 type TFieldElemProps =
     InputHTMLAttributes<HTMLInputElement> &
+    TextareaHTMLAttributes<HTMLTextAreaElement> &
     SelectHTMLAttributes<HTMLSelectElement> &
     HTMLAttributes<HTMLSpanElement>;
 
@@ -149,7 +177,7 @@ const CLEAR_SAVE_STATUS_DELAY = 3000;
 const isDeliveryRequired = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
     deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 
-const formGroupConfigs = [
+const formGroupConfigs = extendFormGroupConfigs([
     {
         name: 'orderItemsGroup',
         title: 'Товары в заказе',
@@ -169,7 +197,7 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите имя покупателя',
-                autocomplete: 'given-name',
+                autoComplete: 'given-name',
                 trim: true
             },
             {
@@ -178,7 +206,7 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите фамилию покупателя',
-                autocomplete: 'family-name',
+                autoComplete: 'family-name',
                 trim: true
             },
             {
@@ -187,7 +215,7 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите отчество покупателя, если есть',
-                autocomplete: 'additional-name',
+                autoComplete: 'additional-name',
                 trim: true,
                 optional: true
             },
@@ -197,7 +225,7 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text', // Чтобы срабатывали изменения для пробелов в начале и конце
                 placeholder: 'Укажите почтовый ящик',
-                autocomplete: 'email',
+                autoComplete: 'email',
                 trim: true
             },
             {
@@ -206,7 +234,7 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'tel',
                 placeholder: 'Укажите номер телефона',
-                autocomplete: 'tel',
+                autoComplete: 'tel',
                 trim: true
             }
         ]
@@ -243,8 +271,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите полное название региона',
-                autocomplete: 'address-level1',
+                autoComplete: 'address-level1',
                 trim: true,
+                address: true,
                 optional: true,
                 canApply: isDeliveryRequired
             },
@@ -254,8 +283,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите район',
-                autocomplete: 'address-level2',
+                autoComplete: 'address-level2',
                 trim: true,
+                address: true,
                 optional: true,
                 canApply: isDeliveryRequired
             },
@@ -265,8 +295,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите город',
-                autocomplete: 'address-level2',
+                autoComplete: 'address-level2',
                 trim: true,
+                address: true,
                 canApply: isDeliveryRequired
             },
             {
@@ -275,8 +306,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите улицу',
-                autocomplete: 'street-address',
+                autoComplete: 'street-address',
                 trim: true,
+                address: true,
                 canApply: isDeliveryRequired
             },
             {
@@ -285,8 +317,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите номер дома',
-                autocomplete: 'address-line1',
+                autoComplete: 'address-line1',
                 trim: true,
+                address: true,
                 canApply: isDeliveryRequired
             },
             {
@@ -295,8 +328,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите номер квартиры',
-                autocomplete: 'address-line2',
+                autoComplete: 'address-line2',
                 trim: true,
+                address: true,
                 optional: true,
                 canApply: isDeliveryRequired
             },
@@ -306,8 +340,9 @@ const formGroupConfigs = [
                 elem: 'input',
                 type: 'text',
                 placeholder: 'Укажите почтовый индекс',
-                autocomplete: 'postal-code',
+                autoComplete: 'postal-code',
                 trim: true,
+                address: true,
                 optional: true,
                 canApply: isDeliveryRequired
             }
@@ -344,12 +379,13 @@ const formGroupConfigs = [
             }
         ]
     }
-] as const;
+] as const satisfies readonly IFormGroupConfig[]);
 
 const collapsibleFormGroupNames = extractCollapsibleFormGroupNames(formGroupConfigs);
-const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
+const fieldConfigs = extractFieldConfigs(formGroupConfigs);
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs, { autoSave: true });
+const shippingAddressFieldNames = extractFieldConfigNamesByKey(fieldConfigs, 'address');
 
 export default function CheckoutForm({
     orderId,
@@ -392,7 +428,7 @@ export default function CheckoutForm({
                     ? cfg.canApply({ deliveryMethod: fieldsState.deliveryMethod.value })
                     : true
             ])
-        ),
+        ) as Record<TFieldName, boolean>,
         [fieldsState.deliveryMethod.value]
     );
 
@@ -461,23 +497,23 @@ export default function CheckoutForm({
 
         // Дополнительные поля для методов доставки
         if ('deliveryMethod' in updateFields) {
-            const deliveryMethod = updateFields.deliveryMethod;
-            const isTransportCompanyMethod = deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY;
-            const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
-            const isAllowCourierExtra = 'allowCourierExtra' in updateFields;
+            const { COURIER, TRANSPORT_COMPANY } = DELIVERY_METHOD;
+            const oldDeliveryMethod = fieldsState.deliveryMethod.savedValue;
+            const newDeliveryMethod = updateFields.deliveryMethod;
             const typedUpdateFields = updateFields as TApiFormFields;
             
-            if (isCourierMethod && !isAllowCourierExtra) {
+            if (newDeliveryMethod === COURIER && !('allowCourierExtra' in updateFields)) {
                 typedUpdateFields.allowCourierExtra = fieldsState.allowCourierExtra.value;
             }
-            if (isTransportCompanyMethod || isCourierMethod) {
-                typedUpdateFields.region = fieldsState.region.value;
-                typedUpdateFields.district = fieldsState.district.value;
-                typedUpdateFields.city = fieldsState.city.value;
-                typedUpdateFields.street = fieldsState.street.value;
-                typedUpdateFields.house = fieldsState.house.value;
-                typedUpdateFields.apartment = fieldsState.apartment.value;
-                typedUpdateFields.postalCode = fieldsState.postalCode.value;
+
+            if (
+                (newDeliveryMethod === TRANSPORT_COMPANY || newDeliveryMethod === COURIER) &&
+                oldDeliveryMethod !== TRANSPORT_COMPANY &&
+                oldDeliveryMethod !== COURIER
+            ) {
+                shippingAddressFieldNames.forEach(name => {
+                    typedUpdateFields[name] = fieldsState[name].value;
+                });
             }
         }
 
@@ -508,32 +544,42 @@ export default function CheckoutForm({
         (Object.keys(updateFields) as TFieldName[]).forEach(scheduleClearSaveStatus);
     };
 
-    const handleFieldChange = (e) => {
+    const handleFieldChange = (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         clearTimeout(updateDebounceTimerRef.current);
 
-        const { type, name, value, checked } = e.currentTarget;
-        const fieldValue = type === 'checkbox' ? checked : value;
+        const checked = target instanceof HTMLInputElement && target.checked;
+        const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
             type: 'UPDATE',
-            payload: { [name]: { value: fieldValue, uiStatus: '', error: '' } }
+            payload: { [name]: { value: processedValue, uiStatus: '', error: '' } }
         });
     
         updateDebounceTimerRef.current = setTimeout(() => {
             if (isUnmountedRef.current) return;
 
             updateDebounceTimerRef.current = undefined;
-            updateOrderDraft({ name, value: fieldValue });
+            updateOrderDraft({ name, value: processedValue });
         }, 1250);
     };
 
-    const handleFieldBlur = (e) => {
+    const handleFieldBlur = (
+        e: FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         clearTimeout(updateDebounceTimerRef.current);
         updateDebounceTimerRef.current = undefined;
 
-        const { type, name, value, checked } = e.currentTarget;
-        const fieldValue = type === 'checkbox' ? checked : value;
-        const normalizedValue = fieldConfigMap[name]?.trim ? fieldValue.trim() : fieldValue;
+        const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
 
         if (normalizedValue !== value) {
             dispatchFieldsState({
@@ -542,23 +588,29 @@ export default function CheckoutForm({
             });
         }
 
+        const checked = target instanceof HTMLInputElement && target.checked;
+        const fieldValue = type === 'checkbox' ? checked : value;
+
         updateOrderDraft({ name, value: fieldValue });
     };
     
-    const fillRegistrationEmail = () => {
+    const fillRegistrationEmail = (): void => {
         clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = null;
-        
-        updateOrderDraft({ name: 'email', value: registrationEmail });
+        updateDebounceTimerRef.current = undefined;
 
         dispatchFieldsState({
             type: 'UPDATE',
             payload: { email: { value: registrationEmail, uiStatus: '', error: '' } }
         });
+        
+        updateOrderDraft({ name: 'email', value: registrationEmail });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TFieldName,
+        IOrderDraftConfirmBody
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) return acc;
@@ -570,11 +622,14 @@ export default function CheckoutForm({
                 }
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(normalizedValue)
-                        : validation.test(normalizedValue);
+                        : typeof normalizedValue === 'string' 
+                            ? validation.test(normalizedValue) 
+                            : false;
 
                 const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
 
@@ -583,12 +638,12 @@ export default function CheckoutForm({
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.checkout[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.checkout[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
         
                 if (isValid) {
                     if (normalizedValue !== '') {
-                        acc.formFields[name] = normalizedValue;
+                        (acc.formFields as TApiFormFields)[name] = normalizedValue;
                         acc.changedFields.push(name);
                     }
                 } else {
@@ -597,13 +652,18 @@ export default function CheckoutForm({
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IOrderDraftConfirmBody,
+                changedFields: [] as TFieldName[]
+            }
         );
     
         return result;
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         submitInProgressRef.current = true;
@@ -611,10 +671,12 @@ export default function CheckoutForm({
         clearTimeout(updateDebounceTimerRef.current);
         updateDebounceTimerRef.current = undefined;
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
+
+        console.log(formFields);
         
-        setIsOrderItemsValid(true);
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
+        setIsOrderItemsValid(true);
 
         if (!allValid) {
             submitInProgressRef.current = false;
@@ -628,10 +690,7 @@ export default function CheckoutForm({
         const responseData = await dispatch(sendOrderDraftConfirmRequest(orderId, formFields));
         if (isUnmountedRef.current) return;
 
-        const {
-            status, message, fieldErrors, orderItemAdjustments,
-            tradeProductList, customerDiscount, orderDraft
-        } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'CHECKOUT: CONFIRM';
 
         switch (status) {
@@ -681,12 +740,17 @@ export default function CheckoutForm({
 
             // Сумма заказа меньше минимальной
             case FORM_STATUS.LIMITATION: {
+                const { 
+                    tradeProductList, cartItemList, customerDiscount,
+                    currentTotal, orderItemAdjustments
+                } = responseData;
+
                 logRequestStatus({ context: LOG_CTX, status, message });
-                dispatch(applyCartState(tradeProductList, orderDraft.items, customerDiscount));
+                dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
                 setIsOrderItemsValid(false);
                 setSubmitStatus(status);
 
-                const amountToAdd = Math.max(0, MIN_ORDER_AMOUNT - orderDraft.totals.totalAmount);
+                const amountToAdd = Math.max(0, MIN_ORDER_AMOUNT - currentTotal);
                 const minOrderAmountMsg =
                     'Сумма заказа после синхронизации с текущими данными каталога ' +
                     'стала меньше минимальной.\n' +
@@ -721,24 +785,30 @@ export default function CheckoutForm({
 
             // Изменения в результате синхронизации черновика заказа
             case FORM_STATUS.MODIFIED: {
+                const {
+                    tradeProductList, cartItemList, customerDiscount,
+                    orderDraft, orderItemAdjustments
+                } = responseData;
+
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message });
                 updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
-                dispatch(applyCartState(tradeProductList, orderDraft.items, customerDiscount));
-                setOrderDraft(orderDraft);
+                dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
+                setOrderDraft(prev => ({ ...(prev ?? {}), ...orderDraft }));
                 setIsOrderItemsValid(false);
                 setSubmitStatus(status);
 
                 const adjustmentsMsg =
                     '<span className="bold underline">Изменения товаров в заказе:</span>' +
-                    `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`;
+                    `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}` +
+                    '\n\n\nПожалуйста, подтвердите заказ ещё раз.';
 
                 openAlertModal({
                     openDelay: 1000,
                     type: 'warn',
                     dismissible: false,
                     title: 'Заказ был синхронизирован с текущими данными каталога',
-                    message: adjustmentsMsg + '\n\n\nПожалуйста, подтвердите заказ ещё раз.',
+                    message: adjustmentsMsg,
                     onClose: () => {
                         if (expandedFormGroup === 'orderItemsGroup') {
                             scrollToFormGroup('orderItemsGroup');
@@ -747,7 +817,7 @@ export default function CheckoutForm({
                             setTimeout(() => {
                                 if (isUnmountedRef.current) return;
                                 scrollToFormGroup('orderItemsGroup');
-                            }, 320);
+                            }, COLLAPSIBLE_ANIMATION_DURATION);
                         }
                     }
                 });
@@ -757,6 +827,8 @@ export default function CheckoutForm({
 
             // Ошибки валидации полей
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
+
                 submitInProgressRef.current = false;
                 logRequestStatus({
                     context: LOG_CTX,
@@ -766,8 +838,9 @@ export default function CheckoutForm({
                 });
                 updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -779,11 +852,11 @@ export default function CheckoutForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = {
-                        savedValue: fieldsState[name].value,
-                        uiStatus: FIELD_UI_STATUS.CHANGED
+                        uiStatus: FIELD_UI_STATUS.CHANGED,
+                        savedValue: fieldsState[name].value
                     };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -824,16 +897,29 @@ export default function CheckoutForm({
         if (!orderDraft) return;
 
         // Выпрямление начальных значений полей и установка их в состояние редьюсера
-        const { customerInfo = {}, delivery = {}, financials = {}, customerComment } = orderDraft;
-        const { deliveryMethod, allowCourierExtra = false, shippingAddress = {} } = delivery;
+        const { customerInfo, delivery, financials, customerComment } = orderDraft ?? {};
+        const { firstName, lastName, middleName, email, phone } = customerInfo ?? {};
+        const { deliveryMethod, allowCourierExtra, shippingAddress } = delivery ?? {};
+        const { region, district, city, street, house, apartment, postalCode } = shippingAddress ?? {};
+        const { defaultPaymentMethod } = financials ?? {};
 
-        const flatInitValues = {
-            ...customerInfo,
-            ...shippingAddress,
-            ...(deliveryMethod && { deliveryMethod }),
-            allowCourierExtra,
-            ...financials,
-            ...(customerComment && { customerComment })
+        const flatInitValues: Record<TFieldName, TFieldStateValue> = {
+            firstName: firstName ?? '',
+            lastName: lastName ?? '',
+            middleName: middleName ?? '',
+            email: email ?? '',
+            phone: phone ?? '',
+            deliveryMethod: deliveryMethod ?? '',
+            allowCourierExtra: allowCourierExtra ?? false,
+            region: region ?? '',
+            district: district ?? '',
+            city: city ?? '',
+            street: street ?? '',
+            house: house ?? '',
+            apartment: apartment ?? '',
+            postalCode: postalCode ?? '',
+            defaultPaymentMethod: defaultPaymentMethod ?? '',
+            customerComment: customerComment ?? ''
         };
 
         if (Object.keys(flatInitValues).length > 0) {
@@ -871,15 +957,17 @@ export default function CheckoutForm({
         <form className="checkout-form" onSubmit={handleFormSubmit} noValidate>
             <div className="form-body">
                 {formGroupConfigs.map(({ name, title, description, fieldConfigs }, idx) => {
-                    const isVisited = visitedFormGroups.has(name);
-                    
-                    const isValid = fieldConfigs?.filter(cfg => applicabilityMap[cfg.name])
+                    const extendedFieldConfigs = castFormGroupFields(fieldConfigs);
+
+                    const isVisited = isSetMember(name, visitedFormGroups);
+
+                    const isValid = extendedFieldConfigs.filter(cfg => applicabilityMap[cfg.name])
                         .every(cfg =>
-                            [FIELD_UI_STATUS.VALID, FIELD_UI_STATUS.CHANGED]
-                                .includes(fieldsState[cfg.name]?.uiStatus)
+                            fieldsState[cfg.name]?.uiStatus === FIELD_UI_STATUS.VALID ||
+                            fieldsState[cfg.name]?.uiStatus === FIELD_UI_STATUS.CHANGED
                         ) ?? false;
 
-                    const isInvalid = !isValid && (fieldConfigs?.some(cfg =>
+                    const isInvalid = !isValid && (extendedFieldConfigs.some(cfg =>
                         fieldsState[cfg.name]?.uiStatus === FIELD_UI_STATUS.INVALID
                     ) ?? false);
 
@@ -922,15 +1010,13 @@ export default function CheckoutForm({
                                         <OrderItems
                                             orderItemList={orderItemList}
                                             productMap={productMap}
-                                            formGroupName={name}
-                                            collapsibleFormGroupNames={collapsibleFormGroupNames}
                                             toggleFormGroupExpansion={toggleFormGroupExpansion}
                                         />
                                     </Collapsible>
                                 </>
                             ) : name === 'customerCommentGroup' ? (
                                 <FormGroupEntries
-                                    fieldConfigs={fieldConfigs}
+                                    fieldConfigs={extendedFieldConfigs}
                                     fieldsState={fieldsState}
                                     applicabilityMap={applicabilityMap}
                                     handleFieldChange={handleFieldChange}
@@ -965,7 +1051,7 @@ export default function CheckoutForm({
                                         showContextIndicator={false}
                                     >
                                         <FormGroupSummary
-                                            fieldConfigs={fieldConfigs}
+                                            fieldConfigs={extendedFieldConfigs}
                                             fieldsState={fieldsState}
                                         />
                                     </Collapsible>
@@ -975,16 +1061,15 @@ export default function CheckoutForm({
                                         className="form-group-entries-collapsible"
                                     >
                                         <FormGroupEntries
-                                            fieldConfigs={fieldConfigs}
+                                            fieldConfigs={extendedFieldConfigs}
                                             fieldsState={fieldsState}
                                             applicabilityMap={applicabilityMap}
                                             handleFieldChange={handleFieldChange}
                                             handleFieldBlur={handleFieldBlur}
-                                            fillRegistrationEmail={fillRegistrationEmail}
                                             isFormLocked={isFormLocked}
                                             isSubmitInProgress={submitInProgressRef.current}
+                                            fillRegistrationEmail={fillRegistrationEmail}
                                             formGroupName={name}
-                                            collapsibleFormGroupNames={collapsibleFormGroupNames}
                                             toggleFormGroupExpansion={toggleFormGroupExpansion}
                                         />
                                     </Collapsible>
@@ -1008,10 +1093,8 @@ export default function CheckoutForm({
 function OrderItems({
     orderItemList,
     productMap,
-    formGroupName,
-    collapsibleFormGroupNames,
     toggleFormGroupExpansion
-}): JSX.Element | null {
+}: TOrderItemsProps): JSX.Element | null {
     if (!orderItemList) return null;
 
     return (
@@ -1034,7 +1117,7 @@ function OrderItems({
                     sku,
                     name,
                     brand,
-                    unit = 'ед.'
+                    unit = PRODUCT_UNITS[0] ?? 'ед.'
                 } = product ?? {};
 
                 const title = formatProductTitle(name, brand) || `Товар (${productId})`;
@@ -1042,9 +1125,8 @@ function OrderItems({
                 const productUrl = routeConfig.productDetails.generatePath({ productId, slug, sku });
 
                 const hasImages = images.length > 0;
-                const thumbImageSrc = hasImages
-                    ? (images[mainImageIndex] ?? images[0]).thumbnails.small
-                    : PRODUCT_IMAGE_PLACEHOLDER;
+                const mainImage = hasImages ? images[mainImageIndex] ?? images[0] : null;
+                const thumbImageSrc = mainImage?.thumbnails.small ?? PRODUCT_IMAGE_PLACEHOLDER;
                 const thumbImageAlt = hasImages ? title : '';
 
                 const hasDiscount = appliedDiscountSnapshot > 0;
@@ -1112,24 +1194,27 @@ function OrderItems({
             })}
 
             <FormGroupControls
-                formGroupName={formGroupName}
-                collapsibleFormGroupNames={collapsibleFormGroupNames}
+                formGroupName="orderItemsGroup"
                 toggleFormGroupExpansion={toggleFormGroupExpansion}
             />
         </div>
     );
 }
 
-function FormGroupSummary({ fieldConfigs, fieldsState }): JSX.Element {
+function FormGroupSummary(
+    { fieldConfigs, fieldsState }: TFormGroupSummaryProps
+): JSX.Element {
     return (
         <div className="form-group-summary">
             {fieldConfigs.map(fieldConfig => {
                 const fieldState = fieldsState[fieldConfig.name];
-                const displayValue =
+                const displayValue = (
                     fieldConfig.elem === 'select' && fieldState?.value
-                        ? fieldConfig.options.find(opt => opt.value === fieldState.value)?.label
-                        : fieldState?.value
-                    || NO_VALUE_LABEL;
+                        ? fieldConfig.options.find(opt => opt.value === fieldState.value)?.label ?? ''
+                        : typeof fieldState?.value === 'string'
+                            ? fieldState.value
+                            : ''
+                ) || NO_VALUE_LABEL;
         
                 return (
                         <p
@@ -1152,13 +1237,12 @@ function FormGroupEntries({
     applicabilityMap,
     handleFieldChange,
     handleFieldBlur,
-    fillRegistrationEmail,
     isFormLocked,
     isSubmitInProgress,
+    fillRegistrationEmail,
     formGroupName,
-    collapsibleFormGroupNames,
     toggleFormGroupExpansion
-}): JSX.Element {
+}: TFormGroupEntriesProps): JSX.Element {
     return (
         <div className="form-group-entries">
             {fieldConfigs.map(({
@@ -1179,23 +1263,30 @@ function FormGroupEntries({
                 const isApplicable = applicabilityMap[name];
                 const collapsible = !!canApply;
 
-                const elemProps = {
+                const baseElemProps: TFieldElemProps = {
                     id: fieldId,
                     name,
-                    type,
-                    placeholder,
-                    value: fieldsState[name]?.value,
                     autoComplete,
                     onChange: handleFieldChange,
                     onBlur: handleFieldBlur,
-                    disabled: isFormLocked || !isApplicable
+                    disabled: isFormLocked || !isApplicable,
                 };
 
-                let fieldElem;
+                const fieldElem = (() => {
+                    if (elem === 'textarea') return (
+                        <textarea
+                            {...baseElemProps}
+                            placeholder={placeholder}
+                            value={getStringValue(fieldsState[name]?.value)}
+                        >
+                        </textarea>
+                    );
 
-                if (elem === 'select') {
-                    fieldElem = (
-                        <select {...elemProps}>
+                    if (elem === 'select') return (
+                        <select
+                            {...baseElemProps}
+                            value={getStringValue(fieldsState[name]?.value)}
+                        >
                             {options.map((option, idx) => (
                                 <option key={`${idx}-${option.value}`} value={option.value}>
                                     {option.label}
@@ -1203,18 +1294,24 @@ function FormGroupEntries({
                             ))}
                         </select>
                     );
-                } else if (elem === 'checkbox') {
-                    fieldElem = (
+                    
+                    if (elem === 'checkbox') return (
                         <DesignedCheckbox
-                            {...elemProps}
+                            {...baseElemProps}
                             label={checkboxLabel}
-                            checked={fieldsState[name]?.value}
-                            value={undefined}
+                            checked={getBoolValue(fieldsState[name]?.value)}
                         />
                     );
-                } else {
-                    fieldElem = React.createElement(elem, elemProps);
-                }
+                
+                    return (
+                        <input
+                            {...baseElemProps}
+                            type={type}
+                            placeholder={placeholder}
+                            value={getStringValue(fieldsState[name]?.value)}
+                        />
+                    );
+                })();
 
                 const formEntryElem = (
                     <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
@@ -1272,10 +1369,9 @@ function FormGroupEntries({
                 return formEntryElem;
             })}
 
-            {formGroupName && collapsibleFormGroupNames && toggleFormGroupExpansion && (
+            {formGroupName && toggleFormGroupExpansion && (
                 <FormGroupControls
                     formGroupName={formGroupName}
-                    collapsibleFormGroupNames={collapsibleFormGroupNames}
                     toggleFormGroupExpansion={toggleFormGroupExpansion}
                 />
             )}
@@ -1285,9 +1381,8 @@ function FormGroupEntries({
 
 function FormGroupControls({
     formGroupName,
-    collapsibleFormGroupNames,
     toggleFormGroupExpansion
-}): JSX.Element | null {
+}: IFormGroupControlsProps): JSX.Element | null {
     const fromGroupIdx = collapsibleFormGroupNames.indexOf(formGroupName);
     if (fromGroupIdx === -1) return null;
 
@@ -1297,7 +1392,7 @@ function FormGroupControls({
     return (
         <div className="form-group-controls">
             <div className="prev-form-group-btn-box">
-                {fromGroupIdx > 0 && (
+                {fromGroupIdx > 0 && prevFormGroupName && (
                     <button
                         type="button"
                         className="prev-form-group-btn"
@@ -1309,7 +1404,7 @@ function FormGroupControls({
             </div>
             
             <div className="next-form-group-btn-box">
-                {fromGroupIdx < collapsibleFormGroupNames.length - 1 && (
+                {fromGroupIdx < collapsibleFormGroupNames.length - 1 && nextFormGroupName && (
                     <button
                         type="button"
                         className="next-form-group-btn"

@@ -18,8 +18,8 @@ export const NotificationSchema = new Schema({
         }],
         required: true,
         validate: [
-            (arr: string[]): boolean =>
-                validationRules.notification.recipients(arr) && arr.every(id => Types.ObjectId.isValid(id))
+            (arr: unknown): boolean =>
+                Array.isArray(arr) && arr.length > 0 && arr.every(id => Types.ObjectId.isValid(id))
         ]
     },
     subject: {

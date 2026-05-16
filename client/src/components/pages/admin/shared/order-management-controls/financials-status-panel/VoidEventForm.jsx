@@ -111,7 +111,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleFieldBlur = (e) => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -276,7 +276,7 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
                         value: fieldsState[name]?.value,
                         autoComplete: 'off',
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                        onBlur: trim ? handleFieldBlur : undefined,
                         disabled: isFormLocked
                     };
 

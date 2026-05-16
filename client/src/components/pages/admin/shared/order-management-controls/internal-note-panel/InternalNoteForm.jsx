@@ -109,7 +109,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         });
     };
 
-    const handleTrimmedFieldBlur = (e) => {
+    const handleFieldBlur = (e) => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -285,7 +285,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                         value: fieldsState[name]?.value,
                         autoComplete: 'off',
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                        onBlur: trim ? handleFieldBlur : undefined,
                         disabled: isFormLocked
                     };
 

@@ -20,6 +20,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -43,6 +44,7 @@ import type {
 } from 'react';
 import type {
     IGetSubmitStatesResult,
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
@@ -94,6 +96,8 @@ type TFieldElemProps =
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
+
+const RECIPIENTS_SEPARATOR = ', ';
 
 const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
@@ -169,12 +173,12 @@ const getFieldConfigs = (totalSelectedCustomers: number) => {
             label: 'Отправитель',
             elem: 'input',
             type: 'text',
-            value: 'Администрация «Мото-Магазина»',
+            defaultValue: 'Администрация «Мото-Магазина»',
             placeholder: 'Укажите отправителя',
             autoComplete: 'on',
             trim: true
         }
-    ] as const;
+    ] as const satisfies readonly IFieldConfig[];
 
     return extendFieldConfigs(fieldConfigs);
 }
@@ -217,9 +221,11 @@ export default function NotificationEditor({
     const displayRecipientNames = (selectedCustomerIds: Set<string> = new Set()): string =>
         [...selectedCustomerIds]
             .map(id => filteredCustomerNamesMap[id] ?? `<имя неизвестно (ID: ${id})>`)
-            .join(', ');
+            .join(RECIPIENTS_SEPARATOR);
 
-    const loadNotification = async (notificationId: string): Promise<void> => {
+    const loadNotification = async (): Promise<void> => {
+        if (!notificationId) return;
+        
         setSubmitStatus(FORM_STATUS.LOADING);
 
         const responseData = await dispatch(sendNotificationRequest(notificationId));
@@ -245,7 +251,7 @@ export default function NotificationEditor({
         dispatchFieldsState({
             type: 'UPDATE',
             payload: {
-                recipients: { value: recipients.join(', ') }, // Строка
+                recipients: { value: recipients.join(RECIPIENTS_SEPARATOR) }, // Строка
                 subject: { value: subject },
                 message: { value: message },
                 signature: { value: signature }
@@ -257,12 +263,13 @@ export default function NotificationEditor({
     };
 
     const reloadNotification = (): void => {
-        if (isEditMode && notificationId) loadNotification(notificationId);
+        if (isEditMode) loadNotification();
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
-        if (name === 'recipients') return; // Блокировка поля получателей от изменения вручную
+        if (!isObjectKey(name, fieldConfigMap)) return;
+        if (name === 'recipients') return; // Блокировка поля получателей от ручного ввода
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -270,8 +277,10 @@ export default function NotificationEditor({
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -284,14 +293,24 @@ export default function NotificationEditor({
     const processRecipientsField = (
         config: TFieldConfig,
         validation: TValidationRuleType,
-        value: string,
-        initValue: string[]
+        value: TFieldStateValue,
+        initValue: TFieldApiValue
     ): IProcessFieldResult => {
-        const { name } = config;
-        const recipientSet = new Set(value.split(', ').filter(Boolean));
+        if (
+            typeof value !== 'string' ||
+            (
+                initValue !== undefined &&
+                (!Array.isArray(initValue) || !initValue.every(r => typeof r === 'string'))
+            )
+        ) {
+            return { isValid: false, normalizedValue: value, fieldEntries: [], isValueChanged: false };
+        }
+        
+        const recipientSet = new Set(value.split(RECIPIENTS_SEPARATOR).filter(Boolean));
         const uniqueRecipients = [...recipientSet];
-        const initRecipientSet = new Set(initValue || []);
+        const initRecipientSet = new Set(initValue ?? []);
 
+        const { name } = config;
         const isValid = typeof validation === 'function' ? validation(uniqueRecipients) : false;
         const fieldEntries: TFieldEntries = [[name, uniqueRecipients]];
         const isValueChanged =
@@ -299,7 +318,7 @@ export default function NotificationEditor({
             uniqueRecipients.some(id => !initRecipientSet.has(id));
     
         return { isValid, normalizedValue: value, fieldEntries, isValueChanged };
-    };    
+    };   
 
     const processGenericField = (
         config: TFieldConfig,
@@ -314,7 +333,7 @@ export default function NotificationEditor({
             ? validation.test(normalizedValue)
             : false;
         const fieldEntries: TFieldEntries = isValid ? [[name, normalizedValue]] : [];
-        const isValueChanged = normalizedValue !== initValue;
+        const isValueChanged = normalizedValue !== (initValue ?? '');
     
         return { isValid, normalizedValue, fieldEntries, isValueChanged };
     };
@@ -330,13 +349,8 @@ export default function NotificationEditor({
 
                 const config = fieldConfigMap[name] ?? {};
                 const initValue = initFieldValuesRef.current[name];
-                const isRecipientsField =
-                    name === 'recipients' &&
-                    typeof value === 'string' &&
-                    Array.isArray(initValue) &&
-                    initValue.every(r => typeof r === 'string');
     
-                const processFieldResult = isRecipientsField
+                const processFieldResult = name === 'recipients'
                     ? processRecipientsField(config, validation, value, initValue)
                     : processGenericField(config, validation, value, initValue);
 
@@ -419,12 +433,10 @@ export default function NotificationEditor({
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -460,7 +472,7 @@ export default function NotificationEditor({
 
     // Стартовая загрузка уведомления в режиме редактирования и очистка при размонтировании
     useEffect(() => {
-        if (isEditMode && notificationId) loadNotification(notificationId);
+        if (isEditMode) loadNotification();
 
         return () => {
             isUnmountedRef.current = true;
@@ -473,7 +485,7 @@ export default function NotificationEditor({
             type: 'UPDATE',
             payload: {
                 recipients: {
-                    value: [...selectedCustomerIds].join(', '),
+                    value: [...selectedCustomerIds].join(RECIPIENTS_SEPARATOR),
                     ...(!isFormLocked && {
                         uiStatus: '',
                         error: ''
@@ -523,7 +535,7 @@ export default function NotificationEditor({
                                 : getStringValue(fieldsState[name]?.value),
                             autoComplete,
                             onChange: handleFieldChange,
-                            onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                            onBlur: trim ? handleFieldBlur : undefined,
                             disabled: isFormLocked
                         };
 

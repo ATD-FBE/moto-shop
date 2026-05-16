@@ -25,6 +25,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -33,6 +34,7 @@ import {
 import { USER_ROLE } from '@shared/constants.js';
 import type { JSX, ChangeEvent, FocusEvent, SubmitEvent } from 'react';
 import type {
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
     IGetSubmitStatesResult,
@@ -123,7 +125,7 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
             placeholder: 'Подтвердите пароль',
             autoComplete: 'off'
         }
-    ] as const;
+    ] as const satisfies readonly IFieldConfig[];
     
     const adminRegCodeFieldConfig = [
         {
@@ -134,7 +136,7 @@ const getFieldConfigs = (isAdminRegistration: boolean) => {
             placeholder: 'Введите код администратора',
             autoComplete: 'off'
         }
-    ] as const;
+    ] as const satisfies readonly IFieldConfig[];
 
     const resultFieldConfigs = isAdminRegistration
         ? [...baseFieldConfigs, ...adminRegCodeFieldConfig]
@@ -172,6 +174,7 @@ export default function RegistrationForm(): JSX.Element {
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
         
         dispatchFieldsState({
             type: 'UPDATE',
@@ -179,8 +182,10 @@ export default function RegistrationForm(): JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -272,12 +277,10 @@ export default function RegistrationForm(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
                 setSubmitStatus(status);
@@ -296,9 +299,7 @@ export default function RegistrationForm(): JSX.Element {
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
                 fieldConfigs.forEach(({ name }) => {
-                    if (name in fieldConfigMap) {
-                        fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
-                    }
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         
@@ -384,7 +385,7 @@ export default function RegistrationForm(): JSX.Element {
                                         value={getStringValue(fieldsState[name]?.value)}
                                         autoComplete={autoComplete}
                                         onChange={handleFieldChange}
-                                        onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                                        onBlur={trim ? handleFieldBlur : undefined}
                                         disabled={isFormLocked}
                                     />
                                     

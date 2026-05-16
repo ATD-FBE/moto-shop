@@ -154,11 +154,11 @@ export type TOrderDraftConfirmResponse =
     | TSuccessResponse;
 
 interface IOrderDraftConfirmLimitationErrorData extends ICheckoutBaseResponseData {
-    orderDraft: Pick<IOrderDraft, 'items' | 'totals'>;
+    currentTotal: number;
     orderItemAdjustments: IProductAdjustment[];
 }
 interface IOrderDraftConfirmModifiedErrorData extends ICheckoutBaseResponseData {
-    orderDraft: Pick<IOrderDraft, 'items' | 'totals' | 'expiresAt'>;
+    orderDraft: IOrderDraft;
     orderItemAdjustments: IProductAdjustment[];
 }
 

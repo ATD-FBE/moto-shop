@@ -27,6 +27,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -48,6 +49,7 @@ import type {
 } from 'react';
 import type {
     IGetSubmitStatesResult,
+    IFormGroupConfig,
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
@@ -83,7 +85,7 @@ interface IFormGroupEntriesProps {
     applicabilityMap: Record<TFieldName, boolean>;
     isFormLocked: boolean;
     handleFieldChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-    handleTrimmedFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
+    handleFieldBlur: (e: FocusEvent<HTMLInputElement>) => void;
     fillRegistrationEmail: () => void;
 }
 
@@ -304,7 +306,7 @@ const formGroupConfigs = [
             }
         ]
     }
-] as const;
+] as const satisfies readonly IFormGroupConfig[];
 
 const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
@@ -374,24 +376,22 @@ export default function CheckoutPreferences(): JSX.Element {
             defaultPaymentMethod: defaultPaymentMethod ?? ''
         };
 
-        const initValues = initFieldValuesRef.current;
-        const initValuesEntries = Object.entries(initValues) as [TFieldName, TFieldStateValue][];
-
-        if (initValuesEntries.length > 0) {
-            dispatchFieldsState({
-                type: 'UPDATE',
-                payload: Object.fromEntries(
-                    initValuesEntries.map(([key, value]) => ([key, { value }]))
-                ) as Record<TFieldName, { value: TFieldStateValue }>
-            });
-        }
+        dispatchFieldsState({
+            type: 'UPDATE',
+            payload: Object.fromEntries(
+                Object.entries(initFieldValuesRef.current).map(([key, value]) => ([key, { value }]))
+            )
+        });
         
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-        const { type, name, value } = e.currentTarget;
-        const checked = e.currentTarget instanceof HTMLInputElement && e.currentTarget.checked;
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
+        const checked = target instanceof HTMLInputElement && target.checked;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -400,8 +400,10 @@ export default function CheckoutPreferences(): JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+        
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -444,9 +446,9 @@ export default function CheckoutPreferences(): JSX.Element {
                         : typeof normalizedValue === 'string' 
                             ? validation.test(normalizedValue) 
                             : false;
-                const isValid = optional
-                    ? (normalizedValue === undefined || normalizedValue === '' || ruleCheck)
-                    : ruleCheck;
+
+                const hasValue = normalizedValue !== '';
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -520,12 +522,10 @@ export default function CheckoutPreferences(): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -609,7 +609,7 @@ export default function CheckoutPreferences(): JSX.Element {
                                 fieldsState={fieldsState}
                                 applicabilityMap={applicabilityMap}
                                 handleFieldChange={handleFieldChange}
-                                handleTrimmedFieldBlur={handleTrimmedFieldBlur}
+                                handleFieldBlur={handleFieldBlur}
                                 isFormLocked={isFormLocked}
                                 fillRegistrationEmail={fillRegistrationEmail}
                             />
@@ -634,7 +634,7 @@ function FormGroupEntries({
     applicabilityMap,
     isFormLocked,
     handleFieldChange,
-    handleTrimmedFieldBlur,
+    handleFieldBlur,
     fillRegistrationEmail
 }: IFormGroupEntriesProps): JSX.Element {
     return (
@@ -692,7 +692,7 @@ function FormGroupEntries({
                             type={type}
                             placeholder={placeholder}
                             value={getStringValue(fieldsState[name]?.value)}
-                            onBlur={trim ? handleTrimmedFieldBlur : undefined}
+                            onBlur={trim ? handleFieldBlur : undefined}
                         />
                     );
                 })();

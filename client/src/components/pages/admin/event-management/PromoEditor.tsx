@@ -27,6 +27,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -43,6 +44,7 @@ import type {
 } from 'react';
 import type {
     IGetSubmitStatesResult,
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
@@ -68,7 +70,7 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = Extract<TFieldConfig['name'], TEntityField<'promotion'>>;
 
-type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface IPromoEditorProps {
@@ -176,7 +178,7 @@ const fieldConfigs = extendFieldConfigs([
         elem: 'input',
         type: 'date'
     }
-] as const);
+] as const satisfies readonly IFieldConfig[]);
 
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
@@ -200,7 +202,9 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const loadPromo = async (promoId: string): Promise<void> => {
+    const loadPromo = async (): Promise<void> => {
+        if (!promoId) return;
+
         setSubmitStatus(FORM_STATUS.LOADING);
 
         const responseData = await dispatch(sendPromoRequest(promoId));
@@ -220,7 +224,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
         initFieldValuesRef.current = {
             title,
-            image: image ?? '', // URL или undefined
+            image: image ?? null, // URL или undefined
             description,
             startDate: formattedStartDate,
             endDate: formattedEndDate
@@ -240,12 +244,14 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
     };
 
     const reloadPromo = (): void => {
-        if (isEditMode && promoId) loadPromo(promoId);
+        if (isEditMode) loadPromo();
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const target = e.currentTarget;
         const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
 
         const fieldsStateUpdates = {
@@ -280,8 +286,10 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -454,12 +462,10 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -495,7 +501,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
 
     // Стартовая загрузка акции в режиме редактирования и очистка при размонтировании
     useEffect(() => {
-        if (isEditMode && promoId) loadPromo(promoId);
+        if (isEditMode) loadPromo();
 
         return () => {
             isUnmountedRef.current = true;
@@ -543,7 +549,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                             value: getStringValue(fieldsState[name]?.value),
                             autoComplete,
                             onChange: handleFieldChange,
-                            onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                            onBlur: trim ? handleFieldBlur : undefined,
                             disabled: isFormLocked || (hasPrevImage && !shouldRemoveImage)
                         };
 

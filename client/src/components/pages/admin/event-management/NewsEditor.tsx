@@ -26,6 +26,7 @@ import {
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
     fieldErrorMessages,
@@ -33,9 +34,9 @@ import {
 } from '@shared/fieldRules.js';
 import type {
     IGetSubmitStatesResult,
+    IFieldConfig,
     TFormStatus,
     TSubmitStates,
-    TFieldStateValue,
     TFieldApiValue,
     IFieldState,
     TAppThunk,
@@ -64,7 +65,7 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = Extract<TFieldConfig['name'], TEntityField<'news'>>;
 
-type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 interface INewsEditorProps {
@@ -140,7 +141,7 @@ const fieldConfigs = extendFieldConfigs([
         autoComplete: 'off',
         trim: true
     }
-] as const);
+] as const satisfies readonly IFieldConfig[]);
 
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
@@ -163,7 +164,9 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
 
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const loadNews = async (newsId: string): Promise<void> => {
+    const loadNews = async (): Promise<void> => {
+        if (!newsId) return;
+
         setSubmitStatus(FORM_STATUS.LOADING);
 
         const responseData = await dispatch(sendNewsRequest(newsId));
@@ -182,21 +185,21 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
 
         dispatchFieldsState({
             type: 'UPDATE',
-            payload: {
-                title: { value: title },
-                content: { value: content }
-            }
+            payload: Object.fromEntries(
+                Object.entries(initFieldValuesRef.current).map(([key, value]) => ([key, { value }]))
+            )
         });
         
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
     const reloadNews = (): void => {
-        if (isEditMode && newsId) loadNews(newsId);
+        if (isEditMode) loadNews();
     }
 
     const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -204,8 +207,10 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
         });
     };
 
-    const handleTrimmedFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -244,7 +249,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                     (acc.formFields as TApiFormFields)[name] = normalizedValue;
 
                     const initValue = initFieldValuesRef.current[name];
-                    if (normalizedValue !== initValue) acc.changedFields.push(name);
+                    if (normalizedValue !== (initValue ?? '')) acc.changedFields.push(name);
                 } else {
                     acc.allValid = false;
                 }
@@ -308,12 +313,10 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
-                (Object.entries(fieldErrors) as [TFieldName, string][])
-                    .forEach(([name, error]) => {
-                        if (name in fieldConfigMap) {
-                            fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
-                        }
-                    });
+                Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
+                    fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
+                });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
@@ -349,7 +352,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
 
     // Стартовая загрузка новости в режиме редактирования и очистка при размонтировании
     useEffect(() => {
-        if (isEditMode && newsId) loadNews(newsId);
+        if (isEditMode) loadNews();
 
         return () => {
             isUnmountedRef.current = true;
@@ -373,14 +376,14 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
             <form className="news-form" onSubmit={handleFormSubmit} noValidate>
                 <div className="form-body">
                     {fieldConfigs.map(({
-                        name,
-                        label,
-                        elem,
-                        type,
-                        placeholder,
-                        autoComplete,
-                        trim
-                    }) => {
+                            name,
+                            label,
+                            elem,
+                            type,
+                            placeholder,
+                            autoComplete,
+                            trim
+                        }) => {
                         const fieldId = `news-${toKebabCase(name)}`;
                         const fieldInfoClass = getFieldInfoClass(elem, type, name);
 
@@ -392,7 +395,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                             value: getStringValue(fieldsState[name]?.value),
                             autoComplete,
                             onChange: handleFieldChange,
-                            onBlur: trim ? handleTrimmedFieldBlur : undefined,
+                            onBlur: trim ? handleFieldBlur : undefined,
                             disabled: isFormLocked
                         };
 
