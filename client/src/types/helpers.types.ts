@@ -102,9 +102,10 @@ export type TFieldsAction<TFieldName extends string> =
         type: 'SAVE'; 
         payload: { 
             fields: Partial<Record<TFieldName, TFieldStateValue>>;
-            status: TFieldSaveStatus | ''; 
+            status: TFieldSaveStatus; 
         } 
     }
+    | { type: 'CLEAR_SAVE_STATUS'; payload: { name: TFieldName } }
     | { type: 'RESET'; payload: TFormState<TFieldName> };
 
 export interface IProcessFormFieldsResult<TFieldName extends string, TFormBody> {
