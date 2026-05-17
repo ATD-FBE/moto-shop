@@ -162,28 +162,16 @@ export const fieldsStateReducer = <TFieldName extends string>(
         case 'SAVE': {
             const { fields, status } = action.payload;
             const newState = { ...state };
-
             const isSuccess = status === FIELD_SAVE_STATUS.SUCCESS;
 
             for (const name in fields) {
-                const isValueChanged = fields[name] !== state[name].value;
-                const isSaving = state[name].saveStatus === FIELD_SAVE_STATUS.SAVING;
-
                 newState[name] = {
                     ...state[name],
-                    savedValue: isSuccess
-                        ? fields[name]
-                        : state[name].savedValue,
-                    saveStatus: isValueChanged && isSaving
-                        ? FIELD_SAVE_STATUS.SAVING
-                        : status,
-                    saveStatusMessage: isValueChanged && isSaving
-                        ? state[name].saveStatusMessage
-                        : FIELD_SAVE_STATUS_MESSAGES[status]
+                    savedValue: isSuccess ? fields[name] : state[name].savedValue,
+                    saveStatus: status,
+                    saveStatusMessage: FIELD_SAVE_STATUS_MESSAGES[status]
                 };
             }
-
-            //console.log(newState);
             
             return newState;
         }

@@ -502,7 +502,6 @@ export const handleOrderDraftUpdateRequest: RequestHandler<
             // Проверка на изменение полей в этом обработчике не нужна
             // Установка через set и сохранение через save для удаления null-полей и пустых объектов
             dbOrderDraft.set(mergedOrderDraft);
-
             await dbOrderDraft.save({ session });
             checkTimeout(req);
         });

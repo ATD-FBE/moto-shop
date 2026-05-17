@@ -387,6 +387,11 @@ const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfi
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs, { autoSave: true });
 const shippingAddressFieldNames = extractFieldConfigNamesByKey(fieldConfigs, 'address');
 
+type TPendingFieldMeta = {
+    inFlight: boolean;
+    requestedValue: TFieldStateValue;
+};
+
 export default function CheckoutForm({
     orderId,
     orderDraft,
@@ -414,7 +419,7 @@ export default function CheckoutForm({
     const formGroupRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const updateDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const fieldsStateRef = useRef(fieldsState);
-    const updateRequestIdMapRef = useRef<Partial<Record<TFieldName, string>>>({});
+    const pendingFieldMapRef = useRef<Partial<Record<TFieldName, TPendingFieldMeta>>>({});
     const saveStatusTimersRef = useRef<
         Partial<Record<TFieldName, ReturnType<typeof setTimeout>>>
     >({});
@@ -424,7 +429,7 @@ export default function CheckoutForm({
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    fieldsStateRef.current = fieldsState;
+    fieldsStateRef.current = fieldsState; // Обновление рефа состояния при каждом рендере
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -462,95 +467,90 @@ export default function CheckoutForm({
         }
     };
 
-    const scheduleClearSaveStatus = (fieldName: TFieldName): void => {
-        saveStatusTimersRef.current[fieldName] = setTimeout(() => {
-            if (isUnmountedRef.current) return;
+    const updateOrderDraft = async (
+        updatedField?: IUpdatedField,
+        { isReplay = false }: { isReplay?: boolean } = {}
+    ): Promise<void> => {
+        const updateFieldMap = (Object.entries(fieldsStateRef.current) as [TFieldName, IFieldState][])
+            .reduce((acc, [name, state]) => {
+                const replayFieldName = isReplay ? updatedField?.name : undefined;
+                if (state.saveStatus === FIELD_SAVE_STATUS.SAVING && replayFieldName !== name) {
+                    return acc;
+                }
 
-            delete saveStatusTimersRef.current[fieldName];
-            dispatchFieldsState({
-                type: 'CLEAR_SAVE_STATUS',
-                payload: { name: fieldName }
-            });
-        }, CLEAR_SAVE_STATUS_DELAY);
-    };
-
-    const updateOrderDraft = async (updatedField?: IUpdatedField): Promise<void> => {
-        const currentFieldsState = fieldsStateRef.current;
-
-        const changedFieldEntries = (Object.entries(currentFieldsState) as [TFieldName, IFieldState][])
-            .reduce<[TFieldName, TFieldStateValue][]>((acc, [name, state]) => {
                 const value = name === updatedField?.name ? updatedField.value : state.value;
                 const { trim } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
 
-                if (name === 'customerComment') {
-                    console.log(normalizedValue, state.savedValue);
+                if (!isReplay && normalizedValue === state.savedValue) return acc;
+
+                // Сброс таймеров очистки статуса для отправляемых полей
+                if (saveStatusTimersRef.current[name]) {
+                    clearTimeout(saveStatusTimersRef.current[name]);
+                    delete saveStatusTimersRef.current[name];
                 }
 
-                if (normalizedValue !== state.savedValue) {
-                    acc.push([name, normalizedValue]);
+                // Сбор полей
+                acc.set(name, normalizedValue);
+
+                if (name === 'deliveryMethod') {
+                    const { COURIER, TRANSPORT_COMPANY } = DELIVERY_METHOD;
+                    const oldDeliveryMethod = fieldsStateRef.current.deliveryMethod.savedValue;
+                    const newDeliveryMethod = normalizedValue;
+                    
+                    if (newDeliveryMethod === COURIER) {
+                        acc.set('allowCourierExtra', fieldsStateRef.current.allowCourierExtra.value);
+                    }
+        
+                    if (
+                        (newDeliveryMethod === TRANSPORT_COMPANY || newDeliveryMethod === COURIER) &&
+                        oldDeliveryMethod !== TRANSPORT_COMPANY &&
+                        oldDeliveryMethod !== COURIER
+                    ) {
+                        shippingAddressFieldNames.forEach(name => {
+                            acc.set(name, fieldsStateRef.current[name].value);
+                        });
+                    }
                 }
+
                 return acc;
-            }, []);
+            }, new Map() as Map<TFieldName, TFieldStateValue>);
 
-        if (!changedFieldEntries.length) return;
+        if (!updateFieldMap.size) return;
 
-        const changedFields: Partial<Record<TFieldName, TFieldStateValue>> =
-            Object.fromEntries(changedFieldEntries);
-        const submittedFields: IOrderDraftUpdateBody = Object.fromEntries(changedFieldEntries);
+        const updateFields: IOrderDraftUpdateBody = Object.fromEntries(updateFieldMap);
 
-        // Дополнительные поля для методов доставки
-        if ('deliveryMethod' in submittedFields) {
-            const { COURIER, TRANSPORT_COMPANY } = DELIVERY_METHOD;
-            const oldDeliveryMethod = currentFieldsState.deliveryMethod.savedValue;
-            const newDeliveryMethod = submittedFields.deliveryMethod;
-            const typedSubmittedFields = submittedFields as TApiFormFields;
-            
-            if (newDeliveryMethod === COURIER && !('allowCourierExtra' in submittedFields)) {
-                typedSubmittedFields.allowCourierExtra = currentFieldsState.allowCourierExtra.value;
-            }
-
-            if (
-                (newDeliveryMethod === TRANSPORT_COMPANY || newDeliveryMethod === COURIER) &&
-                oldDeliveryMethod !== TRANSPORT_COMPANY &&
-                oldDeliveryMethod !== COURIER
-            ) {
-                shippingAddressFieldNames.forEach(name => {
-                    typedSubmittedFields[name] = currentFieldsState[name].value;
-                });
-            }
-        }
-
-        // Сброс таймеров очистки статуса для отправляемых полей
-        const requestId = Date.now().toString() + Math.random().toString();
-        const changedFieldKeys = Object.keys(changedFields) as TFieldName[];
-
-        changedFieldKeys.forEach((name) => {
-            updateRequestIdMapRef.current[name] = requestId;
-            if (!saveStatusTimersRef.current[name]) return;
-
-            clearTimeout(saveStatusTimersRef.current[name]);
-            delete saveStatusTimersRef.current[name];
-        });
-
+        // Изменение статуса состояния на saving
         dispatchFieldsState({
             type: 'SAVE',
-            payload: { fields: changedFields, status: FIELD_SAVE_STATUS.SAVING }
+            payload: { fields: updateFields, status: FIELD_SAVE_STATUS.SAVING }
         });
 
-        const responseData = await dispatch(sendOrderDraftUpdateRequest(orderId, submittedFields));
+        // Отправка запроса апдейта полей на сервер
+        const responseData = await dispatch(sendOrderDraftUpdateRequest(orderId, updateFields));
         if (isUnmountedRef.current) return;
 
-        const validChangedFields: Partial<Record<TFieldName, TFieldStateValue>> = {};
+        // Сбор завершённых полей и новый апдейт тех, чьё значение изменилось за время запроса
+        const processedUpdateFields: Partial<Record<TFieldName, TFieldStateValue>> = {};
 
-        changedFieldKeys.forEach((name) => {
-            if (updateRequestIdMapRef.current[name] === requestId) {
-                validChangedFields[name] = changedFields[name];
+        updateFieldMap.forEach((requestedValue, name) => {
+            const currentValue = fieldsStateRef.current[name].value;
+            const normalizedCurrentValue =
+                typeof currentValue === 'string' && fieldConfigMap[name]?.trim
+                    ? currentValue.trim()
+                    : currentValue;
+
+            if (normalizedCurrentValue === requestedValue) {
+                processedUpdateFields[name] = requestedValue;
+            } else {
+                updateOrderDraft({ name, value: currentValue }, { isReplay: true });
             }
         });
 
-        if (!Object.keys(validChangedFields).length) return;
+        const processedUpdateFieldKeys = Object.keys(processedUpdateFields) as TFieldName[];
+        if (!processedUpdateFieldKeys.length) return;
 
+        // Логирование ответа сервера, обновление статуса и сохранение состояния
         const { status, message } = responseData;
         logRequestStatus({ context: 'CHECKOUT: UPDATE', status, message });
 
@@ -564,15 +564,33 @@ export default function CheckoutForm({
             : FIELD_SAVE_STATUS.ERROR;
         dispatchFieldsState({
             type: 'SAVE',
-            payload: { fields: validChangedFields, status: saveStatus }
+            payload: { fields: processedUpdateFields, status: saveStatus }
         });
 
-        (Object.keys(validChangedFields) as TFieldName[]).forEach((name) => {
+        // Взвод таймеров для очистки статуса сохранения
+        processedUpdateFieldKeys.forEach((name) => {
             if (saveStatusTimersRef.current[name]) {
                 clearTimeout(saveStatusTimersRef.current[name]);
             }
             scheduleClearSaveStatus(name);
         });
+    };
+
+    const scheduleClearSaveStatus = (fieldName: TFieldName): void => {
+        saveStatusTimersRef.current[fieldName] = setTimeout(() => {
+            if (isUnmountedRef.current) return;
+
+            delete saveStatusTimersRef.current[fieldName];
+            dispatchFieldsState({
+                type: 'CLEAR_SAVE_STATUS',
+                payload: { name: fieldName }
+            });
+        }, CLEAR_SAVE_STATUS_DELAY);
+    };
+    
+    const clearUpdateDebounceTimer = (): void => {
+        clearTimeout(updateDebounceTimerRef.current);
+        updateDebounceTimerRef.current = undefined;
     };
 
     const handleFieldChange = (
@@ -582,7 +600,7 @@ export default function CheckoutForm({
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        clearTimeout(updateDebounceTimerRef.current);
+        clearUpdateDebounceTimer();
 
         const checked = target instanceof HTMLInputElement && target.checked;
         const processedValue = type === 'checkbox' ? checked : value;
@@ -595,7 +613,7 @@ export default function CheckoutForm({
         updateDebounceTimerRef.current = setTimeout(() => {
             if (isUnmountedRef.current) return;
 
-            updateDebounceTimerRef.current = undefined;
+            clearUpdateDebounceTimer();
             updateOrderDraft({ name, value: processedValue });
         }, 1250);
     };
@@ -607,8 +625,7 @@ export default function CheckoutForm({
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = undefined;
+        clearUpdateDebounceTimer();
 
         const normalizedValue = fieldConfigMap[name]?.trim ? value.trim() : value;
 
@@ -626,8 +643,7 @@ export default function CheckoutForm({
     };
     
     const fillRegistrationEmail = (): void => {
-        clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = undefined;
+        clearUpdateDebounceTimer();
 
         dispatchFieldsState({
             type: 'UPDATE',
@@ -697,10 +713,8 @@ export default function CheckoutForm({
     const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
+        clearUpdateDebounceTimer();
         submitInProgressRef.current = true;
-
-        clearTimeout(updateDebounceTimerRef.current);
-        updateDebounceTimerRef.current = undefined;
 
         const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
 
@@ -709,9 +723,10 @@ export default function CheckoutForm({
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         setIsOrderItemsValid(true);
 
+        await updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
+
         if (!allValid) {
             submitInProgressRef.current = false;
-            updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
             setSubmitStatus(FORM_STATUS.INVALID);
             return;
         }
