@@ -1,8 +1,9 @@
 import './styles/global.scss';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { useSelector, useDispatch, Provider } from 'react-redux';
+import { Provider } from 'react-redux';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { loadSession } from '@/services/authService.js';
 import { routeConfig } from '@/config/appRouting.js';
 import GlobalLoader from '@/components/GlobalLoader.jsx';
@@ -11,10 +12,17 @@ import RouteGuard from '@/components/RouteGuard.jsx';
 import AppStore from '@/redux/Store.js';
 import StructureRefsProvider from '@/components/StructureRefsContext.jsx';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
+import type { JSX } from 'react';
 
-const App = () => {
-    const isSessionReady = useSelector(state => state.ui.isSessionReady);
-    const dispatch = useDispatch();
+const appRootElement = document.getElementById('app');
+
+if (!appRootElement) {
+    throw new Error('Не удалось найти корневой элемент "app". Проверьте index.html!');
+}
+
+const App = (): JSX.Element => {
+    const isSessionReady = useAppSelector(state => state.ui.isSessionReady);
+    const dispatch = useAppDispatch();
 
     useDeviceInfo();
 
@@ -61,7 +69,7 @@ const App = () => {
 
 // BrowserRouter обёрнут снаружи App для работы useLocation
 ReactDOM
-    .createRoot(document.getElementById('app'))
+    .createRoot(appRootElement)
     .render(
         <Provider store={AppStore}>
             <App />

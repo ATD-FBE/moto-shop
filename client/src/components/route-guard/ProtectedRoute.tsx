@@ -1,15 +1,33 @@
-import { useSelector } from 'react-redux';
-import { useLocation, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { useAppSelector, useAppLocation } from '@/hooks/storeHooks.js';
 import { routeConfig } from '@/config/appRouting.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { JSX, ReactElement } from 'react';
+import type { TRouteConfig } from '@/types/index.js';
 
-export default function ProtectedRoute({ access, children }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProtectedRouteProps {
+    access: TRouteConfig[keyof TRouteConfig]['access'];
+    children: ReactElement;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function ProtectedRoute(
+    { access, children }: IProtectedRouteProps
+): JSX.Element {
     const {
         isAuthenticated,
         user,
         suppressAuthRedirect,
         forceRedirectToLogin
-    } = useSelector(state => state.auth);
-    const location = useLocation();
+    } = useAppSelector(state => state.auth);
+    const location = useAppLocation();
 
     const loginPath = routeConfig.login.paths[0];
 
@@ -19,9 +37,11 @@ export default function ProtectedRoute({ access, children }) {
     }
 
     // Защита маршрутов в соответствии с их доступом и роли пользователя
-    const userRole = user?.role || 'guest';
+    const userRole = user?.role || USER_ROLE.GUEST;
     const isPrivilegedUser = ['admin'].includes(userRole);
-    const personalPath = routeConfig[`${userRole}Personal`]?.paths[0] || '/';
+    const personalPath = userRole !== USER_ROLE.GUEST
+        ? routeConfig[`${userRole}Personal`]?.paths[0] || '/'
+        : '/';
 
     switch (access) {
         case 'admin':

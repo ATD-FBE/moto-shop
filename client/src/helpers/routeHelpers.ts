@@ -91,6 +91,7 @@ export const buildNavigationMap = () => {
                     {
                         authType: AUTH_NAV_TYPE.LOGOUT,
                         label: 'Выйти',
+                        paths: [],
                         order: 1
                     }
                 ];

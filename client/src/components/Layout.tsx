@@ -1,6 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, matchPath, Outlet } from 'react-router-dom';
+import { useRef, useEffect } from 'react';
+import { matchPath, Outlet } from 'react-router-dom';
 import BackgroundImage from './layout/BackgroundImage.jsx';
 import MainHeader from './layout/MainHeader.jsx';
 import MainFooter from './layout/MainFooter.jsx';
@@ -10,38 +9,41 @@ import ConfirmModal from '@/components/common/ConfirmModal.jsx';
 import ImageViewerModal from '@/components/common/ImageViewerModal.jsx';
 import SseNotifications from '@/components/sse/SseNotifications.jsx';
 import SseOrderManagement from '@/components/sse/SseOrderManagement.jsx';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { useStructureRefs } from '@/hooks/useStructureRefs.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { setKeyboardInput, setPointerInput } from '@/helpers/inputMethod.js';
 import { handleLogout } from '@/services/authService.js';
+import { setKeyboardInput, setPointerInput } from '@/helpers/inputMethod.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { JSX } from 'react';
 
-const cartHiddenRoutes = [
+const CART_HIDDEN_ROUTES = [
     ...routeConfig.customerCart.paths,
     ...routeConfig.customerCheckout.paths
-];
+] as const;
 
-export default function Layout() {
+export default function Layout(): JSX.Element {
     const { mainHeaderRef, mainFooterRef } = useStructureRefs();
-    const { isAuthenticated, user } = useSelector(state => state.auth);
-    const { isDashboardPanelActive } = useSelector(state => state.ui);
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
+    const { isDashboardPanelActive } = useAppSelector(state => state.ui);
     const isAuthenticatedRef = useRef(isAuthenticated);
-    const location = useLocation();
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
 
-    const userRole = user?.role ?? 'guest';
+    const userRole = user?.role ?? USER_ROLE.GUEST;
 
     const showFloatingCart = !isAuthenticated ||
         (
-            userRole === 'customer' &&
+            userRole === USER_ROLE.CUSTOMER &&
             !isDashboardPanelActive &&
-            !cartHiddenRoutes.some(pattern => matchPath(pattern, location.pathname))
+            !CART_HIDDEN_ROUTES.some(pattern => matchPath(pattern, location.pathname))
         );
-    const showSseNotifications = isAuthenticated && userRole === 'customer';
-    const showSseOrderManagement = isAuthenticated && userRole === 'admin';
+    const showSseNotifications = isAuthenticated && userRole === USER_ROLE.CUSTOMER;
+    const showSseOrderManagement = isAuthenticated && userRole === USER_ROLE.ADMIN;
 
     // Прослушивание и установка типа последнего ввода на всём сайте
     useEffect(() => {
-        const onKeyDown = (e) => {
+        const onKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Tab' || e.key?.startsWith('Arrow')) {
                 setKeyboardInput();
             }
@@ -62,7 +64,7 @@ export default function Layout() {
 
     // Приём сигнала для выхода на всех вкладках браузера
     useEffect(() => {
-        const onStorage = (e) => {
+        const onStorage = (e: StorageEvent) => {
             if (e.key === 'auth:logout' && isAuthenticatedRef.current) {
                 dispatch(handleLogout());
             }

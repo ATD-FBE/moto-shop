@@ -1,7 +1,10 @@
-import React from 'react';
 import { formatCurrency } from '@/helpers/textHelpers.js';
+import type { JSX } from 'react';
+import type { IOrderDraft } from '@shared/types/index.js';
 
-export default function CheckoutSummary({ orderTotals }) {
+export default function CheckoutSummary(
+    { orderTotals }: { orderTotals?: IOrderDraft['totals'] }
+): JSX.Element {
     const { subtotalAmount = 0, totalSavings = 0, totalAmount = 0 } = orderTotals ?? {};
 
     return (

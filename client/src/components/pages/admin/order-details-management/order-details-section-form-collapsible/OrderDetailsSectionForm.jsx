@@ -263,7 +263,7 @@ const fieldsStateReducer = (state, action) => {
     }
 };
 
-export default function SectionForm({
+export default function OrderDetailsSectionForm({
     section,
     order,
     itemsSubmitResult,

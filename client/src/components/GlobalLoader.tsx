@@ -1,7 +1,10 @@
 import { FadeLoader } from 'react-spinners';
 import cn from 'classnames';
+import type { JSX } from 'react';
 
-export default function GlobalLoader({ visibility = true }) {
+export default function GlobalLoader(
+    { visibility = true }: { visibility?: boolean }
+): JSX.Element {
     return (
         <div className={cn('global-loader', { visible: visibility })}>
             <FadeLoader

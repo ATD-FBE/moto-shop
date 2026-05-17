@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useRef, useMemo, useEffect } from 'react';
+import { useReducer, useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import Collapsible from '@/components/common/Collapsible.jsx';
@@ -16,7 +16,6 @@ import {
     PRODUCT_IMAGE_PLACEHOLDER,
     FIELD_UI_STATUS,
     FIELD_SAVE_STATUS,
-    FIELD_SAVE_STATUS_MESSAGES,
     SUCCESS_DELAY
 } from '@/config/constants.js';
 import { clearLockedRoute } from '@/redux/slices/uiSlice.js';
@@ -25,7 +24,6 @@ import { applyCartState, refreshCartTotals } from '@/services/cartService.js';
 import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import {
-    getLockedStatuses,
     extractCollapsibleFormGroupNames,
     extractFieldConfigs,
     extendFormGroupConfigs,
@@ -73,12 +71,10 @@ import type {
 } from 'react';
 import type {
     IFormGroupConfig,
-    IGetSubmitStatesResult,
     TFormStatus,
     TSubmitStates,
     TFieldStateValue,
     TFieldApiValue,
-    IFieldConfig,
     IFieldState,
     TFormState,
     IProcessFormFieldsResult

@@ -364,12 +364,12 @@ export default function Checkout(): JSX.Element | null {
                     )}
                 >
                     <CheckoutSummary
-                        orderTotals={orderDraft?.totals ?? null}
+                        orderTotals={orderDraft?.totals}
                     />
 
                     <div className="checkout-order-draft-panel">
                         <OrderDraftExpirationTimer
-                            expirationTime={orderDraft?.expiresAt ?? null}
+                            expirationTime={orderDraft?.expiresAt}
                             isCancelled={submitStatus === FORM_STATUS.CANCEL_SUCCESS}
                             onExpire={handleDraftExpiration}
                         />

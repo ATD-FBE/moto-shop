@@ -18,7 +18,7 @@ export type TRoutePath = TRoute['paths'][number];
 
 export interface INavItem {
     label: TRoute['label'] | string;
-    paths?: TRoute['paths'] | string[];
+    paths: TRoute['paths'] | string[];
     order?: number;
     authType?: TAuthNavType;
     featured?: boolean;

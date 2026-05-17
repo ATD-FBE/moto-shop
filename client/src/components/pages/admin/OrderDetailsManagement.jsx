@@ -1,8 +1,8 @@
 import OrderDetailsBase from '@/components/pages/shared/OrderDetailsBase.jsx';
 import OrderManagementControls from '@/components/pages/admin/shared/OrderManagementControls.jsx';
 import OrderManagementNotes from '@/components/pages/admin/shared/OrderManagementNotes.jsx';
-import SectionEditButton from './order-details-management/SectionEditButton.jsx';
-import SectionFormCollapsible from './order-details-management/SectionFormCollapsible.jsx';
+import OrderDetailsSectionEditButton from './order-details-management/OrderDetailsSectionEditButton.jsx';
+import OrderDetailsSectionFormCollapsible from './order-details-management/OrderDetailsSectionFormCollapsible.jsx';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 
 export default function OrderDetailsManagement() {
@@ -20,8 +20,8 @@ export default function OrderDetailsManagement() {
                 </>
             )}
             renderManagementControls={props => <OrderManagementControls showExtras={true} {...props} />}
-            renderSectionEditButton={props => <SectionEditButton {...props} />}
-            renderSectionFormCollapsible={props => <SectionFormCollapsible {...props} />}
+            renderSectionEditButton={props => <OrderDetailsSectionEditButton {...props} />}
+            renderSectionFormCollapsible={props => <OrderDetailsSectionFormCollapsible {...props} />}
             renderManagementNotes={props => <OrderManagementNotes {...props} />}
         />
     );

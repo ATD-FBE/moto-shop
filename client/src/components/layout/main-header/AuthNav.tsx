@@ -16,7 +16,7 @@ interface IAuthNavProps {
     userRole: TUserRole;
     userName: string;
     navigationMap: Record<string, INavItem[]>;
-    setActiveClass: (paths?: readonly string[]) => 'active' | '';
+    setActiveClass: (paths: readonly string[]) => 'active' | '';
 }
 
 /////////////////////
@@ -29,7 +29,7 @@ export default function AuthNav(
     const authNavItems = navigationMap[`${userRole}Auth`] || [];
     const dispatch = useAppDispatch();
 
-    const safeHandleLogout = async () => {
+    const safeHandleLogout = async (): Promise<void> => {
         dispatch(setNavigationLock(true));
         await dispatch(handleLogout());
         dispatch(setNavigationLock(false));
@@ -53,7 +53,7 @@ export default function AuthNav(
                                         {label}
                                         <BlockableLink
                                             className="user-name"
-                                            to={navItem.paths?.[0] ?? '/'}
+                                            to={navItem.paths[0] ?? '/'}
                                         >
                                             {userName}
                                         </BlockableLink>
@@ -73,10 +73,10 @@ export default function AuthNav(
                             default:
                                 return (
                                     <li
-                                        key={navItem.paths?.[0]}
+                                        key={navItem.paths[0]}
                                         className={cn(setActiveClass(navItem.paths))}
                                     >
-                                        <BlockableLink to={navItem.paths?.[0] ?? '/'}>
+                                        <BlockableLink to={navItem.paths[0] ?? '/'}>
                                             {label}
                                         </BlockableLink>
                                     </li>

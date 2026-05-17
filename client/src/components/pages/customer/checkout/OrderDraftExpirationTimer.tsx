@@ -1,19 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { JSX } from 'react';
 
-export default function OrderDraftExpirationTimer({ expirationTime, isCancelled, onExpire }) {
-    const calculateTimerData = () => {
-        if (!expirationTime) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrderDraftExpirationTimerProps {
+    expirationTime?: Date;
+    isCancelled: boolean;
+    onExpire: () => void;
+}
+
+interface IExpirationTimerData {
+    isExpired: boolean;
+    hours: string;
+    minutes: string;
+    seconds: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function OrderDraftExpirationTimer(
+    { expirationTime, isCancelled, onExpire }: IOrderDraftExpirationTimerProps
+): JSX.Element {
+    const calculateTimerData = (): IExpirationTimerData => {
+        const expirationTimeNum = expirationTime?.getTime();
+
+        if (!expirationTimeNum || Number.isNaN(expirationTimeNum)) {
             return { isExpired: false, hours: '--', minutes: '--', seconds: '--' };
         }
 
-        const now = new Date();
-        const end = new Date(expirationTime);
+        const timeDifference = expirationTimeNum - Date.now();
 
-        if (now > end) {
+        if (timeDifference <= 0) {
             return { isExpired: true, hours: '00', minutes: '00', seconds: '00' };
         }
-
-        const timeDifference = end - now;
         
         return {
             isExpired: false,
