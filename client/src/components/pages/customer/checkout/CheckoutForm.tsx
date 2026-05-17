@@ -473,16 +473,14 @@ export default function CheckoutForm({
     ): Promise<void> => {
         const updateFieldMap = (Object.entries(fieldsStateRef.current) as [TFieldName, IFieldState][])
             .reduce((acc, [name, state]) => {
-                const replayFieldName = isReplay ? updatedField?.name : undefined;
-                if (state.saveStatus === FIELD_SAVE_STATUS.SAVING && replayFieldName !== name) {
-                    return acc;
-                }
+                const isReplayField = updatedField?.name === name && isReplay;
+                if (state.saveStatus === FIELD_SAVE_STATUS.SAVING && !isReplayField) return acc;
 
                 const value = name === updatedField?.name ? updatedField.value : state.value;
                 const { trim } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
 
-                if (!isReplay && normalizedValue === state.savedValue) return acc;
+                if (normalizedValue === state.savedValue && !isReplayField) return acc;
 
                 // Сброс таймеров очистки статуса для отправляемых полей
                 if (saveStatusTimersRef.current[name]) {
@@ -492,21 +490,15 @@ export default function CheckoutForm({
 
                 // Сбор полей
                 acc.set(name, normalizedValue);
-
+                
                 if (name === 'deliveryMethod') {
                     const { COURIER, TRANSPORT_COMPANY } = DELIVERY_METHOD;
-                    const oldDeliveryMethod = fieldsStateRef.current.deliveryMethod.savedValue;
-                    const newDeliveryMethod = normalizedValue;
                     
-                    if (newDeliveryMethod === COURIER) {
+                    if (normalizedValue === COURIER) {
                         acc.set('allowCourierExtra', fieldsStateRef.current.allowCourierExtra.value);
                     }
         
-                    if (
-                        (newDeliveryMethod === TRANSPORT_COMPANY || newDeliveryMethod === COURIER) &&
-                        oldDeliveryMethod !== TRANSPORT_COMPANY &&
-                        oldDeliveryMethod !== COURIER
-                    ) {
+                    if (normalizedValue === TRANSPORT_COMPANY || normalizedValue === COURIER) {
                         shippingAddressFieldNames.forEach(name => {
                             acc.set(name, fieldsStateRef.current[name].value);
                         });
@@ -714,23 +706,18 @@ export default function CheckoutForm({
         e.preventDefault();
 
         clearUpdateDebounceTimer();
-        submitInProgressRef.current = true;
-
         const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
-
-        console.log(formFields);
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         setIsOrderItemsValid(true);
 
-        await updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
-
         if (!allValid) {
-            submitInProgressRef.current = false;
             setSubmitStatus(FORM_STATUS.INVALID);
+            updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
             return;
         }
 
+        submitInProgressRef.current = true;
         setSubmitStatus(FORM_STATUS.SENDING);
 
         const responseData = await dispatch(sendOrderDraftConfirmRequest(orderId, formFields));
@@ -755,8 +742,8 @@ export default function CheckoutForm({
             case FORM_STATUS.TIMEOUT:
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message });
-                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 setSubmitStatus(status);
+                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 break;
 
             // Товары в корзине и заказе не совпадают
@@ -838,11 +825,11 @@ export default function CheckoutForm({
 
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message });
-                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 dispatch(applyCartState(tradeProductList, cartItemList, customerDiscount));
                 setOrderDraft(prev => ({ ...(prev ?? {}), ...orderDraft }));
                 setIsOrderItemsValid(false);
                 setSubmitStatus(status);
+                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
 
                 const adjustmentsMsg =
                     '<span className="bold underline">Изменения товаров в заказе:</span>' +
@@ -882,7 +869,6 @@ export default function CheckoutForm({
                     message,
                     details: fieldErrors
                 });
-                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
 
                 const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
@@ -892,6 +878,7 @@ export default function CheckoutForm({
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
                 setSubmitStatus(status);
+                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 break;
             }
         
@@ -914,7 +901,6 @@ export default function CheckoutForm({
                     
                     dispatch(setCart([])); // До обновления сумм!
                     dispatch(refreshCartTotals());
-
                     dispatch(clearLockedRoute());
                     navigate(routeConfig.customerOrders.paths[0]);
                 }, SUCCESS_DELAY);
@@ -924,8 +910,8 @@ export default function CheckoutForm({
             default:
                 submitInProgressRef.current = false;
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
-                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
+                updateOrderDraft(); // Синхронизация сохранённых значений полей с текущими
                 break;
         }
     };

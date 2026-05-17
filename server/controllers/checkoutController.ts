@@ -755,7 +755,11 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
             const dbCounter = await Counter.findOneAndUpdate(
                 { entity: 'order' },
                 { $inc: { seq: 1 } },
-                { new: true, upsert: true } // upsert (update + insert) создаёт документ, если его ещё нет
+                {
+                    new: true,
+                    upsert: true // upsert (update + insert) создаёт документ, если его ещё нет
+                    // session - Без сессии, чтобы не было очередей ожидания из-за счётчика
+                }
             );
             checkTimeout(req);
 
@@ -773,8 +777,6 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                 changedBy: { id: customerId, name: dbUser.name, role: dbUser.role },
                 changedAt: now
             });
-
-            console.log(confirmedOrderDoc);
 
             // Сохранение документа подтверждённого заказа
             await confirmedOrderDoc.save({ session });
