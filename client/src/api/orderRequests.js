@@ -67,7 +67,7 @@ export const sendOrderRepeatRequest = (orderId) => async (dispatch) => {
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Изменение внутренней заметки заказа (SSE у клиента) ///
+/// Изменение внутренней заметки заказа (SSE) ///
 export const sendOrderInternalNoteUpdateRequest = (orderId, formFields) => async (dispatch) => {
     const url = `/api/orders/${orderId}/internal-note`;
     const options = {
@@ -87,7 +87,7 @@ export const sendOrderInternalNoteUpdateRequest = (orderId, formFields) => async
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Изменение деталей подтверждённого заказа (SSE у клиента) ///
+/// Изменение деталей подтверждённого заказа (SSE) ///
 export const sendOrderDetailsUpdateRequest = (orderId, formFields) => async (dispatch) => {
     const url = `/api/orders/${orderId}`;
     const options = {
@@ -107,7 +107,7 @@ export const sendOrderDetailsUpdateRequest = (orderId, formFields) => async (dis
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Изменение товаров подтверждённого заказа (SSE у клиента) ///
+/// Изменение товаров подтверждённого заказа (SSE) ///
 export const sendOrderItemsUpdateRequest = (orderId, formFields) => async (dispatch) => {
     const url = `/api/orders/${orderId}/items`;
     const options = {
@@ -127,7 +127,7 @@ export const sendOrderItemsUpdateRequest = (orderId, formFields) => async (dispa
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Изменение статуса заказа (SSE у клиента) ///
+/// Изменение статуса заказа (SSE) ///
 export const sendOrderStatusUpdateRequest = (orderId, payload) => async (dispatch) => {
     const url = `/api/orders/${orderId}/status`;
     const options = {
@@ -179,7 +179,7 @@ export const sendOrderRemainingAmountRequest = (orderId) => async (dispatch) => 
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Аннулирование записи успешного финансового события в заказе (SSE у клиента) ///
+/// Аннулирование записи успешного финансового события в заказе (SSE) ///
 export const sendOrderFinancialsEventVoidRequest = (params, payload) => async (dispatch) => {
     const { orderId, eventId } = params;
     const url = `/api/orders/${orderId}/financials/events/${eventId}/void`;
@@ -200,7 +200,7 @@ export const sendOrderFinancialsEventVoidRequest = (params, payload) => async (d
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Внесение оплаты за заказ оффлайн-методом (SSE у клиента) ///
+/// Внесение оплаты за заказ оффлайн-методом (SSE) ///
 export const sendOrderOfflinePaymentApplyRequest = (orderId, payload) => async (dispatch) => {
     const url = `/api/orders/${orderId}/financials/payments/offline`;
     const options = {
@@ -220,7 +220,7 @@ export const sendOrderOfflinePaymentApplyRequest = (orderId, payload) => async (
     return await apiResponse(response, { errorPrefix });
 };
 
-/// Возврат средств за заказ оффлайн-методом (SSE у клиента) ///
+/// Возврат средств за заказ оффлайн-методом (SSE) ///
 export const sendOrderOfflineRefundApplyRequest = (orderId, payload) => async (dispatch) => {
     const url = `/api/orders/${orderId}/financials/refunds/offline`;
     const options = {

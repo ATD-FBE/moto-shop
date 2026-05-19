@@ -1,7 +1,13 @@
-import Order from '@server/db/models/Order.js';
+import { OrderFinal } from '@server/db/models/Order.js';
 import Product from '@server/db/models/Product.js';
 import { ORDER_VIEW_MATRIX } from '@server/config/viewPolicy.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
+import {
+    DEFAULT_SEARCH_TYPE,
+    BASE_DB_ORDER_FIELDS,
+    MANAGED_DB_ORDER_FIELDS,
+    ORDER_ADJUSTMENT_TYPE
+} from '@server/config/constants.js';
 import { storageService } from '@server/services/storage/storageService.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
@@ -29,17 +35,15 @@ import {
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
 import { collectDbChanges } from '@server/utils/compareUtils.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { DEFAULT_SEARCH_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { isEqualCurrency, makeOrderItemQuantityFieldName, } from '@shared/commonHelpers.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,
     USER_ROLE,
@@ -50,29 +54,65 @@ import {
     ORDER_ACTION,
     REQUEST_STATUS
 } from '@shared/constants.js';
-//import type { TDbOrder } from '@server/types/index.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { FilterQuery } from 'mongoose';
+import type { TDbOrderFinal, TDbProduct, TDbCartItem, TSelectedFields } from '@server/types/index.js';
+import type {
+    IAdminSseMessageData,
+    TOrderListFilterParams,
+    TOrderListQuery,
+    TOrderListResponse,
+    TOrderQuery,
+    TOrderResponse,
+    TOrderItemsAvailabilityResponse,
+    TOrderRepeatResponse,
+    IOrderInternalNoteUpdateBody,
+    TOrderInternalNoteUpdateResponse,
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrderParams extends ParamsDictionary {
+    orderId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Загрузка списка заказов для одной страницы ///
-export const handleOrderListRequest = async (req, res, next) => {
+export const handleOrderListRequest: RequestHandler<
+    {},
+    TOrderListResponse,
+    {},
+    TOrderListQuery
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
     const dbUser = req.dbUser;
     
     // Настройка фильтра поиска
-    const allowedSearchFields = ['orderNumber'];
-    const searchMatch = buildSearchMatch/*<TDbOrder>*/(
+    const allowedSearchFields: (keyof TDbOrderFinal)[] = ['orderNumber'];
+    const searchMatch = buildSearchMatch<TDbOrderFinal>(
         req.query.search,
         allowedSearchFields,
         DEFAULT_SEARCH_TYPE
     );
                 
     // Настройка фильтра по параметрам
-    const filterMatch = buildFilterMatch/*<TDbOrder>*/(req.query, ordersFilterOptions);
+    const filterMatch = buildFilterMatch<
+        TDbOrderFinal,
+        TOrderListFilterParams
+    >(req.query, ordersFilterOptions);
 
     // Общая фильтрация по поиску и параметрам
-    const baseFilter = { ...searchMatch, ...filterMatch };
+    const baseFilter: FilterQuery<TDbOrderFinal> = { ...searchMatch, ...filterMatch };
 
     // Настройка пагинации
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 10) || ordersPageLimitOptions[0], 1);
+    const page = Math.max(req.query.page ?? 1, 1);
+    const limit = Math.max(req.query.limit ?? ordersPageLimitOptions[0], 1);
     const skip = (page - 1) * limit;
 
     try {
@@ -89,41 +129,46 @@ export const handleOrderListRequest = async (req, res, next) => {
                     const cancelledFilter = { ...baseFilter, currentStatus: ORDER_STATUS.CANCELLED };
     
                     const [activeCount, completedCount] = await Promise.all([
-                        Order.countDocuments(activeFilter),
-                        Order.countDocuments(completedFilter)
+                        OrderFinal.countDocuments(activeFilter),
+                        OrderFinal.countDocuments(completedFilter)
                         // Без cancelledCount, т.к. dbCancelledOrders ограничивается в конце общим limit
                     ]);
                     checkTimeout(req);
     
                     // Сначала активные, потом завершённые, потом отменённые
-                    let dbActiveOrders = [], dbCompletedOrders = [], dbCancelledOrders = [];
+                    let dbActiveOrders: TDbOrderFinal[] = []
+                    let dbCompletedOrders: TDbOrderFinal[] = [];
+                    let dbCancelledOrders: TDbOrderFinal[] = [];
     
                     if (skip < activeCount) {
                         const activeLimit = Math.min(limit, activeCount - skip);
     
-                        dbActiveOrders = await Order.find(activeFilter)
+                        dbActiveOrders = await OrderFinal.find(activeFilter)
                             .sort({ lastActivityAt: -1 })
                             .skip(skip)
                             .limit(activeLimit)
-                            .lean();
+                            .select(MANAGED_DB_ORDER_FIELDS)
+                            .lean<TDbOrderFinal[]>();
                         checkTimeout(req);
                         
                         const remaining1 = limit - dbActiveOrders.length;
     
                         if (remaining1 > 0) {
-                            dbCompletedOrders = await Order.find(completedFilter)
+                            dbCompletedOrders = await OrderFinal.find(completedFilter)
                                 .sort({ lastActivityAt: -1 })
                                 .limit(remaining1)
-                                .lean();
+                                .select(MANAGED_DB_ORDER_FIELDS)
+                                .lean<TDbOrderFinal[]>();
                             checkTimeout(req);
                             
                             const remaining2 = remaining1 - dbCompletedOrders.length;
     
                             if (remaining2 > 0) {
-                                dbCancelledOrders = await Order.find(cancelledFilter)
+                                dbCancelledOrders = await OrderFinal.find(cancelledFilter)
                                     .sort({ lastActivityAt: -1 })
                                     .limit(remaining2)
-                                    .lean();
+                                    .select(MANAGED_DB_ORDER_FIELDS)
+                                    .lean<TDbOrderFinal[]>();
                                 checkTimeout(req);
                             }
                         }
@@ -131,41 +176,44 @@ export const handleOrderListRequest = async (req, res, next) => {
                         const completedSkip = skip - activeCount;
                         const completedLimit = Math.min(limit, completedCount - completedSkip);
     
-                        dbCompletedOrders = await Order.find(completedFilter)
+                        dbCompletedOrders = await OrderFinal.find(completedFilter)
                             .sort({ lastActivityAt: -1 })
                             .skip(completedSkip)
                             .limit(completedLimit)
-                            .lean();
+                            .select(MANAGED_DB_ORDER_FIELDS)
+                            .lean<TDbOrderFinal[]>();
                         checkTimeout(req);
                         
                         const remaining = limit - dbCompletedOrders.length;
     
                         if (remaining > 0) {
-                            dbCancelledOrders = await Order.find(cancelledFilter)
+                            dbCancelledOrders = await OrderFinal.find(cancelledFilter)
                                 .sort({ lastActivityAt: -1 })
                                 .limit(remaining)
-                                .lean();
+                                .lean<TDbOrderFinal[]>();
                             checkTimeout(req);
                         }
                     } else {
                         const cancelledSkip = skip - activeCount - completedCount;
     
-                        dbCancelledOrders = await Order.find(cancelledFilter)
+                        dbCancelledOrders = await OrderFinal.find(cancelledFilter)
                             .sort({ lastActivityAt: -1 })
                             .skip(cancelledSkip)
                             .limit(limit)
-                            .lean();
+                            .select(MANAGED_DB_ORDER_FIELDS)
+                            .lean<TDbOrderFinal[]>();
                         checkTimeout(req);
                     }
     
                     dbPaginatedOrderList = [...dbActiveOrders, ...dbCompletedOrders, ...dbCancelledOrders];
 
                 } else {
-                    dbPaginatedOrderList = await Order.find({ ...baseFilter })
+                    dbPaginatedOrderList = await OrderFinal.find({ ...baseFilter })
                         .sort({ lastActivityAt: -1 })
                         .skip(skip)
                         .limit(limit)
-                        .lean();
+                        .select(MANAGED_DB_ORDER_FIELDS)
+                        .lean<TDbOrderFinal[]>();
                     checkTimeout(req);
                 }
 
@@ -173,18 +221,19 @@ export const handleOrderListRequest = async (req, res, next) => {
             }
 
             case USER_ROLE.CUSTOMER: {
-                const { sortField, sortOrder } = parseSortParam/*<TDbOrder>*/(
+                const { sortField, sortOrder } = parseSortParam/*<TDbOrderFinal>*/(
                     req.query.sort,
                     ordersSortOptions
                 );
 
                 baseFilter.customerId = dbUser._id;
 
-                dbPaginatedOrderList = await Order.find({ ...baseFilter })
+                dbPaginatedOrderList = await OrderFinal.find({ ...baseFilter })
                     .sort({ [sortField]: sortOrder })
                     .skip(skip)
                     .limit(limit)
-                    .lean();
+                    .select(BASE_DB_ORDER_FIELDS)
+                    .lean<TDbOrderFinal[]>();
                 checkTimeout(req);
 
                 break;
@@ -198,10 +247,10 @@ export const handleOrderListRequest = async (req, res, next) => {
         }
 
         if (!baseFilter.currentStatus) baseFilter.currentStatus = { $ne: ORDER_STATUS.DRAFT };
-        const dbFilteredOrders = await Order.find({ ...baseFilter }).select('_id').lean();
+        const dbFilteredOrders = await OrderFinal.find({ ...baseFilter }).select('_id').lean<TDbOrderFinal[]>();
         checkTimeout(req);
 
-        const filteredOrderIdList = dbFilteredOrders.map(ord => ord._id);
+        const filteredOrderIdList = dbFilteredOrders.map(ord => ord._id.toString());
         const paginatedOrderList = dbPaginatedOrderList.map(dbOrder => prepareOrder(dbOrder, {
             inList: true,
             managed: isManaged,
@@ -219,20 +268,23 @@ export const handleOrderListRequest = async (req, res, next) => {
 };
 
 /// Загрузка или обновление отдельного заказа ///
-export const handleOrderRequest = async (req, res, next) => {
+export const handleOrderRequest: RequestHandler<
+    IOrderParams,
+    TOrderResponse,
+    {},
+    TOrderQuery
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const userRole = req.dbUser.role;
     const orderId = req.params.orderId;
     const viewMode = req.query.viewMode;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-    if (!['page', 'list'].includes(viewMode)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: viewMode' });
-    }
-
     try {
-        const dbOrder = await Order.findById(orderId).populate('customerId', 'name email').lean();
+        const dbOrder = await OrderFinal
+            .findById(orderId)
+            .populate('customerId', 'name email')
+            .lean<TDbOrderFinal>();
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -251,15 +303,21 @@ export const handleOrderRequest = async (req, res, next) => {
 };
 
 /// Загрузка доступного на складе количества товаров в заказе ///
-export const handleOrderItemsAvailabilityRequest = async (req, res, next) => {
+export const handleOrderItemsAvailabilityRequest: RequestHandler<
+    IOrderParams,
+    TOrderItemsAvailabilityResponse
+> = async (req, res, next) => {
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-
     try {
-        const dbOrder = await Order.findById(orderId).select('items.productId').lean();
+        const selectedOrderFields: TSelectedFields<TDbOrderFinal> = {
+            orderNumber: 1,
+            'items.productId': 1
+        };
+        const dbOrder = await OrderFinal
+            .findById(orderId)
+            .select(selectedOrderFields)
+            .lean<TDbOrderFinal>();
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -269,19 +327,24 @@ export const handleOrderItemsAvailabilityRequest = async (req, res, next) => {
         }
 
         const productIds = dbOrder.items.map(item => item.productId);
-        const dbOrderProducts = await Product.find({ _id: { $in: productIds } })
-            .select('stock reserved')
-            .lean();
+        const selectedProductFields: TSelectedFields<TDbProduct> = {
+            stock: 1,
+            reserved: 1
+        };
+        const dbTradeProducts = await Product
+            .find({ _id: { $in: productIds } })
+            .select(selectedProductFields)
+            .lean<TDbProduct[]>();
         checkTimeout(req);
 
-        const dbOrderProductMap = new Map(dbOrderProducts.map(prod => [prod._id.toString(), prod]));
+        const dbTradeProductMap = new Map(dbTradeProducts.map(prod => [prod._id.toString(), prod]));
 
         const orderItemsAvailabilityMap = Object.fromEntries(
             productIds.map(productObjectId => {
                 const productId = productObjectId.toString();
-                const dbOrderProduct = dbOrderProductMap.get(productId);
-                if (!dbOrderProduct) return [productId, 0];
-                return [productId, Math.max(0, dbOrderProduct.stock - dbOrderProduct.reserved)]
+                const dbTradeProduct = dbTradeProductMap.get(productId);
+                if (!dbTradeProduct) return [productId, 0];
+                return [productId, Math.max(0, dbTradeProduct.stock - dbTradeProduct.reserved)]
             })
         );
 
@@ -295,19 +358,26 @@ export const handleOrderItemsAvailabilityRequest = async (req, res, next) => {
 };
 
 /// Повтор завершённого или отменённого заказа ///
-export const handleOrderRepeatRequest = async (req, res, next) => {
+export const handleOrderRepeatRequest: RequestHandler<
+    IOrderParams,
+    TOrderRepeatResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-
     try {
         const { orderLbl } = await runInDbTransaction(async (session) => {
-            const dbOrder = await Order.findById(orderId)
-                .select('customerId currentStatus items')
-                .lean()
+            const selectedOrderFields: TSelectedFields<TDbOrderFinal> = {
+                orderNumber: 1,
+                customerId: 1,
+                currentStatus: 1,
+                items: 1
+            };
+            const dbOrder = await OrderFinal.findById(orderId)
+                .select(selectedOrderFields)
+                .lean<TDbOrderFinal>()
                 .session(session);
             checkTimeout(req);
 
@@ -327,13 +397,14 @@ export const handleOrderRepeatRequest = async (req, res, next) => {
                 });
             }
 
-            dbUser.cart = dbOrder.items.map(({ productId, quantity, name, brand }) => ({
-                productId,
-                quantity,
-                nameSnapshot: name,
-                brandSnapshot: brand ?? null
+            const repeatedDbCart: TDbCartItem[] = dbOrder.items.map(item => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                nameSnapshot: item.name,
+                brandSnapshot: item.brand ?? null
             }));
 
+            dbUser.cart.splice(0, dbUser.cart.length, ...repeatedDbCart);
             await dbUser.save({ session });
             checkTimeout(req);
 
@@ -344,39 +415,23 @@ export const handleOrderRepeatRequest = async (req, res, next) => {
             message: `Товары из заказа ${orderLbl} повторно добавлены в корзину`
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
         next(err);
     }
 };
 
-/// Изменение внутренней заметки заказа (SSE у клиента) ///
-export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
+/// Изменение внутренней заметки заказа (SSE) ///
+export const handleOrderInternalNoteUpdateRequest: RequestHandler<
+    IOrderParams,
+    TOrderInternalNoteUpdateResponse,
+    IOrderInternalNoteUpdateBody
+> = async (req, res, next) => {
     // Предварительная проверка формата данных
     const orderId = req.params.orderId;
-    const { internalNote } = req.body ?? {};
+    const { internalNote } = req.body;
 
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        internalNote: { value: internalNote, type: 'string', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    // Работа с базой данных
     try {
-        const { orderUpdateData, orderLbl } = await runInDbTransaction(async (session) => {
-            const dbOrder = await Order.findById(orderId).session(session);
+        const transactionResult = await runInDbTransaction(async (session) => {
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -404,31 +459,22 @@ export const handleOrderInternalNoteUpdateRequest = async (req, res, next) => {
             return { orderUpdateData, orderLbl };
         });
 
+        const { orderUpdateData, orderLbl } = transactionResult;
+
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
+        const sseMessageData: IAdminSseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, { message: `Внутренняя заметка заказа ${orderLbl} изменена` });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
-/// Изменение деталей подтверждённого заказа (SSE у клиента) ///
+/// Изменение деталей подтверждённого заказа (SSE) ///
 export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
 
     // Предварительная проверка формата данных
@@ -493,7 +539,7 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 
     try {
         const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -566,27 +612,14 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 
         safeSendResponse(res, 200, { message: `Заказ ${orderLbl} успешно изменён` });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей при сохранении в MongoDB
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-        
         next(err);
     }
 };
 
-/// Изменение товаров подтверждённого заказа (SSE у клиента) ///
+/// Изменение товаров подтверждённого заказа (SSE) ///
 export const handleOrderItemsUpdateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
 
@@ -611,17 +644,21 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
     const itemFieldErrors = {};
 
     for (const { productId, quantity } of items) {
-        if (!typeCheck.objectIdString(productId)) {
-            return safeSendResponse(res, 400, { message: 'Неверный формат данных в items' });
-        }
+        const isProductIdValid = typeCheck.objectIdString(productId);
 
-        // Проверка нового значения поля для количества товара
-        const isValid = validationRules.order.itemQuantity.test(quantity);
-
-        if (!isValid) {
+        if (!isProductIdValid) {
             const fieldName = makeOrderItemQuantityFieldName(productId);
             itemFieldErrors[fieldName] =
-                fieldErrorMessages.order.itemQuantity.default ||
+                fieldErrorMessages.order.itemQuantity.productId ||
+                fieldErrorMessages.DEFAULT;
+        }
+
+        const isQuantityValid = validationRules.order.itemQuantity.test(quantity);
+
+        if (!isQuantityValid) {
+            const fieldName = makeOrderItemQuantityFieldName(productId);
+            itemFieldErrors[fieldName] =
+                fieldErrorMessages.order.itemQuantity.quantity ||
                 fieldErrorMessages.DEFAULT;
         }
     }
@@ -646,7 +683,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
         const imageFilenamesToDelete = [];
 
         const transactionResult = await runInDbTransaction(async (session) => {
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -864,27 +901,14 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
             storageService.deleteOrderItemsImages(orderId, imageFilenamesToDelete, reqCtx);
         }
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей при сохранении в MongoDB
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-        
         next(err);
     }
 };
 
-/// Изменение статуса заказа (SSE у клиента) ///
+/// Изменение статуса заказа (SSE) ///
 export const handleOrderStatusUpdateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
     const { action, formFields } = req.body ?? {};
@@ -918,7 +942,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
         // Транзакция MongoDB
         const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск и проверка наличия документа заказа
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -1152,21 +1176,6 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
             message: `Статус заказа ${orderLbl} успешно изменён: ${newOrderStatus}`
         });
     } catch (err) {
-        // Обработка контролируемой ошибки
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        // Обработка ошибок валидации полей при сохранении в MongoDB
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'order');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };

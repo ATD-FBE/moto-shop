@@ -6,6 +6,7 @@ import { MAX_DATE_TS, MAX_TIMEZONE_OFFSET_MINUTES } from '@shared/constants.js';
 import type { FilterQuery, PipelineStage } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
+    TDbField,
     TFilterOption,
     TFilterParamsServer,
     ISortOption,
@@ -17,7 +18,7 @@ import type {
 //////////////////////////
 
 interface IParseSortResult<TModel extends object> {
-    sortField: keyof TModel;
+    sortField: TDbField<TModel>;
     sortOrder: 1 | -1;
 }
 
@@ -71,7 +72,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
     query: TQuery<TModel, TFilter>,
     filterOptions: readonly TFilterOption<TModel>[]
 ): FilterQuery<TModel> => {
-    const filterMatch = {} as Record<keyof TModel, any>;
+    const filterMatch = {} as Record<TDbField<TModel>, any>;
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;
@@ -204,7 +205,7 @@ export const parseSortParam = <TModel extends object>(
     sortOptions: readonly ISortOption<TModel>[]
 ): IParseSortResult<TModel> => {
     const defaultOption = sortOptions[0];
-    const defaultSortField = defaultOption?.dbField ?? '' as keyof TModel;
+    const defaultSortField = defaultOption?.dbField ?? '' as TDbField<TModel>;
     const defaultSortOrder = defaultOption?.defaultOrder === 'asc' ? 1 : -1;
 
     const sort = typeof sortParam === 'string' ? sortParam.trim() : '';
@@ -217,13 +218,13 @@ export const parseSortParam = <TModel extends object>(
     const matchedOption = sortOptions.find(opt => opt.dbField === sortFieldCandidate);
 
     return {
-        sortField: matchedOption ? (matchedOption.dbField as keyof TModel) : defaultSortField,
+        sortField: matchedOption ? (matchedOption.dbField as TDbField<TModel>) : defaultSortField,
         sortOrder: matchedOption ? sortOrder : defaultSortOrder
     };
 };
 
 export const buildSortPipeline = <TModel extends object>(
-    sortField: keyof TModel,
+    sortField: TDbField<TModel>,
     sortOrder: 1 | -1
 ): PipelineStage.FacetPipelineStage[] => [
     { $sort: { [sortField]: sortOrder } }

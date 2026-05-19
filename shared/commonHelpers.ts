@@ -72,15 +72,15 @@ export const getValueByPath = (path: string, obj: Record<string, any>): unknown 
     return path.split('.').reduce((acc, key) => acc?.[key], obj);
 };
 
-export const getFilterOptionsByContext = <TContext extends string>(
-    options: readonly TFilterOptionConfig<TContext>[],
+export const getFilterOptionsByContext = <TModel extends object, TContext extends string>(
+    options: readonly TFilterOptionConfig<TModel, TContext>[],
     context: TContext,
 ): readonly TFilterOption[] =>
     options
         .filter(opt => opt.contexts.includes(context))
         .map(opt => {
             const { contexts, ...rest } = opt;
-            return rest as TFilterOption;
+            return rest satisfies TFilterOption;
         });
 
 export const trimSetByFilter = (
@@ -250,7 +250,7 @@ export const getLastFinancialsEventEntry = <T extends object>(
 };
 
 export const makeOrderItemQuantityFieldName = (productId: string): string =>
-    `item-${productId}-quantity`;
+    `order-item-${productId}-quantity`;
 
 export const getCustomerOrderDetailsPath = (orderNumber: string, orderId: string): string =>
     `/customer/orders/${orderNumber ?? ''}~${orderId}`;

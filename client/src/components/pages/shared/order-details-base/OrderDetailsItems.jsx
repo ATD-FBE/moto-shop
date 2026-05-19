@@ -13,7 +13,6 @@ import { REQUEST_STATUS } from '@shared/constants.js';
 
 const getFieldConfigs = (orderItemList, itemsAvailabilityMap) => {
     const fieldConfigs = orderItemList.map(item => ({
-        id: item.productId,
         name: makeOrderItemQuantityFieldName(item.productId),
         elem: 'input',
         type: 'number',
@@ -24,7 +23,7 @@ const getFieldConfigs = (orderItemList, itemsAvailabilityMap) => {
     }));
 
     const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-        acc[config.id] = config;
+        acc[config.name] = config;
         return acc;
     }, {});
 
@@ -129,9 +128,9 @@ export default function OrderDetailsItems({
                     return acc;
                 }
 
-                const productId = name.split('-')[1]; // name создано makeOrderItemQuantityFieldName
-                const { min, max, defaultValue } = fieldConfigMap[productId] ?? {};
-                const ruleCheck = validation.test(value);
+                const productId = name.split('-')[2]; // name создано makeOrderItemQuantityFieldName
+                const { min, max, defaultValue } = fieldConfigMap[name] ?? {};
+                const ruleCheck = validation(value);
 
                 const isValid = ruleCheck && value >= min && value <= max;
 
@@ -140,7 +139,7 @@ export default function OrderDetailsItems({
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.order.itemQuantity?.default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.order.itemQuantity.quantity || fieldErrorMessages.DEFAULT
                 };
 
                 if (isValid && value !== defaultValue) {
@@ -315,7 +314,8 @@ export default function OrderDetailsItems({
                         none: ''
                     })[appliedDiscountSource];
 
-                    const fieldConfig = fieldConfigMap[productId];
+                    const fieldName = makeOrderItemQuantityFieldName(productId);
+                    const fieldConfig = fieldConfigMap[fieldName];
 
                     return (
                         <div key={productId} data-id={productId} className="table-row">

@@ -43,7 +43,9 @@ import {
     BASE_DB_NOTIFICATION_FIELDS,
     MANAGED_DB_NOTIFICATION_FIELDS,
 } from '@server/config/constants.js';
+import { orderDotNotationMap } from '@server/services/orderService.js';
 import type { InferSchemaType, HydratedDocument, Schema, Types } from 'mongoose';
+import type { TDbField } from '@shared/types/index.js';
 
 // Типизация подсхем моделей
 export type TDbUpdateHistoryItem = InferSchemaType<typeof UpdateHistoryItemSchema>;
@@ -91,6 +93,7 @@ export type TDbOrderDraft = TDbBaseOrder & TBaseDocument<typeof OrderDraftSchema
 };
 export type TDbOrderFinal = TDbBaseOrder & TBaseDocument<typeof OrderFinalSchema> & {
     _modelType: typeof ORDER_MODEL_TYPE.FINAL;
+    _dotNotationMap: typeof orderDotNotationMap;
 };
 export type TDbOrder = TDbOrderDraft | TDbOrderFinal;
 
@@ -126,6 +129,7 @@ export interface IDbProductComputedFields {
     inStock: boolean;
     isBrandNew: boolean;
     isRestocked: boolean;
+    isReserved: boolean;
 }
 export type TDbProductView = TDbProduct & IDbProductComputedFields;
 
@@ -136,5 +140,5 @@ export type TDbOrderWithTx = TDbOrderFinal & {
 };
 
 // Прочие типы
-export type TSelectedFields<T> = Partial<Record<keyof T, TProjectionValue>>
+export type TSelectedFields<TModel> = Partial<Record<TDbField<TModel>, TProjectionValue>>;
 type TProjectionValue = true | false | 1 | 0;

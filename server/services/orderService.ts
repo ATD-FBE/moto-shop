@@ -12,7 +12,6 @@ import { getPopulatedDbField } from '@server/utils/dbUtils.js';
 import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import {
-    USER_ROLE,
     CURRENCY,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
@@ -41,7 +40,7 @@ import type {
     IApplyOrderFinancialsResult
 } from '@server/types/index.js';
 import type {
-    TRegisteredUserRole,
+    IDotNotationMap,
     IOrder,
     IOrderItem,
     TDeliveryMethod,
@@ -70,6 +69,10 @@ export const orderDotNotationMap = {
     subtotalAmount: 'totals.subtotalAmount',
     totalSavings: 'totals.totalSavings',
     totalAmount: 'totals.totalAmount',
+
+    // Items
+    itemsProductId: 'items.productId',
+    itemsQuantity: 'items.quantity',
 
     // Customer info
     firstName: 'customerInfo.firstName',
@@ -101,7 +104,7 @@ export const orderDotNotationMap = {
     // Notes
     customerComment: 'customerComment',
     internalNote: 'internalNote'
-} as const;
+} as const satisfies IDotNotationMap;
 
 export const prepareOrder = (
     dbOrder: TDbOrderFinal,
@@ -130,10 +133,12 @@ export const prepareOrder = (
         totalAmount: dbOrder.totals.totalAmount
     },
     ...(details
-        ? { items: dbOrder.items.map(item => prepareOrderItem(item, {
-            orderId: dbOrder._id.toString(),
-            inList
-        })) }
+        ? {
+            items: dbOrder.items.map(item => prepareOrderItem(item, {
+                orderId: dbOrder._id.toString(),
+                inList
+            }))
+        }
         : { totalItems: dbOrder.items.length }),
     ...(details && {
         customerInfo: {
@@ -144,7 +149,7 @@ export const prepareOrder = (
             phone: dbOrder.customerInfo.phone,
             ...(!inList && {
                 ...(managed && { customerId: dbOrder.customerId._id.toString() }),
-                login: getPopulatedDbField(dbOrder.customerId, 'login'),
+                login: getPopulatedDbField(dbOrder.customerId, 'name'),
                 registrationEmail: getPopulatedDbField(dbOrder.customerId, 'email')
             })
         }

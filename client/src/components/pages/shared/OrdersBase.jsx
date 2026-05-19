@@ -21,7 +21,11 @@ import {
     buildShippingAddressDisplay,
     getShippingCostDisplay
 } from '@/services/orderService.js';
-import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS, PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
+import {
+    LOAD_STATUS_MIN_HEIGHT,
+    DATA_LOAD_STATUS,
+    PRODUCT_IMAGE_PLACEHOLDER
+} from '@/config/constants.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -31,6 +35,7 @@ import {
     getLastFinancialsEventEntry
 } from '@shared/commonHelpers.js';
 import {
+    ORDER_VIEW_MODE,
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
     ORDER_FINAL_STATUSES,
@@ -516,7 +521,7 @@ function OrderCard({
                 <div className="order-actions">
                     {isActiveOrder && renderOrderRefreshButton?.({
                         orderId: id,
-                        viewMode: 'list',
+                        viewMode: ORDER_VIEW_MODE.LIST,
                         uiBlocked,
                         refreshOrderState
                     })}

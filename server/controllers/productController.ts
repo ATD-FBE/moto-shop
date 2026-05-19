@@ -84,7 +84,7 @@ export const handleProductListRequest: RequestHandler<
     const computedFields = buildProductsComputedFields(req.query);
 
     // Настройка фильтра поиска
-    const allowedSearchFields = ['sku', 'name', 'brand', 'tags'] as const;
+    const allowedSearchFields: (keyof TDbProductView)[] = ['sku', 'name', 'brand', 'tags'];
     const searchMatch = buildSearchMatch<TDbProductView>(
         req.query.search,
         allowedSearchFields,

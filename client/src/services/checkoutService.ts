@@ -1,7 +1,7 @@
 import { formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
 import type { IProductAdjustment } from '@shared/types/index.js';
 
-export const formatCheckoutAdjustmentLogs = (productAdjustments: IProductAdjustment[]): string => {
+export const formatCheckoutAdjustmentLogs = (productAdjustments: IProductAdjustment[] = []): string => {
     const logs: string[] = [];
     let num = 0;
 

@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -51,7 +51,7 @@ export interface IAuthRegistrationBody {
 }
 
 export type TAuthRegistrationResponse =
-    | TFormFieldsErrorResponse<'auth'>
+    | TFieldErrorResponse<'auth'>
     | TGeneralErrorResponse
     | TSuccessResponse<TAuthBaseSuccessData>;
 
@@ -67,7 +67,7 @@ export interface IAuthLoginBody {
 
 export type TAuthLoginResponse =
     | TLoginAuthError
-    | TFormFieldsErrorResponse<'auth'>
+    | TFieldErrorResponse<'auth'>
     | TGeneralErrorResponse
     | TSuccessResponse<TAuthBaseSuccessData>;
 
@@ -84,7 +84,7 @@ export interface IAuthUserUpdateBody {
 export type TAuthUserUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'auth'>
+    | TFieldErrorResponse<'auth'>
     | TGeneralErrorResponse
     | TSuccessResponse<IAuthUserUpdateSuccessData>;
 
@@ -146,7 +146,7 @@ export interface IAuthCheckoutPrefsUpdateBody {
 export type TAuthCheckoutPrefsUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'checkout'>
+    | TFieldErrorResponse<'checkout'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

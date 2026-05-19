@@ -60,7 +60,7 @@ export const handleCustomerListRequest: RequestHandler<
     TCustomerListQuery
 > = async (req, res, next) => {
     // Настройка фильтра поиска
-    const allowedSearchFields = ['name', 'email'] as const;
+    const allowedSearchFields: (keyof TDbUser)[] = ['name', 'email'];
     const searchMatch = buildSearchMatch<TDbUser>(
         req.query.search,
         allowedSearchFields,

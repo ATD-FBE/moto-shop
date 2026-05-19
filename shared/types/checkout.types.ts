@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TLimitationErrorResponse,
     TModifiedErrorResponse,
     TGeneralErrorResponse,
@@ -120,7 +120,7 @@ export interface IOrderDraftUpdateBody {
 export type TOrderDraftUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'checkout'>
+    | TFieldErrorResponse<'checkout'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 
@@ -147,7 +147,7 @@ export interface IOrderDraftConfirmBody {
 export type TOrderDraftConfirmResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'checkout'>
+    | TFieldErrorResponse<'checkout'>
     | TLimitationErrorResponse<IOrderDraftConfirmLimitationErrorData>
     | TModifiedErrorResponse<IOrderDraftConfirmModifiedErrorData>
     | TGeneralErrorResponse

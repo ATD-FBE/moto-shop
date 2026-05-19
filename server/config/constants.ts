@@ -1,4 +1,11 @@
 import { MIN_IN_MS, HOUR_IN_MS, DAY_IN_MS } from '@shared/constants.js';
+import type {
+    TSelectedFields,
+    TDbNews,
+    TDbPromo,
+    TDbNotification,
+    TDbOrderFinal
+} from '@server/types/index.js';
 
 export const MONGO_MODE = {
     LOCAL: 'local',
@@ -70,46 +77,46 @@ export const ONLINE_TRANSACTION_INIT_EXPIRATION = 5 * MIN_IN_MS; // 5 минут
 export const ORDER_RESERVE_BATCH_SIZE = 10;
 
 // Поля из БД для новостей
-export const BASE_DB_NEWS_FIELDS = {
+export const BASE_DB_NEWS_FIELDS: TSelectedFields<TDbNews> = {
     _id: 1,
     publishDate: 1,
     title: 1,
     content: 1
-} as const;
+};
 
-export const MANAGED_DB_NEWS_FIELDS = {
+export const MANAGED_DB_NEWS_FIELDS: TSelectedFields<TDbNews> = {
     ...BASE_DB_NEWS_FIELDS,
     createdBy: 1,
     updateHistory: 1
-} as const;
+};
 
 // Поля из БД для акций
-export const BASE_DB_PROMO_FIELDS = {
+export const BASE_DB_PROMO_FIELDS: TSelectedFields<TDbPromo> = {
     _id: 1,
     title: 1,
     imageFilename: 1,
     description: 1,
     startDate: 1,
     endDate: 1
-} as const;
+};
 
-export const MANAGED_DB_PROMO_FIELDS = {
+export const MANAGED_DB_PROMO_FIELDS: TSelectedFields<TDbPromo> = {
     ...BASE_DB_PROMO_FIELDS,
     createdBy: 1,
     createdAt: 1,
     updateHistory: 1
-} as const;
+};
 
 // Поля из БД для уведомлений
-export const BASE_DB_NOTIFICATION_FIELDS = {
+export const BASE_DB_NOTIFICATION_FIELDS: TSelectedFields<TDbNotification> = {
     _id: 1,
     subject: 1,
     message: 1,
     signature: 1,
     sentAt: 1
-} as const;
+};
 
-export const MANAGED_DB_NOTIFICATION_FIELDS = {
+export const MANAGED_DB_NOTIFICATION_FIELDS: TSelectedFields<TDbNotification> = {
     ...BASE_DB_NOTIFICATION_FIELDS,
     status: 1,
     recipients: 1,
@@ -118,4 +125,25 @@ export const MANAGED_DB_NOTIFICATION_FIELDS = {
     createdAt: 1,
     updatedAt: 1,
     sentBy: 1
-} as const;
+};
+
+// Поля из БД для заказов
+export const BASE_DB_ORDER_FIELDS: TSelectedFields<TDbOrderFinal> = {
+    _id: 1,
+    orderNumber: 1,
+    confirmedAt: 1,
+    lastActivityAt: 1,
+    statusHistory: 1,
+    totals: 1,
+    items: 1,
+    customerInfo: 1,
+    delivery: 1,
+    financials: 1
+};
+
+export const MANAGED_DB_ORDER_FIELDS: TSelectedFields<TDbOrderFinal> = {
+    ...BASE_DB_ORDER_FIELDS,
+    customerComment: 1,
+    internalNote: 1,
+    auditLog: 1
+};

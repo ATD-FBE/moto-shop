@@ -14,9 +14,7 @@ import type {
     TBankProvider,
     TCardOnlineProvider,
     IOrderStatusEntry,
-    IOrderStatusEntrySummary,
     IFinancialsEventEntry,
-    IFinancialsEventEntrySummary,
     IAuditLogEntry,
     IProductAdjustment,
     TDeliveryMethod,
@@ -53,7 +51,7 @@ const PROVIDER_MAP = [...BANK_PROVIDER_OPTIONS, ...CARD_ONLINE_PROVIDER_OPTIONS]
         return map;
     }, {} as TProviderMap);
 
-export const formatOrderStatusHistoryLogs = (orderStatusHistory: IOrderStatusEntry[]): string =>
+export const formatOrderStatusHistoryLogs = (orderStatusHistory: IOrderStatusEntry[] = []): string =>
     orderStatusHistory.reduce((acc, entry) => {
         const { status, isRollback, changes, cancellationReason, changedBy, changedAt } = entry;
         let line = '';
@@ -91,7 +89,7 @@ export const formatOrderStatusHistoryLogs = (orderStatusHistory: IOrderStatusEnt
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatFinancialsEventHistoryLogs = (eventHistory: IFinancialsEventEntry[]): string =>
+export const formatFinancialsEventHistoryLogs = (eventHistory: IFinancialsEventEntry[] = []): string =>
     eventHistory.reduce((acc, entry) => {
         const { eventId, event, action, changedBy, changedAt, voided } = entry;
         let line = '';
@@ -144,7 +142,7 @@ export const formatFinancialsEventHistoryLogs = (eventHistory: IFinancialsEventE
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatAuditLogs = (auditLog: IAuditLogEntry[]): string =>
+export const formatAuditLogs = (auditLog: IAuditLogEntry[] = []): string =>
     auditLog.reduce((acc, entry) => {
         const { changes, reason, changedBy, changedAt } = entry;
 
@@ -172,7 +170,7 @@ export const formatAuditLogs = (auditLog: IAuditLogEntry[]): string =>
         return acc + line + TEXT_LOG_LINE_BREAK;
     }, '').slice(0, -TEXT_LOG_LINE_BREAK.length);
 
-export const formatOrderAdjustmentLogs = (productAdjustments: IProductAdjustment[]): string => {
+export const formatOrderAdjustmentLogs = (productAdjustments: IProductAdjustment[] = []): string => {
     const logs: string[] = [];
     let num = 0;
 

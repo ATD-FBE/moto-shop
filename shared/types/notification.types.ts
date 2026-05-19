@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -62,7 +62,7 @@ interface INotificationSuccessData {
 /// Создание черновика уведомления ///
 export type TNotificationCreateResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'notification'>
+    | TFieldErrorResponse<'notification'>
     | TGeneralErrorResponse
     | TSuccessResponse;
     
@@ -70,7 +70,7 @@ export type TNotificationCreateResponse =
 export type TNotificationUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'notification'>
+    | TFieldErrorResponse<'notification'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

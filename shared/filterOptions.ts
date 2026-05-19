@@ -5,7 +5,8 @@ import {
     FINANCIALS_ACTIVE_STATES,
     FINANCIALS_FINAL_STATES
 } from './constants.js';
-
+import type { TFilterOptionConfig, TFilterOption } from '@shared/types/index.js';
+import type { TDbNotification, TDbUser, TDbProductView, TDbOrderFinal } from '@server/types/db.types.js';
 
 export const customersFilterOptions = [
     {
@@ -39,7 +40,7 @@ export const customersFilterOptions = [
         type: 'boolean',
         paramName: 'ban'
     }
-] as const;
+] as const satisfies readonly TFilterOption<TDbUser>[];
 
 export const productsFilterOptions = [
     {
@@ -96,7 +97,7 @@ export const productsFilterOptions = [
         paramName: 'reserved',
         contexts: ['editor']
     }
-] as const;
+] as const satisfies readonly TFilterOptionConfig<TDbProductView>[];
 
 export const productCatalogFilterOptions = getFilterOptionsByContext(productsFilterOptions, 'catalog');
 export const productEditorFilterOptions = getFilterOptionsByContext(productsFilterOptions, 'editor');
@@ -127,4 +128,4 @@ export const ordersFilterOptions = [
         ],
         defaultValue: ''
     }
-] as const;
+] as const satisfies readonly TFilterOption<TDbOrderFinal>[];

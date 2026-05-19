@@ -23,6 +23,7 @@ import {
 } from '@shared/commonHelpers.js';
 import {
     REQUEST_STATUS,
+    ORDER_VIEW_MODE,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD,
     PAYMENT_METHOD_OPTIONS,
@@ -72,7 +73,7 @@ export default function OrderDetailsBase({
         setOrderLoadError(false);
         setOrderLoading(true);
 
-        const params = new URLSearchParams({ viewMode: 'page' }); // page | list
+        const params = new URLSearchParams({ viewMode: ORDER_VIEW_MODE.PAGE }); // page | list
         const urlParams = params.toString();
         const { status, message, order } = await dispatch(sendOrderRequest(orderId, urlParams));
         if (isUnmountedRef.current) return;
@@ -414,7 +415,7 @@ function OrderDetailsMain({
                             <p>
                                 {renderOrderRefreshButton({
                                     orderId: id,
-                                    viewMode: 'page',
+                                    viewMode: ORDER_VIEW_MODE.PAGE,
                                     refreshOrderState
                                 })}
                             </p>

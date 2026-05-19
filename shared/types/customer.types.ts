@@ -1,6 +1,6 @@
 import type {
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -66,7 +66,7 @@ export interface ICustomerDiscountUpdateBody {
 
 export type TCustomerDiscountUpdateResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'customer'>
+    | TFieldErrorResponse<'customer'>
     | TGeneralErrorResponse
     | TSuccessResponse<ICustomerUpdateSuccessData>;
     

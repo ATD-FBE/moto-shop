@@ -91,7 +91,8 @@ export const handleNotificationListRequest: RequestHandler<
                 if (skip < draftsCount) { // Если на странице попадают черновики
                     const draftsLimit = Math.min(limit, draftsCount - skip);
 
-                    dbDraftNotifications = await Notification.find(draftsFilter)
+                    dbDraftNotifications = await Notification
+                        .find(draftsFilter)
                         .sort({ updatedAt: -1 })
                         .skip(skip)
                         .limit(draftsLimit)
@@ -106,7 +107,8 @@ export const handleNotificationListRequest: RequestHandler<
                     const remaining = limit - dbDraftNotifications.length;
 
                     if (remaining > 0) {
-                        dbNonDraftNotifications = await Notification.find(nonDraftsFilter)
+                        dbNonDraftNotifications = await Notification
+                            .find(nonDraftsFilter)
                             .sort({ sentAt: -1 })
                             .skip(0) // Нечерновики идут сразу после всех черновиков
                             .limit(remaining)
@@ -121,7 +123,8 @@ export const handleNotificationListRequest: RequestHandler<
                 } else { // Если все черновики уже пропущены — только нечерновики
                     const nonDraftsSkip = skip - draftsCount;
 
-                    dbNonDraftNotifications = await Notification.find(nonDraftsFilter)
+                    dbNonDraftNotifications = await Notification
+                        .find(nonDraftsFilter)
                         .sort({ sentAt: -1 })
                         .skip(nonDraftsSkip)
                         .limit(limit)

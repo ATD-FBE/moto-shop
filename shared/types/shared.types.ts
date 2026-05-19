@@ -4,6 +4,7 @@ import {
     PRODUCT_UNITS,
     USER_ROLE,
     REGISTERED_USER_ROLES,
+    ORDER_VIEW_MODE,
     CURRENCY,
     DISCOUNT_SOURCE,
     PRODUCT_THUMBNAIL_PRESETS,
@@ -49,6 +50,8 @@ export type TProductUnit = typeof PRODUCT_UNITS[number];
 
 export type TUserRole = typeof USER_ROLE[keyof typeof USER_ROLE];
 export type TRegisteredUserRole = typeof REGISTERED_USER_ROLES[number];
+
+export type TOrderViewMode = typeof ORDER_VIEW_MODE[keyof typeof ORDER_VIEW_MODE];
 
 export type TCurrency = typeof CURRENCY[keyof typeof CURRENCY];
 
@@ -161,54 +164,56 @@ export type TCustomersFilterOption = typeof customersFilterOptions[number];
 export type TProductsFilterOption = typeof productsFilterOptions[number];
 export type TOrdersFilterOption = typeof ordersFilterOptions[number];
 
-export type TFilterOptionConfig<TContext extends string> = TFilterOption & {
+export type TFilterOptionConfig<
+    TModel extends object = any,
+    TContext extends string = string
+> = TFilterOption<TModel> & {
     contexts: readonly TContext[];
-    defaultByContext?: Partial<Record<TContext, TBoolFilterValue>>;
 };
 
-export type TFilterOption<TModel extends object = any> = 
+export type TFilterOption<TModel extends object = any> =
     | INumberFilter<TModel> 
     | IDateFilter<TModel> 
     | IBooleanFilter<TModel> 
     | IStringFilter<TModel>;
 
-export interface IStringFilterValueOption {
-    value: string;
-    label: string;
-    matches?: string[]
-}
-
 interface IBaseFilter<TModel> {
-    dbField: Extract<keyof TModel, string>; 
-    label: string;
+    readonly dbField: TDbField<TModel>; 
+    readonly label: string;
 }
 
 interface INumberFilter<TModel> extends IBaseFilter<TModel> {
-    type: 'number';
-    minParamName: string;
-    maxParamName: string;
-    minLimit?: number;
-    maxLimit?: number;
+    readonly type: 'number';
+    readonly minParamName: string;
+    readonly maxParamName: string;
+    readonly minLimit?: number;
+    readonly maxLimit?: number;
 }
 
 interface IDateFilter<TModel> extends IBaseFilter<TModel> {
-    type: 'date';
-    minParamName: string;
-    maxParamName: string;
-    minLimit?: Date;
-    maxLimit?: Date;
+    readonly type: 'date';
+    readonly minParamName: string;
+    readonly maxParamName: string;
+    readonly minLimit?: Date;
+    readonly maxLimit?: Date;
 }
 
 interface IBooleanFilter<TModel> extends IBaseFilter<TModel> {
-    type: 'boolean';
-    paramName: string;
+    readonly type: 'boolean';
+    readonly paramName: string;
 }
 
 interface IStringFilter<TModel> extends IBaseFilter<TModel> {
-    type: 'string';
-    paramName: string;
-    valueOptions: IStringFilterValueOption[];
-    defaultValue?: string;
+    readonly type: 'string';
+    readonly paramName: string;
+    readonly valueOptions: IStringFilterValueOption[];
+    readonly defaultValue?: string;
+}
+
+export interface IStringFilterValueOption {
+    readonly value: string;
+    readonly label: string;
+    readonly matches?: readonly string[]
 }
 
 ////////////////////
@@ -222,9 +227,9 @@ export type TProductEditorSortOption = typeof productEditorSortOptions[number];
 export type TOrdersSortOption = typeof ordersSortOptions[number];
 
 export interface ISortOption<TModel = any> {
-    dbField: Extract<keyof TModel, string>;
-    label: string;
-    defaultOrder: 'asc' | 'desc';
+    readonly dbField: TDbField<TModel>;
+    readonly label: string;
+    readonly defaultOrder: 'asc' | 'desc';
 }
 
 /////////////
@@ -244,7 +249,7 @@ export type TFilterParamsClient = Record<string, string>;
 export type TFilterParamsServer = Record<string, string | number | boolean | Date | undefined>;
 
 export type TQuery<TModel extends object, TFilter extends TFilterParamsServer = {}> =
-    IBaseQuery<Extract<keyof TModel, string>> &
+    IBaseQuery<TDbField<TModel>> &
     TFilter;
 
 export type TInferFilterParams<T extends TFilterOption> = {
@@ -285,3 +290,14 @@ export interface IDotNotationPatch {
     path: string;
     value: any;
 }
+
+// Утилита для получения всех ключей модели и заданных для неё путей через точку в карте
+export type IDotNotationMap = Record<string, string>;
+
+type ExtractDotPaths<T> = T extends { _dotNotationMap: infer M }
+    ? M extends IDotNotationMap
+        ? M[keyof M]
+        : never
+    : never;
+
+export type TDbField<TModel> = Extract<keyof TModel, string> | ExtractDotPaths<TModel>;

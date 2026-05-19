@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -45,7 +45,7 @@ interface ICategoryListSuccessData {
 /// Создание категории ///
 export type TCategoryCreateResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'category'>
+    | TFieldErrorResponse<'category'>
     | TGeneralErrorResponse
     | TSuccessResponse<ICategoryCreateSuccessData>;
 
@@ -57,7 +57,7 @@ interface ICategoryCreateSuccessData extends ICategoryBaseSuccessData {
 export type TCategoryUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'category'>
+    | TFieldErrorResponse<'category'>
     | TGeneralErrorResponse
     | TSuccessResponse<ICategoryUpdateSuccessData>;
 

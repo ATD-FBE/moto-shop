@@ -5,7 +5,7 @@ import {
     SEARCH_TYPES,
     ORDER_ADJUSTMENT_TYPE
 } from '@server/config/constants.js';
-import type { TRegisteredUserRole } from '@shared/types/index.js';
+import type { TRegisteredUserRole, TOrderViewMode } from '@shared/types/index.js';
 
 /////////////////
 /// CONSTANTS ///
@@ -76,12 +76,9 @@ interface IS3StorageConfig {
 /// VIEW POICY ///
 //////////////////
 
-export type TOrderViewMatrix = Record<TRegisteredUserRole, IOrderViewMatrixEntry>;
+export type TOrderViewMatrix = Record<TRegisteredUserRole, TOrderViewMatrixEntry>;
 
-interface IOrderViewMatrixEntry {
-    readonly page: IOrderViewConfig;
-    readonly list: IOrderViewConfig;
-}
+type TOrderViewMatrixEntry = Record<TOrderViewMode, IOrderViewConfig>;
 
 interface IOrderViewConfig {
     readonly inList: boolean;

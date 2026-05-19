@@ -186,10 +186,6 @@ export const handleAuthUserUpdateRequest: RequestHandler<
     }
     
     const dbUser = req.dbUser;
-    const dbUserBackup: Pick<TDbUser, 'name' | 'email'> = {
-        name: dbUser.name,
-        email: dbUser.email
-    };
     const prepDbFields: IAuthUserUpdateBody = {
         newName: newName?.trim(),
         newEmail: newEmail?.trim(),
@@ -227,13 +223,17 @@ export const handleAuthUserUpdateRequest: RequestHandler<
             }
 
             // Предварительное обновление остальных полей
-            const dbFieldToFormFieldMap = {
+            const dbUserBackup: Pick<TDbUser, 'name' | 'email'> = {
+                name: dbUser.name,
+                email: dbUser.email
+            };
+            const dbFieldToFormFieldMap: Record<keyof typeof dbUserBackup, keyof IAuthUserUpdateBody> = {
                 name: 'newName',
                 email: 'newEmail'
-            } as const;
+            };
 
             for (const [dbField, formField] of Object.entries(dbFieldToFormFieldMap) as [
-                keyof typeof dbFieldToFormFieldMap,
+                keyof typeof dbUserBackup,
                 keyof IAuthUserUpdateBody
             ][]) {
                 const value = prepDbFields[formField];

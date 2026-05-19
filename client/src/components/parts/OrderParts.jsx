@@ -12,6 +12,7 @@ import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import {
     REQUEST_STATUS,
+    ORDER_VIEW_MODE,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD,
     PAYMENT_METHOD_OPTIONS,
@@ -255,7 +256,7 @@ export function OrderInvoiceButton({ orderId }) {
 
 export function OrderRefreshButton({
     orderId,
-    viewMode = 'page', // page | list
+    viewMode = ORDER_VIEW_MODE.PAGE, // page | list
     uiBlocked = false,
     refreshOrderState
 }) {

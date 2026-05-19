@@ -144,10 +144,11 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                 };
 
                 if (isValid) {
+                    acc.formFields[name] = normalizedValue;
+
                     const initValue = initFieldValuesRef.current[name];
 
                     if (normalizedValue !== initValue) {
-                        acc.formFields[name] = normalizedValue;
                         acc.changedFields.push(name);
                     }
                 } else {

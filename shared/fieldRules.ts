@@ -28,15 +28,20 @@ export const skuValidation = /^[A-Z]{2,5}-\d{2,5}$/;
 export const phoneValidation = /^(\+7|8)\d{10}$/;
 export const cvcValidation = /^\d{3,4}$/;
 
-export const naturalValidation = (val: unknown) => /^\d+$/.test(String(val));
+export const naturalValidation = (val: unknown) =>
+    typeof val === 'number' && /^\d+$/.test(String(val));
 
-export const decimalValidation = (val: unknown) => /^\d+(\.\d+)?$/.test(String(val));
+export const decimalValidation = (val: unknown) =>
+    typeof val === 'number' && /^\d+(\.\d+)?$/.test(String(val));
 
-export const currencyValidation = (val: unknown) => /^\d+(?:\.\d{1,2})?$/.test(String(val));
+export const currencyValidation = (val: unknown) =>
+    typeof val === 'number' && /^\d+(?:\.\d{1,2})?$/.test(String(val));
 
-export const alwaysPassValidation = (_val: unknown): boolean => true;
+export const booleanValidation = (val: unknown): boolean => typeof val === 'boolean';
 
 export const booleanRequiredValidation = (val: unknown): boolean => val === true;
+
+export const alwaysPassValidation = (_val: unknown): boolean => true;
 
 export const imageValidation = (
     file: File,
@@ -56,10 +61,8 @@ export const recipientsValidation = (recipients: unknown): boolean =>
 export const productUnitValidation = (val: unknown): boolean =>
     typeof val === 'string' && PRODUCT_UNITS.some(unit => unit === val);
 
-export const discountValidation = (val: unknown): boolean => {
-    if (typeof val !== 'number') return false;
-    return /^\d+(?:\.\d{1})?$/.test(String(val)) && val >= 0 && val <= 100;
-};
+export const discountValidation = (val: unknown): boolean =>
+    typeof val === 'number' && /^\d+(?:\.\d{1})?$/.test(String(val)) && val >= 0 && val <= 100;
 
 export const deliveryMethodValidation = (val: unknown): boolean =>
     typeof val === 'string' && Object.values(DELIVERY_METHOD).some(m => m === val);
@@ -155,7 +158,7 @@ export const validationRules = {
         discount: discountValidation,
         category: alwaysPassValidation, // select с динамически вычисленными options
         tags: textValidation,
-        isActive: alwaysPassValidation
+        isActive: booleanValidation
     },
     checkout: {
         firstName: textValidation,
@@ -164,7 +167,7 @@ export const validationRules = {
         email: emailValidation,
         phone: phoneValidation,
         deliveryMethod: deliveryMethodValidation,
-        allowCourierExtra: alwaysPassValidation,
+        allowCourierExtra: booleanValidation,
         region: textValidation,
         district: textValidation,
         city: textValidation,
@@ -182,7 +185,7 @@ export const validationRules = {
         email: emailValidation,
         phone: phoneValidation,
         deliveryMethod: deliveryMethodValidation,
-        allowCourierExtra: alwaysPassValidation,
+        allowCourierExtra: booleanValidation,
         region: textValidation,
         district: textValidation,
         city: textValidation,
@@ -209,7 +212,7 @@ export const validationRules = {
         provider: providerValidation,
         amount: currencyValidation,
         transactionId: textValidation,
-        markAsFailed: alwaysPassValidation,
+        markAsFailed: booleanValidation,
         failureReason: textValidation,
         cardNumber: cardNumberValidation,
         cvc: cvcValidation,
@@ -220,7 +223,7 @@ export const validationRules = {
         provider: providerValidation,
         amount: currencyValidation,
         transactionId: textValidation,
-        markAsFailed: alwaysPassValidation,
+        markAsFailed: booleanValidation,
         failureReason: textValidation,
         externalReference: textValidation
     }
@@ -494,7 +497,9 @@ export const fieldErrorMessages: TFieldErrorMessages = {
             default: 'Некорректное значение'
         },
         itemQuantity: {
-            default: 'Некоррект. кол-во'
+            default: 'Неверные данные',
+            productId: 'Некорр. ID товара',
+            quantity: 'Некоррект. кол-во'
         },
         editReason: {
             default: 'Причина изменений обязательна для заполнения'

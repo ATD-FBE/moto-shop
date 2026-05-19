@@ -1,5 +1,14 @@
 import { USER_ROLE } from '@shared/constants.js';
 import type {
+    TEmptyResponse,
+    TAuthErrorResponse,
+    TFieldErrorResponse,
+    TLimitationErrorResponse,
+    TModifiedErrorResponse,
+    TGeneralErrorResponse,
+    TSuccessResponse
+} from './apiResponse.types.js';
+import type {
     IDataChange,
     TDiscountSource,
     TDeliveryMethod,
@@ -11,7 +20,12 @@ import type {
     TBankProvider,
     TCardOnlineProvider,
     TTransactionType,
-    TTransactionStatus
+    TTransactionStatus,
+    TInferFilterParams,
+    TOrdersFilterOption,
+    IBaseQuery,
+    TOrdersSortOption,
+    TOrderViewMode
 } from './shared.types.js';
 
 /// Общие типы ///
@@ -176,3 +190,61 @@ export interface IRefundablePayment {
     transactionId: string;
     amount: number;
 }
+
+/// Загрузка списка заказов для одной страницы ///
+export type TOrderListFilterParams = TInferFilterParams<TOrdersFilterOption>;
+export type TOrderListQuery = IBaseQuery<TOrdersSortOption['dbField']> & TOrderListFilterParams;
+
+export type TOrderListResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderListSuccessData>;
+
+interface IOrderListSuccessData {
+    filteredOrderIdList: string[];
+    paginatedOrderList: IOrder[];
+}
+
+/// Загрузка или обновление отдельного заказа ///
+export type TOrderQuery = {
+    viewMode: TOrderViewMode;
+};
+
+export type TOrderResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderSuccessData>;
+
+interface IOrderSuccessData {
+    order: IOrder;
+}
+
+/// Загрузка доступного на складе количества товаров в заказе ///
+export type TOrderItemsAvailabilityResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderItemsAvailabilitySuccessData>;
+
+interface IOrderItemsAvailabilitySuccessData {
+    orderItemsAvailabilityMap: Record<string, number>;
+}
+
+/// Повтор завершённого или отменённого заказа ///
+export type TOrderRepeatResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+
+/// Изменение внутренней заметки заказа (SSE) ///
+export interface IOrderInternalNoteUpdateBody {
+    internalNote: string;
+}
+
+export type TOrderInternalNoteUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'order'>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Изменение деталей подтверждённого заказа (SSE) ///

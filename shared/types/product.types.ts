@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -134,7 +134,7 @@ export type TProductCreateBodyClient = IProductCreateBodyBase<File>;
 
 export type TProductCreateResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'product'>
+    | TFieldErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IProductCreateSuccessData>;
 
@@ -149,7 +149,7 @@ export type TProductUpdateBodyClient = IProductUpdateBodyBase<File>;
 export type TProductUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'product'>
+    | TFieldErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IProductUpdateSuccessData>;
 
@@ -173,7 +173,7 @@ export interface IBulkProductUpdateBody {
 export type TBulkProductUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'product'>
+    | TFieldErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse<IBulkProductUpdateSuccessData>;
 
@@ -194,6 +194,6 @@ export interface IBulkProductDeleteBody {
 
 export type TBulkProductDeleteResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'product'>
+    | TFieldErrorResponse<'product'>
     | TGeneralErrorResponse
     | TSuccessResponse;

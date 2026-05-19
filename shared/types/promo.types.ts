@@ -1,7 +1,7 @@
 import type {
     TEmptyResponse,
     TAuthErrorResponse,
-    TFormFieldsErrorResponse,
+    TFieldErrorResponse,
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
@@ -60,7 +60,7 @@ export type TPromoCreateBodyClient = IPromoCreateBodyBase<File>;
 
 export type TPromoCreateResponse =
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'promotion'>
+    | TFieldErrorResponse<'promotion'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 
@@ -71,7 +71,7 @@ export type TPromoUpdateBodyClient = IPromoUpdateBodyBase<File>;
 export type TPromoUpdateResponse =
     | TEmptyResponse
     | TAuthErrorResponse
-    | TFormFieldsErrorResponse<'promotion'>
+    | TFieldErrorResponse<'promotion'>
     | TGeneralErrorResponse
     | TSuccessResponse;
 

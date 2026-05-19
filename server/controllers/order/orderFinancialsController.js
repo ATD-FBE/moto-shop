@@ -136,7 +136,7 @@ export const handleOrderRemainingAmountRequest = async (req, res, next) => {
     }
 };
 
-/// Аннулирование записи успешного финансового оффлайн-события в заказе (SSE у клиента) ///
+/// Аннулирование записи успешного финансового оффлайн-события в заказе (SSE) ///
 export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
@@ -309,7 +309,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
     }
 };
 
-/// Внесение оплаты за заказ оффлайн-методом (SSE у клиента) ///
+/// Внесение оплаты за заказ оффлайн-методом (SSE) ///
 export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
@@ -487,7 +487,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     }
 };
 
-/// Возврат средств за заказ оффлайн-методом (SSE у клиента) ///
+/// Возврат средств за заказ оффлайн-методом (SSE) ///
 export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;

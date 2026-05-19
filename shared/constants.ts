@@ -53,6 +53,11 @@ export const HTTP_STATUS_CODE_MAP = {
     SUCCESS: [200, 201, 207]
 } as const;
 
+export const ORDER_VIEW_MODE = {
+    PAGE: 'page',
+    LIST: 'list'
+} as const;
+
 export const CURRENCY = {
     RUB: 'rub'
 } as const;
