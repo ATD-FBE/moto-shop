@@ -55,7 +55,7 @@ export const prepareOrderDraft = (
     dbOrderDraft: TDbOrderDraft,
     orderItemList: IOrderDraft['items']
 ): IOrderDraft => ({
-    expiresAt: dbOrderDraft.expiresAt,
+    expiresAt: dbOrderDraft.expiresAt.toISOString(),
     items: orderItemList,
     totals: dbOrderDraft.totals,
     customerInfo: prepareOrderDraftCustomerInfo(dbOrderDraft.customerInfo),

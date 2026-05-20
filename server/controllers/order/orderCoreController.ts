@@ -17,11 +17,13 @@ import {
     prepareOrder,
     getLastActiveOrderStatus,
     prepareShippingCost,
+    prepareAuditlogEntry,
     getFinancialsState,
     getOrderTransitionData,
     returnProductsToStore,
     getFieldErrors,
-    updateCustomerTotalSpent
+    updateCustomerTotalSpent,
+    processOrderItemsUpdate
 } from '@server/services/orderService.js';
 import { applyProductBulkUpdate } from '@server/services/productService.js';
 import {
@@ -35,7 +37,7 @@ import {
     deepMergeNewNullable
 } from '@server/utils/normalizeUtils.js';
 import { collectDbChanges } from '@server/utils/compareUtils.js';
-import { requireDbUser } from '@server/utils/typeGuards.js';
+import { requireDbUser, requireRole } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
@@ -43,7 +45,12 @@ import { typeCheck, validateObjectFields } from '@server/validation/validationEn
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
-import { isEqualCurrency, makeOrderItemQuantityFieldName, } from '@shared/commonHelpers.js';
+import { isEqualCurrency, isObjectKey, makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,
     USER_ROLE,
@@ -57,9 +64,19 @@ import {
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { FilterQuery } from 'mongoose';
-import type { TDbOrderFinal, TDbProduct, TDbCartItem, TSelectedFields } from '@server/types/index.js';
 import type {
-    IAdminSseMessageData,
+    TDbOrderFinal,
+    TDbProduct,
+    TDbCartItem,
+    TDbOrderAuditLogEntry,
+    TSelectedFields,
+    IOrderItemRef
+} from '@server/types/index.js';
+import type {
+    IOrderDataChange,
+    TFieldErrors,
+    IProductAdjustment,
+
     TOrderListFilterParams,
     TOrderListQuery,
     TOrderListResponse,
@@ -69,6 +86,10 @@ import type {
     TOrderRepeatResponse,
     IOrderInternalNoteUpdateBody,
     TOrderInternalNoteUpdateResponse,
+    IOrderDetailsUpdateBody,
+    TOrderDetailsUpdateResponse,
+    IOrderItemsUpdateBody,
+    TOrderItemsUpdateResponse,
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -78,6 +99,16 @@ import type {
 interface IOrderParams extends ParamsDictionary {
     orderId: string;
 }
+
+type TOrderDotNotationMapValues = typeof orderDotNotationMap[keyof typeof orderDotNotationMap];
+type TOrderDetailsUpdateBodyValues = IOrderDetailsUpdateBody[keyof IOrderDetailsUpdateBody];
+
+type TOrderDetailsUpdateDotNotatedFields = {
+    [K in TOrderDotNotationMapValues]?: TOrderDetailsUpdateBodyValues; 
+};
+type TOrderDetailsUpdateNormalizedFields = {
+    [K in TOrderDotNotationMapValues]?: TOrderDetailsUpdateBodyValues | null; 
+};
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -462,7 +493,7 @@ export const handleOrderInternalNoteUpdateRequest: RequestHandler<
         const { orderUpdateData, orderLbl } = transactionResult;
 
         // Отправка SSE-сообщения админам
-        const sseMessageData: IAdminSseMessageData = { orderUpdate: { orderId, orderUpdateData } };
+        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         safeSendResponse(res, 200, { message: `Внутренняя заметка заказа ${orderLbl} изменена` });
@@ -472,69 +503,63 @@ export const handleOrderInternalNoteUpdateRequest: RequestHandler<
 };
 
 /// Изменение деталей подтверждённого заказа (SSE) ///
-export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
+export const handleOrderDetailsUpdateRequest: RequestHandler<
+    IOrderParams,
+    TOrderDetailsUpdateResponse,
+    IOrderDetailsUpdateBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
 
-    // Предварительная проверка формата данных
     const orderId = req.params.orderId;
-    const {
-        firstName, lastName, middleName, email, phone,
-        deliveryMethod, allowCourierExtra,
-        region, district, city, street, house, apartment, postalCode,
-        defaultPaymentMethod,
-        editReason
-    } = req.body ?? {};
+    const { deliveryMethod, allowCourierExtra, city, street, house, editReason } = req.body;
 
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        firstName: { value: firstName, type: 'string', optional: true, formField: true },
-        lastName: { value: lastName, type: 'string', optional: true, formField: true },
-        middleName: { value: middleName, type: 'string', optional: true, formField: true },
-        email: { value: email, type: 'string', optional: true, formField: true },
-        phone: { value: phone, type: 'string', optional: true, formField: true },
-        deliveryMethod: { value: deliveryMethod, type: 'string', optional: true, formField: true },
-        allowCourierExtra:
-            { value: allowCourierExtra, type: 'emptyableBoolean', optional: true, formField: true },
-        region: { value: region, type: 'string', optional: true, formField: true },
-        district: { value: district, type: 'string', optional: true, formField: true },
-        city: { value: city, type: 'string', optional: true, formField: true },
-        street: { value: street, type: 'string', optional: true, formField: true },
-        house: { value: house, type: 'string', optional: true, formField: true },
-        apartment: { value: apartment, type: 'string', optional: true, formField: true },
-        postalCode: { value: postalCode, type: 'string', optional: true, formField: true },
-        defaultPaymentMethod: { value: defaultPaymentMethod, type: 'string', optional: true, formField: true },
-        editReason: { value: editReason, type: 'string', formField: true }
-    };
+    // Создание объекта с дотнотационными путями в ключах для обновляемых полей
+    const dotNotatedUpdateFields: TOrderDetailsUpdateDotNotatedFields = {};
 
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
+    for (const [key, value] of (Object.entries(req.body) as [string, TOrderDetailsUpdateBodyValues][])) {
+        if (isObjectKey(key, orderDotNotationMap) && value !== undefined) {
+            dotNotatedUpdateFields[orderDotNotationMap[key]] = value;
+        }
     }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
+
+    // Проверка, есть ли хоть одно обновляемое поле
+    if (!Object.keys(dotNotatedUpdateFields).length) {
+        return safeSendResponse(res, 204);
     }
 
     // Проверка на согласованность данных для метода курьерской доставки
     const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
-    const isAllowCourierExtra = allowCourierExtra !== undefined && allowCourierExtra !== '';
-
-    if ((isCourierMethod && !isAllowCourierExtra) || (!isCourierMethod && isAllowCourierExtra)) {
+    const isAllowCourierExtra = allowCourierExtra !== undefined;
+    
+    if (
+        (isCourierMethod && !isAllowCourierExtra) ||
+        (deliveryMethod !== undefined && !isCourierMethod && isAllowCourierExtra)
+    ) {
         return safeSendResponse(res, 400, { message: 'Несогласованные данные для метода доставки' });
     }
 
-    // Заполнение данных только для пришедших полей через дот-нотационные названия полей
-    const updateFields = Object.fromEntries(
-        Object.entries(validationConfigMap)
-            .filter(([key, { form, value }]) => form && orderDotNotationMap[key] && value !== undefined)
-            .map(([key, { value }]) => [orderDotNotationMap[key], value])
-    );
+    // Проверка на обязательность полей для адресных методов доставки
+    const isAddressDelivery = [
+        DELIVERY_METHOD.COURIER,
+        DELIVERY_METHOD.TRANSPORT_COMPANY
+    ].some(method => method === deliveryMethod);
 
-    if (!Object.keys(updateFields).length) {
-        return safeSendResponse(res, 204);
+    if (isAddressDelivery) {
+        const requiredAddressFields = { city, street, house };
+        const missingAddressFields = Object.entries(requiredAddressFields)
+            .filter(([_, value]) => !value)
+            .map(([field]) => field);
+
+        if (missingAddressFields.length > 0) {
+            return safeSendResponse(res, 400, {
+                message:
+                    'Для выбранного метода доставки отсутствуют обязательные поля адреса: ' +
+                    `[${missingAddressFields.join(', ')}]`
+            });
+        }
     }
 
     try {
@@ -552,20 +577,32 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
             }
 
             // Объединение нормализованных изменённых полей с существующими через дот-нотацию
-            const currentOrder = dbOrder.toObject();
-            const normalizedUpdateFields = normalizeInputDataToNull(updateFields);
-            const newOrderData = dotNotationToObject(normalizedUpdateFields);
-            const mergedOrder = deepMergeNewNullable(currentOrder, newOrderData);
+            const currentOrder: TDbOrderFinal = dbOrder.toObject();
+            const normalizedDotNotatedUpdateFields: TOrderDetailsUpdateNormalizedFields =
+                normalizeInputDataToNull(dotNotatedUpdateFields);
+            const newOrderData: Partial<TDbOrderFinal> =
+                dotNotationToObject(normalizedDotNotatedUpdateFields);
+            const mergedOrder: TDbOrderFinal =
+                deepMergeNewNullable(currentOrder, newOrderData);
 
             if (deliveryMethod !== undefined) {
                 mergedOrder.delivery.shippingCost = prepareShippingCost(deliveryMethod, allowCourierExtra);
             }
 
+            // Очистка данных для методов доставки
+            if (deliveryMethod === DELIVERY_METHOD.SELF_PICKUP) {
+                mergedOrder.delivery.allowCourierExtra = null;
+                mergedOrder.delivery.shippingAddress = undefined;
+            }
+            if (deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY) {
+                mergedOrder.delivery.allowCourierExtra = null;
+            }
+
             // Сбор данных изменения полей
-            const updateZones = ['customerInfo', 'delivery', 'financials'];
+            const updateZones: (keyof TDbOrderFinal)[] = ['customerInfo', 'delivery', 'financials'];
             const fieldsPreserveNull = [orderDotNotationMap.shippingCost]; // Поля с валидным null-значением
             const currencyFields = [orderDotNotationMap.shippingCost]; // Поля со значением валюты
-            let changes = [];
+            let changes: IOrderDataChange[] = [];
 
             for (const zone of updateZones) {
                 changes = collectDbChanges(
@@ -584,14 +621,16 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
             }
 
             // Добавление записи для аудита
-            const auditLog = Array.isArray(currentOrder.auditLog) ? [...currentOrder.auditLog] : [];
+            const auditLog: TDbOrderAuditLogEntry[] = [...(currentOrder.auditLog ?? [])];
+
             auditLog.push({
-                changes,
+                changes: changes as TDbOrderAuditLogEntry['changes'],
                 reason: editReason,
                 changedBy: { id: dbUser._id, name: dbUser.name, role: dbUser.role },
                 changedAt: new Date()
             });
-            mergedOrder.auditLog = auditLog;
+
+            mergedOrder.auditLog = auditLog as TDbOrderFinal['auditLog'];
 
             // Установка через set и сохранение через save для удаления null-полей и пустых объектов
             dbOrder.set(mergedOrder);
@@ -600,8 +639,12 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
-            const newAuditLogEntry = updatedDbOrder.auditLog.at(-1).toObject();
-            const orderUpdateData = { orderPatches, newAuditLogEntry };
+            const newAuditLogEntry = updatedDbOrder.auditLog?.at(-1)?.toObject();
+
+            const orderUpdateData = {
+                orderPatches,
+                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditlogEntry(newAuditLogEntry) })
+            };
 
             return { orderLbl, orderUpdateData };
         });
@@ -617,70 +660,56 @@ export const handleOrderDetailsUpdateRequest = async (req, res, next) => {
 };
 
 /// Изменение товаров подтверждённого заказа (SSE) ///
-export const handleOrderItemsUpdateRequest = async (req, res, next) => {
+export const handleOrderItemsUpdateRequest: RequestHandler<
+    IOrderParams,
+    TOrderItemsUpdateResponse,
+    IOrderItemsUpdateBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
 
-    // Предварительная проверка формата данных
+    const reqCtx = req.reqCtx;
     const orderId = req.params.orderId;
-    const { items, editReason } = req.body ?? {};
+    const { items, editReason } = req.body;
 
-    /*const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        items: { value: items, type: 'arrayOf', arrElemType: 'object' },
-        editReason: { value: editReason, type: 'string', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
+    // Проверка длины и содержимого массива items
+    if (!items.length) {
+        return safeSendResponse(res, 204);
     }
 
-    // Проверка содержимого массива items
-    const itemFieldErrors = {};
+    const fieldErrors: TFieldErrors<'order'> = {};
 
     for (const { productId, quantity } of items) {
         const isProductIdValid = typeCheck.objectIdString(productId);
 
         if (!isProductIdValid) {
             const fieldName = makeOrderItemQuantityFieldName(productId);
-            itemFieldErrors[fieldName] =
+            (fieldErrors as any)[fieldName] =
                 fieldErrorMessages.order.itemQuantity.productId ||
-                fieldErrorMessages.DEFAULT;
+                DEFAULT_FIELD_ERROR_MESSAGE;
         }
 
-        const isQuantityValid = validationRules.order.itemQuantity.test(quantity);
+        const isQuantityValid = validationRules.order.itemQuantity(quantity) && quantity >= 0;
 
         if (!isQuantityValid) {
             const fieldName = makeOrderItemQuantityFieldName(productId);
-            itemFieldErrors[fieldName] =
+            (fieldErrors as any)[fieldName] =
                 fieldErrorMessages.order.itemQuantity.quantity ||
-                fieldErrorMessages.DEFAULT;
+                DEFAULT_FIELD_ERROR_MESSAGE;
         }
     }
 
-    const hasFieldErrors = Object.keys(fieldErrors).length > 0;
-    const hasItemFieldErrors = Object.keys(itemFieldErrors).length > 0;
-
-    if (hasFieldErrors || hasItemFieldErrors) {
-        return safeSendResponse(res, 422, {
+    if (Object.keys(fieldErrors).length > 0) {
+        return safeSendResponse<TOrderItemsUpdateResponse, 422, typeof REQUEST_STATUS.INVALID>(res, 422, {
             message: 'Неверный формат данных',
-            ...(hasFieldErrors && { fieldErrors }),
-            ...(hasItemFieldErrors && { itemFieldErrors })
+            fieldErrors
         });
-    }*/
-
-    // Отсутствуют поля в массиве товаров
-    if (!items.length) {
-        return safeSendResponse(res, 204);
     }
 
     try {
-        const imageFilenamesToDelete = [];
+        let imageFilenamesToDelete: string[] = [];
 
         const transactionResult = await runInDbTransaction(async (session) => {
             const dbOrder = await OrderFinal.findById(orderId).session(session);
@@ -697,118 +726,30 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
 
             // Обработка изменения количества товаров в заказе
             const updatedOrder = dbOrder.toObject();
-            const updatedItems = [...updatedOrder.items];
 
-            const itemAdjustments = [];
-            const changes = [];
+            const {
+                updatedItems,
+                changes,
+                itemAdjustments,
+                orderItemsDeltaQty,
+                imageFilenamesToDelete: collectedImageFilenamesToDelete
+            } = await processOrderItemsUpdate(items, updatedOrder);
 
-            const productIds = items.map(item => item.productId);
-            const dbProducts = await Product.find({ _id: { $in: productIds } }).lean().session(session);
-            checkTimeout(req);
-
-            const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
-            const orderItemsDeltaQty = [];
-
-            items.forEach(({ productId, quantity }) => {
-                const dbProduct = dbProductMap.get(productId);
-                const adjustments = {};
-
-                const adjustedProductData = {
-                    id: productId,
-                    name: dbProduct?.name,
-                    brand: dbProduct?.brand ?? undefined,
-                    adjustments
-                };
-
-                // Товар удалён - сбор данных для логов и выход
-                if (!dbProduct) {
-                    adjustments.deleted = true;
-                    itemAdjustments.push(adjustedProductData);
-                    return;
-                }
-
-                // Товар в заказе не найден - значит, добавлен новый (не реализовано)
-                const currentItem = updatedItems.find(item => item.productId.toString() === productId);
-                if (!currentItem) return;
-
-                // Количество не изменилось
-                const currentQuantity = currentItem.quantity;
-                if (quantity === currentQuantity) return;
-
-                const { name, brand } = currentItem;
-
-                // Количество товара добавлено, но он закончился - сбор данных для логов и выход
-                const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
-
-                if (quantity > currentQuantity && available === 0) {
-                    adjustments.outOfStock = true;
-                    itemAdjustments.push(adjustedProductData);
-                    return;
-                }
-
-                // Новое количество товара больше заказанного + доступного - сбор данных для логов
-                const maxQuantity = currentQuantity + available;
-                const correctedQuantity = Math.min(quantity, maxQuantity);
-
-                if (correctedQuantity < quantity) {
-                    adjustments.quantityReduced = {
-                        old: quantity,
-                        corrected: correctedQuantity
-                    };
-                    itemAdjustments.push(adjustedProductData);
-                }
-
-                // Сбор дельты изменения количества для обновления товаров в БД
-                const deltaQuantity = correctedQuantity - currentQuantity; // Значение всегда !== 0
-                orderItemsDeltaQty.push({ productId, quantity: deltaQuantity });
-
-                // Установка нового количества товара в заказе и сбор изменений для товара
-                const currentItemIdx = updatedItems.findIndex(
-                    item => item.productId.toString() === productId
-                );
-
-                if (quantity === 0) { // Удаление товара при указанном количестве 0
-                    changes.push({
-                        field: `items[${currentItemIdx}]`,
-                        oldValue: JSON.stringify(currentItem),
-                        newValue: undefined
-                    });
-                    updatedItems.splice(currentItemIdx, 1);
-
-                    if (currentItem.imageFilename) {
-                        imageFilenamesToDelete.push(currentItem.imageFilename);
-                    }
-                } else { // Установка нового количества и пересчёт суммы
-                    const finalUnitPrice = currentItem.finalUnitPrice;
-                    const oldTotalPrice = currentItem.totalPrice;
-                    const newTotalPrice = Number((correctedQuantity * finalUnitPrice).toFixed(2));
-
-                    changes.push({
-                        field: `items[${currentItemIdx}].quantity`,
-                        oldValue: currentQuantity,
-                        newValue: correctedQuantity
-                    });
-                    changes.push({
-                        field: `items[${currentItemIdx}].totalPrice`,
-                        oldValue: oldTotalPrice,
-                        newValue: newTotalPrice,
-                        currency: true
-                    });
-                    
-                    updatedItems[currentItemIdx].quantity = correctedQuantity;
-                    updatedItems[currentItemIdx].totalPrice = newTotalPrice;
-                }
-            });
+            imageFilenamesToDelete = collectedImageFilenamesToDelete;
 
             if (changes.length > 0) { // Есть изменения
                 // Пересчёт сумм и проверка минимальной суммы заказа
                 const orderTotals = calculateOrderTotals(updatedItems, { confirmed: true });
 
                 if (orderTotals.totalAmount < MIN_ORDER_AMOUNT) {
-                    throw createAppError(422, `Сумма заказа ${orderLbl} меньше минимальной`, {
-                        reason: REQUEST_STATUS.LIMITATION,
-                        orderItemAdjustments: itemAdjustments
-                    });
+                    throw createAppError<TOrderItemsUpdateResponse, 422, typeof REQUEST_STATUS.LIMITATION>(
+                        422,
+                        `Сумма заказа ${orderLbl} меньше минимальной`,
+                        {
+                            reason: REQUEST_STATUS.LIMITATION,
+                            orderItemAdjustments: itemAdjustments
+                        }
+                    );
                 }
 
                 // Изменение количества товаров на складе
@@ -816,7 +757,7 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 checkTimeout(req);
 
                 // Сбор данных для логов изменения сумм
-                Object.entries(updatedOrder.totals)
+                (Object.entries(updatedOrder.totals) as [keyof typeof updatedOrder.totals, number][])
                     .forEach(([field, oldValue]) => {
                         const newValue = orderTotals[field];
                         if (oldValue === newValue) return;
@@ -850,26 +791,30 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
                 }
 
                 updatedOrder.totals = orderTotals;
-                updatedOrder.items = updatedItems;
+                updatedOrder.items.splice(0, updatedOrder.items.length, ...updatedItems);
             } else { // Нет изменений
-                if (itemAdjustments.length > 0) { // Есть корректировки изменений
-                    throw createAppError(412, `Заказ ${orderLbl} не изменён в связи с корректировками`, {
-                        orderItemAdjustments: itemAdjustments
-                    });
-                } else { // Нет корректировок изменений
-                    throw createAppError(204);
+                // Есть корректировки изменений
+                if (itemAdjustments.length > 0) {
+                    throw createAppError<TOrderItemsUpdateResponse, 412>(
+                        412,
+                        `Заказ ${orderLbl} не изменён в связи с корректировками`,
+                        { orderItemAdjustments: itemAdjustments }
+                    );
                 }
+
+                // Нет ни изменений, ни корректровок
+                throw createAppError(204);
             }
 
             // Добавление записи для аудита
-            const auditLog = Array.isArray(updatedOrder.auditLog) ? [...updatedOrder.auditLog] : [];
+            const auditLog: TDbOrderAuditLogEntry[] = [...updatedOrder.auditLog ?? []];
             auditLog.push({
-                changes,
+                changes: changes as TDbOrderAuditLogEntry['changes'],
                 reason: editReason,
                 changedBy: { id: dbUser._id, name: dbUser.name, role: dbUser.role },
                 changedAt: new Date()
             });
-            updatedOrder.auditLog = auditLog;
+            updatedOrder.auditLog = auditLog as TDbOrderFinal['auditLog'];
 
             // Установка через set и сохранение через save для удаления null-полей и пустых объектов
             dbOrder.set(updatedOrder);
@@ -878,8 +823,12 @@ export const handleOrderItemsUpdateRequest = async (req, res, next) => {
 
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
-            const newAuditLogEntry = updatedDbOrder.auditLog.at(-1).toObject();
-            const orderUpdateData = { orderPatches, newAuditLogEntry };
+            const newAuditLogEntry = updatedDbOrder.auditLog?.at(-1)?.toObject();
+
+            const orderUpdateData = {
+                orderPatches,
+                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditlogEntry(newAuditLogEntry) })
+            };
 
             return { orderLbl, orderUpdateData, itemAdjustments };
         });
@@ -910,6 +859,8 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
+
     const orderId = req.params.orderId;
     const { action, formFields } = req.body ?? {};
     const { shippingCost, cancellationReason } = typeCheck.object(formFields) ? formFields : {};

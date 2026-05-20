@@ -7,6 +7,8 @@ import {
     orderItemsAvailabilitySchema,
     orderRepeatSchema,
     orderInternalNoteUpdateSchema,
+    orderDetailsUpdateSchema,
+    orderItemsUpdateSchema,
 } from '@server/validation/schemas/order.schemas.js';
 import {
     handleOrderListRequest,
@@ -101,6 +103,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderDetailsUpdateSchema),
     handleOrderDetailsUpdateRequest
 );
 router.patch(
@@ -108,6 +111,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderItemsUpdateSchema),
     handleOrderItemsUpdateRequest
 );
 router.patch(

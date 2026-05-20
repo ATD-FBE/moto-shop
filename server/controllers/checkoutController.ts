@@ -433,9 +433,9 @@ export const handleOrderDraftUpdateRequest: RequestHandler<
 
     const userId = req.dbUser._id;
     const orderId = req.params.orderId;
+    const { deliveryMethod, allowCourierExtra } = req.body;
 
     // Проверка на согласованность данных для метода курьерской доставки
-    const { deliveryMethod, allowCourierExtra } = req.body;
     const isCourierMethod = deliveryMethod === DELIVERY_METHOD.COURIER;
     const isAllowCourierExtra = allowCourierExtra !== undefined;
     
@@ -644,7 +644,7 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                             orderDraft: {
                                 items: orderItemList,
                                 totals: orderTotals,
-                                expiresAt: dbOrderDraft.expiresAt
+                                expiresAt: dbOrderDraft.expiresAt.toISOString()
                             },
                             orderItemAdjustments
                         }

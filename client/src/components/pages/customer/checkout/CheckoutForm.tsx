@@ -66,8 +66,7 @@ import type {
     SubmitEvent,
     InputHTMLAttributes,
     TextareaHTMLAttributes,
-    SelectHTMLAttributes,
-    HTMLAttributes
+    SelectHTMLAttributes
 } from 'react';
 import type {
     IFormGroupConfig,
@@ -161,8 +160,7 @@ type TFormGroupSummaryProps = Pick<TFormGroupEntriesProps, 'fieldConfigs' | 'fie
 type TFieldElemProps =
     InputHTMLAttributes<HTMLInputElement> &
     TextareaHTMLAttributes<HTMLTextAreaElement> &
-    SelectHTMLAttributes<HTMLSelectElement> &
-    HTMLAttributes<HTMLSpanElement>;
+    SelectHTMLAttributes<HTMLSelectElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -383,11 +381,6 @@ const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfi
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs, { autoSave: true });
 const shippingAddressFieldNames = extractFieldConfigNamesByKey(fieldConfigs, 'address');
 
-type TPendingFieldMeta = {
-    inFlight: boolean;
-    requestedValue: TFieldStateValue;
-};
-
 export default function CheckoutForm({
     orderId,
     orderDraft,
@@ -415,7 +408,6 @@ export default function CheckoutForm({
     const formGroupRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const updateDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const fieldsStateRef = useRef(fieldsState);
-    const pendingFieldMapRef = useRef<Partial<Record<TFieldName, TPendingFieldMeta>>>({});
     const saveStatusTimersRef = useRef<
         Partial<Record<TFieldName, ReturnType<typeof setTimeout>>>
     >({});
@@ -493,7 +485,6 @@ export default function CheckoutForm({
                     if (normalizedValue === COURIER) {
                         acc.set('allowCourierExtra', fieldsStateRef.current.allowCourierExtra.value);
                     }
-        
                     if (normalizedValue === TRANSPORT_COMPANY || normalizedValue === COURIER) {
                         shippingAddressFieldNames.forEach(name => {
                             acc.set(name, fieldsStateRef.current[name].value);
@@ -590,7 +581,7 @@ export default function CheckoutForm({
 
         clearUpdateDebounceTimer();
 
-        const checked = target instanceof HTMLInputElement && target.checked;
+        const checked = 'checked' in target ? target.checked : false;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({
@@ -624,7 +615,7 @@ export default function CheckoutForm({
             });
         }
 
-        const checked = target instanceof HTMLInputElement && target.checked;
+        const checked = 'checked' in target ? target.checked : false;
         const fieldValue = type === 'checkbox' ? checked : value;
 
         updateOrderDraft({ name, value: fieldValue });
@@ -949,16 +940,14 @@ export default function CheckoutForm({
             defaultPaymentMethod: defaultPaymentMethod ?? '',
             customerComment: customerComment ?? ''
         };
-
-        if (Object.keys(flatInitValues).length > 0) {
-            dispatchFieldsState({
-                type: 'UPDATE',
-                payload: Object.fromEntries(
-                    Object.entries(flatInitValues)
-                        .map(([name, value]) => ([name, { value, savedValue: value }]))
-                )
-            });
-        }
+        
+        dispatchFieldsState({
+            type: 'UPDATE',
+            payload: Object.fromEntries(
+                Object.entries(flatInitValues)
+                    .map(([name, value]) => ([name, { value, savedValue: value }]))
+            )
+        });
 
         // Раскрытие первой группы формы с товарами в заказе
         setExpandedFormGroup('orderItemsGroup');

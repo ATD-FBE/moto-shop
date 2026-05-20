@@ -1,6 +1,6 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
-import { ORDER_VIEW_MODE } from '@shared/constants.js';
+import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD } from '@shared/constants.js';
 import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
 
 const orderEntity = 'order';
@@ -33,5 +33,59 @@ export const orderInternalNoteUpdateSchema: IValidationInputSchema = {
     params: paramsBaseSchema,
     body: {
         internalNote: { type: 'string', optional: true, match: true, formField: true }
+    }
+} as const;
+
+export const orderDetailsUpdateSchema: IValidationInputSchema = {
+    entityType: orderEntity,
+    params: paramsBaseSchema,
+    body: {
+        firstName: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        lastName: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        middleName: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        email: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        phone: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        deliveryMethod: {
+            type: 'string',
+            optional: true,
+            emptyable: true,
+            enum: Object.values(DELIVERY_METHOD),
+            formField: true
+        },
+        allowCourierExtra: { type: 'boolean', optional: true, formField: true },
+        region: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        district: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        city: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        street: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        house: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        apartment: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        postalCode: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
+        defaultPaymentMethod: {
+            type: 'string',
+            optional: true,
+            emptyable: true,
+            enum: Object.values(PAYMENT_METHOD),
+            formField: true
+        },
+        customerComment: { type: 'string', optional: true, emptyable: true, formField: true },
+        editReason: { type: 'string', match: true, formField: true }
+    }
+} as const;
+
+export const orderItemsUpdateSchema: IValidationInputSchema = {
+    entityType: orderEntity,
+    params: paramsBaseSchema,
+    body: {
+        items: {
+            type: 'array',
+            /*items: {
+                type: 'object',
+                fields: {
+                    productId: { type: 'objectIdString' },
+                    quantity: { type: 'integer', min: 0 }
+                }
+            }*/
+        },
+        editReason: { type: 'string', match: true, formField: true }
     }
 } as const;

@@ -6,7 +6,7 @@ import type { JSX } from 'react';
 //////////////////////////
 
 interface IOrderDraftExpirationTimerProps {
-    expirationTime?: Date;
+    expirationTime?: string;
     isCancelled: boolean;
     onExpire: () => void;
 }
@@ -26,9 +26,9 @@ export default function OrderDraftExpirationTimer(
     { expirationTime, isCancelled, onExpire }: IOrderDraftExpirationTimerProps
 ): JSX.Element {
     const calculateTimerData = (): IExpirationTimerData => {
-        const expirationTimeNum = expirationTime?.getTime();
+        const expirationTimeNum = new Date(expirationTime ?? NaN).getTime();
 
-        if (!expirationTimeNum || Number.isNaN(expirationTimeNum)) {
+        if (Number.isNaN(expirationTimeNum)) {
             return { isExpired: false, hours: '--', minutes: '--', seconds: '--' };
         }
 

@@ -67,18 +67,15 @@ export const FinalDeliverySchema = new Schema({
         },
         city: {
             ...baseDeliveryFields.shippingAddress.city,
-            match: validationRules.checkout.city,
-            required: true
+            match: validationRules.checkout.city
         },
         street: {
             ...baseDeliveryFields.shippingAddress.street,
-            match: validationRules.checkout.street,
-            required: true
+            match: validationRules.checkout.street
         },
         house: {
             ...baseDeliveryFields.shippingAddress.house,
-            match: validationRules.checkout.house,
-            required: true
+            match: validationRules.checkout.house
         },
         apartment: { // Опционально для заказа
             ...baseDeliveryFields.shippingAddress.apartment,

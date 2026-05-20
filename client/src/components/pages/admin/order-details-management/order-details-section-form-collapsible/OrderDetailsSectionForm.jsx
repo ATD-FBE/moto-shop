@@ -135,7 +135,6 @@ const getFieldConfigs = (section) => {
                 label: 'Курьер-экстра',
                 elem: 'checkbox',
                 checkboxLabel: 'Выбрать дополнительную услугу курьера',
-                relatedField: 'deliveryMethod',
                 tooltip:
                     'При удалении свыше 10 км от магазина возможен выезд курьера с доплатой. ' +
                     'Стоимость рассчитывается индивидуально.',
@@ -279,6 +278,7 @@ export default function OrderDetailsSectionForm({
     );
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const initFieldValuesRef = useRef({});
+    const isItemsSectionRef = useRef(section === 'itemsSection');
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();
 
@@ -295,7 +295,6 @@ export default function OrderDetailsSectionForm({
     );
 
     const isFormLocked = lockedStatuses.has(submitStatus);
-    const isItemsSection = section === 'itemsSection';
 
     const handleFieldChange = (e) => {
         const { type, name, value, checked } = e.currentTarget;
@@ -323,7 +322,6 @@ export default function OrderDetailsSectionForm({
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) {
-                    acc.formFields[name] = ''; // Для удаления поля в БД
                     return acc;
                 }
 
@@ -357,7 +355,7 @@ export default function OrderDetailsSectionForm({
                         acc.formFields[name] = normalizedValue;
                         acc.changedFields.push(name);
 
-                        if (relatedField) {
+                        if (relatedField && applicabilityMap[relatedField]) {
                             acc.formFields[relatedField] = fieldsState[relatedField]?.value;
                         }
                     }
@@ -376,7 +374,7 @@ export default function OrderDetailsSectionForm({
     const handleFormSubmit = (e) => {
         e.preventDefault();
 
-        if (isItemsSection) {
+        if (isItemsSectionRef.current) {
             setIsItemsSubmitting(true);
         } else {
             const formFieldsResult = prepareFormFields();
@@ -387,19 +385,27 @@ export default function OrderDetailsSectionForm({
         }
     };
 
-    const handleItemsSectionFormSubmit = async (itemsSubmitResult) => {
-        const formFieldsResult = prepareFormFields();
+    const handleItemsSectionFormSubmit = (itemsSubmitResult) => {
+        if (!itemsSubmitResult.ok) {
+            return setIsItemsSubmitting(false);
+        }
 
-        if (!formFieldsResult || !itemsSubmitResult.ok) {
+        // Сбор и валиация полей общей формы (поле editReason для itemsSection)
+        const formFieldsResult = prepareFormFields({
+            changedItemsFields: itemsSubmitResult.changedFields
+        });
+
+        if (!formFieldsResult) {
             return setIsItemsSubmitting(false);
         }
 
         const { formFields, changedFields } = formFieldsResult;
         formFields.items = itemsSubmitResult.items;
-        await performFormSubmission(formFields, changedFields, itemsSubmitResult.changedFields);
+
+        performFormSubmission(formFields, changedFields, itemsSubmitResult.changedFields);
     };
 
-    const prepareFormFields = () => {
+    const prepareFormFields = ({ changedItemsFields } = {}) => {
         const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -407,9 +413,20 @@ export default function OrderDetailsSectionForm({
         if (!allValid) {
             setSubmitStatus(FORM_STATUS.INVALID);
             return null;
-        } else if (!changedFields.length) {
-            setSubmitStatus(FORM_STATUS.UNCHANGED);
-            return null;
+        } else {
+            if (isItemsSectionRef.current) {
+                if (!changedItemsFields.length) {
+                    setSubmitStatus(FORM_STATUS.UNCHANGED);
+                    return null;
+                }
+            } else {
+                const changedDbFields = changedFields.filter(f => f !== 'editReason');
+
+                if (!changedDbFields.length) {
+                    setSubmitStatus(FORM_STATUS.UNCHANGED);
+                    return null;
+                }
+            }
         }
 
         return { formFields, changedFields };
@@ -419,13 +436,13 @@ export default function OrderDetailsSectionForm({
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const requestThunk = isItemsSection
+        const requestThunk = isItemsSectionRef.current
             ? sendOrderItemsUpdateRequest(order.id, formFields)
             : sendOrderDetailsUpdateRequest(order.id, formFields);
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
-        const { status, message, orderItemAdjustments, fieldErrors, itemFieldErrors } = responseData;
+        const { status, message, orderItemAdjustments, fieldErrors } = responseData;
         const hasAdjustments = orderItemAdjustments?.length > 0;
         const LOG_CTX = 'ORDER: UPDATE';
 
@@ -440,7 +457,7 @@ export default function OrderDetailsSectionForm({
             case FORM_STATUS.ERROR:
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });
-                if (isItemsSection) setIsItemsSubmitting(false);
+                if (isItemsSectionRef.current) setIsItemsSubmitting(false);
                 setSubmitStatus(status);
                 dispatch(setNavigationLock(false));
                 break;
@@ -493,8 +510,7 @@ export default function OrderDetailsSectionForm({
             }
 
             case FORM_STATUS.INVALID: {
-                const combinedErrors = { ...(fieldErrors ?? {}), ...(itemFieldErrors ?? {}) };
-                logRequestStatus({ context: LOG_CTX, status, message, details: combinedErrors });
+                logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
                 if (fieldErrors) {
                     const fieldsStateUpdates = {};
@@ -504,12 +520,9 @@ export default function OrderDetailsSectionForm({
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
                 }
 
-                if (isItemsSection) {
+                if (isItemsSectionRef.current) {
                     setIsItemsSubmitting(false);
-
-                    if (itemFieldErrors) {
-                        onItemsResponseResult({ fieldErrors: itemFieldErrors });
-                    }
+                    onItemsResponseResult({ fieldErrors });
                 }
 
                 setSubmitStatus(status);
@@ -526,7 +539,9 @@ export default function OrderDetailsSectionForm({
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
-                if (isItemsSection) onItemsResponseResult({ changedFields: changedItemsFields });
+                if (isItemsSectionRef.current) {
+                    onItemsResponseResult({ changedFields: changedItemsFields });
+                }
                 setSubmitStatus(status);
 
                 setTimeout(() => {
@@ -550,7 +565,7 @@ export default function OrderDetailsSectionForm({
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
-                    if (isItemsSection) setIsItemsSubmitting(false);
+                    if (isItemsSectionRef.current) setIsItemsSubmitting(false);
                     setSubmitStatus(FORM_STATUS.DEFAULT);
                     dispatch(setNavigationLock(false));
                 }, SUCCESS_DELAY);
@@ -559,7 +574,7 @@ export default function OrderDetailsSectionForm({
         
             default:
                 logRequestStatus({ context: LOG_CTX, status, message, unhandled: true });
-                if (isItemsSection) setIsItemsSubmitting(false);
+                if (isItemsSectionRef.current) setIsItemsSubmitting(false);
                 setSubmitStatus(FORM_STATUS.UNKNOWN);
                 dispatch(setNavigationLock(false));
                 break;
@@ -575,32 +590,41 @@ export default function OrderDetailsSectionForm({
 
     // Установка начальных значений полей заказа после загрузки/апдейта заказа
     useEffect(() => {
-        // Выпрямление начальных значений полей и установка их в состояние редьюсера
-        const { customerInfo = {}, delivery = {}, financials = {} } = order;
-        const { deliveryMethod, allowCourierExtra = false, shippingAddress = {} } = delivery;
+        const { customerInfo, delivery, financials, customerComment } = order ?? {};
+        const { firstName, lastName, middleName, email, phone } = customerInfo ?? {};
+        const { deliveryMethod, allowCourierExtra, shippingAddress } = delivery ?? {};
+        const { region, district, city, street, house, apartment, postalCode } = shippingAddress ?? {};
+        const { defaultPaymentMethod } = financials ?? {};
 
-        const allFlatInitValues = {
-            ...customerInfo,
-            deliveryMethod,
-            allowCourierExtra,
-            ...shippingAddress,
-            ...financials
+        initFieldValuesRef.current = {
+            firstName: firstName ?? '',
+            lastName: lastName ?? '',
+            middleName: middleName ?? '',
+            email: email ?? '',
+            phone: phone ?? '',
+            deliveryMethod: deliveryMethod ?? '',
+            allowCourierExtra: allowCourierExtra ?? false,
+            region: region ?? '',
+            district: district ?? '',
+            city: city ?? '',
+            street: street ?? '',
+            house: house ?? '',
+            apartment: apartment ?? '',
+            postalCode: postalCode ?? '',
+            defaultPaymentMethod: defaultPaymentMethod ?? '',
+            customerComment: customerComment ?? '',
+            editReason: ''
         };
 
-        const fieldsStateUpdates = {};
-
-        fieldConfigs.forEach(cfg => {
-            if (cfg.name === 'editReason') return;
-
-            const initValue = allFlatInitValues[cfg.name] ?? '';
-
-            initFieldValuesRef.current[cfg.name] = initValue;
-            fieldsStateUpdates[cfg.name] = { value: initValue };
+        dispatchFieldsState({
+            type: 'UPDATE',
+            payload: Object.fromEntries(
+                Object.entries(initFieldValuesRef.current).map(([name, value]) => ([name, { value }]))
+            )
         });
 
-        dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         setSubmitStatus(FORM_STATUS.DEFAULT);
-    }, [order, fieldConfigs]);
+    }, [order]);
 
     // Сброс статуса формы при отсутствии ошибок полей
     useEffect(() => {
@@ -610,13 +634,13 @@ export default function OrderDetailsSectionForm({
         if (!isErrorField) setSubmitStatus(FORM_STATUS.DEFAULT);
     }, [submitStatus, fieldsState]);
 
-    // Отправка данных после обработки полей количества товара в заказе (для секции )
+    // Отправка данных после обработки полей количества товара в заказе (для секции)
     useEffect(() => {
-        if (!isItemsSection) return;
+        if (!isItemsSectionRef.current) return;
         if (!itemsSubmitResult) return;
 
         handleItemsSectionFormSubmit(itemsSubmitResult);
-    }, [isItemsSection, itemsSubmitResult]);
+    }, [itemsSubmitResult]);
 
     return (
         <form className="order-details-section-form" onSubmit={handleFormSubmit} noValidate>

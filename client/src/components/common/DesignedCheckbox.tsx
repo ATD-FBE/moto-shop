@@ -8,7 +8,7 @@ interface IDesignedCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputEleme
     showColon?: boolean;
     checkIcon?: string;
     checkIconColor?: 'blue' | 'red' | 'green';
-    onBlur?: (e: FocusEvent<HTMLSpanElement>) => void; // Переопределение blur для span
+    onBlur?: (e: FocusEvent<HTMLInputElement>) => void; // Переопределение blur для span
 }
 
 export default function DesignedCheckbox({
@@ -26,18 +26,52 @@ export default function DesignedCheckbox({
     ...rest
 }: IDesignedCheckboxProps): JSX.Element {
     const inputRef = useRef<HTMLInputElement | null>(null);
+    const spanRef = useRef<HTMLSpanElement | null>(null);
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
+    const handleSpanKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
         if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
-            e.preventDefault(); // Чтобы пробел не скроллил страницу
+            e.preventDefault();
             inputRef.current?.click();
+        }
+    };
+
+    const handleSpanBlur = (e: FocusEvent<HTMLSpanElement>) => {
+        if (!onBlur) return;
+
+        const input = inputRef.current;
+        if (!input) return;
+
+        const fakeInputElementEvent = {
+            ...e,
+            currentTarget: {
+                name: input.name,
+                type: input.type,
+                value: input.value,
+                checked: input.checked
+            }
+        } as FocusEvent<HTMLInputElement>;
+
+        onBlur(fakeInputElementEvent);
+    };
+
+    const handleLabelMouseDown = (e: React.MouseEvent<HTMLSpanElement>) => {
+        e.preventDefault(); 
+    };
+
+    const handleLabelClick = () => {
+        if (!disabled && spanRef.current) {
+            spanRef.current.focus();
         }
     };
 
     return (
         <label className="designed-checkbox-container">
             {label && labelSide === 'left' &&
-                <span className="checkbox-label left-side">
+                <span
+                    className="checkbox-label left-side"
+                    onMouseDown={handleLabelMouseDown}
+                    onClick={handleLabelClick}
+                >
                     {label}{showColon && ':'}
                 </span>}
 
@@ -53,10 +87,11 @@ export default function DesignedCheckbox({
             />
 
             <span
+                ref={spanRef}
                 className="designed-checkbox"
                 tabIndex={disabled ? -1 : 0}
-                onKeyDown={handleKeyDown}
-                onBlur={onBlur}
+                onKeyDown={handleSpanKeyDown}
+                onBlur={handleSpanBlur}
             >
                 <span
                     className={cn('check-icon', `color-${checkIconColor}`, { 'visible': checked })}
@@ -67,7 +102,11 @@ export default function DesignedCheckbox({
             </span>
 
             {label && labelSide === 'right' &&
-                <span className="checkbox-label right-side">
+                <span
+                    className="checkbox-label right-side"
+                    onMouseDown={handleLabelMouseDown}
+                    onClick={handleLabelClick}
+                >
                     {label}{showColon && ':'}
                 </span>}
         </label>

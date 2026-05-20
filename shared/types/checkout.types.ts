@@ -37,7 +37,7 @@ export interface ICheckoutDetails {
 };
 
 export interface IOrderDraft extends ICheckoutDetails {
-    expiresAt: Date;
+    expiresAt: string;
     items: {
         productId: string;
         quantity: number;

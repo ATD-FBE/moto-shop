@@ -44,7 +44,7 @@ export const orderDraftUpdateSchema: IValidationInputSchema = {
             enum: Object.values(DELIVERY_METHOD),
             formField: true
         },
-        allowCourierExtra: { type: 'boolean', optional: true, emptyable: true, formField: true },
+        allowCourierExtra: { type: 'boolean', optional: true, formField: true },
         region: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
         district: { type: 'string', optional: true, emptyable: true, match: true, formField: true },
         city: { type: 'string', optional: true, emptyable: true, match: true, formField: true },

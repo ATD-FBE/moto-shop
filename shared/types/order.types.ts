@@ -8,6 +8,7 @@ import type {
     TGeneralErrorResponse,
     TSuccessResponse
 } from './apiResponse.types.js';
+import type { IProductAdjustment } from './product.types.js';
 import type {
     IDataChange,
     TDiscountSource,
@@ -108,9 +109,9 @@ export interface IDelivery {
     shippingAddress?: {
         region?: string;
         district?: string;
-        city: string;
-        street: string;
-        house: string;
+        city?: string;
+        street?: string;
+        house?: string;
         apartment?: string;
         postalCode?: string;
     };
@@ -248,3 +249,57 @@ export type TOrderInternalNoteUpdateResponse =
     | TSuccessResponse;
     
 /// Изменение деталей подтверждённого заказа (SSE) ///
+export interface IOrderDetailsUpdateBody {
+    firstName?: string;
+    lastName?: string;
+    middleName?: string;
+    email?: string;
+    phone?: string;
+    deliveryMethod?: TDeliveryMethod;
+    allowCourierExtra?: boolean;
+    region?: string;
+    district?: string;
+    city?: string;
+    street?: string;
+    house?: string;
+    apartment?: string;
+    postalCode?: string;
+    defaultPaymentMethod?: TPaymentMethod;
+    customerComment?: string;
+    editReason: string;
+}
+
+export type TOrderDetailsUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'order'>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Изменение товаров подтверждённого заказа (SSE) ///
+export interface IOrderItemsUpdateBody {
+    items: {
+        productId: string;
+        quantity: number;
+    }[],
+    editReason: string;
+}
+
+export type TOrderItemsUpdateResponse =
+    | TEmptyResponse
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'order'>
+    | TLimitationErrorResponse<IOrderItemsUpdateLimitationErrorData>
+    | TModifiedErrorResponse<IOrderItemsUpdateModifiedErrorData>
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderItemsUpdateSuccessData>;
+
+interface IOrderItemsUpdateLimitationErrorData {
+    orderItemAdjustments: IProductAdjustment[];
+}
+interface IOrderItemsUpdateModifiedErrorData {
+    orderItemAdjustments: IProductAdjustment[];
+}
+interface IOrderItemsUpdateSuccessData {
+    orderItemAdjustments: IProductAdjustment[];
+}

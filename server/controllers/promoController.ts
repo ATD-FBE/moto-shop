@@ -212,7 +212,6 @@ export const handlePromoUpdateRequest: RequestHandler<
     const { file: image, fileUploadError } = req; // Проверено в multer
     const { title, description, startDate, endDate, removeImage } = req.body;
 
-    const shouldRemoveImage = removeImage === 'true';
     const newImageFilename = image?.filename ?? null;
     let rollbackCleanupFiles = false;
 
@@ -235,8 +234,8 @@ export const handlePromoUpdateRequest: RequestHandler<
         
             // Проверка на согласованность флага удаления старого файла картинки и нового файла
             if (
-                (hasImage && image && !shouldRemoveImage) ||
-                (!hasImage && shouldRemoveImage)
+                (hasImage && image && !removeImage) ||
+                (!hasImage && removeImage)
             ) {
                 throw createAppError(400, `Несогласованные данные для изображения акции ${promoLbl}`);
             }
@@ -248,7 +247,7 @@ export const handlePromoUpdateRequest: RequestHandler<
             };
 
             dbPromo.imageFilename = oldImageFilename
-                ? shouldRemoveImage ? newImageFilename : oldImageFilename
+                ? removeImage ? newImageFilename : oldImageFilename
                 : newImageFilename;
 
             const startDateUTC = new Date(startDate);
@@ -294,7 +293,7 @@ export const handlePromoUpdateRequest: RequestHandler<
             checkTimeout(req);
 
             // Подготовка данных для удаления файлов
-            const postUpdateFileCleanup = shouldRemoveImage && oldImageFilename
+            const postUpdateFileCleanup = removeImage && oldImageFilename
                 ? {
                     filename: oldImageFilename,
                     fullCleanup: !image

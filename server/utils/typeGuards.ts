@@ -4,7 +4,7 @@ import { validationRules } from '@shared/fieldRules.js';
 import { REGISTERED_USER_ROLES } from '@shared/constants.js';
 import type { Request, NextFunction } from 'express';
 import type { TDbUserDoc, TTokenDecodedUser } from '@server/types/index.js';
-import type { TEntityType, TEntityField } from '@shared/types/index.js';
+import type { TEntityType, TEntityField, TUserRole } from '@shared/types/index.js';
 
 export const isTokenDecodedUser = (decoded: string | JwtPayload | null): decoded is TTokenDecodedUser => {
     if (typeof decoded !== 'object' || decoded === null) return false;
@@ -25,6 +25,23 @@ export const requireDbUser = <R extends Request<any, any, any, any>>(
         next(new Error('Критическая ошибка: dbUser не инициализирован в защищённом маршруте'));
         return false;
     }
+
+    return true;
+};
+
+export const requireRole = <
+    U extends TDbUserDoc,
+    R extends TUserRole
+>(
+    dbUser: U,
+    role: R,
+    next: NextFunction
+): dbUser is U & { role: R } => {
+    if (dbUser.role !== role) {
+        next(new Error('Критическая ошибка: недостаточно прав'));
+        return false;
+    }
+
     return true;
 };
 

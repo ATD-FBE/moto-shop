@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { Schema, Model, model } from 'mongoose';
 import { StatusHistoryEntrySchema } from './schemas/order/StatusHistoryEntrySchema.js';
 import { TotalsSchema } from './schemas/order/TotalsSchema.js';
 import { AuditLogSchema } from './schemas/order/AuditLogSchema.js';

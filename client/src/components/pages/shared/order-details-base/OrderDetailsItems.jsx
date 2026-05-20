@@ -246,6 +246,8 @@ export default function OrderDetailsItems({
             dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
             highlightTimerId = setTimeout(() => {
+                if (isUnmountedRef.current) return;
+                
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: '' };
                 });

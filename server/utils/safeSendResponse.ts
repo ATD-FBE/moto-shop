@@ -1,8 +1,8 @@
 import { HTTP_STATUS_CODE_MAP } from '@shared/constants.js';
 import { resolveRequestStatus } from '@shared/statusResolver.js';
 import type { Response } from 'express';
-import type { TInferPayload } from '@server/types/index.js';
-import type { TBaseResponse } from '@shared/types/index.js';
+import type { TInferPayload, TCodeToStatusMap } from '@server/types/index.js';
+import type { TBaseResponse, TRequestStatus } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -23,10 +23,14 @@ export default function safeSendResponse<R extends TBaseResponse>(
 ): void;
 
 // Перегрузка: Сигнатура 2 - Для ответов С телом
-export default function safeSendResponse<R extends TBaseResponse, N extends number>(
+export default function safeSendResponse<
+    R extends TBaseResponse,
+    N extends number,
+    S extends TRequestStatus = TCodeToStatusMap<N>
+>(
     res: Response<R>,
     statusCode: N,
-    data: TInferPayload<R, N>
+    data: TInferPayload<R, N, S>
 ): void;
 
 // Главная реализация ответа

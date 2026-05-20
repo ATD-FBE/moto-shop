@@ -44,8 +44,7 @@ import type {
     FocusEvent,
     SubmitEvent,
     InputHTMLAttributes,
-    SelectHTMLAttributes,
-    HTMLAttributes
+    SelectHTMLAttributes
 } from 'react';
 import type {
     IGetSubmitStatesResult,
@@ -91,8 +90,7 @@ interface IFormGroupEntriesProps {
 
 type TFieldElemProps =
     InputHTMLAttributes<HTMLInputElement> &
-    SelectHTMLAttributes<HTMLSelectElement> &
-    HTMLAttributes<HTMLSpanElement>;
+    SelectHTMLAttributes<HTMLSelectElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -379,7 +377,7 @@ export default function CheckoutPreferences(): JSX.Element {
         dispatchFieldsState({
             type: 'UPDATE',
             payload: Object.fromEntries(
-                Object.entries(initFieldValuesRef.current).map(([key, value]) => ([key, { value }]))
+                Object.entries(initFieldValuesRef.current).map(([name, value]) => ([name, { value }]))
             )
         });
         
@@ -391,7 +389,7 @@ export default function CheckoutPreferences(): JSX.Element {
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        const checked = target instanceof HTMLInputElement && target.checked;
+        const checked = 'checked' in target ? target.checked : false;
         const processedValue = type === 'checkbox' ? checked : value;
 
         dispatchFieldsState({

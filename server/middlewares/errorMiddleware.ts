@@ -46,14 +46,15 @@ export const globalErrorHandler: ErrorRequestHandler = (err, req, res, _next) =>
     // Обработка ошибок валидации полей при сохранении в MongoDB
     if (isMongooseValidationError(error)) {
         const { fieldErrors, systemFieldErrors } = parseValidationErrors(error, req.entityType);
+        const errLbl = '[Mongoose Validation Error]';
     
         if (Object.keys(fieldErrors).length > 0) {
-            return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
+            return safeSendResponse(res, 422, { message: `${errLbl} Некорректные данные`, fieldErrors });
         }
 
         if (systemFieldErrors.length > 0) {
-            log.error(`${req.reqCtx} - Status: 500 - Системные ошибки валидации:`, systemFieldErrors);
-            return safeSendResponse(res, 500, { message: 'Внутренняя ошибка сервера' });
+            log.error(`${req.reqCtx} - ${errLbl} - Системные ошибки валидации:`, systemFieldErrors);
+            return safeSendResponse(res, 500, { message: `${errLbl} Внутренняя ошибка сервера` });
         }
     }
 

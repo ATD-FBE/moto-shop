@@ -35,8 +35,7 @@ import type {
     FocusEvent,
     SubmitEvent,
     InputHTMLAttributes,
-    SelectHTMLAttributes,
-    HTMLAttributes
+    SelectHTMLAttributes
 } from 'react';
 import type {
     TLeafCategories,
@@ -75,8 +74,7 @@ type TApiFormFields = {
 
 type TFieldElemProps =
     InputHTMLAttributes<HTMLInputElement> &
-    SelectHTMLAttributes<HTMLSelectElement> &
-    HTMLAttributes<HTMLSpanElement>;
+    SelectHTMLAttributes<HTMLSelectElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -234,7 +232,7 @@ export default function BulkProductForm(
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        const checked = target instanceof HTMLInputElement && target.checked;
+        const checked = 'checked' in target ? target.checked : false;
         let processedValue: string | number | boolean | undefined;
         
         if (type === 'number' && value !== '') {

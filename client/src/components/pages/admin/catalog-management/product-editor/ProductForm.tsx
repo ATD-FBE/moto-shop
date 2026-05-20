@@ -45,8 +45,7 @@ import type {
     SubmitEvent,
     InputHTMLAttributes,
     TextareaHTMLAttributes,
-    SelectHTMLAttributes,
-    HTMLAttributes
+    SelectHTMLAttributes
 } from 'react';
 import type {
     TLeafCategories,
@@ -124,8 +123,7 @@ type TApiFormFields = {
 type TFieldElemProps =
     InputHTMLAttributes<HTMLInputElement> & 
     TextareaHTMLAttributes<HTMLTextAreaElement> &
-    SelectHTMLAttributes<HTMLSelectElement> &
-    HTMLAttributes<HTMLSpanElement>;
+    SelectHTMLAttributes<HTMLSelectElement>;
 
 /////////////////////
 /// FUNCTIONALITY ///
@@ -479,8 +477,8 @@ export default function ProductForm(
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
-        const checked = target instanceof HTMLInputElement && target.checked;
+        const files = 'files' in target ? Array.from(target.files || []) : [];
+        const checked = 'checked' in target ? target.checked : false;
         const isImages = name === 'images';
         let processedValue: string | number | boolean | undefined;
         

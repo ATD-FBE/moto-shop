@@ -1,9 +1,10 @@
 import { join } from 'path';
-import { Types, type ClientSession } from 'mongoose';
+import { Types } from 'mongoose';
 import PdfPrinter from 'pdfmake';
 import numberToWordsRuPkg from 'number-to-words-ru';
 import User from '@server/db/models/User.js';
 import Order from '@server/db/models/Order.js';
+import Product from '@server/db/models/Product.js';
 import { applyProductBulkUpdate } from './productService.js';
 import { logCriticalEvent } from './criticalEventService.js';
 import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '@server/config/paths.js';
@@ -23,6 +24,7 @@ import {
     TRANSACTION_TYPE
 } from '@shared/constants.js';
 import { COMPANY_DETAILS } from '@shared/company.js';
+import type { ClientSession } from 'mongoose';
 import type {
     TDbOrderFinal,
     TDbOrderDraftItem,
@@ -31,6 +33,7 @@ import type {
     TDbOrderFinancialsEventEntry,
     TDbOrderCurrentOnlineTransaction,
     TDbOrderAuditLogEntry,
+    TDbProduct,
     IInvoiceDefinition,
     TFonts,
     ICalculateOrderFinancialsResult,
@@ -59,10 +62,29 @@ import type {
     TEntityType,
     TEntityField,
     TFieldErrors,
-    TTransactionStatus
+    TTransactionStatus,
+    IProductAdjustment,
+    IOrderDataChange,
+    IOrderItemsUpdateBody
 } from '@shared/types/index.js';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProcessOrderItemsUpdateResult {
+    updatedItems: TDbOrderFinalItem[];
+    changes: IOrderDataChange[];
+    itemAdjustments: IProductAdjustment[];
+    orderItemsDeltaQty: IOrderItemRef[];
+    imageFilenamesToDelete: string[];
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const orderDotNotationMap = {
     // Totals
@@ -161,9 +183,9 @@ export const prepareOrder = (
             shippingAddress: {
                 region: dbOrder.delivery.shippingAddress.region ?? undefined,
                 district: dbOrder.delivery.shippingAddress.district ?? undefined,
-                city: dbOrder.delivery.shippingAddress.city,
-                street: dbOrder.delivery.shippingAddress.street,
-                house: dbOrder.delivery.shippingAddress.house,
+                city: dbOrder.delivery.shippingAddress.city ?? undefined,
+                street: dbOrder.delivery.shippingAddress.street ?? undefined,
+                house: dbOrder.delivery.shippingAddress.house ?? undefined,
                 apartment: dbOrder.delivery.shippingAddress.apartment ?? undefined,
                 postalCode: dbOrder.delivery.shippingAddress.postalCode ?? undefined
             }
@@ -359,21 +381,23 @@ const prepareCurrentOnlineTransaction = (
 };
 
 const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] =>
-    auditLog.map(e => ({
-        changes: e.changes.map(change => ({
-            field: change.field,
-            oldValue: change.oldValue ?? undefined,
-            newValue: change.newValue ?? undefined,
-            currency: change.currency ?? undefined
-        })),
-        reason: e.reason,
-        changedBy: {
-            id: e.changedBy.id.toString(),
-            name: e.changedBy.name,
-            role: e.changedBy.role
-        },
-        changedAt: e.changedAt.toISOString()
-    }));
+    auditLog.map(e => prepareAuditlogEntry(e));
+
+export const prepareAuditlogEntry = (dbAuditLogEntry: TDbOrderAuditLogEntry): IAuditLogEntry => ({
+    changes: dbAuditLogEntry.changes.map(change => ({
+        field: change.field,
+        oldValue: change.oldValue ?? undefined,
+        newValue: change.newValue ?? undefined,
+        currency: change.currency ?? undefined
+    })),
+    reason: dbAuditLogEntry.reason,
+    changedBy: {
+        id: dbAuditLogEntry.changedBy.id.toString(),
+        name: dbAuditLogEntry.changedBy.name,
+        role: dbAuditLogEntry.changedBy.role
+    },
+    changedAt: dbAuditLogEntry.changedAt.toISOString()
+});
 
 export const prepareShippingCost = (
     deliveryMethod: TDeliveryMethod,
@@ -860,4 +884,131 @@ const fmtDate = (date: Date | string): string => {
 const fmtCurrency = (amount: unknown): string => {
     if (typeof amount !== 'number' || isNaN(amount)) return '—';
     return amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+export const processOrderItemsUpdate = async (
+    requestItems: IOrderItemsUpdateBody['items'],
+    updatedOrder: TDbOrderFinal
+): Promise<IProcessOrderItemsUpdateResult> => {
+    const productIds = requestItems.map(item => item.productId);
+    const dbProducts = productIds.length > 0
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
+        : [];
+
+    const updatedItems: TDbOrderFinalItem[] = [...updatedOrder.items];
+    const dbProductMap = new Map(dbProducts.map(prod => [prod._id.toString(), prod]));
+
+    const result = requestItems.reduce<Omit<IProcessOrderItemsUpdateResult, 'updatedItems'>>(
+        (acc, { productId, quantity }) => {
+            const dbProduct = dbProductMap.get(productId);
+            const adjustments: IProductAdjustment['adjustments'] = {};
+
+            const adjustedProductData = {
+                id: productId,
+                name: dbProduct?.name,
+                brand: dbProduct?.brand ?? undefined,
+                adjustments
+            };
+
+            // Товар удалён
+            if (!dbProduct) {
+                adjustments.deleted = true;
+                acc.itemAdjustments.push(adjustedProductData);
+                return acc;
+            }
+
+            // Товар в заказе не найден
+            const currentItemIdx = updatedItems.findIndex(item => item.productId.toString() === productId);
+            if (currentItemIdx === -1) return acc;
+
+            const currentItem = updatedItems[currentItemIdx];
+            if (!currentItem) return acc;
+
+            const currentQuantity = currentItem.quantity;
+
+            // Количество не изменилось
+            if (quantity === currentQuantity) return acc;
+
+            // Проверка доступности
+            const available = Math.max(0, dbProduct.stock - dbProduct.reserved);
+
+            // Нет товара для увеличения количества
+            if (quantity > currentQuantity && available === 0) {
+                adjustments.outOfStock = true;
+                acc.itemAdjustments.push(adjustedProductData);
+                return acc;
+            }
+
+            // Корректировка количества
+            const maxQuantity = currentQuantity + available;
+            const correctedQuantity = Math.min(quantity, maxQuantity);
+
+            if (correctedQuantity < quantity) {
+                adjustments.quantityReduced = {
+                    old: quantity,
+                    corrected: correctedQuantity
+                };
+                acc.itemAdjustments.push(adjustedProductData);
+            }
+
+            // Дельта для склада
+            const deltaQuantity = correctedQuantity - currentQuantity;
+
+            acc.orderItemsDeltaQty.push({
+                productId,
+                quantity: deltaQuantity
+            });
+
+            // Удаление товара
+            if (correctedQuantity === 0) {
+                acc.changes.push({
+                    field: `items[${currentItemIdx}]`,
+                    oldValue: JSON.stringify(currentItem),
+                    newValue: undefined
+                });
+                updatedItems.splice(currentItemIdx, 1);
+
+                if (currentItem.imageFilename) {
+                    acc.imageFilenamesToDelete.push(currentItem.imageFilename);
+                }
+
+                return acc;
+            }
+
+            // Пересчёт totalPrice
+            const finalUnitPrice = currentItem.finalUnitPrice;
+            const oldTotalPrice = currentItem.totalPrice;
+            const newTotalPrice = Number((correctedQuantity * finalUnitPrice).toFixed(2));
+
+            acc.changes.push({
+                field: `items[${currentItemIdx}].quantity`,
+                oldValue: currentQuantity,
+                newValue: correctedQuantity
+            });
+            acc.changes.push({
+                field: `items[${currentItemIdx}].totalPrice`,
+                oldValue: oldTotalPrice,
+                newValue: newTotalPrice,
+                currency: true
+            });
+
+            const updatedItem = {
+                ...currentItem,
+                quantity: correctedQuantity,
+                totalPrice: newTotalPrice
+            };
+
+            updatedItems[currentItemIdx] = updatedItem;
+
+            return acc;
+        },
+        {
+            changes: [],
+            itemAdjustments: [],
+            orderItemsDeltaQty: [],
+            imageFilenamesToDelete: []
+        }
+    );
+
+    return { updatedItems, ...result };
 };

@@ -252,7 +252,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         const { name, type, value } = target;
         if (!isObjectKey(name, fieldConfigMap)) return;
 
-        const files = target instanceof HTMLInputElement ? Array.from(target.files || []) : [];
+        const files = 'files' in target ? Array.from(target.files || []) : [];
 
         const fieldsStateUpdates = {
             [name]: {
