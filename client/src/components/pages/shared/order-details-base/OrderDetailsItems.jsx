@@ -218,8 +218,8 @@ export default function OrderDetailsItems({
         const { shouldRefreshItemsAvailability, fieldErrors, changedFields } = itemsResponseResult;
 
         if (shouldRefreshItemsAvailability) {
-            loadItemsAvailability(); // Для обновления максимального количества товаров
             clearItemsResponseResult();
+            loadItemsAvailability(); // Для обновления максимального количества товаров
             return;
         }
 

@@ -16,10 +16,11 @@ import {
     orderDotNotationMap,
     prepareOrder,
     getLastActiveOrderStatus,
+    getFullOrderStatusEntry,
     prepareShippingCost,
-    prepareAuditlogEntry,
+    getAuditlogEntry,
     getFinancialsState,
-    getOrderTransitionData,
+    getOrderStatusTransitionData,
     returnProductsToStore,
     getFieldErrors,
     updateCustomerTotalSpent,
@@ -41,7 +42,7 @@ import { requireDbUser, requireRole } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { typeCheck } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -69,14 +70,10 @@ import type {
     TDbProduct,
     TDbCartItem,
     TDbOrderAuditLogEntry,
-    TSelectedFields,
-    IOrderItemRef
+    TDbOrderStatusHistoryEntry,
+    TSelectedFields
 } from '@server/types/index.js';
 import type {
-    IOrderDataChange,
-    TFieldErrors,
-    IProductAdjustment,
-
     TOrderListFilterParams,
     TOrderListQuery,
     TOrderListResponse,
@@ -90,6 +87,11 @@ import type {
     TOrderDetailsUpdateResponse,
     IOrderItemsUpdateBody,
     TOrderItemsUpdateResponse,
+    IOrderStatusUpdateBody,
+    TOrderStatusUpdateResponse,
+    IOrderDataChange,
+    TEntityField,
+    TFieldErrors
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -643,7 +645,7 @@ export const handleOrderDetailsUpdateRequest: RequestHandler<
 
             const orderUpdateData = {
                 orderPatches,
-                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditlogEntry(newAuditLogEntry) })
+                ...(newAuditLogEntry && { newAuditLogEntry: getAuditlogEntry(newAuditLogEntry) })
             };
 
             return { orderLbl, orderUpdateData };
@@ -827,7 +829,7 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
 
             const orderUpdateData = {
                 orderPatches,
-                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditlogEntry(newAuditLogEntry) })
+                ...(newAuditLogEntry && { newAuditLogEntry: getAuditlogEntry(newAuditLogEntry) })
             };
 
             return { orderLbl, orderUpdateData, itemAdjustments };
@@ -855,43 +857,23 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
 };
 
 /// Изменение статуса заказа (SSE) ///
-export const handleOrderStatusUpdateRequest = async (req, res, next) => {
+export const handleOrderStatusUpdateRequest: RequestHandler<
+    IOrderParams,
+    TOrderStatusUpdateResponse,
+    IOrderStatusUpdateBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const dbUser = req.dbUser;
     if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
 
     const orderId = req.params.orderId;
-    const { action, formFields } = req.body ?? {};
-    const { shippingCost, cancellationReason } = typeCheck.object(formFields) ? formFields : {};
-
-    // Предварительная проверка формата данных
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        action: { value: action, type: 'string' },
-        formFields: { value: formFields, type: 'object', optional: true },
-        shippingCost: { value: shippingCost, type: 'float', optional: true, formField: true },
-        cancellationReason: { value: cancellationReason, type: 'string', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'order');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    // Проверка доступных значений для action
-    if (!Object.values(ORDER_ACTION).includes(action)) {
-        return safeSendResponse(res, 400, { message: 'Некорректное значение поля: action' });
-    }
+    const { action, formFields } = req.body;
+    const { shippingCost, cancellationReason } = formFields;
 
     try {
         // Транзакция MongoDB
-        const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Поиск и проверка наличия документа заказа
             const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
@@ -919,22 +901,24 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
             const { totalPaid, totalRefunded } = calculateOrderFinancials(financialsEventHistory);
             const netPaid = totalPaid - totalRefunded;
 
-            const prepDbFields = {
-                shippingCost: shippingCost !== undefined ? Number(shippingCost) : currentShippingCost,
-                cancellationReason: cancellationReason?.trim()
-            };
-            const prepDbOrderStatusEntry = {
+            const newDbStatusHistoryEntry: TDbOrderStatusHistoryEntry = {
+                status: currentOrderStatus,
                 changedBy: { id: dbUser._id, name: dbUser.name, role: dbUser.role },
                 changedAt: new Date()
             };
-            const invalidFields = [];
+
+            const invalidFields: TEntityField<'order'>[] = [];
             let newShippingCost = currentShippingCost;
 
             switch (action) {
                 case ORDER_ACTION.NEXT: {
                     // Проверка минимальной суммы заказа
                     if (totalAmount < MIN_ORDER_AMOUNT) {
-                        throw createAppError(422, `Сумма заказа ${orderLbl} меньше минимальной`, {
+                        throw createAppError<
+                            TOrderStatusUpdateResponse,
+                            422,
+                            typeof REQUEST_STATUS.LIMITATION
+                        >(422, `Сумма заказа ${orderLbl} меньше минимальной`, {
                             reason: REQUEST_STATUS.LIMITATION
                         });
                     }
@@ -942,7 +926,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                     // Получение нового статуса
                     const {
                         newOrderStatus
-                    } = getOrderTransitionData(deliveryMethod, currentOrderStatus, 1);
+                    } = getOrderStatusTransitionData(deliveryMethod, currentOrderStatus, 1);
 
                     // Проверка оплаты заказа при изменении статуса на COMPLETED
                     if (
@@ -954,12 +938,12 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                     }
 
                     // Установка статуса
-                    prepDbOrderStatusEntry.status = newOrderStatus;
+                    newDbStatusHistoryEntry.status = newOrderStatus;
 
                     // Обработка нового статуса DELIVERED
                     if (newOrderStatus === ORDER_STATUS.DELIVERED) {
                         // Проверка наличия стоимости за доставку при изменении статуса на DELIVERED
-                        if (prepDbFields.shippingCost === undefined || prepDbFields.shippingCost < 0) {
+                        if (shippingCost === undefined || shippingCost < 0) {
                             invalidFields.push('shippingCost');
                         }
 
@@ -967,7 +951,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                         if (invalidFields.length > 0) break;
 
                         // Изменение стоимости доставки
-                        newShippingCost = prepDbFields.shippingCost;
+                        newShippingCost = shippingCost;
                     }
 
                     break;
@@ -978,7 +962,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                     const {
                         newOrderStatus,
                         rollbackAllowed
-                    } = getOrderTransitionData(deliveryMethod, currentOrderStatus, -1);
+                    } = getOrderStatusTransitionData(deliveryMethod, currentOrderStatus, -1);
                     
                     // Проверка возможности отката для текущего статуса
                     if (!rollbackAllowed) {
@@ -986,11 +970,11 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                     }
 
                     // Установка статуса и флага отката
-                    prepDbOrderStatusEntry.status = newOrderStatus;
-                    prepDbOrderStatusEntry.isRollback = true;
+                    newDbStatusHistoryEntry.status = newOrderStatus;
+                    newDbStatusHistoryEntry.isRollback = true;
 
                     // Сброс стоимости доставки при возврате на статусе DELIVERED
-                    const allowCourierExtra = dbOrder.delivery.allowCourierExtra;
+                    const allowCourierExtra = dbOrder.delivery.allowCourierExtra ?? undefined;
 
                     if (
                         currentOrderStatus === ORDER_STATUS.DELIVERED &&
@@ -1004,10 +988,11 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
                 case ORDER_ACTION.CANCEL: {
                     // Установка нового статуса
-                    prepDbOrderStatusEntry.status = ORDER_STATUS.CANCELLED;
+                    newDbStatusHistoryEntry.status = ORDER_STATUS.CANCELLED;
 
                     // Проверка наличия причины отмены заказа
-                    if (!prepDbFields.cancellationReason) {
+                    const trimmedCancellationReason = cancellationReason?.trim();
+                    if (!trimmedCancellationReason) {
                         invalidFields.push('cancellationReason');
                     }
 
@@ -1015,7 +1000,7 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
                     if (invalidFields.length > 0) break;
 
                     // Установка причины отмены
-                    prepDbOrderStatusEntry.cancellationReason = prepDbFields.cancellationReason;
+                    newDbStatusHistoryEntry.cancellationReason = trimmedCancellationReason;
 
                     // Удаление уточняющейся стоимости доставки
                     if (currentShippingCost === null) {
@@ -1031,26 +1016,33 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
             // Сбор ошибок для невалидных полей и отправка их в ответе
             if (invalidFields.length > 0) {
-                throw createAppError(422, 'Некорректные данные', {
-                    fieldErrors: getFieldErrors(invalidFields, 'order')
-                });
+                throw createAppError<TOrderStatusUpdateResponse, 422, typeof REQUEST_STATUS.INVALID>(
+                    422,
+                    'Некорректные данные',
+                    { fieldErrors: getFieldErrors(invalidFields, 'order') }
+                );
             }
 
             // Проверка изменения статуса заказа
-            if (prepDbOrderStatusEntry.status === currentOrderStatus) {
+            if (newDbStatusHistoryEntry.status === currentOrderStatus) {
                 throw createAppError(400, `Статус заказа ${orderLbl} не изменился`);
+            }
+
+            // Проверка допустимого статуса для подтверждённого заказа
+            if (newDbStatusHistoryEntry.status === ORDER_STATUS.DRAFT) {
+                throw createAppError(500, `Недопустимый статус заказа: ${newDbStatusHistoryEntry.status}`);
             }
 
             // Установка нового финансового состояния
             const newFinancialsState = getFinancialsState(
-                prepDbOrderStatusEntry.status,
+                newDbStatusHistoryEntry.status,
                 netPaid,
                 totalAmount,
                 financialsEventHistory
             );
 
             // Сбор изменений в полях и установка новых значений в документ
-            const changes = [];
+            const changes: IOrderDataChange[] = [];
 
             // Проверка стоимости доставки
             if (newShippingCost !== currentShippingCost) {
@@ -1074,12 +1066,12 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
             }
 
             if (changes.length > 0) {
-                prepDbOrderStatusEntry.changes = changes;
+                newDbStatusHistoryEntry.changes = changes as TDbOrderStatusHistoryEntry['changes'];
             }
 
-            dbOrder.currentStatus = prepDbOrderStatusEntry.status;
-            dbOrder.lastActivityAt = prepDbOrderStatusEntry.changedAt;
-            dbOrder.statusHistory.push(prepDbOrderStatusEntry);
+            dbOrder.currentStatus = newDbStatusHistoryEntry.status;
+            dbOrder.lastActivityAt = newDbStatusHistoryEntry.changedAt;
+            dbOrder.statusHistory.push(newDbStatusHistoryEntry);
             
             // Сохранение докумета
             const updatedDbOrder = await dbOrder.save({ session });
@@ -1099,27 +1091,33 @@ export const handleOrderStatusUpdateRequest = async (req, res, next) => {
 
             // Формирование данных для SSE-сообщения
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
-            const newOrderStatusEntry = updatedDbOrder.statusHistory.at(-1).toObject();
+            const newOrderStatusEntry = updatedDbOrder.statusHistory?.at(-1)?.toObject();
 
-            if (updatedDbOrder.currentStatus === ORDER_STATUS.CANCELLED) {
-                newOrderStatusEntry.lastActiveStatus = getLastActiveOrderStatus(updatedDbOrder.statusHistory);
-            }
+            const lastActiveStatus =
+                newOrderStatusEntry && updatedDbOrder.currentStatus === ORDER_STATUS.CANCELLED
+                    ? getLastActiveOrderStatus(updatedDbOrder.statusHistory.toObject())
+                    : undefined;
 
             const orderUpdateData = {
                 ...(orderPatches.length > 0 && { orderPatches }),
-                newOrderStatusEntry
+                ...(newOrderStatusEntry && {
+                    newOrderStatusEntry: getFullOrderStatusEntry(newOrderStatusEntry, lastActiveStatus)
+                })
             };
 
             return { orderLbl, orderUpdateData };
         });
 
-        const newOrderStatus = orderUpdateData.newOrderStatusEntry.status;
+        const { orderLbl, orderUpdateData } = transactionResult;
+        const newOrderStatus = orderUpdateData.newOrderStatusEntry?.status;
 
         // Отправка SSE-сообщения админам
-        const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
-        if (ORDER_FINAL_STATUSES.includes(newOrderStatus)) {
-            sseMessageData.newActiveOrdersChange = -1;
-        }
+        const sseMessageData = {
+            orderUpdate: { orderId, orderUpdateData },
+            ...(newOrderStatus && ORDER_FINAL_STATUSES.includes(newOrderStatus) && {
+                newActiveOrdersChange: -1
+            })
+        };
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Отправка ответа заказчику

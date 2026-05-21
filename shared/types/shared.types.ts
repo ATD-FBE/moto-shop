@@ -18,6 +18,7 @@ import {
     TRANSACTION_STATUS,
     BANK_PROVIDER,
     CARD_ONLINE_PROVIDER,
+    ORDER_ACTION,
     ORDER_STATUS,
     FINANCIALS_STATE,
     FINANCIALS_EVENT,
@@ -81,11 +82,15 @@ export type TBankProvider = typeof BANK_PROVIDER[keyof typeof BANK_PROVIDER];
 
 export type TCardOnlineProvider = typeof CARD_ONLINE_PROVIDER[keyof typeof CARD_ONLINE_PROVIDER];
 
+export type TOrderAction = typeof ORDER_ACTION[keyof typeof ORDER_ACTION];
+
 export type TOrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
 export type TFinancialsState = typeof FINANCIALS_STATE[keyof typeof FINANCIALS_STATE];
 
 export type TFinancialsEvent = typeof FINANCIALS_EVENT[keyof typeof FINANCIALS_EVENT];
+
+
 
 export type TRequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
 

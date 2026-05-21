@@ -249,23 +249,23 @@ const prepareOrderStatusHistory = (
     // Заказ НЕ отменен
     if (currentEntry?.status !== ORDER_STATUS.CANCELLED) {
         if (latestSummary) {
-            return currentEntry ? [summarizeOrderStatusEntry(currentEntry)] : [];
+            return currentEntry ? [getSummarizedOrderStatusEntry(currentEntry)] : [];
         }
-        return history.map(e => mapFullOrderStatusEntry(e));
+        return history.map(e => getFullOrderStatusEntry(e));
     }
 
     // Заказ ОТМЕНЕН
     const lastActiveStatus = getLastActiveOrderStatus(history);
 
     if (latestSummary) {
-        return currentEntry ? [summarizeOrderStatusEntry(currentEntry, lastActiveStatus)] : [];
+        return currentEntry ? [getSummarizedOrderStatusEntry(currentEntry, lastActiveStatus)] : [];
     }
 
     return history.map(e => {
         if (e.status === ORDER_STATUS.CANCELLED) {
-            return mapFullOrderStatusEntry(e, lastActiveStatus);
+            return getFullOrderStatusEntry(e, lastActiveStatus);
         }
-        return mapFullOrderStatusEntry(e);
+        return getFullOrderStatusEntry(e);
     });
 };
 
@@ -279,7 +279,7 @@ export const getLastActiveOrderStatus = (
     return lastActive ?? ORDER_STATUS.CONFIRMED;
 };
 
-const mapFullOrderStatusEntry = (
+export const getFullOrderStatusEntry = (
     e: TDbOrderStatusHistoryEntry,
     lastActiveStatus?: TOrderStatus
 ): IOrderStatusEntry => ({
@@ -301,7 +301,7 @@ const mapFullOrderStatusEntry = (
     lastActiveStatus
 });
 
-const summarizeOrderStatusEntry = (
+const getSummarizedOrderStatusEntry = (
     e: TDbOrderStatusHistoryEntry,
     lastActiveStatus?: TOrderStatus
 ): IOrderStatusEntrySummary => ({
@@ -316,13 +316,13 @@ const prepareFinancialsHistory = (
 ): (IFinancialsEventEntry | IFinancialsEventEntrySummary)[] => {
     if (latestSummary) {
         const currentEntry = getLastFinancialsEventEntry(history);
-        return currentEntry ? [summarizeFinancialsEventEntry(currentEntry)] : [];
+        return currentEntry ? [getSummarizedFinancialsEventEntry(currentEntry)] : [];
     }
 
-    return history.map(mapFullFinancialsEventEntry);
+    return history.map(getFullFinancialsEventEntry);
 };
 
-const mapFullFinancialsEventEntry = (e: TDbOrderFinancialsEventEntry): IFinancialsEventEntry => ({
+const getFullFinancialsEventEntry = (e: TDbOrderFinancialsEventEntry): IFinancialsEventEntry => ({
     eventId: e.eventId.toString(),
     event: e.event,
     action: {
@@ -352,7 +352,7 @@ const mapFullFinancialsEventEntry = (e: TDbOrderFinancialsEventEntry): IFinancia
     } : undefined
 });
 
-const summarizeFinancialsEventEntry = (
+const getSummarizedFinancialsEventEntry = (
     e: TDbOrderFinancialsEventEntry
 ): IFinancialsEventEntrySummary => ({
     event: e.event,
@@ -381,9 +381,9 @@ const prepareCurrentOnlineTransaction = (
 };
 
 const prepareAuditlog = (auditLog: TDbOrderAuditLogEntry[]): IAuditLogEntry[] =>
-    auditLog.map(e => prepareAuditlogEntry(e));
+    auditLog.map(e => getAuditlogEntry(e));
 
-export const prepareAuditlogEntry = (dbAuditLogEntry: TDbOrderAuditLogEntry): IAuditLogEntry => ({
+export const getAuditlogEntry = (dbAuditLogEntry: TDbOrderAuditLogEntry): IAuditLogEntry => ({
     changes: dbAuditLogEntry.changes.map(change => ({
         field: change.field,
         oldValue: change.oldValue ?? undefined,
@@ -514,7 +514,7 @@ export const checkFinancialsTransactionRecord = (
     transactionId: string
 ): boolean => history.some(e => !e.voided?.flag && e.action.transactionId === transactionId);
 
-export const getOrderTransitionData = (
+export const getOrderStatusTransitionData = (
     deliveryMethod: TDeliveryMethod,
     currentOrderStatus: TOrderStatus,
     stepDelta: 1 | -1 = 1

@@ -9,6 +9,7 @@ import {
     orderInternalNoteUpdateSchema,
     orderDetailsUpdateSchema,
     orderItemsUpdateSchema,
+    orderStatusUpdateSchema,
 } from '@server/validation/schemas/order.schemas.js';
 import {
     handleOrderListRequest,
@@ -119,6 +120,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderStatusUpdateSchema),
     handleOrderStatusUpdateRequest
 );
 router.patch(

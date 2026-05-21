@@ -216,8 +216,12 @@ export default function OrderStatusSteps({
                 }
 
                 const normalizedValue = trim ? value.trim() : value;
-                const ruleCheck = validation.test(normalizedValue);
-                const isValid = ruleCheck;
+                const isValid =
+                    typeof validation === 'function'
+                        ? validation(normalizedValue)
+                        : typeof normalizedValue === 'string'
+                            ? validation.test(normalizedValue)
+                            : false;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,

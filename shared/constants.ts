@@ -199,6 +199,12 @@ export const CARD_ONLINE_PROVIDER_OPTIONS = [
     { value: CARD_ONLINE_PROVIDER.YOOKASSA, label: '«ЮKassa»' }
 ] as const;
 
+export const ORDER_ACTION = {
+    NEXT: 'next',
+    ROLLBACK: 'rollback',
+    CANCEL: 'cancel'
+} as const;
+
 export const ORDER_STATUS = {
     DRAFT: 'draft',
     CONFIRMED: 'confirmed',
@@ -438,12 +444,6 @@ export const SUCCESSFUL_FINANCIALS_EVENTS: readonly TFinancialsEvent[] =
     Object.entries(FINANCIALS_EVENT_CONFIG)
         .filter(([_, cfg]) => cfg.successful)
         .map(([event]) => event as TFinancialsEvent);
-
-export const ORDER_ACTION = {
-    NEXT: 'next',
-    ROLLBACK: 'rollback',
-    CANCEL: 'cancel'
-} as const;
 
 export const REQUEST_STATUS = {
     UNAUTH: 'unauth',

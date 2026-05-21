@@ -1,6 +1,6 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
-import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD } from '@shared/constants.js';
+import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD, ORDER_ACTION } from '@shared/constants.js';
 import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
 
 const orderEntity = 'order';
@@ -87,5 +87,20 @@ export const orderItemsUpdateSchema: IValidationInputSchema = {
             }*/
         },
         editReason: { type: 'string', match: true, formField: true }
+    }
+} as const;
+
+export const orderStatusUpdateSchema: IValidationInputSchema = {
+    entityType: orderEntity,
+    params: paramsBaseSchema,
+    body: {
+        action: { type: 'string', enum: Object.values(ORDER_ACTION) },
+        formFields: {
+            type: 'object',
+            fields: {
+                shippingCost: { type: 'float', optional: true, min: 0, match: true, formField: true },
+                cancellationReason: { type: 'string', optional: true, match: true, formField: true }
+            }
+        }
     }
 } as const;

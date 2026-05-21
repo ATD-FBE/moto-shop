@@ -26,7 +26,8 @@ import type {
     TOrdersFilterOption,
     IBaseQuery,
     TOrdersSortOption,
-    TOrderViewMode
+    TOrderViewMode,
+    TOrderAction
 } from './shared.types.js';
 
 /// Общие типы ///
@@ -303,3 +304,19 @@ interface IOrderItemsUpdateModifiedErrorData {
 interface IOrderItemsUpdateSuccessData {
     orderItemAdjustments: IProductAdjustment[];
 }
+
+/// Изменение статуса заказа (SSE) ///
+export interface IOrderStatusUpdateBody {
+    action: TOrderAction;
+    formFields: {
+        shippingCost?: number;
+        cancellationReason?: string;
+    };
+}
+
+export type TOrderStatusUpdateResponse =
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'order'>
+    | TLimitationErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;
