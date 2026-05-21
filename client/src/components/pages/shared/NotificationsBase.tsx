@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import Toolbar from '@/components/common/Toolbar.jsx';
@@ -9,7 +9,7 @@ import { sendNotificationListRequest } from '@/api/notificationRequests.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
-import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';
+import type { ReactNode, JSX, RefObject, Dispatch, SetStateAction } from 'react';
 import type {
     TDataLoadStatus,
     TToolbarControls,
@@ -25,8 +25,8 @@ import type { INotification } from '@shared/types/index.js';
 interface INotificationsBaseProps {
     showSort?: boolean;
     headerContent: ReactNode;
-    renderNotificationCard: (props: TRenderNotificationCardProps) => JSX.Element;
-    renderNewNotificationsAlert?: (props: INewNotificationAlertProps) => JSX.Element;
+    renderNotificationCard: (props: TRenderNotificationCardProps) => ReactNode;
+    renderNewNotificationsAlert?: (props: INewNotificationAlertProps) => ReactNode;
 }
 
 interface INotificationsMainProps {
@@ -45,7 +45,7 @@ interface INotificationsMainProps {
     limit: number;
     totalNotifications: number;
     setPage: Dispatch<SetStateAction<number>>;
-    renderNotificationCard: (props: TRenderNotificationCardProps) => JSX.Element;
+    renderNotificationCard: (props: TRenderNotificationCardProps) => ReactNode;
 }
 
 /////////////////////

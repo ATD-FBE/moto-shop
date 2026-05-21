@@ -1,8 +1,9 @@
 import NotificationsBase from '@/components/pages/shared/NotificationsBase.jsx';
 import NotificationCardManagement from './notification-management/NotificationCardManagement.jsx';
+import type { JSX } from 'react';
 import type { TRenderNotificationCardProps } from '@/types/index.js';
 
-export default function NotificationManagement() {
+export default function NotificationManagement(): JSX.Element {
     return (
         <NotificationsBase
             headerContent={

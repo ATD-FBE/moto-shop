@@ -1,8 +1,23 @@
-import React from 'react';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import { routeConfig } from '@/config/appRouting.js';
+import type { JSX } from 'react';
 
-export default function CardOnlinePaymentLink({ orderId, orderNumber }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICardOnlinePaymentLinkProps {
+    orderId: string;
+    orderNumber: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function CardOnlinePaymentLink(
+    { orderId, orderNumber }: ICardOnlinePaymentLinkProps
+): JSX.Element {
     return (
         <BlockableLink
             className="card-online-payment-link"

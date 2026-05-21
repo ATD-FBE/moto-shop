@@ -183,9 +183,9 @@ export const prepareOrder = (
             shippingAddress: {
                 region: dbOrder.delivery.shippingAddress.region ?? undefined,
                 district: dbOrder.delivery.shippingAddress.district ?? undefined,
-                city: dbOrder.delivery.shippingAddress.city ?? undefined,
-                street: dbOrder.delivery.shippingAddress.street ?? undefined,
-                house: dbOrder.delivery.shippingAddress.house ?? undefined,
+                city: dbOrder.delivery.shippingAddress.city,
+                street: dbOrder.delivery.shippingAddress.street,
+                house: dbOrder.delivery.shippingAddress.house,
                 apartment: dbOrder.delivery.shippingAddress.apartment ?? undefined,
                 postalCode: dbOrder.delivery.shippingAddress.postalCode ?? undefined
             }

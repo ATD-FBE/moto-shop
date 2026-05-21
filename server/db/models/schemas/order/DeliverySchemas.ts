@@ -57,34 +57,41 @@ export const FinalDeliverySchema = new Schema({
     },
     allowCourierExtra: baseDeliveryFields.allowCourierExtra,
     shippingAddress: {
-        region: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.region,
-            match: validationRules.checkout.region
-        },
-        district: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.district,
-            match: validationRules.checkout.district
-        },
-        city: {
-            ...baseDeliveryFields.shippingAddress.city,
-            match: validationRules.checkout.city
-        },
-        street: {
-            ...baseDeliveryFields.shippingAddress.street,
-            match: validationRules.checkout.street
-        },
-        house: {
-            ...baseDeliveryFields.shippingAddress.house,
-            match: validationRules.checkout.house
-        },
-        apartment: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.apartment,
-            match: validationRules.checkout.apartment
-        },
-        postalCode: { // Опционально для заказа
-            ...baseDeliveryFields.shippingAddress.postalCode,
-            match: validationRules.checkout.postalCode
-        }
+        type: new Schema({
+            region: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.region,
+                match: validationRules.checkout.region
+            },
+            district: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.district,
+                match: validationRules.checkout.district
+            },
+            city: {
+                ...baseDeliveryFields.shippingAddress.city,
+                match: validationRules.checkout.city,
+                required: true
+            },
+            street: {
+                ...baseDeliveryFields.shippingAddress.street,
+                match: validationRules.checkout.street,
+                required: true
+            },
+            house: {
+                ...baseDeliveryFields.shippingAddress.house,
+                match: validationRules.checkout.house,
+                required: true
+            },
+            apartment: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.apartment,
+                match: validationRules.checkout.apartment
+            },
+            postalCode: { // Опционально для заказа
+                ...baseDeliveryFields.shippingAddress.postalCode,
+                match: validationRules.checkout.postalCode
+            }
+        }, {
+            _id: false
+        })
     },
     shippingCost: {
         type: Number,

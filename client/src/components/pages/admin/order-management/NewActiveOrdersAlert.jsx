@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
-import {
-    resetNewActiveOrders as resetNewActiveOrdersCount
-} from '@/redux/slices/uiSlice.js';
+import { resetNewActiveOrders } from '@/redux/slices/uiSlice.js';
 import { getInitFilterParams } from '@/helpers/urlParamsHelper.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 
@@ -41,7 +39,7 @@ export default function NewActiveOrdersAlert({
     // Сброс счётчика новых заказов при размонтировании
     useEffect(() => {
         return () => {
-            dispatch(resetNewActiveOrdersCount());
+            dispatch(resetNewActiveOrders());
         };
     }, [dispatch]);
 
@@ -60,7 +58,7 @@ export default function NewActiveOrdersAlert({
 
     // Сброс счётчика новых заказов после изменения их общего количества (уже включает их в себя)
     useEffect(() => {
-        dispatch(resetNewActiveOrdersCount());
+        dispatch(resetNewActiveOrders());
     }, [totalFilteredOrders, dispatch]);
 
     return (

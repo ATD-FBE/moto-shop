@@ -1,11 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
-import { OrderCardOverview, OrderCardInfoGrid } from '@/components/parts/OrderParts.jsx';
+import CardOnlinePaymentLink from '@/components/pages/customer/customer-orders/CardOnlinePaymentLink.jsx';
+import OrderRepeatButton from '@/components/pages/customer/customer-orders/OrderRepeatButton.jsx';
+import OrderManagementControls from '@/components/pages/admin/shared/OrderManagementControls.jsx';
+import OrderManagementNotes from '@/components/pages/admin/shared/OrderManagementNotes.jsx';
+import NewActiveOrdersAlert from '@/components/pages/admin/order-management/NewActiveOrdersAlert.jsx';
+import {
+    OrderCardStatusSummary,
+    OrderRefreshButton,
+    OrderCardOverview,
+    OrderCardInfoGrid
+} from '@/components/parts/OrderParts.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import Toolbar from '@/components/common/Toolbar.jsx';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
+import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { subscribeToOrderUpdates } from '@/components/sse/SseOrderManagement.jsx';
 import { sendOrderListRequest } from '@/api/orderRequests.js';
 import {
@@ -41,40 +51,118 @@ import {
     ORDER_FINAL_STATUSES,
     REQUEST_STATUS
 } from '@shared/constants.js';
+import type { ReactNode, JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
+import type {
+    TDataLoadStatus,
+    TToolbarControls,
+} from '@/types/index.js';
+import type {
+    TFilterParamsClient,
+    IOrder,
+    IOrderUpdateData,
+    IOrderItem,
+    ICustomerInfo,
+    IDelivery
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrdersBaseProps {
+    showSort?: boolean;
+    subscribeToUpdates?: boolean;
+    isMetaMobileStacked?: boolean;
+    headerContent: ReactNode;
+    renderManagementControls?: (props: ComponentProps<typeof OrderManagementControls>) => ReactNode;
+    renderManagementNotes?: (props: ComponentProps<typeof OrderManagementNotes>) => ReactNode;
+    renderNewActiveOrdersAlert?: (props: ComponentProps<typeof NewActiveOrdersAlert>) => ReactNode;
+    renderCardOnlinePaymentLink?: (props: ComponentProps<typeof CardOnlinePaymentLink>) => ReactNode;
+    renderStatusSummary?: (props: ComponentProps<typeof OrderCardStatusSummary>) => ReactNode;
+    renderOrderRefreshButton?: (props: ComponentProps<typeof OrderRefreshButton>) => ReactNode;
+    renderOrderRepeatButton?: (props: ComponentProps<typeof OrderRepeatButton>) => ReactNode;
+}
+
+type TOrdersMainProps = Pick<IOrdersBaseProps, 
+    | 'renderManagementControls'
+    | 'renderManagementNotes'
+    | 'renderCardOnlinePaymentLink'
+    | 'renderStatusSummary'
+    | 'renderOrderRefreshButton'
+    | 'renderOrderRepeatButton'
+> & {
+    loadStatus: TDataLoadStatus;
+    reloadOrders: () => Promise<void>;
+    paginatedOrderList: IOrder[];
+    expandedOrderIds: Set<string>;
+    toggleOrderExpansion: (id: string) => void;
+    uiBlocked: boolean;
+    setOrderRepeatLoading: Dispatch<SetStateAction<boolean>>;
+    isMetaMobileStacked: boolean;
+    refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+};
+
+type TOrderCardProps = Pick<TOrdersMainProps,
+    | 'isMetaMobileStacked'
+    | 'toggleOrderExpansion'
+    | 'setOrderRepeatLoading'
+    | 'refreshOrderState'
+    | 'renderManagementControls'
+    | 'renderManagementNotes'
+    | 'renderCardOnlinePaymentLink'
+    | 'renderStatusSummary'
+    | 'renderOrderRefreshButton'
+    | 'renderOrderRepeatButton'
+    | 'uiBlocked'
+> & {
+    order: IOrder;
+    isExpanded: boolean;
+};
+
+interface IOrderDetailsInlineProps {
+    orderItemList: IOrderItem[];
+    customerInfo: ICustomerInfo;
+    delivery: IDelivery;
+    totalAmount: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
  
 export default function OrdersBase({
-    headerContent,
-    showSort = true,
+    showSort = false,
     subscribeToUpdates = false,
     isMetaMobileStacked = false,
+    headerContent,
     renderManagementControls,
     renderManagementNotes,
-    renderNewManagedActiveOrdersAlert,
+    renderNewActiveOrdersAlert,
     renderCardOnlinePaymentLink,
     renderStatusSummary,
     renderOrderRefreshButton,
     renderOrderRepeatButton
-}) {
+}: IOrdersBaseProps): JSX.Element | null {
     const [initialized, setInitialized] = useState(false);
 
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState({});
-    const [sort, setSort] = useState(ordersSortOptions[0].dbField);
+    const [filter, setFilter] = useState<TFilterParamsClient>({});
+    const [sort, setSort] = useState<string>(ordersSortOptions[0].dbField);
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(ordersPageLimitOptions[0]);
+    const [limit, setLimit] = useState<number>(ordersPageLimitOptions[0]);
 
     const [initOrdersReady, setInitOrdersReady] = useState(false);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [ordersLoadError, setOrdersLoadError] = useState(false);
     const [orderRepeatLoading, setOrderRepeatLoading] = useState(false); // Один повтор заказа за раз
-    const [filteredOrderIds, setFilteredOrderIds] = useState(new Set());
-    const [paginatedOrderList, setPaginatedOrderList] = useState([]);
-    const [expandedOrderIds, setExpandedOrderIds] = useState(new Set());
+    const [paginatedOrderList, setPaginatedOrderList] = useState<IOrder[]>([]);
+    const [filteredOrderIds, setFilteredOrderIds] = useState<Set<string>>(new Set());
+    const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
 
     const ordersLoadStatus =
@@ -88,22 +176,24 @@ export default function OrdersBase({
 
     const isOrderUiBlocked = ordersLoading || ordersLoadError || orderRepeatLoading;
 
-    const toolbarTopActiveControls = ['limit', 'search', 'filter', 'pages'];
+    const toolbarTopActiveControls: TToolbarControls[]  = ['limit', 'search', 'filter', 'pages'];
     if (showSort) toolbarTopActiveControls.splice(1, 0, 'sort');
 
-    const loadOrders = async (urlParams) => {
+    const loadOrders = async (urlParams: string): Promise<void> => {
         setOrdersLoadError(false);
         setOrdersLoading(true);
 
         const responseData = await dispatch(sendOrderListRequest(urlParams));
         if (isUnmountedRef.current) return;
 
-        const { status, message, filteredOrderIdList, paginatedOrderList } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'ORDER: LOAD LIST', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setOrdersLoadError(true);
         } else {
+            const { filteredOrderIdList, paginatedOrderList } = responseData;
+
             setFilteredOrderIds(new Set(filteredOrderIdList));
             setPaginatedOrderList(paginatedOrderList);
             setInitOrdersReady(true);
@@ -112,12 +202,12 @@ export default function OrdersBase({
         setOrdersLoading(false);
     };
 
-    const reloadOrders = async () => {
+    const reloadOrders = async (): Promise<void> => {
         const urlParams = location.search.slice(1);
         await loadOrders(urlParams);
     };
 
-    const toggleOrderExpansion = (id) => {
+    const toggleOrderExpansion = (id: string): void => {
         setExpandedOrderIds(prev => {
             const newExpandedSet = new Set(prev);
 
@@ -131,7 +221,10 @@ export default function OrdersBase({
         });
     };
     
-    const updateOrderState = (orderId, orderUpdateData = {}) => {
+    const updateOrderState = (
+        orderId: string,
+        orderUpdateData: IOrderUpdateData = {}
+    ): void => {
         const {
             orderPatches = [],
             newOrderStatusEntry,
@@ -150,10 +243,10 @@ export default function OrdersBase({
             if (order.id !== orderId) return order;
     
             // Обновление полей через дот-нотацию
-            const updatedOrder = { ...order, items: order.items.map(item => ({ ...item })) };
+            const updatedOrder = { ...order, items: (order.items ?? []).map(item => ({ ...item })) };
             applyDotNotationPatches(updatedOrder, orderPatches);
     
-            // Замена последних (и единственных) записей в массивах историй
+            // Обновление записей в массивах историй
             if (newOrderStatusEntry) {
                 updatedOrder.statusHistory = [newOrderStatusEntry];
             }
@@ -170,7 +263,7 @@ export default function OrdersBase({
                 updatedOrder.financials = {
                     ...updatedOrder.financials,
                     eventHistory: updatedOrder.financials.eventHistory.map(entry => {
-                        if (entry.eventId === voidedFinancialsEventEntry.eventId) {
+                        if ('eventId' in entry && entry.eventId === voidedFinancialsEventEntry.eventId) {
                             return voidedFinancialsEventEntry;
                         }
                         return entry;
@@ -182,7 +275,7 @@ export default function OrdersBase({
         }));
     };
 
-    const refreshOrderState = (orderId, refreshedOrder) => {
+    const refreshOrderState = (orderId: string, refreshedOrder: IOrder): void => {
         setPaginatedOrderList(prev => prev.map(order => order.id === orderId ? refreshedOrder : order));
     };
 
@@ -279,9 +372,9 @@ export default function OrdersBase({
                 reloadOrders={reloadOrders}
                 paginatedOrderList={paginatedOrderList}
                 expandedOrderIds={expandedOrderIds}
+                isMetaMobileStacked={isMetaMobileStacked}
                 toggleOrderExpansion={toggleOrderExpansion}
                 setOrderRepeatLoading={setOrderRepeatLoading}
-                isMetaMobileStacked={isMetaMobileStacked}
                 refreshOrderState={refreshOrderState}
                 renderManagementControls={renderManagementControls}
                 renderManagementNotes={renderManagementNotes}
@@ -305,7 +398,7 @@ export default function OrdersBase({
                 uiBlocked={isOrderUiBlocked}
             />
 
-            {renderNewManagedActiveOrdersAlert?.({
+            {renderNewActiveOrdersAlert?.({
                 search,
                 setSearch,
                 filter,
@@ -325,20 +418,20 @@ function OrdersMain({
     reloadOrders,
     paginatedOrderList,
     expandedOrderIds,
-    toggleOrderExpansion,
-    uiBlocked,
-    setOrderRepeatLoading,
     isMetaMobileStacked,
+    toggleOrderExpansion,
+    setOrderRepeatLoading,
     refreshOrderState,
     renderManagementControls,
     renderManagementNotes,
     renderCardOnlinePaymentLink,
     renderStatusSummary,
     renderOrderRefreshButton,
-    renderOrderRepeatButton
-}) {
+    renderOrderRepeatButton,
+    uiBlocked
+}: TOrdersMainProps): JSX.Element {
     const [listMainHeight, setListMainHeight] = useState(LOAD_STATUS_MIN_HEIGHT);
-    const listMainRef = useRef(null);
+    const listMainRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (listMainRef.current) {
@@ -405,11 +498,10 @@ function OrdersMain({
                     <li key={order.id} className="order-item">
                         <OrderCard
                             order={order}
-                            uiBlocked={uiBlocked}
+                            isMetaMobileStacked={isMetaMobileStacked}
                             isExpanded={expandedOrderIds.has(order.id)}
                             toggleOrderExpansion={toggleOrderExpansion}
                             setOrderRepeatLoading={setOrderRepeatLoading}
-                            isMetaMobileStacked={isMetaMobileStacked}
                             refreshOrderState={refreshOrderState}
                             renderManagementControls={renderManagementControls}
                             renderManagementNotes={renderManagementNotes}
@@ -417,6 +509,7 @@ function OrdersMain({
                             renderStatusSummary={renderStatusSummary}
                             renderOrderRefreshButton={renderOrderRefreshButton}
                             renderOrderRepeatButton={renderOrderRepeatButton}
+                            uiBlocked={uiBlocked}
                         />
                     </li>
                 ))}
@@ -427,7 +520,6 @@ function OrdersMain({
 
 function OrderCard({
     order,
-    uiBlocked,
     isMetaMobileStacked,
     isExpanded,
     toggleOrderExpansion,
@@ -438,15 +530,20 @@ function OrderCard({
     renderCardOnlinePaymentLink,
     renderStatusSummary,
     renderOrderRefreshButton,
-    renderOrderRepeatButton
-}) {
+    renderOrderRepeatButton,
+    uiBlocked
+}: TOrderCardProps): JSX.Element | null {
     const {
         id, orderNumber, confirmedAt, lastActivityAt, statusHistory: orderStatusHistory,
         totals, items: orderItemList, customerInfo, delivery, financials,
         customerComment, internalNote
     } = order;
-
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
+
+    if (!orderItemList || !customerInfo || !currentOrderStatusEntry) {
+        console.error('Отсутствуют критические данные заказа');
+        return null;
+    }
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
     const isOrderFinal = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
@@ -455,9 +552,13 @@ function OrderCard({
 
     const netPaid = financials.totalPaid - financials.totalRefunded;
 
-    const cancellationReason = orderStatusHistory.find(
+    const cancelledStatusHistoryEntry = orderStatusHistory.find(
         entry => entry.status === ORDER_STATUS.CANCELLED
-    )?.cancellationReason;
+    );
+    const cancellationReason =
+        cancelledStatusHistoryEntry && 'cancellationReason' in cancelledStatusHistoryEntry
+            ? cancelledStatusHistoryEntry.cancellationReason
+            : undefined;
 
     return (
         <article data-id={id} className={cn('order-card', {
@@ -529,12 +630,12 @@ function OrderCard({
                     {isOrderFinal && renderOrderRepeatButton?.({
                         orderId: id,
                         uiBlocked,
-                        onLoading: setOrderRepeatLoading
+                        onLoading: (val: boolean): void => setOrderRepeatLoading(val)
                     })}
 
                     <button
                         className={cn('order-details-inline-btn', { 'enabled': isExpanded })}
-                        onClick={() => toggleOrderExpansion(id)}
+                        onClick={(): void => toggleOrderExpansion(id)}
                     >
                         <span className="icon">{isExpanded ? '🔼' : '📄'}</span>
                         {isExpanded ? 'Скрыть детали' : 'Показать детали'}
@@ -559,7 +660,7 @@ function OrderDetailsInline({
     customerInfo,
     delivery,
     totalAmount
-}) {
+}: IOrderDetailsInlineProps): JSX.Element {
     const { firstName, lastName, middleName, email, phone } = customerInfo;
     const { deliveryMethod, shippingAddress, shippingCost } = delivery;
 

@@ -8,7 +8,15 @@ import type {
     TCategoryCreateResponse,
     TCategoryUpdateResponse,
     TProductCreateResponse,
-    TProductUpdateResponse
+    TProductUpdateResponse,
+    IOrderStatusEntry,
+    IOrderStatusEntrySummary,
+    TDeliveryMethod,
+    TPaymentMethod,
+    TFinancialsState,
+    IFinancialsEventEntry,
+    IFinancialsEventEntrySummary,
+    IAuditLogEntry
 } from '@shared/types/index.js';
 
 /////////////////////////////

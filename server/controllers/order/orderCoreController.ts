@@ -42,16 +42,10 @@ import { requireDbUser, requireRole } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
 import { createAppError } from '@server/utils/errorUtils.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { typeCheck } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
-import { isEqualCurrency, isObjectKey, makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';
-import {
-    validationRules,
-    fieldErrorMessages,
-    DEFAULT_FIELD_ERROR_MESSAGE
-} from '@shared/fieldRules.js';
+import { isEqualCurrency, isObjectKey } from '@shared/commonHelpers.js';
 import {
     MIN_ORDER_AMOUNT,
     USER_ROLE,
@@ -90,8 +84,7 @@ import type {
     IOrderStatusUpdateBody,
     TOrderStatusUpdateResponse,
     IOrderDataChange,
-    TEntityField,
-    TFieldErrors
+    TEntityField
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -680,35 +673,6 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
     if (!items.length) {
         return safeSendResponse(res, 204);
     }
-
-    /*const fieldErrors: TFieldErrors<'order'> = {};
-
-    for (const { productId, quantity } of items) {
-        const isProductIdValid = typeCheck.objectIdString(productId);
-
-        if (!isProductIdValid) {
-            const fieldName = makeOrderItemQuantityFieldName(productId);
-            (fieldErrors as any)[fieldName] =
-                fieldErrorMessages.order.itemQuantity.productId ||
-                DEFAULT_FIELD_ERROR_MESSAGE;
-        }
-
-        const isQuantityValid = validationRules.order.itemQuantity(quantity) && quantity >= 0;
-
-        if (!isQuantityValid) {
-            const fieldName = makeOrderItemQuantityFieldName(productId);
-            (fieldErrors as any)[fieldName] =
-                fieldErrorMessages.order.itemQuantity.quantity ||
-                DEFAULT_FIELD_ERROR_MESSAGE;
-        }
-    }
-
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse<TOrderItemsUpdateResponse, 422, typeof REQUEST_STATUS.INVALID>(res, 422, {
-            message: 'Неверный формат данных',
-            fieldErrors
-        });
-    }*/
 
     try {
         let imageFilenamesToDelete: string[] = [];

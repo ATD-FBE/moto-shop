@@ -1,33 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderRepeatRequest } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { logRequestStatus } from '@/helpers/requestLogger.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrderRepeatButtonProps {
+    orderId: string;
+    onLoading: ((val: boolean) => void) | null;
+    uiBlocked: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const LOG_CTX = 'ORDER: REPEAT';
 
 export default function OrderRepeatButton({
     orderId,
-    uiBlocked = false,
-    onLoading = null // Внешний сеттер для индикации загрузки при запросе
-}) {
-    const totalCartItems = useSelector(state => state.cart.ids.length);
+    onLoading = null, // Внешний сеттер для индикации загрузки при запросе
+    uiBlocked = false
+}: IOrderRepeatButtonProps): JSX.Element {
+    const totalCartItems = useAppSelector(state => state.cart.ids.length);
     const [orderRepeating, setOrderRepeating] = useState(false);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const cartPath = routeConfig.customerCart.paths[0];
 
-    const repeatOrder = async () => {
+    const repeatOrder = async (): Promise<void> => {
         // В корзине есть товары
         if (totalCartItems > 0) {
-            const processOrderRepeating = async (orderId) => {
+            const processOrderRepeating = async (): Promise<void> => {
                 setOrderRepeating(true);
                 onLoading?.(true);
 
@@ -43,16 +58,18 @@ export default function OrderRepeatButton({
                 }
             };
 
-            const finalizeOrderRepeating = () => {
+            const finalizeOrderRepeating = (): void => {
                 if (isUnmountedRef.current) return;
                 navigate(cartPath);
             };
 
-            return openConfirmModal({
+            openConfirmModal({
                 prompt: 'Корзина не пуста. Повторение заказа заменит текущее содержимое.\nПродолжить?',
-                onConfirm: () => processOrderRepeating(orderId),
+                onConfirm: processOrderRepeating,
                 onFinalize: finalizeOrderRepeating
             });
+
+            return;
         }
 
         // В корзине нет товаров

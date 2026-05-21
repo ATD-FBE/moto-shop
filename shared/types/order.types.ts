@@ -110,9 +110,9 @@ export interface IDelivery {
     shippingAddress?: {
         region?: string;
         district?: string;
-        city?: string;
-        street?: string;
-        house?: string;
+        city: string;
+        street: string;
+        house: string;
         apartment?: string;
         postalCode?: string;
     };

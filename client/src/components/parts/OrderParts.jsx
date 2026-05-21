@@ -23,6 +23,16 @@ import {
     FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
 
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
 export function OrderCardOverview({
     id,
     orderNumber,

@@ -128,7 +128,10 @@ const getFieldConfigs = (section) => {
                     { value: '', label: '--- Выбрать метод доставки ---' },
                     ...DELIVERY_METHOD_OPTIONS
                 ],
-                relatedField: 'allowCourierExtra'
+                relatedFields: [
+                    'allowCourierExtra', 'region', 'district', 'city',
+                    'street', 'house', 'apartment', 'postalCode'
+                ]
             },
             {
                 name: 'allowCourierExtra',
@@ -331,7 +334,7 @@ export default function OrderDetailsSectionForm({
                     return acc;
                 }
 
-                const { trim, optional, relatedField } = fieldConfigMap[name] ?? {};
+                const { trim, optional, relatedFields } = fieldConfigMap[name] ?? {};
                 const normalizedValue = trim ? value.trim() : value;
                 const ruleCheck =
                     typeof validation === 'function'
@@ -355,9 +358,12 @@ export default function OrderDetailsSectionForm({
                         acc.formFields[name] = normalizedValue;
                         acc.changedFields.push(name);
 
-                        if (relatedField && applicabilityMap[relatedField]) {
-                            acc.formFields[relatedField] = fieldsState[relatedField]?.value;
-                        }
+                        relatedFields?.forEach(relFieldName => {
+                            if (applicabilityMap[relFieldName]) {
+                                acc.formFields[relFieldName] = fieldsState[relFieldName]?.value;
+                            }
+                        });
+                        
                     }
                 } else {
                     acc.allValid = false;

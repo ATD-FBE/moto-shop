@@ -17,6 +17,7 @@ import {
     CUSTOMER_TABLE_ORDERS_LOAD_STEP,
     ORDER_STATUS,
     ORDER_ACTIVE_STATUSES,
+    ORDER_VIEW_MODE,
     REQUEST_STATUS
 } from '@shared/constants.js';
 import type { JSX, ComponentProps } from 'react';
@@ -367,9 +368,9 @@ function OrderCard(
                     <div className="order-actions">
                         <OrderRefreshButton
                             orderId={id}
-                            viewMode="list"
-                            uiBlocked={uiBlocked}
+                            viewMode={ORDER_VIEW_MODE.LIST}
                             refreshOrderState={refreshOrderState}
+                            uiBlocked={uiBlocked}
                         />
                     </div>
                 )}
