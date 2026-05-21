@@ -1,4 +1,4 @@
-import { isObject } from './normalizeUtils.js';
+import { typeCheck } from '@server/validation/validationEngine.js';
 import type { IOrderDataChange } from '@shared/types/index.js';
 
 export const isArrayContentDifferent = (
@@ -70,8 +70,8 @@ export const isDbDataModified = (
         return oldData.some((item, idx) => isDbDataModified(item, newData[idx], { preserveNull }));
     }
 
-    const oldIsObj = isObject(oldData);
-    const newIsObj = isObject(newData);
+    const oldIsObj = typeCheck.object(oldData);
+    const newIsObj = typeCheck.object(newData);
 
     // Одно из значений примитив, второе - объект
     if (!oldIsObj && newIsObj) {
@@ -107,8 +107,8 @@ export const collectDbChanges = (
     currencyFields: string[] = [],
     changes: IOrderDataChange[] = []
 ) => {
-    const oldIsObj = isObject(oldData);
-    const newIsObj = isObject(newData);
+    const oldIsObj = typeCheck.object(oldData);
+    const newIsObj = typeCheck.object(newData);
 
     // Старые данные листовые, новые — объект => рекурсивный сбор изменений по свойствам нового объекта
     if (!oldIsObj && newIsObj) {

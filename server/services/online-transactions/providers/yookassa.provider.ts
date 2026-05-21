@@ -170,15 +170,17 @@ export const createYooKassaRefunds = async (
 export const normalizeYooKassaWebhook = <T = IYooKassaWebhook>(
     payload: unknown
 ): INormalizedWebhook<T> | null => {
-    const { type, event, object: wh } = (payload ?? {}) as IYooKassaWebhook;
+    const { type, event, object } = (payload ?? {}) as IYooKassaWebhook;
 
-    if (type !== 'notification' || !typeCheck.string(event) || !typeCheck.object(wh)) {
+    if (type !== 'notification' || !typeCheck.string(event) || !typeCheck.object(object)) {
         return null;
     }
 
     const isPayment = event.startsWith('payment.');
     const isRefund = event.startsWith('refund.');
     if (!isPayment && !isRefund) return null;
+
+    const wh = object as IYooKassaWebhook['object']; // Каст из-за тайпгарда в typeCheck
 
     return {
         provider: CARD_ONLINE_PROVIDER.YOOKASSA,

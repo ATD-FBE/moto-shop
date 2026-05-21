@@ -1,18 +1,25 @@
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 import { isValidEntityField } from '@server/utils/typeGuards.js';
 import { validationRules, fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
-import type { TCheckType, IValidationSchema, IValidationConfig } from '@server/types/index.js';
+import type { TCheckType, ITypeCheckMap, IValidationSchema, IValidationConfig } from '@server/types/index.js';
 import type { TEntityType, TValidationRuleType, TFieldErrors, TFilterOption } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
-type TCheckFn = (val: unknown) => boolean;
+type TCheckFn<T> = (val: unknown) => val is T;
 
-type TBaseTypeChecks = Record<TCheckType, TCheckFn>;
+type TBaseTypeChecks = {
+    [K in TCheckType]: TCheckFn<ITypeCheckMap[K]>;
+};
+
 type TTypeCheck = TBaseTypeChecks & {
-    optional: TBaseTypeChecks;
+    optional: TOptionalTypeChecks;
+};
+
+type TOptionalTypeChecks = {
+    [K in TCheckType]: (val: unknown) => val is ITypeCheckMap[K] | undefined;
 };
 
 interface IValidationResult<E extends TEntityType = TEntityType> {
@@ -43,13 +50,7 @@ const baseTypeChecks: TBaseTypeChecks = {
 
     boolean: (val: unknown): val is boolean => typeof val === 'boolean',
 
-    emptyableBoolean: (val: unknown): val is '' | boolean => val === '' || typeof val === 'boolean',
-
     date: (val: unknown): val is Date => val instanceof Date && !isNaN(val.getTime()),
-
-    objectId: (val: unknown): val is mongoose.Types.ObjectId => mongoose.Types.ObjectId.isValid(val as any),
-
-    objectIdString: (val: unknown): val is string => mongoose.Types.ObjectId.isValid(val as any),
 
     array: (val: unknown): val is unknown[] => Array.isArray(val),
 
@@ -58,6 +59,10 @@ const baseTypeChecks: TBaseTypeChecks = {
         val !== null &&
         !Array.isArray(val) &&
         !(val instanceof Date),
+
+    objectId: (val: unknown): val is Types.ObjectId => Types.ObjectId.isValid(val as any),
+
+    objectIdString: (val: unknown): val is string => Types.ObjectId.isValid(val as any),
 
     file: (val: unknown): val is Express.Multer.File =>
         typeof val === 'object' &&
@@ -68,17 +73,18 @@ const baseTypeChecks: TBaseTypeChecks = {
     
     files: (val: unknown): val is Express.Multer.File[] =>
         Array.isArray(val) && val.every(f => typeCheck.file(f))
-} as const;
+};
 
-const makeOptionalCheck = (checkFn: TCheckFn): TCheckFn =>
-    (val: unknown): boolean => val === undefined || checkFn(val);
+const makeOptionalCheck = <T>(checkFn: TCheckFn<T>): ((val: unknown) => val is T | undefined) =>
+    (val: unknown): val is T | undefined => val === undefined || checkFn(val);
 
 const makeTypeCheck = (checks: TBaseTypeChecks): TTypeCheck => {
-    const optionalChecks = {} as TBaseTypeChecks;
-
-    (Object.keys(checks) as TCheckType[]).forEach(key => {
-        optionalChecks[key] = makeOptionalCheck(checks[key]);
+    const optionalEntries = Object.entries(checks).map(([key, fn]) => {
+        const optionalFn = makeOptionalCheck(fn as TCheckFn<unknown>);
+        return [key, optionalFn] as const;
     });
+
+    const optionalChecks = Object.fromEntries(optionalEntries) as TOptionalTypeChecks;
 
     return {
         ...checks,
@@ -162,7 +168,7 @@ export const validateArrayItems = <E extends TEntityType = TEntityType>(
     }
     
     for (let i = 0; i < arr.length; i++) {
-        const item = arr[i];
+        const item: unknown = arr[i];
         const currentPath = `${parentPath}[${i}]`;
 
         // Предварительные проверки типа элемента массива для имеющихся подсхем объекта или массива
@@ -183,8 +189,8 @@ export const validateArrayItems = <E extends TEntityType = TEntityType>(
         const itemConfig = buildValidationConfig(arrSchema, item);
 
         // OBJECT + fields
-        if (itemConfig.type === 'object' && itemConfig.fields) {
-            const result = validateObjectFields(itemConfig.fields, entityType, currentPath);
+        if (itemConfig.type === 'object' && itemConfig.fields && typeCheck.object(item)) {
+            const result = validateObjectFields(itemConfig.fields, entityType, currentPath, item);
 
             invalidInputPaths.push(...result.invalidInputPaths);
             fieldErrors = { ...fieldErrors, ...result.fieldErrors };
@@ -215,14 +221,17 @@ export const validateArrayItems = <E extends TEntityType = TEntityType>(
 export const validateObjectFields = <E extends TEntityType = TEntityType>(
     configMap: Record<string, IValidationConfig>,
     entityType?: E,
-    pathPrefix: string = ''
+    pathPrefix: string = '',
+    parentValue?: Record<string, unknown>
 ): IValidationResult<E> => {
-    const invalidInputPaths: string[] = [];
+    const invalidInputPaths: string[] = []; // Содержит ошибки всех полей, включая поля формы
     let fieldErrors: TFieldErrors<E> = {};
     let isValid = true;
 
     for (const [fieldName, config] of Object.entries(configMap) as [string, IValidationConfig][]) {
-        const { value, type, fields, items, optional, formField = false, errorType } = config;
+        const {
+            value, type, fields, items, optional, formField = false, errorType, dynamicErrorConfig
+        } = config;
         const fullPath = pathPrefix ? `${pathPrefix}.${fieldName}` : fieldName;
 
         let isFieldValid = true;
@@ -237,7 +246,7 @@ export const validateObjectFields = <E extends TEntityType = TEntityType>(
                 continue;
             }
 
-            const result = validateObjectFields(fields, entityType, fullPath);
+            const result = validateObjectFields(fields, entityType, fullPath, value);
 
             if (!result.isValid) {
                 invalidInputPaths.push(...result.invalidInputPaths);
@@ -276,14 +285,33 @@ export const validateObjectFields = <E extends TEntityType = TEntityType>(
             isValid = false;
 
             // Заполнение ошибок валидации полей формы
-            if (formField && entityType && isValidEntityField(entityType, fieldName)) {
-                const errorMessageTypes = fieldErrorMessages[entityType][fieldName];
+            if (formField && entityType) {
+                const errorFields = fieldErrorMessages[entityType];
 
-                fieldErrors[fieldName] =
-                    (errorType && errorMessageTypes?.[errorType]) ||
-                    errorMessageTypes?.mismatch ||
-                    errorMessageTypes?.default ||
-                    DEFAULT_FIELD_ERROR_MESSAGE;
+                if (isValidEntityField(entityType, fieldName)) {
+                    const errorMessageTypes = errorFields[fieldName];
+    
+                    fieldErrors[fieldName] =
+                        (errorType && errorMessageTypes?.[errorType]) ||
+                        errorMessageTypes?.mismatch ||
+                        errorMessageTypes?.default ||
+                        DEFAULT_FIELD_ERROR_MESSAGE;
+                } else if (dynamicErrorConfig && parentValue) {
+                    const { idField, entityField, generateFieldName } = dynamicErrorConfig;
+                    const itemId = parentValue[idField];
+                    
+                    if (typeCheck.string(itemId)) {
+                        const dynamicFieldName = generateFieldName(itemId);
+                        const errorMessageTypes = (errorFields as any)?.[entityField];
+                        
+                        const errorMsg =
+                            errorMessageTypes[fieldName] ||
+                            errorMessageTypes.default ||
+                            DEFAULT_FIELD_ERROR_MESSAGE;
+
+                        (fieldErrors as Record<string, string>)[dynamicFieldName] = errorMsg;
+                    }
+                }
             }
         }
     }

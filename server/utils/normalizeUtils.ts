@@ -1,5 +1,4 @@
-export const isObject = (val: unknown): val is Record<string | number | symbol, unknown> =>
-    typeof val === 'object' && val !== null && !Array.isArray(val) && !(val instanceof Date);
+import { typeCheck } from '@server/validation/validationEngine.js';
 
 export const normalizeInputDataToNull = (data: unknown): any => {
     if (data == null) return null;
@@ -7,7 +6,7 @@ export const normalizeInputDataToNull = (data: unknown): any => {
     if (data instanceof Date) return new Date(data);
     if (Array.isArray(data)) return data.map(normalizeInputDataToNull);
 
-    if (isObject(data)) {
+    if (typeCheck.object(data)) {
         return Object.fromEntries(
             Object.entries(data)
                 .filter(([key]) => Object.hasOwn(data, key))
@@ -31,8 +30,8 @@ export const dotNotationToObject = (flatObj: Record<string, unknown>): Record<st
             const part = parts[i];
             if (!part) break partsCycle;
 
-            if (!isObject(target[part])) target[part] = {};
-            if (isObject(target[part])) target = target[part];
+            if (!typeCheck.object(target[part])) target[part] = {};
+            if (typeCheck.object(target[part])) target = target[part];
         }
 
         const lastKey = parts.at(-1);
@@ -62,7 +61,7 @@ export const deepMergeNewNullable = (target: unknown, source: unknown): any => {
         const trgVal = trg[key];
         const srcVal = src[key];
 
-        if (isObject(srcVal)) {
+        if (typeCheck.object(srcVal)) {
             resultObj[key] = deepMergeNewNullable(trgVal || {}, srcVal);
         } else if (srcVal !== undefined) {
             resultObj[key] = srcVal;

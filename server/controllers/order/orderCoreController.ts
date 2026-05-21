@@ -681,7 +681,7 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
         return safeSendResponse(res, 204);
     }
 
-    const fieldErrors: TFieldErrors<'order'> = {};
+    /*const fieldErrors: TFieldErrors<'order'> = {};
 
     for (const { productId, quantity } of items) {
         const isProductIdValid = typeCheck.objectIdString(productId);
@@ -708,7 +708,7 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
             message: 'Неверный формат данных',
             fieldErrors
         });
-    }
+    }*/
 
     try {
         let imageFilenamesToDelete: string[] = [];

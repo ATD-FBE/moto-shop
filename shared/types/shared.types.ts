@@ -268,7 +268,7 @@ export type TInferFilterParams<T extends TFilterOption> = {
                 ? (MinP extends string ? MinP : never) | (MaxP extends string ? MaxP : never)
                 : never
     ]?: K extends { type: 'boolean' }
-        ? boolean | '' // Пустая строка для emptyableBoolean
+        ? boolean
         : K extends { type: 'number' }
             ? number
         : K extends { type: 'date' }

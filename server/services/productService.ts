@@ -43,10 +43,10 @@ import type {
 //////////////////////////
 
 interface IProductFilterQuery<TModel extends object> extends TQuery<TModel> {
-    inStock?: boolean | '';
-    brandNew?: boolean | '';
-    restocked?: boolean | '';
-    reserved?: boolean | '';
+    inStock?: boolean;
+    brandNew?: boolean;
+    restocked?: boolean;
+    reserved?: boolean;
 }
 
 /////////////////////
@@ -315,10 +315,10 @@ export const buildProductInventoryUpdatePipeline = (
 export const buildProductsComputedFields = (
     query: IProductFilterQuery<TDbProductView>
 ): PipelineStage[] => {
-    const needInStockFilter = query.inStock !== undefined && query.inStock !== '';
-    const needBrandNewFilter = query.brandNew !== undefined && query.brandNew !== '';
-    const needRestockedFilter = query.restocked !== undefined && query.restocked !== '';
-    const needReservedFilter = query.reserved !== undefined && query.reserved !== '';
+    const needInStockFilter = query.inStock !== undefined;
+    const needBrandNewFilter = query.brandNew !== undefined;
+    const needRestockedFilter = query.restocked !== undefined;
+    const needReservedFilter = query.reserved !== undefined;
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter && !needReservedFilter) return [];
 

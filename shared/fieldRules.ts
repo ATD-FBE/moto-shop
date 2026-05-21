@@ -227,7 +227,7 @@ export const validationRules = {
         failureReason: textValidation,
         externalReference: textValidation
     }
-} satisfies Record<TEntityType, Record<string, TValidationRuleType>>;
+} as const satisfies Record<TEntityType, Record<string, TValidationRuleType>>;
 
 /// Сообщения об ошибках полей формы ///
 export const fieldErrorMessages: TFieldErrorMessages = {

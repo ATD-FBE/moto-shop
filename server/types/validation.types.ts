@@ -1,8 +1,21 @@
-import type { TValidationRuleType, TEntityType } from '@shared/types/index.js';
+import type { Types } from 'mongoose';
+import type { TValidationRuleType, TEntityType, TEntityField } from '@shared/types/index.js';
 
-export type TCheckType =
-    | 'string' | 'float' | 'integer' | 'boolean' | 'emptyableBoolean' | 'date'
-    | 'objectId' | 'objectIdString' | 'array' | 'object' | 'file' | 'files';
+export interface ITypeCheckMap {
+    string: string;
+    float: number;
+    integer: number;
+    boolean: boolean;
+    date: Date;
+    array: unknown[];
+    object: Record<string | number | symbol, unknown>;
+    objectId: Types.ObjectId;
+    objectIdString: string;
+    file: Express.Multer.File;
+    files: Express.Multer.File[];
+}
+
+export type TCheckType = keyof ITypeCheckMap;
 
 export interface IValidationSchema {
     type: TCheckType;                              // Тип значения поля
@@ -17,6 +30,13 @@ export interface IValidationSchema {
     enum?: readonly (string | number | boolean)[]; // Для типов string, float, integer и boolean
     formField?: boolean;                           // Для поля формы
     errorType?: string;                            // Для поля формы
+    dynamicErrorConfig?: IDynamicErrorConfig;
+}
+
+export interface IDynamicErrorConfig {
+    idField: string;                               // Ключ в объекте с ошибочным полем
+    entityField: string;                           // Общее поле ошибки для указанной сущности
+    generateFieldName: (id: string) => string;     // Функция, генерирующая имя по ключу
 }
 
 export interface IValidationConfig extends IValidationSchema {

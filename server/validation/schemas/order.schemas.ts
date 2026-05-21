@@ -1,12 +1,19 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
+import { makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';
 import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD, ORDER_ACTION } from '@shared/constants.js';
-import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
+import type { IDynamicErrorConfig, IValidationInputSchema } from '@server/types/index.js';
 
 const orderEntity = 'order';
 
 const paramsBaseSchema: IValidationInputSchema['params'] = {
     orderId: 'objectIdString'
+} as const;
+
+const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig = {
+    idField: 'productId',
+    entityField: 'itemQuantity',
+    generateFieldName: makeOrderItemQuantityFieldName
 } as const;
 
 export const orderListSchema: IValidationInputSchema = {
@@ -78,13 +85,22 @@ export const orderItemsUpdateSchema: IValidationInputSchema = {
     body: {
         items: {
             type: 'array',
-            /*items: {
+            items: {
                 type: 'object',
                 fields: {
-                    productId: { type: 'objectIdString' },
-                    quantity: { type: 'integer', min: 0 }
+                    productId: {
+                        type: 'objectIdString',
+                        formField: true,
+                        dynamicErrorConfig: orderItemsUpdateDynamicErrorSchema
+                    },
+                    quantity: {
+                        type: 'integer',
+                        min: 0,
+                        formField: true,
+                        dynamicErrorConfig: orderItemsUpdateDynamicErrorSchema
+                    }
                 }
-            }*/
+            }
         },
         editReason: { type: 'string', match: true, formField: true }
     }
