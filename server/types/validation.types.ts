@@ -33,15 +33,15 @@ export interface IValidationSchema {
     dynamicErrorConfig?: IDynamicErrorConfig;
 }
 
-export interface IDynamicErrorConfig {
+export interface IDynamicErrorConfig<E extends TEntityType = any> {
     idField: string;                               // Ключ в объекте с ошибочным полем
-    entityField: string;                           // Общее поле ошибки для указанной сущности
+    entityField: TEntityField<E>;                  // Общее поле ошибки для указанной сущности
     generateFieldName: (id: string) => string;     // Функция, генерирующая имя по ключу
 }
 
 export interface IValidationConfig extends IValidationSchema {
-    value: unknown;                             // Заполнение конфига поля значением (кроме эл-в массива)
-    fields?: Record<string, IValidationConfig>; // Заполнение значениями конфига вложенного объекта
+    value: unknown;                                // Заполнение конфига поля значением (кроме эл-в массива)
+    fields?: Record<string, IValidationConfig>;    // Заполнение значениями конфига вложенного объекта
 }
 
 export interface IValidationInputSchema {

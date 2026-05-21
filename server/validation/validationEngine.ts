@@ -289,26 +289,28 @@ export const validateObjectFields = <E extends TEntityType = TEntityType>(
                 const errorFields = fieldErrorMessages[entityType];
 
                 if (isValidEntityField(entityType, fieldName)) {
-                    const errorMessageTypes = errorFields[fieldName];
+                    const entityField = fieldName;
+                    const errorMessageTypes = errorFields[entityField];
     
-                    fieldErrors[fieldName] =
-                        (errorType && errorMessageTypes?.[errorType]) ||
-                        errorMessageTypes?.mismatch ||
-                        errorMessageTypes?.default ||
+                    fieldErrors[entityField] =
+                        (errorType && errorMessageTypes[errorType]) ||
+                        errorMessageTypes.mismatch ||
+                        errorMessageTypes.default ||
                         DEFAULT_FIELD_ERROR_MESSAGE;
                 } else if (dynamicErrorConfig && parentValue) {
                     const { idField, entityField, generateFieldName } = dynamicErrorConfig;
                     const itemId = parentValue[idField];
                     
-                    if (typeCheck.string(itemId)) {
-                        const dynamicFieldName = generateFieldName(itemId);
-                        const errorMessageTypes = (errorFields as any)?.[entityField];
-                        
+                    if (typeCheck.string(itemId) && isValidEntityField(entityType, entityField)) {
+                        const errorMessageTypes = errorFields[entityField];
+                        const dynamicErrorType = fieldName;
+                    
                         const errorMsg =
-                            errorMessageTypes[fieldName] ||
+                            errorMessageTypes[dynamicErrorType] ||
                             errorMessageTypes.default ||
                             DEFAULT_FIELD_ERROR_MESSAGE;
 
+                        const dynamicFieldName = generateFieldName(itemId);
                         (fieldErrors as Record<string, string>)[dynamicFieldName] = errorMsg;
                     }
                 }

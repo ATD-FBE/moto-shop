@@ -10,7 +10,7 @@ const paramsBaseSchema: IValidationInputSchema['params'] = {
     orderId: 'objectIdString'
 } as const;
 
-const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig = {
+const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig<typeof orderEntity> = {
     idField: 'productId',
     entityField: 'itemQuantity',
     generateFieldName: makeOrderItemQuantityFieldName

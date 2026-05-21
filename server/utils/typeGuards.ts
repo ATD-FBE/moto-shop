@@ -71,7 +71,7 @@ export const isAppError = (err: Error): err is Error & { statusCode: number } =>
 
 export const isValidEntityField = <E extends TEntityType>(
     entityType: E,
-    fieldName: string
+    fieldName: string | number | symbol
 ): fieldName is Extract<TEntityField<E>, string> => {
     return fieldName in validationRules[entityType];
 };
