@@ -7,7 +7,7 @@ import { incrementNewActiveOrders } from '@/redux/slices/uiSlice.js';
 import { saveUserToLocalStorage } from '@/services/authService.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { getSseUrl } from '@/helpers/sseHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { TAppThunk } from '@/types/index.js';
 import type { IOrderUpdate, IAdminSseMessageData } from '@shared/types/index.js';

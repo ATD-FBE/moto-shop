@@ -279,10 +279,7 @@ export type TOrderDetailsUpdateResponse =
     
 /// Изменение товаров подтверждённого заказа (SSE) ///
 export interface IOrderItemsUpdateBody {
-    items: {
-        productId: string;
-        quantity: number;
-    }[],
+    items: { productId: string, quantity: number }[],
     editReason: string;
 }
 

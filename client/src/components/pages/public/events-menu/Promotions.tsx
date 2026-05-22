@@ -9,7 +9,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import { DATA_LOAD_STATUS, NO_VALUE_LABEL } from '@/config/constants.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { USER_ROLE, DAY_IN_MS, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { TDataLoadStatus } from '@/types/index.js';

@@ -17,7 +17,7 @@ import { sendCategoryListRequest } from '@/api/categoryRequests.js';
 import { sendProductListRequest } from '@/api/productRequests.js';
 import { buildCategoryTreeAndMap } from '@/helpers/categoryHelpers.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { PRODUCTS_PAGE_CONTEXT, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';

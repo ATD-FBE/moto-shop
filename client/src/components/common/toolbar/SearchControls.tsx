@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 
 //////////////////////////
@@ -24,7 +24,7 @@ export default function SearchControls({
     uiBlocked = false
 }: TSearchControlsProps): JSX.Element | null {
     if (search == null || setSearch == null) {
-        logToolbarMissingProps('SearchControls', { search, setSearch });
+        logMissingProps('SearchControls', { search, setSearch });
         return null; 
     }
 

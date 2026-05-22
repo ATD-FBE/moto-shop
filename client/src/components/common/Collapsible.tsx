@@ -10,8 +10,8 @@ interface ICollapsibleProps {
     isExpanded: boolean;
     className?: string;
     showContextIndicator?: boolean;
-    onExpandEnd?: (() => void) | null;
-    onCollapseEnd?: (() => void) | null;
+    onExpandEnd?: () => void;
+    onCollapseEnd?: () => void;
     children: ReactNode;
 }
 
@@ -24,8 +24,8 @@ export default function Collapsible({
     isExpanded,
     className = '',
     showContextIndicator = true,
-    onExpandEnd = null,
-    onCollapseEnd = null,
+    onExpandEnd,
+    onCollapseEnd,
     children
 }: ICollapsibleProps): JSX.Element {
     const [fullyExpanded, setFullyExpanded] = useState(false);

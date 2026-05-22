@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type { ISortOption } from '@shared/types/index.js';
 
@@ -26,7 +26,7 @@ export default function SortingControls({
     uiBlocked = false
 }: TSortingControlsProps): JSX.Element | null {
     if (sort == null || setSort == null || options == null) {
-        logToolbarMissingProps('SortingControls', { sort, setSort, options });
+        logMissingProps('SortingControls', { sort, setSort, options });
         return null; 
     }
 

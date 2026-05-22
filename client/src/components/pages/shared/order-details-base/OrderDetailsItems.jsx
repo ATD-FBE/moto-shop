@@ -4,7 +4,7 @@ import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import { sendOrderItemsAvailabilityRequest } from '@/api/orderRequests.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
 import { PRODUCT_IMAGE_PLACEHOLDER, FIELD_UI_STATUS, SUCCESS_DELAY } from '@/config/constants.js';
 import { makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';

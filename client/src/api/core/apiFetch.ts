@@ -3,7 +3,7 @@ import { PROD_ENV, REFRESH_TOKEN_BUFFER } from '@/config/constants.js';
 import { incrementApiRequests, decrementApiRequests } from '@/redux/slices/loadingSlice.js';
 import { setAccessTokenExpiry } from '@/redux/slices/authSlice.js';
 import { addApiController, removeApiController } from '@/services/apiControllerService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import waitForRequestDelay from '@/helpers/waitForRequestDelay.js';
 import { handleLogout } from '@/services/authService.js';
 import { REQUEST_STATUS } from '@shared/constants.js';

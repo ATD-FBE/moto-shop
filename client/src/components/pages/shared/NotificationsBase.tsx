@@ -6,7 +6,7 @@ import { getInitSortParam, getInitPageParam, getInitLimitParam } from '@/helpers
 import { notificationsSortOptions } from '@shared/sortOptions.js';
 import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { sendNotificationListRequest } from '@/api/notificationRequests.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { ReactNode, JSX, RefObject, Dispatch, SetStateAction } from 'react';

@@ -1,4 +1,4 @@
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 
 //////////////////////////
@@ -32,7 +32,7 @@ export default function PageLimitSelector({
         limit == null || setLimit == null || page == null ||
         setPage == null || totalItems == null || options == null
     ) {
-        logToolbarMissingProps(
+        logMissingProps(
             'PageLimitSelector',
             { limit, setLimit, page, setPage, totalItems, options }
         );

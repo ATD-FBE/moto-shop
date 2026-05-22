@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import cn from 'classnames';
 import { sendOrderStatusUpdateRequest } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { FIELD_UI_STATUS } from '@/config/constants.js';

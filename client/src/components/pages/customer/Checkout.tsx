@@ -21,7 +21,7 @@ import { openConfirmModal, closeConfirmModal } from '@/services/modalConfirmServ
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { getLockedStatuses } from '@/helpers/formHelpers.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { MIN_ORDER_AMOUNT } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { IGetSubmitStatesResult, TFormStatus, TSubmitStates } from '@/types/index.js';

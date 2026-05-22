@@ -9,7 +9,7 @@ import {
     sendOrderOnlineRefundsCreateRequest
 } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import {
     FORM_STATUS,

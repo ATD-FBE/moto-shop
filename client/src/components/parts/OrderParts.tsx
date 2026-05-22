@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect }  from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import cn from 'classnames';
+import CardOnlinePaymentLink from '@/components/pages/customer/customer-orders/CardOnlinePaymentLink.jsx';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderInvoicePdfRequest, sendOrderRequest } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { pluralize, formatCurrency } from '@/helpers/textHelpers.js';
+import { NO_VALUE_LABEL } from '@/config/constants.js';
 import triggerFileDownload from '@/services/triggerFileDownload.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { NO_VALUE_LABEL } from '@/config/constants.js';
+import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
+import { pluralize, formatCurrency } from '@/helpers/textHelpers.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import {
+    USER_ROLE,
     REQUEST_STATUS,
-    ORDER_VIEW_MODE,
     DELIVERY_METHOD_OPTIONS,
     PAYMENT_METHOD,
     PAYMENT_METHOD_OPTIONS,
@@ -22,28 +23,84 @@ import {
     FINANCIALS_STATE_CONFIG,
     FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
+import type { JSX, ReactNode, ComponentProps } from 'react';
+import type {
+    TOrderViewMode,
+    TOrderStatus,
+    TDeliveryMethod,
+    TPaymentMethod,
+    TFinancialsState,
+    IOrder,
+    IFinancialsEventEntry,
+    IFinancialsEventEntrySummary,
+    ICurrentOnlineTransaction
+} from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
 
+interface IOrderCardOverviewProps {
+    orderId: string;
+    orderNumber: string;
+    confirmedAt: string;
+    totalOrderItems: number;
+    totalAmount: number;
+}
 
+interface IOrderCardInfoGridProps {
+    orderId: string;
+    orderNumber: string;
+    confirmedAt: string;
+    totalAmount: number;
+    totalPaid: number;
+    totalRefunded: number;
+    orderStatus: TOrderStatus;
+    deliveryMethod: TDeliveryMethod;
+    defaultPaymentMethod: TPaymentMethod;
+    allowCourierExtra?: boolean;
+    currentOnlineTransaction?: ICurrentOnlineTransaction;
+    renderCardOnlinePaymentLink?: (props: ComponentProps<typeof CardOnlinePaymentLink>) => ReactNode;
+}
+
+interface IOrderCardStatusSummaryProps {
+    lastActivityAt?: string;
+    orderStatus: TOrderStatus;
+    financialsState: TFinancialsState;
+    lastFinancialsEventEntry: IFinancialsEventEntry | IFinancialsEventEntrySummary | null;
+}
+
+interface IOrderLastFinancialsEventProps {
+    lastFinancialsEventEntry: IFinancialsEventEntry | IFinancialsEventEntrySummary | null;
+    showDate?: boolean;
+}
+
+interface IOrderInvoiceButtonProps {
+    orderId: string;
+}
+
+interface IOrderRefreshButtonProps {
+    orderId: string;
+    viewMode: TOrderViewMode;
+    refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+    uiBlocked?: boolean;
+}
 
 /////////////////////
 /// FUNCTIONALITY ///
 /////////////////////
 
 export function OrderCardOverview({
-    id,
+    orderId,
     orderNumber,
     confirmedAt,
     totalOrderItems,
     totalAmount
-}) {
-    const userRole = useSelector(state => state.auth.user?.role ?? 'guest');
+}: IOrderCardOverviewProps): JSX.Element | null {
+    const userRole = useAppSelector(state => state.auth.user?.role ?? USER_ROLE.GUEST);
+    if (userRole !== USER_ROLE.ADMIN && userRole !== USER_ROLE.CUSTOMER) return null;
 
-    const orderUrl = routeConfig[`${userRole}OrderDetails`]
-        ?.generatePath({ orderId: id, orderNumber }) || '/';
+    const orderUrl = routeConfig[`${userRole}OrderDetails`]?.generatePath({ orderId, orderNumber }) ?? '/';
 
     const confirmedDateTime = new Date(confirmedAt).toLocaleString();
 
@@ -61,7 +118,7 @@ export function OrderCardOverview({
 }
 
 export function OrderCardInfoGrid({
-    id,
+    orderId,
     orderNumber,
     confirmedAt,
     totalAmount,
@@ -73,7 +130,7 @@ export function OrderCardInfoGrid({
     allowCourierExtra,
     currentOnlineTransaction,
     renderCardOnlinePaymentLink
-}) {
+}: IOrderCardInfoGridProps): JSX.Element {
     const confirmedDate = new Date(confirmedAt).toLocaleDateString();
     const netPaid = totalPaid - totalRefunded;
     const paymentBalance = netPaid - totalAmount;
@@ -86,7 +143,7 @@ export function OrderCardInfoGrid({
     const isCardOnlineMethod = defaultPaymentMethod === PAYMENT_METHOD.CARD_ONLINE;
 
     const showCardOnlinePaymentLink =
-        renderCardOnlinePaymentLink &&
+        !!renderCardOnlinePaymentLink &&
         isCardOnlineMethod &&
         isActiveOrder &&
         isUnpaid &&
@@ -146,9 +203,9 @@ export function OrderCardInfoGrid({
                 <div className="payment-method-wrapper">
                     {paymentMethodDisplay}
                     {showCardOnlinePaymentLink && (
-                        renderCardOnlinePaymentLink({ orderNumber, orderId: id })
+                        renderCardOnlinePaymentLink({ orderId, orderNumber })
                     )}
-                    {onlineTransactionProcessText && isCardOnlineMethod && (
+                    {isCardOnlineMethod && onlineTransactionProcessText && (
                         <p className="online-transaction-process">{onlineTransactionProcessText}</p>
                     )}
                 </div>
@@ -164,7 +221,7 @@ export function OrderCardInfoGrid({
 
             <div className="order-info-label order-invoice">Скачать счёт</div>
             <div className="order-info-value order-invoice">
-                <OrderInvoiceButton orderId={id} />
+                <OrderInvoiceButton orderId={orderId} />
             </div>
         </div>
     );
@@ -175,7 +232,12 @@ export function OrderCardStatusSummary({
     orderStatus,
     financialsState,
     lastFinancialsEventEntry
-}) {
+}: IOrderCardStatusSummaryProps): JSX.Element | null {
+    if (lastActivityAt == null) {
+        logMissingProps('OrderCard', { lastActivityAt });
+        return null; 
+    }
+
     const lastActivityDate = new Date(lastActivityAt).toLocaleString();
 
     const orderStatusConfig = ORDER_STATUS_CONFIG[orderStatus];
@@ -199,7 +261,9 @@ export function OrderCardStatusSummary({
     );
 }
 
-export function OrderLastFinancialsEvent({ lastFinancialsEventEntry, showDate = false }) {
+export function OrderLastFinancialsEvent(
+    { lastFinancialsEventEntry, showDate = false }: IOrderLastFinancialsEventProps
+): JSX.Element | null {
     if (!lastFinancialsEventEntry) return null;
 
     const lastFinancialsEventConfig = FINANCIALS_EVENT_CONFIG[lastFinancialsEventEntry.event];
@@ -224,15 +288,15 @@ export function OrderLastFinancialsEvent({ lastFinancialsEventEntry, showDate = 
     );
 }
 
-export function OrderInvoiceButton({ orderId }) {
+export function OrderInvoiceButton({ orderId }: IOrderInvoiceButtonProps): JSX.Element {
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const downloadInvoice = async () => {
+    const downloadInvoice = async (): Promise<void> => {
         const fileData = await dispatch(sendOrderInvoicePdfRequest(orderId));
         if (isUnmountedRef.current) return;
 
-        const { status, message, blob, filename } = fileData;
+        const { status, message } = fileData;
         logRequestStatus({ context: 'ORDER: LOAD INVOICE', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -242,9 +306,12 @@ export function OrderInvoiceButton({ orderId }) {
                 title: 'Не удалось скачать документ',
                 message: 'Ошибка при скачивании счёта заказа.\nПодробности ошибки в консоли.'
             });
-        } else {
-            triggerFileDownload(blob, filename);
+
+            return;
         }
+
+        const { blob, filename } = fileData;
+        triggerFileDownload(blob, filename);
     };
 
     // Очистка при размонтировании
@@ -258,6 +325,7 @@ export function OrderInvoiceButton({ orderId }) {
         <button
             className="download-invoice-btn"
             onClick={downloadInvoice}
+            aria-label="Скачать счёт"
         >
             📥
         </button>
@@ -266,15 +334,15 @@ export function OrderInvoiceButton({ orderId }) {
 
 export function OrderRefreshButton({
     orderId,
-    viewMode = ORDER_VIEW_MODE.PAGE, // page | list
-    uiBlocked = false,
-    refreshOrderState
-}) {
+    viewMode,
+    refreshOrderState,
+    uiBlocked = false
+}: IOrderRefreshButtonProps): JSX.Element {
     const [orderUpdating, setOrderUpdating] = useState(false);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const updateOrder = async () => {
+    const updateOrder = async (): Promise<void> => {
         setOrderUpdating(true);
 
         const params = new URLSearchParams({ viewMode });
@@ -282,7 +350,7 @@ export function OrderRefreshButton({
         const responseData = await dispatch(sendOrderRequest(orderId, urlParams));
         if (isUnmountedRef.current) return;
 
-        const { status, message, order } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'ORDER: LOAD SINGLE', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
@@ -293,6 +361,7 @@ export function OrderRefreshButton({
                 message: 'Ошибка при попытке обновления данных заказа.\nПодробности ошибки в консоли.'
             });
         } else {
+            const { order } = responseData;
             refreshOrderState(orderId, order);
         }
 
@@ -311,6 +380,7 @@ export function OrderRefreshButton({
             className="update-order-btn"
             onClick={updateOrder}
             disabled={uiBlocked || orderUpdating}
+            aria-label="Обновить данные заказа"
         >
             <span className="icon">🔄</span>
             Обновить

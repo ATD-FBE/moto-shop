@@ -4,8 +4,9 @@ import OrderManagementNotes from '@/components/pages/admin/shared/OrderManagemen
 import OrderDetailsSectionEditButton from './order-details-management/OrderDetailsSectionEditButton.jsx';
 import OrderDetailsSectionFormCollapsible from './order-details-management/OrderDetailsSectionFormCollapsible.jsx';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
+import type { JSX } from 'react';
 
-export default function OrderDetailsManagement() {
+export default function OrderDetailsManagement(): JSX.Element {
     return (
         <OrderDetailsBase
             routeKey="adminOrderDetails"
@@ -19,10 +20,10 @@ export default function OrderDetailsManagement() {
                     </p>
                 </>
             )}
-            renderManagementControls={props => <OrderManagementControls showExtras={true} {...props} />}
-            renderSectionEditButton={props => <OrderDetailsSectionEditButton {...props} />}
-            renderSectionFormCollapsible={props => <OrderDetailsSectionFormCollapsible {...props} />}
-            renderManagementNotes={props => <OrderManagementNotes {...props} />}
+            renderManagementControls={(props) => <OrderManagementControls showExtras={true} {...props} />}
+            renderSectionEditButton={(props) => <OrderDetailsSectionEditButton {...props} />}
+            renderSectionFormCollapsible={(props) => <OrderDetailsSectionFormCollapsible {...props} />}
+            renderManagementNotes={(props) => <OrderManagementNotes {...props} />}
         />
     );
 }

@@ -6,7 +6,7 @@ import ProductInfo from './product-details/ProductInfo.jsx';
 import { sendProductRequest } from '@/api/productRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { parseRouteParams } from '@/helpers/routeHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { formatProductTitle } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
 import { reconcileCartWithProducts } from '@/services/cartService.js';

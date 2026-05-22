@@ -1,5 +1,5 @@
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX } from 'react';
 import type { TDataLoadStatus } from '@/types/index.js';
 
@@ -27,7 +27,7 @@ export default function PaginationInfo({
     label
 }: TPaginationInfoProps): JSX.Element | null {
     if (loadStatus == null || page == null || limit == null || totalItems == null || label == null) {
-        logToolbarMissingProps('SortingControls', { loadStatus, page, limit, totalItems, label });
+        logMissingProps('SortingControls', { loadStatus, page, limit, totalItems, label });
         return null; 
     }
 

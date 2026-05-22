@@ -19,7 +19,7 @@ import {
     getInitPageParam,
     getInitLimitParam
 } from '@/helpers/urlParamsHelper.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { customersFilterOptions } from '@shared/filterOptions.js';
 import { customersPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { customersSortOptions } from '@shared/sortOptions.js';

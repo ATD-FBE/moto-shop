@@ -10,7 +10,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { INotificationCardManagementProps } from '@/types/index.js';

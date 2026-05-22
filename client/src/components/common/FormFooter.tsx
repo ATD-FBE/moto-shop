@@ -8,7 +8,7 @@ interface IFormFooterProps {
     submitStatus: TFormStatus;
     uiBlocked: boolean;
     reloadBtnLabel?: string;
-    reloadData?: (() => void) | null;
+    reloadData?: () => void;
 }
 
 export default function FormFooter({
@@ -16,7 +16,7 @@ export default function FormFooter({
     submitStatus,
     uiBlocked,
     reloadBtnLabel = 'Повторить',
-    reloadData = null
+    reloadData
 }: IFormFooterProps): JSX.Element {
     const submitState = submitStates[submitStatus] ?? {};
 

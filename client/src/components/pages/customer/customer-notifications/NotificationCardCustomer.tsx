@@ -4,7 +4,7 @@ import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendNotificationMarkAsReadRequest } from '@/api/notificationRequests.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatLocalDate } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 import type { INotificationCardCustomerProps } from '@/types/index.js';

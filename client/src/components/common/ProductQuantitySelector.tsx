@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import useHoldAction from '@/hooks/useHoldAction.js';
 import { sendCartItemUpdateRequest } from '@/api/cartRequests.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { setCartItem, unsetCartItem, refreshCartTotals } from '@/services/cartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { REQUEST_STATUS } from '@shared/constants.js';

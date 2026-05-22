@@ -25,7 +25,7 @@ import {
     getInitFilterParams
 } from '@/helpers/urlParamsHelper.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
 import {
     buildCustomerFullName,
     buildShippingAddressDisplay,
@@ -52,10 +52,7 @@ import {
     REQUEST_STATUS
 } from '@shared/constants.js';
 import type { ReactNode, JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
-import type {
-    TDataLoadStatus,
-    TToolbarControls,
-} from '@/types/index.js';
+import type { TDataLoadStatus, TToolbarControls } from '@/types/index.js';
 import type {
     TFilterParamsClient,
     IOrder,
@@ -92,14 +89,14 @@ type TOrdersMainProps = Pick<IOrdersBaseProps,
     | 'renderOrderRepeatButton'
 > & {
     loadStatus: TDataLoadStatus;
-    reloadOrders: () => Promise<void>;
+    onReload: () => void;
     paginatedOrderList: IOrder[];
+    isMetaMobileStacked: boolean;
     expandedOrderIds: Set<string>;
     toggleOrderExpansion: (id: string) => void;
-    uiBlocked: boolean;
     setOrderRepeatLoading: Dispatch<SetStateAction<boolean>>;
-    isMetaMobileStacked: boolean;
     refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+    uiBlocked: boolean;
 };
 
 type TOrderCardProps = Pick<TOrdersMainProps,
@@ -202,9 +199,9 @@ export default function OrdersBase({
         setOrdersLoading(false);
     };
 
-    const reloadOrders = async (): Promise<void> => {
+    const reloadOrders = (): void => {
         const urlParams = location.search.slice(1);
-        await loadOrders(urlParams);
+        loadOrders(urlParams);
     };
 
     const toggleOrderExpansion = (id: string): void => {
@@ -243,7 +240,10 @@ export default function OrdersBase({
             if (order.id !== orderId) return order;
     
             // Обновление полей через дот-нотацию
-            const updatedOrder = { ...order, items: (order.items ?? []).map(item => ({ ...item })) };
+            const updatedOrder: IOrder = {
+                ...order,
+                items: (order.items ?? []).map(item => ({ ...item }))
+            };
             applyDotNotationPatches(updatedOrder, orderPatches);
     
             // Обновление записей в массивах историй
@@ -369,10 +369,10 @@ export default function OrdersBase({
 
             <OrdersMain
                 loadStatus={ordersLoadStatus}
-                reloadOrders={reloadOrders}
+                onReload={reloadOrders}
                 paginatedOrderList={paginatedOrderList}
-                expandedOrderIds={expandedOrderIds}
                 isMetaMobileStacked={isMetaMobileStacked}
+                expandedOrderIds={expandedOrderIds}
                 toggleOrderExpansion={toggleOrderExpansion}
                 setOrderRepeatLoading={setOrderRepeatLoading}
                 refreshOrderState={refreshOrderState}
@@ -415,10 +415,10 @@ export default function OrdersBase({
 
 function OrdersMain({
     loadStatus,
-    reloadOrders,
+    onReload,
     paginatedOrderList,
-    expandedOrderIds,
     isMetaMobileStacked,
+    expandedOrderIds,
     toggleOrderExpansion,
     setOrderRepeatLoading,
     refreshOrderState,
@@ -468,7 +468,13 @@ function OrdersMain({
                         <span className="icon error">❌</span>
                         Ошибка сервера. Заказы не доступны.
                     </p>
-                    <button className="reload-btn" onClick={reloadOrders}>Повторить</button>
+                    <button
+                        className="reload-btn"
+                        onClick={onReload}
+                        aria-label="Перезагрузить заказы"
+                    >
+                        Повторить
+                    </button>
                 </div>
             </div>
         );
@@ -540,9 +546,9 @@ function OrderCard({
     } = order;
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
 
-    if (!orderItemList || !customerInfo || !currentOrderStatusEntry) {
-        console.error('Отсутствуют критические данные заказа');
-        return null;
+    if (orderItemList == null || customerInfo == null || currentOrderStatusEntry == null) {
+        logMissingProps('OrderCard', { orderItemList, customerInfo, currentOrderStatusEntry });
+        return null; 
     }
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
@@ -568,7 +574,7 @@ function OrderCard({
             {isActiveOrder && <span className="active-order-badge">⚡</span>}
 
             <OrderCardOverview
-                id={id}
+                orderId={id}
                 orderNumber={orderNumber}
                 confirmedAt={confirmedAt}
                 totalOrderItems={orderItemList.length}
@@ -576,7 +582,7 @@ function OrderCard({
             />
 
             <OrderCardInfoGrid
-                id={id}
+                orderId={id}
                 orderNumber={orderNumber}
                 confirmedAt={confirmedAt}
                 totalAmount={totals.totalAmount}
@@ -623,19 +629,20 @@ function OrderCard({
                     {isActiveOrder && renderOrderRefreshButton?.({
                         orderId: id,
                         viewMode: ORDER_VIEW_MODE.LIST,
-                        uiBlocked,
-                        refreshOrderState
+                        refreshOrderState,
+                        uiBlocked
                     })}
 
                     {isOrderFinal && renderOrderRepeatButton?.({
                         orderId: id,
-                        uiBlocked,
-                        onLoading: (val: boolean): void => setOrderRepeatLoading(val)
+                        onLoading: (val: boolean): void => setOrderRepeatLoading(val),
+                        uiBlocked
                     })}
 
                     <button
                         className={cn('order-details-inline-btn', { 'enabled': isExpanded })}
                         onClick={(): void => toggleOrderExpansion(id)}
+                        aria-label="Переключить показ деталей заказа"
                     >
                         <span className="icon">{isExpanded ? '🔼' : '📄'}</span>
                         {isExpanded ? 'Скрыть детали' : 'Показать детали'}

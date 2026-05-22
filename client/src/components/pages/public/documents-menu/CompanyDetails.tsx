@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendCompanyDetailsPdfRequest } from '@/api/companyRequests.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import triggerFileDownload from '@/services/triggerFileDownload.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { REQUEST_STATUS } from '@shared/constants.js';

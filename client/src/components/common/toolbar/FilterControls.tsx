@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import cn from 'classnames';
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import { getInitFilterParams } from '@/helpers/urlParamsHelper.js';
 import { formatDateOnly, isObjectsEqual } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS } from '@shared/constants.js';
@@ -36,7 +36,7 @@ export default function FilterControls({
     uiBlocked = false
 }: IFilterControlsProps): JSX.Element | null {
     if (filter == null || setFilter == null || options == null) {
-        logToolbarMissingProps('FilterControls', { filter, setFilter, options });
+        logMissingProps('FilterControls', { filter, setFilter, options });
         return null; 
     }
 

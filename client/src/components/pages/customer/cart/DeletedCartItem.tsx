@@ -4,7 +4,7 @@ import { CartItem } from '../Cart.jsx';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendCartItemRemoveRequest } from '@/api/cartRequests.js';
 import { highlightText } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
 import type { ICartItemElemAnimationState } from '@/types/index.js';

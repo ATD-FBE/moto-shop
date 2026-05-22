@@ -4,7 +4,7 @@ import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderInternalNoteUpdateRequest } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import {
     FORM_STATUS,

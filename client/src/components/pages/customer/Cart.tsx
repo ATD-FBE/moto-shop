@@ -24,7 +24,7 @@ import { formatCheckoutAdjustmentLogs } from '@/services/checkoutService.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatProductTitle, formatCurrency, pluralize } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 import { MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, RefObject, Dispatch, SetStateAction } from 'react';

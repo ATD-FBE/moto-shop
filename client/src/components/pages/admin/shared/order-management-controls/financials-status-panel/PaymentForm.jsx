@@ -6,7 +6,7 @@ import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
 import { sendOrderOfflinePaymentApplyRequest } from '@/api/orderRequests.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { isEqualCurrency } from '@shared/commonHelpers.js';
 import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';

@@ -1,21 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
-import { OrderInvoiceButton } from '@/components/parts/OrderParts.jsx';
+import CardOnlinePaymentLink from '@/components/pages/customer/customer-orders/CardOnlinePaymentLink.jsx';
+import OrderRepeatButton from '@/components/pages/customer/customer-orders/OrderRepeatButton.jsx';
+import OrderManagementControls from '@/components/pages/admin/shared/OrderManagementControls.jsx';
+import OrderManagementNotes from '@/components/pages/admin/shared/OrderManagementNotes.jsx';
+import OrderDetailsSectionEditButton from '@/components/pages/admin/order-details-management/OrderDetailsSectionEditButton.jsx';
+import OrderDetailsSectionFormCollapsible from '@/components/pages/admin/order-details-management/OrderDetailsSectionFormCollapsible.jsx';
+import { OrderRefreshButton, OrderInvoiceButton } from '@/components/parts/OrderParts.jsx';
 import OrderDetailsItems from './order-details-base/OrderDetailsItems.jsx';
+import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { subscribeToOrderUpdates } from '@/components/sse/SseOrderManagement.jsx';
 import { sendOrderRequest } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
-import { parseRouteParams } from '@/helpers/routeHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
-import { formatCurrency } from '@/helpers/textHelpers.js';
+import { ORDER_DETAILS_EDIT_SECTION, NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/config/constants.js';
 import {
     buildCustomerFullName,
     buildShippingAddressDisplay,
     getShippingCostDisplay
 } from '@/services/orderService.js';
-import { NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/config/constants.js';
+import { parseRouteParams } from '@/helpers/routeHelpers.js';
+import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
+import { formatCurrency } from '@/helpers/textHelpers.js';
 import {
     applyDotNotationPatches,
     getLastFinancialsEventEntry,
@@ -36,9 +42,62 @@ import {
     FINANCIALS_STATE_CONFIG,
     FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
+import type { ReactNode, JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
+import type {
+    TDataLoadStatus,
+    TOrderDetailsEditSection,
+    IOrderItemsSubmitResult,
+    IOrderItemsResponseResult
+} from '@/types/index.js';
+import type {
+    IOrder,
+    IOrderUpdateData,
+    IOrderItem,
+    ICustomerInfo,
+    IDelivery
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrderDetailsBaseProps {
+    routeKey: 'adminOrderDetails' | 'customerOrderDetails';
+    subscribeToUpdates?: boolean;
+    renderHeaderContent: (orderNumber: string) => ReactNode;
+    renderManagementControls?: (props: ComponentProps<typeof OrderManagementControls>) => ReactNode;
+    renderSectionEditButton?: (props: ComponentProps<typeof OrderDetailsSectionEditButton>) => ReactNode;
+    renderSectionFormCollapsible?: (props: ComponentProps<typeof OrderDetailsSectionFormCollapsible>) => ReactNode;
+    renderManagementNotes?: (props: ComponentProps<typeof OrderManagementNotes>) => ReactNode;
+    renderCardOnlinePaymentLink?: (props: ComponentProps<typeof CardOnlinePaymentLink>) => ReactNode;
+    renderOrderRefreshButton?: (props: ComponentProps<typeof OrderRefreshButton>) => ReactNode;
+    renderOrderRepeatButton?: (props: ComponentProps<typeof OrderRepeatButton>) => ReactNode;
+}
+
+interface IOrderDetailsLoadStatusProps {
+    loadStatus: TDataLoadStatus;
+    onReload: () => void;
+}
+
+type TOrderDetailsMainProps = Pick<IOrderDetailsBaseProps, 
+    | 'renderManagementControls'
+    | 'renderSectionEditButton'
+    | 'renderSectionFormCollapsible'
+    | 'renderManagementNotes'
+    | 'renderCardOnlinePaymentLink'
+    | 'renderOrderRefreshButton'
+    | 'renderOrderRepeatButton'
+> & {
+    order: IOrder | null;
+    refreshOrderState: (orderId: string, refreshedOrder: IOrder) => void;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function OrderDetailsBase({
-    routeKey = '',
+    routeKey,
     subscribeToUpdates = false,
     renderHeaderContent,
     renderManagementControls,
@@ -48,19 +107,19 @@ export default function OrderDetailsBase({
     renderCardOnlinePaymentLink,
     renderOrderRefreshButton,
     renderOrderRepeatButton
-}) {
+}: IOrderDetailsBaseProps): JSX.Element {
     const [orderLoading, setOrderLoading] = useState(true);
     const [orderLoadError, setOrderLoadError] = useState(false);
-    const [order, setOrder] = useState(null);
+    const [order, setOrder] = useState<IOrder | null>(null);
 
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
     const navigate = useNavigate();
     const params = useParams();
 
-    const { orderNumber, orderId } = parseRouteParams({ routeKey, params });
+    const { orderId, orderNumber } = parseRouteParams({ routeKey, params });
 
     const orderLoadStatus =
         orderLoading
@@ -69,24 +128,28 @@ export default function OrderDetailsBase({
                 ? DATA_LOAD_STATUS.ERROR
                 : DATA_LOAD_STATUS.READY;
 
-    const loadOrder = async () => {
+    const loadOrder = async (): Promise<void> => {
+        if (!orderId) return;
+
         setOrderLoadError(false);
         setOrderLoading(true);
 
-        const params = new URLSearchParams({ viewMode: ORDER_VIEW_MODE.PAGE }); // page | list
+        const params = new URLSearchParams({ viewMode: ORDER_VIEW_MODE.PAGE });
         const urlParams = params.toString();
-        const { status, message, order } = await dispatch(sendOrderRequest(orderId, urlParams));
+        const responseData = await dispatch(sendOrderRequest(orderId, urlParams));
         if (isUnmountedRef.current) return;
 
+        const { status, message } = responseData;
         logRequestStatus({ context: 'ORDER: LOAD SINGLE', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setOrderLoadError(true);
         } else {
+            const { order } = responseData;
             setOrder(order);
 
             const { id, orderNumber } = order;
-            const updatedUrl = routeConfig[routeKey].generatePath({ orderId: id, orderNumber });
+            const updatedUrl = routeConfig[routeKey]?.generatePath({ orderId: id, orderNumber }) ?? '/';
 
             if (location.pathname !== updatedUrl) {
                 navigate(updatedUrl, { replace: true });
@@ -96,8 +159,11 @@ export default function OrderDetailsBase({
         setOrderLoading(false);
     };
 
-    const updateOrderState = (updatedOrderId, orderUpdateData = {}) => {
-        if (updatedOrderId !== orderId) return;
+    const updateOrderState = (
+        updatedOrderId: string,
+        orderUpdateData: IOrderUpdateData = {}
+    ): void => {
+        if (!orderId || updatedOrderId !== orderId) return;
         
         const {
             orderPatches = [],
@@ -116,11 +182,16 @@ export default function OrderDetailsBase({
         ) return;
 
         setOrder(prev => {
+            const currentOrder = prev ?? {} as IOrder;
+
             // Обновление полей через дот-нотацию
-            const updatedOrder = { ...prev, items: prev.items.map(item => ({ ...item })) };
+            const updatedOrder: IOrder = {
+                ...currentOrder,
+                items: (currentOrder.items ?? []).map(item => ({ ...item }))
+            };
             applyDotNotationPatches(updatedOrder, orderPatches);
     
-            // Добавление/замена новых записей в массивы историй
+            // Обновление записей в массивах историй
             if (newOrderStatusEntry) {
                 updatedOrder.statusHistory = [
                     ...updatedOrder.statusHistory,
@@ -140,7 +211,7 @@ export default function OrderDetailsBase({
                 updatedOrder.financials = {
                     ...updatedOrder.financials,
                     eventHistory: updatedOrder.financials.eventHistory.map(entry => {
-                        if (entry.eventId === voidedFinancialsEventEntry.eventId) {
+                        if ('eventId' in entry && entry.eventId === voidedFinancialsEventEntry.eventId) {
                             return voidedFinancialsEventEntry;
                         }
                         return entry;
@@ -158,7 +229,9 @@ export default function OrderDetailsBase({
         });
     };
     
-    const refreshOrderState = (_, refreshedOrder) => setOrder(refreshedOrder);
+    const refreshOrderState = (_orderId: string, refreshedOrder: IOrder): void => {
+        setOrder(refreshedOrder);
+    }
 
     // Стартовая загрузка заказа и очистка при размонтировании
     useEffect(() => {
@@ -182,12 +255,12 @@ export default function OrderDetailsBase({
     return (
         <div className="order-details-page">
             <header className="order-details-header">
-                {renderHeaderContent?.(orderNumber)}
+                {renderHeaderContent(orderNumber ?? NO_VALUE_LABEL)}
             </header>
 
-            <OrdersDetailsLoadStatus
+            <OrderDetailsLoadStatus
                 loadStatus={orderLoadStatus}
-                reloadOrderDetails={loadOrder}
+                onReload={loadOrder}
             />
 
             <OrderDetailsMain
@@ -205,7 +278,9 @@ export default function OrderDetailsBase({
     );
 }
 
-function OrdersDetailsLoadStatus({ loadStatus, reloadOrderDetails }) {
+function OrderDetailsLoadStatus(
+    { loadStatus, onReload }: IOrderDetailsLoadStatusProps
+): JSX.Element | null {
     if (loadStatus === DATA_LOAD_STATUS.LOADING) {
         return (
             <div className="order-details-load-status">
@@ -224,7 +299,13 @@ function OrdersDetailsLoadStatus({ loadStatus, reloadOrderDetails }) {
                     <span className="icon error">❌</span>
                     Ошибка сервера. Детали заказа не доступны.
                 </p>
-                <button className="reload-btn" onClick={reloadOrderDetails}>Повторить</button>
+                <button
+                    className="reload-btn"
+                    onClick={onReload}
+                    aria-label="Перезагрузить детали заказа"
+                >
+                    Повторить
+                </button>
             </div>
         );
     }
@@ -242,19 +323,43 @@ function OrderDetailsMain({
     renderOrderRefreshButton,
     renderOrderRepeatButton,
     refreshOrderState
-}) {
-    if (!order) return;
-
-    const [expandedSectionForms, setExpandedSectionForms] = useState(new Set());
-    const [isItemsSubmitting, setIsItemsSubmitting] = useState(false);
-    const [itemsSubmitResult, setItemsSubmitResult] = useState(null);
-    const [itemsResponseResult, setItemsResponseResult] = useState(null);
-
+}: TOrderDetailsMainProps): JSX.Element | null {
+    if (!order) return null;
+    
     const {
         id, orderNumber, confirmedAt, statusHistory: orderStatusHistory,
         totals, items: orderItemList, customerInfo, delivery, financials,
         customerComment, internalNote, auditLog
     } = order;
+    const currentOrderStatusEntry = orderStatusHistory.at(-1);
+
+    if (
+        orderItemList == null ||
+        customerInfo == null ||
+        currentOrderStatusEntry == null ||
+        !('subtotalAmount' in totals) ||
+        !('totalSavings' in totals)
+    ) {
+        logMissingProps('OrderDetailsMain', {
+            orderItemList,
+            customerInfo,
+            currentOrderStatusEntry,
+            subtotalAmount: 'subtotalAmount' in totals ? totals.subtotalAmount : undefined,
+            totalSavings: 'totalSavings' in totals ? totals.totalSavings : undefined
+        });
+        return null; 
+    }
+
+    const [expandedSectionForms, setExpandedSectionForms] = useState<
+        Set<TOrderDetailsEditSection>
+    >(new Set());
+    const [isItemsSubmitting, setIsItemsSubmitting] = useState(false);
+    const [itemsSubmitResult, setItemsSubmitResult] = useState<
+        IOrderItemsSubmitResult | null
+    >(null);
+    const [itemsResponseResult, setItemsResponseResult] = useState<
+        IOrderItemsResponseResult | null
+    >(null);
 
     const { subtotalAmount, totalSavings, totalAmount } = totals;
     const {
@@ -271,8 +376,6 @@ function OrderDetailsMain({
     } = financials;
 
     const confirmedDate = new Date(confirmedAt).toLocaleString();
-
-    const currentOrderStatusEntry = orderStatusHistory.at(-1);
     const lastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
@@ -283,12 +386,15 @@ function OrderDetailsMain({
 
     const currentOrderStatusConfig = ORDER_STATUS_CONFIG[currentOrderStatusEntry.status];
     const financialsStateConfig = FINANCIALS_STATE_CONFIG[financialsState];
-    const lastFinancialsEventConfig = FINANCIALS_EVENT_CONFIG[lastFinancialsEventEntry?.event];
+    const lastFinancialsEventConfig = lastFinancialsEventEntry
+        ? FINANCIALS_EVENT_CONFIG[lastFinancialsEventEntry.event]
+        : null;
 
     const currentOrderStatusChangedDate =
         new Date(currentOrderStatusEntry.changedAt).toLocaleString();
-    const lastFinancialsEventChangedDate =
-        new Date(lastFinancialsEventEntry?.changedAt).toLocaleString();
+    const lastFinancialsEventChangedDate = lastFinancialsEventEntry
+        ? new Date(lastFinancialsEventEntry.changedAt).toLocaleString()
+        : '';
 
     const netPaid = totalPaid - totalRefunded;
     const paymentBalance = netPaid - totalAmount;
@@ -297,15 +403,19 @@ function OrderDetailsMain({
     const currentOnlineTransaction = financials.currentOnlineTransaction;
 
     const showCardOnlinePaymentLink =
-        renderCardOnlinePaymentLink &&
+        !!renderCardOnlinePaymentLink &&
         defaultPaymentMethod === PAYMENT_METHOD.CARD_ONLINE &&
         isActiveOrder &&
         isUnpaid &&
         !currentOnlineTransaction;
 
-    const onlineOperationType = TRANSACTION_TYPE_CONFIG[currentOnlineTransaction?.type];
+    const onlineOperationType = currentOnlineTransaction
+        ? TRANSACTION_TYPE_CONFIG[currentOnlineTransaction.type]
+        : null;
     const onlineProviders = currentOnlineTransaction?.providers;
-    const onlineOperationStatus = TRANSACTION_STATUS_CONFIG[currentOnlineTransaction?.status];
+    const onlineOperationStatus = currentOnlineTransaction?.status
+        ? TRANSACTION_STATUS_CONFIG[currentOnlineTransaction.status]
+        : null;
     const onlineConfirmationUrl = currentOnlineTransaction?.confirmationUrl;
 
     const formattedTotalPaid = formatCurrency(totalPaid);
@@ -328,11 +438,15 @@ function OrderDetailsMain({
     const shippingAddressDisplay = buildShippingAddressDisplay(deliveryMethod, shippingAddress);
     const shippingCostDisplay = getShippingCostDisplay(shippingCost);
 
-    const cancellationReason = orderStatusHistory.find(
+    const cancelledStatusHistoryEntry = orderStatusHistory.find(
         entry => entry.status === ORDER_STATUS.CANCELLED
-    )?.cancellationReason;
+    );
+    const cancellationReason =
+        cancelledStatusHistoryEntry && 'cancellationReason' in cancelledStatusHistoryEntry
+            ? cancelledStatusHistoryEntry.cancellationReason
+            : undefined;
 
-    const toggleSectionFormExpansion = (section) => {
+    const toggleSectionFormExpansion = (section: TOrderDetailsEditSection): void => {
         setExpandedSectionForms(prev => {
             const newExpandedSet = new Set(prev);
 
@@ -433,15 +547,15 @@ function OrderDetailsMain({
                         <h3>Информация об оплате</h3>
 
                         {isConfirmedOrder && renderSectionEditButton?.({
-                            section: 'paymentSection',
-                            isFormExpanded: expandedSectionForms.has('paymentSection'),
+                            section: ORDER_DETAILS_EDIT_SECTION.PAYMENT,
+                            isFormExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.PAYMENT),
                             toggleSectionFormExpansion
                         })}
                     </header>
 
                     {isConfirmedOrder && renderSectionFormCollapsible?.({
-                        isExpanded: expandedSectionForms.has('paymentSection'),
-                        section: 'paymentSection',
+                        isExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.PAYMENT),
+                        section: ORDER_DETAILS_EDIT_SECTION.PAYMENT,
                         order
                     })}
 
@@ -516,7 +630,7 @@ function OrderDetailsMain({
                                         {formattedOnlineTransactionAmount} руб.
                                     </li>
                                     <li>
-                                        {`Провайдер${onlineProviders?.length > 1 ? 'ы' : ''}: `}
+                                        {`Провайдер${(onlineProviders ?? []).length > 1 ? 'ы' : ''}: `}
                                         {onlineProviders?.join(', ').toUpperCase() || NO_VALUE_LABEL}
                                     </li>
                                     <li>
@@ -542,15 +656,17 @@ function OrderDetailsMain({
                         <h3>Сведения о покупателе</h3>
 
                         {isConfirmedOrder && renderSectionEditButton?.({
-                            section: 'customerInfoSection',
-                            isFormExpanded: expandedSectionForms.has('customerInfoSection'),
+                            section: ORDER_DETAILS_EDIT_SECTION.CUSTOMER_INFO,
+                            isFormExpanded: expandedSectionForms.has(
+                                ORDER_DETAILS_EDIT_SECTION.CUSTOMER_INFO
+                            ),
                             toggleSectionFormExpansion
                         })}
                     </header>
 
                     {isConfirmedOrder && renderSectionFormCollapsible?.({
-                        isExpanded: expandedSectionForms.has('customerInfoSection'),
-                        section: 'customerInfoSection',
+                        isExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.CUSTOMER_INFO),
+                        section: ORDER_DETAILS_EDIT_SECTION.CUSTOMER_INFO,
                         order
                     })}
 
@@ -603,15 +719,17 @@ function OrderDetailsMain({
                         <h3>Информация о доставке</h3>
 
                         {isConfirmedOrder && renderSectionEditButton?.({
-                            section: 'deliverySection',
-                            isFormExpanded: expandedSectionForms.has('deliverySection'),
+                            section: ORDER_DETAILS_EDIT_SECTION.DELIVERY,
+                            isFormExpanded: expandedSectionForms.has(
+                                ORDER_DETAILS_EDIT_SECTION.DELIVERY
+                            ),
                             toggleSectionFormExpansion
                         })}
                     </header>
 
                     {isConfirmedOrder && renderSectionFormCollapsible?.({
-                        isExpanded: expandedSectionForms.has('deliverySection'),
-                        section: 'deliverySection',
+                        isExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.DELIVERY),
+                        section: ORDER_DETAILS_EDIT_SECTION.DELIVERY,
                         order
                     })}
 
@@ -638,28 +756,32 @@ function OrderDetailsMain({
                         <h3>Содержимое заказа</h3>
 
                         {isConfirmedOrder && renderSectionEditButton?.({
-                            section: 'itemsSection',
-                            isFormExpanded: expandedSectionForms.has('itemsSection'),
+                            section: ORDER_DETAILS_EDIT_SECTION.ITEMS,
+                            isFormExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.ITEMS),
                             toggleSectionFormExpansion
                         })}
                     </header>
 
                     {isConfirmedOrder && renderSectionFormCollapsible?.({
-                        isExpanded: expandedSectionForms.has('itemsSection'),
-                        section: 'itemsSection',
+                        isExpanded: expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.ITEMS),
+                        section: ORDER_DETAILS_EDIT_SECTION.ITEMS,
                         order,
                         itemsSubmitResult,
                         setIsItemsSubmitting,
-                        onItemsResponseResult: (data) => setItemsResponseResult(data)
+                        onItemsResponseResult: (
+                            data: IOrderItemsResponseResult
+                        ): void => setItemsResponseResult(data)
                     })}
 
                     <OrderDetailsItems
-                        isEditMode={expandedSectionForms.has('itemsSection')}
+                        isEditMode={expandedSectionForms.has(ORDER_DETAILS_EDIT_SECTION.ITEMS)}
                         orderId={id}
                         orderItemList={orderItemList}
                         isItemsSubmitting={isItemsSubmitting}
                         itemsResponseResult={itemsResponseResult}
-                        onItemsSubmitResult={(data) => setItemsSubmitResult(data)}
+                        onItemsSubmitResult={
+                            (data: IOrderItemsSubmitResult): void => setItemsSubmitResult(data)
+                        }
                         clearItemsSubmitResult={() => setItemsSubmitResult(null)}
                         clearItemsResponseResult={() => setItemsResponseResult(null)}
                     />

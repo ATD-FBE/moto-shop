@@ -10,7 +10,7 @@ import {
 } from '@/components/parts/OrderParts.jsx';
 import { sendCustomerOrderListRequest } from '@/api/customerRequests.js';
 import { pluralize } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
 import { getLastFinancialsEventEntry } from '@shared/commonHelpers.js';
 import { LOAD_STATUS_MIN_HEIGHT, DATA_LOAD_STATUS } from '@/config/constants.js';
 import {
@@ -56,7 +56,7 @@ type TOrdersLoadControlsProps = Pick<ICustomerTableOrdersMainProps,
     loadedOrdersCount: number;
 };
 
-type TOrderCardProps = Pick<ICustomerTableOrdersMainProps,
+type TCustomerTableOrderCardProps = Pick<ICustomerTableOrdersMainProps,
     | 'refreshOrderState'
     | 'uiBlocked'
 > & {
@@ -179,7 +179,7 @@ function CustomerTableOrdersMain({
             <ul className="order-list">
                 {loadedOrderList.map(order => (
                     <li key={order.id} className="order-item">
-                        <OrderCard
+                        <CustomerTableOrderCard
                             order={order}
                             refreshOrderState={refreshOrderState}
                             uiBlocked={uiBlocked}
@@ -307,18 +307,18 @@ function OrdersLoadControls(
     );
 }
 
-function OrderCard(
-    { order, refreshOrderState, uiBlocked }: TOrderCardProps
+function CustomerTableOrderCard(
+    { order, refreshOrderState, uiBlocked }: TCustomerTableOrderCardProps
 ): JSX.Element | null {
     const {
         id, orderNumber, statusHistory: orderStatusHistory, confirmedAt,
         lastActivityAt, totals, totalItems, delivery, financials
     } = order;
-
     const currentOrderStatusEntry = orderStatusHistory.at(-1);
-    if (!currentOrderStatusEntry) {
-        console.error('Записи в истории статуса отсутствуют');
-        return null;
+
+    if (totalItems == null || currentOrderStatusEntry == null) {
+        logMissingProps('CustomerTableOrderCard', { totalItems, currentOrderStatusEntry });
+        return null; 
     }
 
     const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
@@ -334,7 +334,7 @@ function OrderCard(
             {isActiveOrder && <span className="active-order-badge">⚡</span>}
 
             <OrderCardOverview
-                id={id}
+                orderId={id}
                 orderNumber={orderNumber}
                 confirmedAt={confirmedAt}
                 totalOrderItems={totalItems}
@@ -342,7 +342,7 @@ function OrderCard(
             />
 
             <OrderCardInfoGrid
-                id={id}
+                orderId={id}
                 orderNumber={orderNumber}
                 confirmedAt={confirmedAt}
                 totalAmount={totals.totalAmount}
@@ -353,7 +353,6 @@ function OrderCard(
                 deliveryMethod={delivery.deliveryMethod}
                 allowCourierExtra={delivery.allowCourierExtra}
                 currentOnlineTransaction={financials.currentOnlineTransaction}
-                renderCardOnlinePaymentLink={null}
             />
 
             <div className="order-meta mobile-stack">

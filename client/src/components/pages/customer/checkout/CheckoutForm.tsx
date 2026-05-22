@@ -43,7 +43,7 @@ import {
     getFieldInfoClass
 } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { isObjectKey, isSetMember } from '@shared/commonHelpers.js';
 import {
     validationRules,

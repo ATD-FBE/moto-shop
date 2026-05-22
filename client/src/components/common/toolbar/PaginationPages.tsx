@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import cn from 'classnames';
-import { logToolbarMissingProps } from '@/helpers/toolbarHelpers.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type {  } from '@shared/types/index.js';
 
@@ -34,7 +34,7 @@ export default function PaginationPages({
     uiBlocked = false
 }: TPaginationPagesProps): JSX.Element | null {
     if (currentPage == null || totalItems == null || limit == null || setPage == null) {
-        logToolbarMissingProps('SortingControls', { currentPage, totalItems, limit, setPage });
+        logMissingProps('SortingControls', { currentPage, totalItems, limit, setPage });
         return null; 
     }
 

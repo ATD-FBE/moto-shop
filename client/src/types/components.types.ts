@@ -9,14 +9,7 @@ import type {
     TCategoryUpdateResponse,
     TProductCreateResponse,
     TProductUpdateResponse,
-    IOrderStatusEntry,
-    IOrderStatusEntrySummary,
-    TDeliveryMethod,
-    TPaymentMethod,
-    TFinancialsState,
-    IFinancialsEventEntry,
-    IFinancialsEventEntrySummary,
-    IAuditLogEntry
+    IOrderItemsUpdateBody
 } from '@shared/types/index.js';
 
 /////////////////////////////
@@ -202,4 +195,20 @@ export interface ICartItemElemAnimationState {
     active: boolean;
     reason: 'filtering' | 'pendingRemoval' | 'restore' | 'remove' | 'clearCart' | null;
     phase: 'expanding' | 'collapsing' | 'transitioning' | null;
+}
+
+/////////////////////
+/// ORDER DETAILS ///
+/////////////////////
+
+export interface IOrderItemsSubmitResult {
+    ok: boolean;
+    items?: IOrderItemsUpdateBody['items'];
+    changedFields?: string[];
+}
+
+export interface IOrderItemsResponseResult {
+    shouldRefreshItemsAvailability?: boolean;
+    fieldErrors?: Record<string, string>;
+    changedFields?: string[];
 }

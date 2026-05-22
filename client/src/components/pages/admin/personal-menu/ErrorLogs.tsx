@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendErrorLogsRequest } from '@/api/logRequests.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';

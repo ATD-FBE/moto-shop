@@ -14,7 +14,7 @@ import {
     getInitCategoryParams
 } from '@/helpers/urlParamsHelper.js';
 import { buildCategoryTreeAndMap } from '@/helpers/categoryHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { DATA_LOAD_STATUS } from '@/config/constants.js';
 import { productEditorFilterOptions } from '@shared/filterOptions.js';
 import { productEditorSortOptions } from '@shared/sortOptions.js';

@@ -20,7 +20,7 @@ import {
     fieldsStateReducer,
     getStringValue
 } from '@/helpers/formHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,

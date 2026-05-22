@@ -64,3 +64,16 @@ export const logRequestStatus = (
             break;
     }
 };
+
+export const logMissingProps = (componentName: string, props: Record<string, unknown>): void => {
+    const missingProps = Object.entries(props)
+        .filter(([_, value]) => value === undefined || value === null)
+        .map(([key]) => key);
+
+    if (missingProps.length > 0) {
+        console.error(
+            `[${componentName}] Отсутствуют критические пропсы и/или свойства объектов: `+
+            `${missingProps.join(', ')}`
+        );
+    }
+};

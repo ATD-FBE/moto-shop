@@ -60,6 +60,13 @@ export const CATEGORY_FORM_MODE = {
     EDIT: 'edit'
 } as const;
 
+export const ORDER_DETAILS_EDIT_SECTION = {
+    PAYMENT: 'payment',
+    CUSTOMER_INFO: 'customer_info',
+    DELIVERY: 'delivery',
+    ITEMS: 'items'
+} as const;
+
 export const FIELD_UI_STATUS = {
     VALID: 'valid',
     CHANGED: 'changed',

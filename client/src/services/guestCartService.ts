@@ -2,7 +2,7 @@ import { sendGuestCartItemListRequest } from '@/api/cartRequests.js';
 import { setCartAccessibility } from '@/redux/slices/cartSlice.js';
 import { applyCartState } from '@/services/cartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { TAppThunk } from '@/types/index.js';

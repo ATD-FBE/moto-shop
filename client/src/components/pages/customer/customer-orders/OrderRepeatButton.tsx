@@ -5,7 +5,7 @@ import { sendOrderRepeatRequest } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX } from 'react';
 
@@ -15,8 +15,8 @@ import type { JSX } from 'react';
 
 interface IOrderRepeatButtonProps {
     orderId: string;
-    onLoading: ((val: boolean) => void) | null;
-    uiBlocked: boolean;
+    onLoading?: (val: boolean) => void;
+    uiBlocked?: boolean;
 }
 
 /////////////////////
@@ -27,7 +27,7 @@ const LOG_CTX = 'ORDER: REPEAT';
 
 export default function OrderRepeatButton({
     orderId,
-    onLoading = null, // Внешний сеттер для индикации загрузки при запросе
+    onLoading, // Внешний сеттер для индикации загрузки при запросе
     uiBlocked = false
 }: IOrderRepeatButtonProps): JSX.Element {
     const totalCartItems = useAppSelector(state => state.cart.ids.length);

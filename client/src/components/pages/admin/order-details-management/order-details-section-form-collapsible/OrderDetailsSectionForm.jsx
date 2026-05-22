@@ -8,9 +8,10 @@ import { sendOrderDetailsUpdateRequest, sendOrderItemsUpdateRequest } from '@/ap
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { formatOrderAdjustmentLogs } from '@/services/orderService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass, formatCurrency } from '@/helpers/textHelpers.js';
 import {
+    ORDER_DETAILS_EDIT_SECTION,
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
@@ -76,7 +77,7 @@ const isDeliveryRequired = (deliveryMethod) =>
 
 const getFieldConfigs = (section) => {
     const baseFieldConfigsBySection = {
-        customerInfoSection: [
+        [ORDER_DETAILS_EDIT_SECTION.CUSTOMER_INFO]: [
             {
                 name: 'firstName',
                 label: 'Имя',
@@ -119,7 +120,7 @@ const getFieldConfigs = (section) => {
                 trim: true
             }
         ],
-        deliverySection: [
+        [ORDER_DETAILS_EDIT_SECTION.DELIVERY]: [
             {
                 name: 'deliveryMethod',
                 label: 'Метод доставки',
@@ -211,7 +212,7 @@ const getFieldConfigs = (section) => {
                 canApply: ({ deliveryMethod }) => isDeliveryRequired(deliveryMethod)
             }
         ],
-        paymentSection: [
+        [ORDER_DETAILS_EDIT_SECTION.PAYMENT]: [
             {
                 name: 'defaultPaymentMethod',
                 label: 'Способ оплаты',
@@ -222,7 +223,7 @@ const getFieldConfigs = (section) => {
                 ]
             }
         ],
-        itemsSection: []
+        [ORDER_DETAILS_EDIT_SECTION.ITEMS]: []
     };
 
     const editReasonConfig = {
@@ -281,7 +282,7 @@ export default function OrderDetailsSectionForm({
     );
     const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
     const initFieldValuesRef = useRef({});
-    const isItemsSectionRef = useRef(section === 'itemsSection');
+    const isItemsSectionRef = useRef(section === ORDER_DETAILS_EDIT_SECTION.ITEMS);
     const isUnmountedRef = useRef(false);
     const dispatch = useDispatch();
 
@@ -527,8 +528,8 @@ export default function OrderDetailsSectionForm({
                 }
 
                 if (isItemsSectionRef.current) {
-                    setIsItemsSubmitting(false);
                     onItemsResponseResult({ fieldErrors });
+                    setIsItemsSubmitting(false);
                 }
 
                 setSubmitStatus(status);

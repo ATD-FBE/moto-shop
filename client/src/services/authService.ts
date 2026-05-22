@@ -18,7 +18,7 @@ import {
     removeGuestCartFromLocalStorage
 } from '@/services/guestCartService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
 import type { TAppThunk, TOpenAlertModalParams } from '@/types/index.js';

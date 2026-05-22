@@ -7,7 +7,7 @@ import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { getLeafCategories } from '@/helpers/categoryHelpers.js';
 import { sendProductDeleteRequest, sendBulkProductDeleteRequest } from '@/api/productRequests.js';
 import { upsertProductsInStore, removeProductsFromStore } from '@/redux/slices/productsSlice.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
 import type {

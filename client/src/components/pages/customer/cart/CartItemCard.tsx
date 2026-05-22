@@ -11,7 +11,7 @@ import { PRODUCT_IMAGE_PLACEHOLDER } from '@/config/constants.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { formatCurrency, highlightText } from '@/helpers/textHelpers.js';
 import generateSlug from '@/helpers/generateSlug.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
 import type { ICartItemElemAnimationState } from '@/types/index.js';

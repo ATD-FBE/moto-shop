@@ -8,7 +8,7 @@ import { openConfirmModal } from '@/services/modalConfirmService.js';
 import { openAlertModal } from '@/services/modalAlertService.js';
 import { sendCategoryDeleteRequest } from '@/api/categoryRequests.js';
 import { pluralize } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 import { UNSORTED_CATEGORY_SLUG, REQUEST_STATUS } from '@shared/constants.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';

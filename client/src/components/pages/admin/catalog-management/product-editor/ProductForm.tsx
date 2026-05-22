@@ -24,7 +24,7 @@ import {
     getBoolValue
 } from '@/helpers/formHelpers.js';
 import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/requestLogger.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
