@@ -593,7 +593,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                     submitStates={submitStates}
                     submitStatus={submitStatus}
                     uiBlocked={isFormLocked}
-                    reloadData={isEditMode ? reloadPromo : null}
+                    reloadData={isEditMode ? reloadPromo : undefined}
                 />
             </form>
         </div>

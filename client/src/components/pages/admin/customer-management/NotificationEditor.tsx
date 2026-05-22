@@ -563,7 +563,7 @@ export default function NotificationEditor({
                     submitStates={submitStates}
                     submitStatus={submitStatus}
                     uiBlocked={isFormLocked}
-                    reloadData={isEditMode ? reloadNotification : null}
+                    reloadData={isEditMode ? reloadNotification : undefined}
                 />
             </form>
         </div>

@@ -421,7 +421,7 @@ export default function NewsEditor({ newsId }: INewsEditorProps): JSX.Element {
                     submitStates={submitStates}
                     submitStatus={submitStatus}
                     uiBlocked={isFormLocked}
-                    reloadData={isEditMode ? reloadNews : null}
+                    reloadData={isEditMode ? reloadNews : undefined}
                 />
             </form>
         </div>
