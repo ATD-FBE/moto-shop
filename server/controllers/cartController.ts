@@ -1,4 +1,5 @@
 import Product from '@server/db/models/Product.js';
+import User from '@server/db/models/User.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import { prepareGuestCart, prepareCart, prepareFixedDbCart } from '@server/services/cartService.js';
 import { requireDbUser } from '@server/utils/typeGuards.js';
@@ -87,19 +88,25 @@ export const handleCartItemUpdateRequest: RequestHandler<
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const dbUser = req.dbUser;
+    const userId = req.dbUser._id.toString();
     const productId = req.params.productId;
     const { quantity } = req.body;
 
     try {
         const { prodLbl, actionMsg } = await runInDbTransaction(async (session) => {
-            const existingCartItem = dbUser.cart.find(item => item.productId.equals(productId));
+            const txDbUser = await User.findById(userId).session(session);
+    
+            if (!txDbUser) {
+                throw createAppError(404, `Пользователь (ID: ${userId}) не найден`);
+            }
+
+            const existingCartItem = txDbUser.cart.find(item => item.productId.equals(productId));
 
             let prodLbl = existingCartItem ? `"${existingCartItem.nameSnapshot}"` : `(ID: ${productId})`;
             let actionMsg: string = '';
 
             if (quantity === 0) {
-                dbUser.cart.pull({ productId });
+                txDbUser.cart.pull({ productId });
                 actionMsg = 'удален из корзины';
             } else {
                 const dbProduct = await Product.findById(productId).lean<TDbProduct>().session(session);
@@ -111,7 +118,6 @@ export const handleCartItemUpdateRequest: RequestHandler<
 
                 const nameSnapshot = dbProduct.name;
                 const brandSnapshot = dbProduct.brand ?? null;
-
                 prodLbl = `"${nameSnapshot}"`;
     
                 // Актуальное количество товара на складе в этом обработчике не проверяется
@@ -119,14 +125,15 @@ export const handleCartItemUpdateRequest: RequestHandler<
                     Object.assign(existingCartItem, { quantity, nameSnapshot, brandSnapshot });
                     actionMsg = `обновлён в корзине в количестве ${quantity} ед.`;
                 } else {
-                    dbUser.cart.push({ productId, quantity, nameSnapshot, brandSnapshot });
+                    txDbUser.cart.push({ productId, quantity, nameSnapshot, brandSnapshot });
                     actionMsg = `добавлен в корзину в количестве ${quantity} ед.`;
                 }
             }
     
-            await dbUser.save({ session });
+            await txDbUser.save({ session });
             checkTimeout(req);
 
+            req.dbUser = txDbUser;
             return { prodLbl, actionMsg };
         });
 
@@ -144,18 +151,24 @@ export const handleCartItemRestoreRequest: RequestHandler<
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const dbUser = req.dbUser;
+    const userId = req.dbUser._id.toString();
     const productId = req.params.productId;
     const { quantity, position } = req.body;
-    
-    const isItemInCart = dbUser.cart.some(item => item.productId.equals(productId));
-
-    if (isItemInCart) {
-        return safeSendResponse(res, 400, { message: 'Товар уже существует в корзине' });
-    }
 
     try {
         const { prodLbl } = await runInDbTransaction(async (session) => {
+            const txDbUser = await User.findById(userId).session(session);
+    
+            if (!txDbUser) {
+                throw createAppError(404, `Пользователь (ID: ${userId}) не найден`);
+            }
+    
+            const isItemInCart = txDbUser.cart.some(item => item.productId.equals(productId));
+        
+            if (isItemInCart) {
+                throw createAppError(400, 'Товар уже существует в корзине');
+            }
+
             const dbProduct = await Product.findById(productId).lean<TDbProduct>().session(session);
             checkTimeout(req);
 
@@ -165,7 +178,7 @@ export const handleCartItemRestoreRequest: RequestHandler<
                 throw createAppError(404, `Товар ${prodLbl} не найден`);
             }
     
-            const insertPos = position <= dbUser.cart.length ? position : dbUser.cart.length;
+            const insertPos = position <= txDbUser.cart.length ? position : txDbUser.cart.length;
             const newItem = {
                 productId,
                 quantity,
@@ -173,10 +186,11 @@ export const handleCartItemRestoreRequest: RequestHandler<
                 brandSnapshot: dbProduct.brand ?? null
             };
     
-            dbUser.cart.splice(insertPos, 0, newItem);
-            await dbUser.save({ session });
+            txDbUser.cart.splice(insertPos, 0, newItem);
+            await txDbUser.save({ session });
             checkTimeout(req);
 
+            req.dbUser = txDbUser;
             return { prodLbl };
         });
 
@@ -193,25 +207,42 @@ export const handleCartWarningsFixRequest: RequestHandler<
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const dbUser = req.dbUser;
+    const userId = req.dbUser._id.toString();
 
     try {
-        const { tradeProductList, cartItemList } = await runInDbTransaction(async (session) => {
-            const { fixedDbCart, tradeProductList, cartItemList } = await prepareFixedDbCart(dbUser.cart);
+        const transactionResult = await runInDbTransaction(async (session) => {
+            const txDbUser = await User.findById(userId).session(session);
+    
+            if (!txDbUser) {
+                throw createAppError(404, `Пользователь (ID: ${userId}) не найден`);
+            }
+
+            const {
+                fixedDbCart,
+                tradeProductList,
+                cartItemList
+            } = await prepareFixedDbCart(txDbUser.cart, session);
             checkTimeout(req);
 
-            dbUser.cart.splice(0, dbUser.cart.length, ...fixedDbCart);
-            await dbUser.save({ session });
+            txDbUser.cart.splice(0, txDbUser.cart.length, ...fixedDbCart);
+            await txDbUser.save({ session });
             checkTimeout(req);
 
-            return { tradeProductList, cartItemList };
+            req.dbUser = txDbUser;
+            return {
+                tradeProductList,
+                cartItemList,
+                customerDiscount: txDbUser.discount
+            };
         });
+
+        const { tradeProductList, cartItemList, customerDiscount } = transactionResult;
 
         safeSendResponse(res, 200, {
             message: 'Проблемные товары в корзине успешно исправлены',
             tradeProductList,
             cartItemList,
-            customerDiscount: dbUser.discount
+            customerDiscount
         });
     } catch (err) {
         next(err);
@@ -232,11 +263,13 @@ export const handleCartItemRemoveRequest: RequestHandler<
         const existingCartItem = dbUser.cart.find(item => item.productId.equals(productId));
         const prodLbl = existingCartItem ? `"${existingCartItem.nameSnapshot}"` : `(ID: ${productId})`;
 
-        if (existingCartItem) {
-            dbUser.cart.pull({ productId });
-            await dbUser.save();
-            checkTimeout(req);
-        }
+        const updatedUser = await User.findByIdAndUpdate(
+            dbUser._id,
+            { $pull: { cart: { productId } } },
+            { new: true }
+        );
+
+        if (updatedUser) req.dbUser = updatedUser;
 
         safeSendResponse(res, 200, { message: `Товар ${prodLbl} удалён из корзины` });
     } catch (err) {
@@ -250,15 +283,15 @@ export const handleCartClearRequest: RequestHandler<
     TCartClearResponse
 > = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
-    
-    const dbUser = req.dbUser;
 
     try {
-        await runInDbTransaction(async (session) => {
-            dbUser.cart.splice(0);
-            await dbUser.save({ session });
-            checkTimeout(req);
-        });
+        const updatedUser = await User.findByIdAndUpdate(
+            req.dbUser._id,
+            { $set: { cart: [] } },
+            { new: true }
+        );
+        
+        if (updatedUser) req.dbUser = updatedUser;
 
         safeSendResponse(res, 200, { message: 'Корзина успешно очищена' });
     } catch (err) {

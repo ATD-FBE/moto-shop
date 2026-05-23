@@ -85,6 +85,7 @@ export default function NewNotificationsAlert({
                 className="load-items-btn"
                 onClick={showNewNotifications}
                 disabled={!newNotificationsAvailable}
+                aria-label="Загрузить новые уведомления"
             >
                 <span className="icon">🔔</span>
                 Загрузить

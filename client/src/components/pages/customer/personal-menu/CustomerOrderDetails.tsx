@@ -1,6 +1,6 @@
 import OrderDetailsBase from '@/components/pages/shared/OrderDetailsBase.jsx';
-import CardOnlinePaymentLink from '../customer-orders/CardOnlinePaymentLink.js';
-import OrderRepeatButton from '../customer-orders/OrderRepeatButton.js';
+import CardOnlinePaymentLink from '../customer-orders/CardOnlinePaymentLink.jsx';
+import OrderRepeatButton from '../customer-orders/OrderRepeatButton.jsx';
 import { OrderRefreshButton } from '@/components/parts/OrderParts.jsx';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
 import type { JSX } from 'react';

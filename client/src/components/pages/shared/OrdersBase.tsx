@@ -176,7 +176,7 @@ export default function OrdersBase({
     const toolbarTopActiveControls: TToolbarControls[]  = ['limit', 'search', 'filter', 'pages'];
     if (showSort) toolbarTopActiveControls.splice(1, 0, 'sort');
 
-    const loadOrders = async (urlParams: string): Promise<void> => {
+    const loadOrders = async (urlParams: string): Promise<boolean | undefined> => {
         setOrdersLoadError(false);
         setOrdersLoading(true);
 
@@ -188,20 +188,22 @@ export default function OrdersBase({
 
         if (status !== REQUEST_STATUS.SUCCESS) {
             setOrdersLoadError(true);
-        } else {
-            const { filteredOrderIdList, paginatedOrderList } = responseData;
-
-            setFilteredOrderIds(new Set(filteredOrderIdList));
-            setPaginatedOrderList(paginatedOrderList);
-            setInitOrdersReady(true);
+            setOrdersLoading(false);
+            return false;
         }
         
+        const { filteredOrderIdList, paginatedOrderList } = responseData;
+
+        setFilteredOrderIds(new Set(filteredOrderIdList));
+        setPaginatedOrderList(paginatedOrderList);
+        setInitOrdersReady(true);
         setOrdersLoading(false);
+        return true;
     };
 
-    const reloadOrders = (): void => {
+    const reloadOrders = async (): Promise<boolean | undefined> => {
         const urlParams = location.search.slice(1);
-        loadOrders(urlParams);
+        return await loadOrders(urlParams);
     };
 
     const toggleOrderExpansion = (id: string): void => {
@@ -403,6 +405,7 @@ export default function OrdersBase({
                 setSearch,
                 filter,
                 setFilter,
+                filterOptions: ordersFilterOptions,
                 page,
                 setPage,
                 limit,

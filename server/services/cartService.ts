@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import Product from '@server/db/models/Product.js';
 import { prepareProduct, prepareProductSnapshot } from './productService.js';
+import type { ClientSession } from 'mongoose';
 import type { TDbProduct, TDbCartItem } from '@server/types/index.js';
 import type { IGuestCartItem, ICartItem, IProduct } from '@shared/types/index.js';
 
@@ -175,10 +176,13 @@ export const areCartsDifferent = (aCart: TDbCartItem[], bCart: TDbCartItem[]): b
     return false;
 };
 
-export const prepareFixedDbCart = async (dbCart: TDbCartItem[]): Promise<IPrepareFixedDbCartCart> => {
+export const prepareFixedDbCart = async (
+    dbCart: TDbCartItem[],
+    session: ClientSession
+): Promise<IPrepareFixedDbCartCart> => {
     const productIds = dbCart.map(item => item.productId);
     const dbProducts = productIds.length > 0
-        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>()
+        ? await Product.find({ _id: { $in: productIds } }).lean<TDbProduct[]>().session(session)
         : [];
 
     // Сбор актуальной и исправленной корзины

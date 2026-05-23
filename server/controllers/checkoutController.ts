@@ -682,10 +682,18 @@ export const handleOrderDraftConfirmRequest: RequestHandler<
                 customerInfo: { firstName, lastName, middleName, email, phone },
                 delivery: {
                     deliveryMethod,
-                    allowCourierExtra,
-                    shippingAddress: deliveryMethod === DELIVERY_METHOD.SELF_PICKUP
-                        ? {}
-                        : { region, district, city, street, house, apartment, postalCode },
+                    ...(allowCourierExtra !== undefined && { allowCourierExtra }),
+                    ...(deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP && {
+                            shippingAddress: {
+                                region,
+                                district,
+                                city,
+                                street,
+                                house,
+                                apartment,
+                                postalCode
+                            }
+                        }),
                     ...(shippingCost !== undefined && { shippingCost })
                 },
                 financials: { defaultPaymentMethod },

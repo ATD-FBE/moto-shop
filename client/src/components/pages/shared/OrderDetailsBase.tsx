@@ -42,20 +42,14 @@ import {
     FINANCIALS_STATE_CONFIG,
     FINANCIALS_EVENT_CONFIG
 } from '@shared/constants.js';
-import type { ReactNode, JSX, ComponentProps, Dispatch, SetStateAction } from 'react';
+import type { ReactNode, JSX, ComponentProps } from 'react';
 import type {
     TDataLoadStatus,
     TOrderDetailsEditSection,
     IOrderItemsSubmitResult,
     IOrderItemsResponseResult
 } from '@/types/index.js';
-import type {
-    IOrder,
-    IOrderUpdateData,
-    IOrderItem,
-    ICustomerInfo,
-    IDelivery
-} from '@shared/types/index.js';
+import type { IOrder, IOrderUpdateData } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
