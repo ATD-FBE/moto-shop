@@ -17,7 +17,9 @@ import { ORDER_DETAILS_EDIT_SECTION, NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/
 import {
     buildCustomerFullName,
     buildShippingAddressDisplay,
-    getShippingCostDisplay
+    getShippingCostDisplay,
+    isFullOrderStatusEntry,
+    isFullOrderFinancialsEntry
 } from '@/services/orderService.js';
 import { parseRouteParams } from '@/helpers/routeHelpers.js';
 import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
@@ -471,14 +473,16 @@ function OrderDetailsMain({
                         {renderManagementControls({
                             isActiveOrder,
                             orderId: id,
-                            currentOrderStatusEntry,
-                            orderStatusHistory,
+                            orderStatus: currentOrderStatusEntry.status,
+                            orderStatusHistory: orderStatusHistory.filter(isFullOrderStatusEntry),
                             deliveryMethod,
                             allowCourierExtra,
                             shippingCost,
                             defaultPaymentMethod,
                             financialsState,
-                            financialsEventHistory,
+                            financialsEventHistory: financials.eventHistory.filter(
+                                isFullOrderFinancialsEntry
+                            ),
                             netPaid,
                             totalAmount,
                             internalNote,

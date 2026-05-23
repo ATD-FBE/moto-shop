@@ -1,23 +1,55 @@
 import { useState, useEffect }  from 'react';
 import cn from 'classnames';
+import OrderManagementControls from '../OrderManagementControls.jsx';
 import OrderStatusSteps from './order-status-panel/OrderStatusSteps.jsx';
 import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
-import { formatOrderStatusHistoryLogs } from '@/services/orderService.js';
 import { NO_VALUE_LABEL } from '@/config/constants.js';
+import { formatOrderStatusHistoryLogs, isFullOrderStatusEntry } from '@/services/orderService.js';
+import { logMissingProps } from '@/helpers/logHelpers.js';
 import { ORDER_STATUS_CONFIG } from '@shared/constants.js';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof OrderManagementControls>;
+
+type TOrderStatusPanelProps = Pick<TParentProps,
+    | 'isActiveOrder'
+    | 'orderId'
+    | 'orderStatusHistory'
+    | 'deliveryMethod'
+    | 'allowCourierExtra'
+    | 'shippingCost'
+    | 'netPaid'
+    | 'totalAmount'
+> & {
+    showExtras: boolean;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function OrderStatusPanel({
     showExtras,
     isActiveOrder,
     orderId,
-    currentOrderStatusEntry,
     orderStatusHistory,
     deliveryMethod,
     allowCourierExtra,
     shippingCost,
     netPaid,
     totalAmount
-}) {
+}: TOrderStatusPanelProps): JSX.Element | null {
+    const currentOrderStatusEntry = orderStatusHistory.at(-1);
+
+    if (currentOrderStatusEntry == null) {
+        logMissingProps('OrderStatusPanel', { currentOrderStatusEntry });
+        return null; 
+    }
+
     const [logs, setLogs] = useState('');
 
     const currentOrderStatusConfig = ORDER_STATUS_CONFIG[currentOrderStatusEntry.status];
@@ -25,7 +57,7 @@ export default function OrderStatusPanel({
 
     useEffect(() => {
         if (!showExtras) return;
-        setLogs(formatOrderStatusHistoryLogs(orderStatusHistory));
+        setLogs(formatOrderStatusHistoryLogs(orderStatusHistory.filter(isFullOrderStatusEntry)));
     }, [orderStatusHistory]);
 
     return (

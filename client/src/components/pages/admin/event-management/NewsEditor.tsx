@@ -1,8 +1,8 @@
 import { useMemo, useReducer, useState, useRef, useEffect, createElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
-import { useAppDispatch } from '@/hooks/storeHooks.js';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import {
     sendNewsRequest,
     sendNewsCreateRequest,

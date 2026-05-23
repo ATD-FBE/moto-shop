@@ -1,5 +1,6 @@
 import { useState, useEffect }  from 'react';
 import cn from 'classnames';
+import OrderManagementControls from '../OrderManagementControls.jsx';
 import { OrderLastFinancialsEvent } from '@/components/parts/OrderParts.jsx';
 import PaymentForm from './financials-status-panel/PaymentForm.jsx';
 import RefundForm from './financials-status-panel/RefundForm.jsx';
@@ -15,6 +16,29 @@ import {
     FINANCIALS_PAID_FINAL_STATES,
     FINANCIALS_CANCEL_FINAL_STATES
 } from '@shared/constants.js';
+import type { JSX, ComponentProps } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof OrderManagementControls>;
+
+type TFinancialsStatusPanelProps = Pick<TParentProps,
+    | 'orderId'
+    | 'orderStatus'
+    | 'defaultPaymentMethod'
+    | 'financialsState'
+    | 'financialsEventHistory'
+    | 'netPaid'
+    | 'totalAmount'
+> & {
+    showExtras: boolean;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function FinancialsStatusPanel({
     showExtras,
@@ -25,7 +49,7 @@ export default function FinancialsStatusPanel({
     financialsEventHistory,
     netPaid,
     totalAmount
-}) {
+}: TFinancialsStatusPanelProps): JSX.Element {
     const [logs, setLogs] = useState('');
 
     const isCancelledOrder = orderStatus === ORDER_STATUS.CANCELLED;

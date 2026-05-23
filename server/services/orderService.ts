@@ -145,7 +145,7 @@ export const prepareOrder = (
     confirmedAt: dbOrder.confirmedAt.toISOString(),
     ...(inList && !managed && { lastActivityAt: dbOrder.lastActivityAt.toISOString() }),
     statusHistory: prepareOrderStatusHistory(dbOrder.statusHistory, {
-        latestSummary: inList || !managed
+        latestSummary: !managed
     }),
     totals: {
         ...(!inList && {

@@ -1,8 +1,22 @@
-import React, { useState, useEffect }  from 'react';
+import { useState, useEffect }  from 'react';
+import OrderManagementControls from '../OrderManagementControls.jsx';
 import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
 import { formatAuditLogs } from '@/services/orderService.js';
+import type { JSX, ComponentProps } from 'react';
 
-export default function AuditLogPanel({ auditLog }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TParentProps = ComponentProps<typeof OrderManagementControls>;
+
+type TAuditLogPanelProps = Pick<TParentProps, 'auditLog'>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function AuditLogPanel({ auditLog }: TAuditLogPanelProps): JSX.Element {
     const [logs, setLogs] = useState('');
 
     useEffect(() => {

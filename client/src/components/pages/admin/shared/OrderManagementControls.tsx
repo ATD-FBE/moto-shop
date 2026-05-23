@@ -5,13 +5,12 @@ import AuditLogPanel from './order-management-controls/AuditLogPanel.jsx';
 import type { JSX } from 'react';
 import type {
     IOrderStatusEntry,
-    IOrderStatusEntrySummary,
     TDeliveryMethod,
     TPaymentMethod,
     TFinancialsState,
     IFinancialsEventEntry,
-    IFinancialsEventEntrySummary,
-    IAuditLogEntry
+    IAuditLogEntry,
+    TOrderStatus
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -22,14 +21,14 @@ export interface IOrderManagementControlsProps {
     showExtras?: boolean;
     isActiveOrder: boolean;
     orderId: string;
-    currentOrderStatusEntry: IOrderStatusEntry | IOrderStatusEntrySummary;
-    orderStatusHistory: (IOrderStatusEntry | IOrderStatusEntrySummary)[];
+    orderStatus: TOrderStatus;
+    orderStatusHistory: IOrderStatusEntry[];
     deliveryMethod: TDeliveryMethod;
     allowCourierExtra?: boolean;
     shippingCost?: number | null;
     defaultPaymentMethod: TPaymentMethod;
     financialsState: TFinancialsState;
-    financialsEventHistory: (IFinancialsEventEntry | IFinancialsEventEntrySummary)[];
+    financialsEventHistory: IFinancialsEventEntry[];
     netPaid: number;
     totalAmount: number;
     internalNote?: string;
@@ -44,7 +43,7 @@ export default function OrderManagementControls({
     showExtras = false,
     isActiveOrder,
     orderId,
-    currentOrderStatusEntry,
+    orderStatus,
     orderStatusHistory,
     deliveryMethod,
     allowCourierExtra,
@@ -63,7 +62,6 @@ export default function OrderManagementControls({
                 showExtras={showExtras}
                 isActiveOrder={isActiveOrder}
                 orderId={orderId}
-                currentOrderStatusEntry={currentOrderStatusEntry}
                 orderStatusHistory={orderStatusHistory}
                 deliveryMethod={deliveryMethod}
                 allowCourierExtra={allowCourierExtra}
@@ -75,7 +73,7 @@ export default function OrderManagementControls({
             <FinancialsStatusPanel
                 showExtras={showExtras}
                 orderId={orderId}
-                orderStatus={currentOrderStatusEntry.status}
+                orderStatus={orderStatus}
                 defaultPaymentMethod={defaultPaymentMethod}
                 financialsState={financialsState}
                 financialsEventHistory={financialsEventHistory}

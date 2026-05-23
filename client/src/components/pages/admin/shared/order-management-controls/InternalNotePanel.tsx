@@ -1,8 +1,23 @@
-import React  from 'react';
 import CheckboxCollapsible from '@/components/common/CheckboxCollapsible.jsx';
 import InternalNoteForm from './internal-note-panel/InternalNoteForm.jsx';
+import type { JSX } from 'react';
 
-export default function InternalNotePanel({ orderId, internalNote }) {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+export interface IInternalNotePanelProps {
+    orderId: string;
+    internalNote?: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+export default function InternalNotePanel(
+    { orderId, internalNote }: IInternalNotePanelProps
+): JSX.Element {
     return (
         <div className="internal-note-panel">
             <div className="internal-note-panel-title">

@@ -19,6 +19,18 @@ import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { subscribeToOrderUpdates } from '@/components/sse/SseOrderManagement.jsx';
 import { sendOrderListRequest } from '@/api/orderRequests.js';
 import {
+    LOAD_STATUS_MIN_HEIGHT,
+    DATA_LOAD_STATUS,
+    PRODUCT_IMAGE_PLACEHOLDER
+} from '@/config/constants.js';
+import {
+    buildCustomerFullName,
+    buildShippingAddressDisplay,
+    getShippingCostDisplay,
+    isFullOrderStatusEntry,
+    isFullOrderFinancialsEntry
+} from '@/services/orderService.js';
+import {
     getInitSortParam,
     getInitPageParam,
     getInitLimitParam,
@@ -26,16 +38,6 @@ import {
 } from '@/helpers/urlParamsHelper.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
 import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
-import {
-    buildCustomerFullName,
-    buildShippingAddressDisplay,
-    getShippingCostDisplay
-} from '@/services/orderService.js';
-import {
-    LOAD_STATUS_MIN_HEIGHT,
-    DATA_LOAD_STATUS,
-    PRODUCT_IMAGE_PLACEHOLDER
-} from '@/config/constants.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { ordersSortOptions } from '@shared/sortOptions.js';
 import { ordersPageLimitOptions } from '@shared/pageLimitOptions.js';
@@ -602,14 +604,14 @@ function OrderCard({
             {renderManagementControls?.({
                 isActiveOrder,
                 orderId: id,
-                currentOrderStatusEntry,
-                orderStatusHistory,
+                orderStatus: currentOrderStatusEntry.status,
+                orderStatusHistory: orderStatusHistory.filter(isFullOrderStatusEntry),
                 deliveryMethod: delivery.deliveryMethod,
                 allowCourierExtra: delivery.allowCourierExtra,
                 shippingCost: delivery.shippingCost,
                 defaultPaymentMethod: financials.defaultPaymentMethod,
                 financialsState: financials.state,
-                financialsEventHistory: financials.eventHistory,
+                financialsEventHistory: financials.eventHistory.filter(isFullOrderFinancialsEntry),
                 netPaid,
                 totalAmount: totals.totalAmount
             })}

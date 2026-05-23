@@ -1,21 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import CartBadge from '@/components/common/badges/CartBadge.jsx';
 import { routeConfig } from '@/config/appRouting.js';
 import { useStructureRefs } from '@/hooks/useStructureRefs.js';
+import type { JSX } from 'react';
 
 const MIN_BOTTOM_OFFSET = 20;
+const UI_LAYOUT_OFFSET = 10;
 
-export default function FloatingCart() {
+export default function FloatingCart(): JSX.Element {
     const { mainFooterRef } = useStructureRefs();
     const [bottomOffset, setBottomOffset] = useState(MIN_BOTTOM_OFFSET);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             // Коллбэк
-            ([entry]) => {
+            (entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+
                 const visibleFooterHeight = entry.intersectionRect.height;
-                const offset = Math.max(MIN_BOTTOM_OFFSET, Math.ceil(visibleFooterHeight + 5));
+                const offset = Math.max(
+                    MIN_BOTTOM_OFFSET,
+                    Math.ceil(visibleFooterHeight + UI_LAYOUT_OFFSET)
+                );
+
                 setBottomOffset(offset);
             },
 

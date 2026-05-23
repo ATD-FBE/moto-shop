@@ -27,7 +27,7 @@ import type { JSX } from 'react';
 import type { IGetSubmitStatesResult, TFormStatus, TSubmitStates } from '@/types/index.js';
 import type { IOrderDraft } from '@shared/types/index.js';
 
-const CHECKOUT_UI_LAYOUT_OFFSET = 6;
+const UI_LAYOUT_OFFSET = 6;
 
 const getSubmitStates = (isCancelPath: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
@@ -145,7 +145,7 @@ export default function Checkout(): JSX.Element | null {
     const topStickyOffset = 
         (mainHeaderRef.current?.offsetHeight ?? 0) +
         (isDashboardPanelActive ? 0 : checkoutSidebarRef.current?.offsetHeight ?? 0) +
-        CHECKOUT_UI_LAYOUT_OFFSET; // Дополнительный отступ сверху
+        UI_LAYOUT_OFFSET; // Дополнительный отступ сверху
 
     const loadOrderDraft = async (): Promise<void> => {
         if (!orderId) return;

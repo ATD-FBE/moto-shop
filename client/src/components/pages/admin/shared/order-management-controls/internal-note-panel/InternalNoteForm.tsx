@@ -1,27 +1,86 @@
-import React, { useReducer, useState, useRef, useEffect }  from 'react';
-import { useDispatch } from 'react-redux';
+import { useReducer, useState, useRef, useEffect, createElement }  from 'react';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderInternalNoteUpdateRequest } from '@/api/orderRequests.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/logHelpers.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue
+} from '@/helpers/formHelpers.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { isObjectKey } from '@shared/commonHelpers.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
+import type {
+    IGetSubmitStatesResult,
+    IFieldConfig,
+    TFormStatus,
+    TSubmitStates,
+    TFieldApiValue,
+    IFieldState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    TextareaHTMLAttributes
+} from 'react';
+import type {
+    TEntityField,
+    IOrderInternalNoteUpdateBody
+} from '@shared/types/index.js';
 
-const getSubmitStates = () => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'order'>>;
+
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+interface IInternalNoteFormProps {
+    orderId: string;
+    internalNote?: string;
+}
+
+type TApiFormFields = {
+    [K in keyof IOrderInternalNoteUpdateBody]: TFieldApiValue;
+};
+
+type TFieldElemProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, UNCHANGED, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Сохранить';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [FORBIDDEN]: { ...base[FORBIDDEN], submitBtnLabel: actionLabel },
@@ -43,18 +102,16 @@ const getSubmitStates = () => {
             mainMessage: 'Заметка обновлена!',
             submitBtnLabel: 'Сохранено'
         }
-    };
+    } as const;
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'internalNote',
         label: 'Заметка к заказу',
@@ -63,44 +120,25 @@ const fieldConfigs = [
         trim: true,
         optional: true
     }
-];
+] as const satisfies readonly IFieldConfig[]);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
-
-export default function InternalNoteForm({ orderId, internalNote }) {
+export default function InternalNoteForm(
+    { orderId, internalNote }: IInternalNoteFormProps
+): JSX.Element {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
-    const initFieldValuesRef = useRef({});
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
+
+    const initFieldValuesRef = useRef<TInitFieldValues>({} as TInitFieldValues);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+
+    const dispatch = useAppDispatch();
     
     const isFormLocked = lockedStatuses.has(submitStatus);
 
-    const handleFieldChange = (e) => {
+    const handleFieldChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
 
         dispatchFieldsState({
@@ -109,7 +147,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         });
     };
 
-    const handleFieldBlur = (e) => {
+    const handleFieldBlur = (e: FocusEvent<HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
@@ -120,8 +158,11 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TFieldName,
+        IOrderInternalNoteUpdateBody
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.order[name];
                 if (!validation) {
@@ -130,21 +171,26 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                 }
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
-                const ruleCheck = validation.test(normalizedValue);
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                
+                const ruleCheck =
+                    typeof normalizedValue === 'string'
+                        ? validation.test(normalizedValue)
+                        : false;
 
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                const hasValue = normalizedValue !== '';
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.order[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.order[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {
-                    acc.formFields[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
 
                     const initValue = initFieldValuesRef.current[name];
 
@@ -157,16 +203,21 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IOrderInternalNoteUpdateBody,
+                changedFields: [] as TFieldName[]
+            }
         );
     
         return result;
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -182,7 +233,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         const responseData = await dispatch(sendOrderInternalNoteUpdateRequest(orderId, formFields));
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'ORDER: INTERNAL NOTE UPDATE';
 
         switch (status) {
@@ -200,10 +251,12 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -216,7 +269,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -275,15 +328,14 @@ export default function InternalNoteForm({ orderId, internalNote }) {
         <form className="internal-note-form" onSubmit={handleFormSubmit} noValidate>
             <div className="form-body">
                 {fieldConfigs.map(({ name, label, elem, type, placeholder, trim, optional }) => {
-                    const fieldId = `order-${orderId}-payment-${toKebabCase(name)}`;
+                    const fieldId = `order-${toKebabCase(name)}`;
                     const fieldInfoClass = getFieldInfoClass(elem, type, name);
 
-                    const elemProps = {
+                    const elemProps: TFieldElemProps = {
                         id: fieldId,
                         name,
-                        type,
                         placeholder,
-                        value: fieldsState[name]?.value,
+                        value: getStringValue(fieldsState[name]?.value),
                         autoComplete: 'off',
                         onChange: handleFieldChange,
                         onBlur: trim ? handleFieldBlur : undefined,
@@ -298,7 +350,7 @@ export default function InternalNoteForm({ orderId, internalNote }) {
                             </label>
 
                             <div className={cn('form-entry-field', fieldsState[name]?.uiStatus)}>
-                                {React.createElement(elem, elemProps)}
+                                {createElement(elem, elemProps)}
 
                                 {fieldsState[name]?.error && (
                                     <span className="invalid-message">

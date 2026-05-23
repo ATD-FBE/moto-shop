@@ -1,14 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useStructureRefs } from '@/hooks/useStructureRefs.js';
+import type { JSX } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface INewActiveOrdersAlertProps {
+    customerComment?: string;
+    internalNote?: string;
+    cancellationReason?: string;
+    floating?: boolean;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const MIN_BOTTOM_OFFSET = 30;
+const UI_LAYOUT_OFFSET = 10;
 
 export default function OrderManagementNotes({
     customerComment,
     internalNote,
     cancellationReason,
     floating = false
-}) {
+}: INewActiveOrdersAlertProps): JSX.Element | null {
     const { mainFooterRef } = useStructureRefs();
     const [bottomOffset, setBottomOffset] = useState(MIN_BOTTOM_OFFSET);
 
@@ -20,9 +37,16 @@ export default function OrderManagementNotes({
 
         const observer = new IntersectionObserver(
             // Коллбэк
-            ([entry]) => {
+            (entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+        
                 const visibleFooterHeight = entry.intersectionRect.height;
-                const offset = Math.max(MIN_BOTTOM_OFFSET, Math.ceil(visibleFooterHeight + 10));
+                const offset = Math.max(
+                    MIN_BOTTOM_OFFSET,
+                    Math.ceil(visibleFooterHeight + UI_LAYOUT_OFFSET)
+                );
+                
                 setBottomOffset(offset);
             },
 
