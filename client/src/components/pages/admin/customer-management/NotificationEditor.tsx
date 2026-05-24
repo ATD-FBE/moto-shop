@@ -134,7 +134,7 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
             addMessage: 'Вы будете перенаправлены на страницу управления уведомлениями.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

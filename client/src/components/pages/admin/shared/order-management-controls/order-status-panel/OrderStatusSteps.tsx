@@ -1,26 +1,91 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect }  from 'react';
-import { useDispatch } from 'react-redux';
+import { useMemo, useReducer, useState, useRef, useEffect, createElement }  from 'react';
 import cn from 'classnames';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderStatusUpdateRequest } from '@/api/orderRequests.js';
+import { FIELD_UI_STATUS } from '@/config/constants.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import { openAlertModal } from '@/services/modalAlertService.js';
+import {
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue
+} from '@/helpers/formHelpers.js';
 import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { openAlertModal } from '@/services/modalAlertService.js';
-import { FIELD_UI_STATUS } from '@/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
-import { isEqualCurrency } from '@shared/commonHelpers.js';
+import { getOrderStatusSteps, isEqualCurrency, isObjectKey } from '@shared/commonHelpers.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import {
     MIN_ORDER_AMOUNT,
     REQUEST_STATUS,
     INTENT,
     DELIVERY_METHOD,
     ORDER_STATUS,
-    ORDER_STATUS_CONFIG,
     ORDER_ACTIVE_STATUSES,
     ORDER_ACTION
 } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes
+} from 'react';
+import type { TFieldApiValue, IFieldState, IProcessFormFieldsResult } from '@/types/index.js';
+import type {
+    TEntityField,
+    TDeliveryMethod,
+    TOrderStatus,
+    IOrderStatusUpdateBody,
+    TIntent,
+    TOrderAction
+} from '@shared/types/index.js';
 
-const fieldConfigs = [
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'order'>>;
+
+interface IOrderStatusStepsProps {
+    orderId: string;
+    currentOrderStatus: TOrderStatus;
+    lastActiveOrderStatus?: TOrderStatus;
+    deliveryMethod: TDeliveryMethod;
+    allowCourierExtra?: boolean;
+    shippingCost?: number | null;
+    netPaid: number;
+    totalAmount: number;
+}
+
+interface IHandleFormSubmitParams {
+    newStatus?: TOrderStatus;
+    rollback?: boolean;
+}
+
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+type TApiFormFields = {
+    [K in keyof NonNullable<IOrderStatusUpdateBody['formFields']>]: TFieldApiValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> & 
+    TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'shippingCost',
         label: 'Стоимость доставки',
@@ -28,11 +93,15 @@ const fieldConfigs = [
         type: 'number',
         step: 0.01,
         min: 0,
-        canApply: ({ stepStatus, deliveryMethod, allowCourierExtra }) =>
+        canApply: ({ stepStatus, deliveryMethod, allowCourierExtra } : {
+            stepStatus: TOrderStatus;
+            deliveryMethod: TDeliveryMethod;
+            allowCourierExtra?: boolean;
+        }): boolean =>
             stepStatus === ORDER_STATUS.DELIVERED &&
             (
                 deliveryMethod === DELIVERY_METHOD.TRANSPORT_COMPANY ||
-                (deliveryMethod === DELIVERY_METHOD.COURIER && allowCourierExtra)
+                (deliveryMethod === DELIVERY_METHOD.COURIER && allowCourierExtra === true)
             )
     },
     {
@@ -41,35 +110,13 @@ const fieldConfigs = [
         elem: 'textarea',
         placeholder: 'Укажите причину отмены заказа',
         trim: true,
-        canApply: ({ stepStatus }) => stepStatus === ORDER_STATUS.CANCELLED
+        canApply: ({ stepStatus }: { stepStatus: TOrderStatus }): boolean =>
+            stepStatus === ORDER_STATUS.CANCELLED
     }
-];
+] as const);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
-
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
 export default function OrderStatusSteps({
     orderId,
@@ -80,24 +127,13 @@ export default function OrderStatusSteps({
     shippingCost,
     netPaid,
     totalAmount
-}) {
+}: IOrderStatusStepsProps): JSX.Element {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [orderStatusLoading, setOrderStatusLoading] = useState(false);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
-    const orderStatusSteps = useMemo(() => {
-        return Object.entries(ORDER_STATUS_CONFIG)
-            .filter(([_, cfg]) =>
-                cfg.step &&
-                (
-                    cfg.step.deliveryMethods.includes('all') ||
-                    cfg.step.deliveryMethods.includes(deliveryMethod)
-                )
-            )
-            .sort((a, b) => a[1].step.order - b[1].step.order)
-            .map(([status, cfg]) => ({ status, ...cfg.step }));
-    }, [deliveryMethod]);
+    const orderStatusSteps = useMemo(() => getOrderStatusSteps(deliveryMethod), [deliveryMethod]);
 
     const nextStepIdx = useMemo(() => {
         const idx = orderStatusSteps.findIndex(step => step.status === currentOrderStatus);
@@ -117,7 +153,7 @@ export default function OrderStatusSteps({
         ? 'grid-pickup'
         : 'grid-delivery';
 
-    const isStepFormVisible = (stepStatus, stepIdx) => {
+    const isStepFormVisible = (stepStatus: TOrderStatus, stepIdx: number): boolean => {
         // Если заказ завершён — никаких кнопок
         if (currentOrderStatus === ORDER_STATUS.COMPLETED) return false;
 
@@ -130,11 +166,11 @@ export default function OrderStatusSteps({
         return stepIdx === nextStepIdx;
     };
 
-    const isRollbackFormVisible = (stepIdx) =>
+    const isRollbackFormVisible = (stepIdx: number): boolean =>
         ORDER_ACTIVE_STATUSES.includes(currentOrderStatus) &&
-        orderStatusSteps[stepIdx - 1]?.rollbackAllowed;
+        (orderStatusSteps[stepIdx - 1]?.rollbackAllowed ?? false);
 
-    const isUpdateOrderStatusBtnDisabled = (stepStatus) =>
+    const isUpdateOrderStatusBtnDisabled = (stepStatus: TOrderStatus): boolean =>
         orderStatusLoading ||
         (
             stepStatus === ORDER_STATUS.COMPLETED &&
@@ -146,9 +182,10 @@ export default function OrderStatusSteps({
             totalAmount < MIN_ORDER_AMOUNT
         );
 
-    const isRollbackOrderStatusBtnDisabled = (stepIdx) => orderStatusLoading || stepIdx !== nextStepIdx;
+    const isRollbackOrderStatusBtnDisabled = (stepIdx: number): boolean =>
+        orderStatusLoading || stepIdx !== nextStepIdx;
 
-    const getStepIntent = (stepStatus, stepIdx) => {
+    const getStepIntent = (stepStatus: TOrderStatus, stepIdx: number): TIntent => {
         if (stepStatus === ORDER_STATUS.CANCELLED) {
             if (currentOrderStatus === ORDER_STATUS.COMPLETED) return INTENT.NEUTRAL;
             return INTENT.NEGATIVE;
@@ -161,7 +198,7 @@ export default function OrderStatusSteps({
         return INTENT.HIGHLIGHT; // stepIdx === nextStepIdx
     };
 
-    const getOrderStatusStepIcon = (stepStatus, stepIdx) => {
+    const getOrderStatusStepIcon = (stepStatus: TOrderStatus, stepIdx: number): string| null => {
         if (currentOrderStatus === ORDER_STATUS.CANCELLED) {
             if (stepStatus === ORDER_STATUS.CANCELLED) return '✅';
             if (stepIdx <= lastActiveStatusStepIdx) return '✅';
@@ -169,10 +206,13 @@ export default function OrderStatusSteps({
         }
         if (stepIdx < nextStepIdx) return '✅';
         if (stepIdx > nextStepIdx) return '⋯';
+        return null;
     };
 
-    const handleFieldChange = (e) => {
-        const { type, name, value } = e.currentTarget;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+        const { name, type, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const processedValue = type === 'number' && value !== ''
             ? Number(value.replace(',', '.'))
             : value;
@@ -183,8 +223,10 @@ export default function OrderStatusSteps({
         });
     };
 
-    const handleFieldBlur = (e) => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -194,8 +236,11 @@ export default function OrderStatusSteps({
         });
     };
 
-    const processFormFields = (newStatus) => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (newStatus: TOrderStatus): IProcessFormFieldsResult<
+        TFieldName,
+        IOrderStatusUpdateBody['formFields']
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const fieldConfig = fieldConfigMap[name];
                 if (!fieldConfig) return acc;
@@ -215,7 +260,7 @@ export default function OrderStatusSteps({
                     return acc;
                 }
 
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
                 const isValid =
                     typeof validation === 'function'
                         ? validation(normalizedValue)
@@ -228,41 +273,49 @@ export default function OrderStatusSteps({
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.order[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.order[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {
-                    acc.formFields[name] = normalizedValue;
+                    (acc.formFields as TApiFormFields)[name] = normalizedValue;
                 } else {
                     acc.allValid = false;
                 }
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {} }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IOrderStatusUpdateBody['formFields']
+            }
         );
     
         return result;
     };
 
-    const handleFormSubmit = async (e, { newStatus, rollback }) => {
+    const handleFormSubmit = async (
+        e: SubmitEvent<HTMLFormElement>,
+        { newStatus = currentOrderStatus, rollback = false }: IHandleFormSubmitParams
+    ): Promise<void> => {
         e.preventDefault();
 
-        let formFields;
+        let formFields: IOrderStatusUpdateBody['formFields'] | undefined;
     
         if (!rollback) {
             const processed = processFormFields(newStatus);
             const { allValid, fieldsStateUpdates } = processed;
-            formFields = processed.formFields;
         
             dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
             if (!allValid) return;
+
+            formFields = processed.formFields;
         }
     
         setOrderStatusLoading(true);
         dispatch(setNavigationLock(true));
     
-        const action =
+        const action: TOrderAction =
             rollback
                 ? ORDER_ACTION.ROLLBACK
                 : newStatus === ORDER_STATUS.CANCELLED
@@ -275,18 +328,20 @@ export default function OrderStatusSteps({
         }));
         if (isUnmountedRef.current) return;
     
-        const { status, message, fieldErrors } = responseData;
+        const { status, message } = responseData;
     
         logRequestStatus({
             context: 'ORDER: STATUS UPDATE',
             status,
             message,
-            ...(fieldErrors && { details: fieldErrors })
+            ...('fieldErrors' in responseData && { details: responseData.fieldErrors })
         });
     
         if (status === REQUEST_STATUS.INVALID && !rollback) {
-            const fieldsStateUpdates = {};
+            const { fieldErrors } = responseData;
+            const fieldsStateUpdates: TFieldsStateUpdates = {};
             Object.entries(fieldErrors).forEach(([name, error]) => {
+                if (!isObjectKey(name, fieldConfigMap)) return;
                 fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
             });
             dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -299,6 +354,7 @@ export default function OrderStatusSteps({
             });
         }
     
+        // Успешный ответ
         setOrderStatusLoading(false);
         dispatch(setNavigationLock(false));
     };
@@ -379,21 +435,21 @@ export default function OrderStatusSteps({
                                         allowCourierExtra
                                     });
 
-                                    const elemProps = {
+                                    if (!isApplicable) return null;
+
+                                    const elemProps: TFieldElemProps = {
                                         id: fieldId,
                                         name,
                                         type,
                                         step,
                                         min,
                                         placeholder,
-                                        value: fieldsState[name]?.value,
+                                        value: getStringValue(fieldsState[name]?.value),
                                         autoComplete: 'off',
                                         onChange: handleFieldChange,
                                         onBlur: trim ? handleFieldBlur : undefined,
-                                        disabled: orderStatusLoading || !isApplicable
+                                        disabled: orderStatusLoading
                                     };
-
-                                    if (!isApplicable) return null;
 
                                     return (
                                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
@@ -405,7 +461,7 @@ export default function OrderStatusSteps({
                                                 'form-entry-field',
                                                 fieldsState[name]?.uiStatus
                                             )}>
-                                                {React.createElement(elem, elemProps)}
+                                                {createElement(elem, elemProps)}
 
                                                 {fieldsState[name]?.error && (
                                                     <span className="invalid-message">

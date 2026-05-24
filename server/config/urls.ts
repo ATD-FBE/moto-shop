@@ -13,5 +13,5 @@ export const BASE_CLIENT_URL = env === 'production'
 export const STORAGE_URL = `${BASE_CLIENT_URL}${STORAGE_URL_PATH}`;
 
 // URL страницы деталей покупателя
-export const getCustomerOrderDetailsUrl = (orderNumber: string, orderId: string): string =>
-    `${BASE_CLIENT_URL}${getCustomerOrderDetailsPath(orderNumber, orderId)}`;
+export const getCustomerOrderDetailsUrl = (orderId: string, orderNumber: string): string =>
+    `${BASE_CLIENT_URL}${getCustomerOrderDetailsPath({ orderId, orderNumber })}`;

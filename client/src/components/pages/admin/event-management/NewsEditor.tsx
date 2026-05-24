@@ -116,7 +116,7 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
             addMessage: 'Вы будете перенаправлены на страницу новостей магазина.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

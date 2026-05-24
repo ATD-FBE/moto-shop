@@ -10,7 +10,11 @@ import { logCriticalEvent } from './criticalEventService.js';
 import { ORDER_STORAGE_FOLDER, SERVER_ROOT, STORAGE_URL_PATH } from '@server/config/paths.js';
 import { ORDER_MODEL_TYPE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getPopulatedDbField } from '@server/utils/dbUtils.js';
-import { getLastFinancialsEventEntry, isEqualCurrency } from '@shared/commonHelpers.js';
+import {
+    getLastFinancialsEventEntry,
+    isEqualCurrency,
+    getOrderStatusSteps
+} from '@shared/commonHelpers.js';
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import {
     CURRENCY,
@@ -522,16 +526,7 @@ export const getOrderStatusTransitionData = (
     newOrderStatus: TOrderStatus;
     rollbackAllowed: boolean;
 } => {
-    const orderStatusSteps = (Object.entries(ORDER_STATUS_CONFIG) as [TOrderStatus, IOrderStatusConfig][])
-        .filter((entry): entry is [TOrderStatus, IOrderStatusStepConfig] => {
-            const [_, cfg] = entry;
-            return !!cfg.step && (
-                cfg.step.deliveryMethods.includes('all') || 
-                cfg.step.deliveryMethods.includes(deliveryMethod)
-            );
-        })
-        .sort((a, b) => a[1].step.order - b[1].step.order)
-        .map(([status, cfg]) => ({ status, ...cfg.step }));
+    const orderStatusSteps = getOrderStatusSteps(deliveryMethod);
     const currentStepIdx = orderStatusSteps.findIndex(step => step.status === currentOrderStatus);
 
     return {

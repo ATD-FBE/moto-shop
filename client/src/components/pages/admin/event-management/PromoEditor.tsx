@@ -131,7 +131,7 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
             addMessage: 'Вы будете перенаправлены на страницу акций магазина.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 
@@ -436,7 +436,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
             isEditMode && promoId
                 ? sendPromoUpdateRequest(promoId, formFields as TPromoUpdateBodyClient)
                 : sendPromoCreateRequest(formFields as TPromoCreateBodyClient)
-        ) as TAppThunk<Promise<TPromoCreateResponse | TPromoUpdateResponse>> ;
+        ) as TAppThunk<Promise<TPromoCreateResponse | TPromoUpdateResponse>>;
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 

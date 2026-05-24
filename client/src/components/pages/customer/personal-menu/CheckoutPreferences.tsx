@@ -71,7 +71,7 @@ type TFieldConfigs = typeof fieldConfigs;
 type TFieldConfig = TFieldConfigs[number];
 type TFieldName = Extract<TFieldConfig['name'], TEntityField<'checkout'>>;
 
-type TInitFieldValues = Record<TFieldName, TFieldStateValue>;
+type TInitFieldValues = Record<TFieldName, TFieldApiValue>;
 type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
 
 type TApiFormFields = {
@@ -127,7 +127,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             mainMessage: 'Настройки заказа сохранены!',
             submitBtnLabel: 'Сохранено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 
@@ -136,8 +136,8 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
 
 const { submitStates, lockedStatuses } = getSubmitStates();
 
-const isDeliveryRequired = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
-    deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
+const isAddressDelivery = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod | '' }): boolean =>
+    !!deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 
 const formGroupConfigs = [
     {
@@ -224,7 +224,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите полное название региона',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'district',
@@ -234,7 +234,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите район',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'city',
@@ -244,7 +244,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите город',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'street',
@@ -254,7 +254,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите улицу',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'house',
@@ -264,7 +264,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите номер дома',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'apartment',
@@ -274,7 +274,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите номер квартиры',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'postalCode',
@@ -284,7 +284,7 @@ const formGroupConfigs = [
                 placeholder: 'Укажите почтовый индекс',
                 trim: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             }
         ]
     },
@@ -457,7 +457,7 @@ export default function CheckoutPreferences(): JSX.Element {
                 };
         
                 if (isValid) {
-                    if (normalizedValue !== '') {
+                    if (hasValue) {
                         (acc.formFields as TApiFormFields)[name] = normalizedValue;
                     }
 

@@ -60,7 +60,7 @@ import type { IOrder, IOrderUpdateData } from '@shared/types/index.js';
 interface IOrderDetailsBaseProps {
     routeKey: 'adminOrderDetails' | 'customerOrderDetails';
     subscribeToUpdates?: boolean;
-    renderHeaderContent: (orderNumber: string) => ReactNode;
+    renderHeaderContent: (orderNumber?: string) => ReactNode;
     renderManagementControls?: (props: ComponentProps<typeof OrderManagementControls>) => ReactNode;
     renderSectionEditButton?: (props: ComponentProps<typeof OrderDetailsSectionEditButton>) => ReactNode;
     renderSectionFormCollapsible?: (props: ComponentProps<typeof OrderDetailsSectionFormCollapsible>) => ReactNode;
@@ -251,7 +251,7 @@ export default function OrderDetailsBase({
     return (
         <div className="order-details-page">
             <header className="order-details-header">
-                {renderHeaderContent(orderNumber ?? NO_VALUE_LABEL)}
+                {renderHeaderContent(orderNumber)}
             </header>
 
             <OrderDetailsLoadStatus
@@ -780,8 +780,8 @@ function OrderDetailsMain({
                         onItemsSubmitResult={
                             (data: IOrderItemsSubmitResult): void => setItemsSubmitResult(data)
                         }
-                        clearItemsSubmitResult={() => setItemsSubmitResult(null)}
-                        clearItemsResponseResult={() => setItemsResponseResult(null)}
+                        clearItemsSubmitResult={(): void => setItemsSubmitResult(null)}
+                        clearItemsResponseResult={(): void => setItemsResponseResult(null)}
                     />
 
                     <div className="order-details-items-summary">

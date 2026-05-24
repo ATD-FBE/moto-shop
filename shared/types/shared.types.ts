@@ -123,6 +123,8 @@ export type IOrderStatusStepConfig = IOrderStatusConfig & {
     step: NonNullable<IOrderStatusConfig['step']>
 };
 
+export type TOrderStatusStep = IOrderStatusStepConfig['step'] & { status: TOrderStatus };
+
 export interface IFinancialsStateConfig {
     label: string;
     intent: TIntent;

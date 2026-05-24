@@ -168,8 +168,8 @@ type TFieldElemProps =
 
 const CLEAR_SAVE_STATUS_DELAY = 3000;
 
-const isDeliveryRequired = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod }): boolean =>
-    deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
+const isAddressDelivery = ({ deliveryMethod }: { deliveryMethod: TDeliveryMethod | '' }): boolean =>
+    !!deliveryMethod && deliveryMethod !== DELIVERY_METHOD.SELF_PICKUP;
 
 const formGroupConfigs = extendFormGroupConfigs([
     {
@@ -269,7 +269,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 trim: true,
                 address: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'district',
@@ -281,7 +281,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 trim: true,
                 address: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'city',
@@ -292,7 +292,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 autoComplete: 'address-level2',
                 trim: true,
                 address: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'street',
@@ -303,7 +303,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 autoComplete: 'street-address',
                 trim: true,
                 address: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'house',
@@ -314,7 +314,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 autoComplete: 'address-line1',
                 trim: true,
                 address: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'apartment',
@@ -326,7 +326,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 trim: true,
                 address: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             },
             {
                 name: 'postalCode',
@@ -338,7 +338,7 @@ const formGroupConfigs = extendFormGroupConfigs([
                 trim: true,
                 address: true,
                 optional: true,
-                canApply: isDeliveryRequired
+                canApply: isAddressDelivery
             }
         ]
     },
@@ -413,22 +413,21 @@ export default function CheckoutForm({
     >({});
     const submitInProgressRef = useRef(false);
     const isUnmountedRef = useRef(false);
-
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     fieldsStateRef.current = fieldsState; // Обновление рефа состояния при каждом рендере
 
+    const deliveryMethod = fieldsState.deliveryMethod.value as TDeliveryMethod | '';
+
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
             fieldConfigs.map(cfg => [
                 cfg.name,
-                typeof cfg.canApply === 'function'
-                    ? cfg.canApply({ deliveryMethod: fieldsState.deliveryMethod.value })
-                    : true
+                typeof cfg.canApply === 'function' ? cfg.canApply({ deliveryMethod }) : true
             ])
         ) as Record<TFieldName, boolean>,
-        [fieldsState.deliveryMethod.value]
+        [deliveryMethod]
     );
 
     const isFormLocked = lockedStatuses.has(submitStatus);
@@ -657,7 +656,8 @@ export default function CheckoutForm({
                             ? validation.test(normalizedValue) 
                             : false;
 
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                const hasValue = normalizedValue !== '';
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
@@ -668,7 +668,7 @@ export default function CheckoutForm({
                 };
         
                 if (isValid) {
-                    if (normalizedValue !== '') {
+                    if (hasValue) {
                         (acc.formFields as TApiFormFields)[name] = normalizedValue;
                         acc.changedFields.push(name);
                     }
@@ -781,8 +781,7 @@ export default function CheckoutForm({
                     'Добавьте товаров ещё на ' +
                     `<span className="color-green">${formatCurrency(amountToAdd)}</span> ₽.`;
 
-                const hasAdjustments = orderItemAdjustments?.length > 0;
-                const adjustmentsMsg = hasAdjustments
+                const adjustmentsMsg = orderItemAdjustments.length > 0
                     ? '\n\n\n<span className="bold underline">Изменения товаров в заказе:</span>' +
                         `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
                     : '';
@@ -1286,7 +1285,7 @@ function FormGroupEntries({
                     autoComplete,
                     onChange: handleFieldChange,
                     onBlur: handleFieldBlur,
-                    disabled: isFormLocked || !isApplicable,
+                    disabled: isFormLocked || !isApplicable
                 };
 
                 const fieldElem = (() => {

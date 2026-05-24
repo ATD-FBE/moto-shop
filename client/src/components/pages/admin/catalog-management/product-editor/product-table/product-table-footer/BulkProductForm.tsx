@@ -122,7 +122,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             addMessage: 'Список товаров будет обновлён.',
             submitBtnLabel: 'Сохранено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

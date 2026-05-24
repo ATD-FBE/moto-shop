@@ -75,6 +75,7 @@ export interface IFieldConfig {
     readonly address?: boolean;
     readonly checkboxLabel?: string;
     readonly tooltip?: string;
+    readonly relatedFields?: string[];
     readonly enabled?: boolean;
     readonly optional?: boolean;
     readonly lock?: boolean;

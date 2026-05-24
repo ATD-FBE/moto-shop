@@ -107,7 +107,7 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
             addMessage: 'Категории товаров будут обновлены.',
             submitBtnLabel: 'Выполнено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

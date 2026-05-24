@@ -79,7 +79,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             mainMessage: 'Данные пользователя обновлены!',
             submitBtnLabel: 'Сохранено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

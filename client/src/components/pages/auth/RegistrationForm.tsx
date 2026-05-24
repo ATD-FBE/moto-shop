@@ -80,7 +80,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             addMessage: 'Вы автоматически войдёте в аккаунт и будете перенаправлены на главную страницу.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

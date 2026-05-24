@@ -89,7 +89,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             addMessage: 'Вы будете перенаправлены на главную страницу.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

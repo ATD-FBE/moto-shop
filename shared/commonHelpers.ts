@@ -3,15 +3,21 @@ import {
     CURRENCY_EPS,
     FINANCIALS_EVENT,
     PAYMENT_METHOD,
-    CARD_ONLINE_PROVIDER
+    CARD_ONLINE_PROVIDER,
+    ORDER_STATUS_CONFIG
 } from './constants.js';
 import type { IFinancialsEventEntry, IRefundablePayment }  from './types/order.types.js';
 import type {
     IDotNotationPatch,
     TCardOnlineProvider,
+    TDeliveryMethod,
     TDiscountSource,
     TFilterOption,
-    TFilterOptionConfig
+    TFilterOptionConfig,
+    TOrderStatus,
+    IOrderStatusConfig,
+    IOrderStatusStepConfig,
+    TOrderStatusStep
 } from './types/shared.types.js';
 
 export interface IGetAppliedDiscountResult {
@@ -249,11 +255,39 @@ export const getLastFinancialsEventEntry = <T extends object>(
     return null; // Для удаления из истории на странице всех заказов
 };
 
-export const makeOrderItemQuantityFieldName = (productId: string): string =>
-    `order-item-${productId}-quantity`;
+export const orderItemQuantityField = {
+    PREFIX: 'order-item-',
+    SUFFIX: '-quantity',
+    makeName: function (productId: string): string  {
+        return `${orderItemQuantityField.PREFIX}${productId}${orderItemQuantityField.SUFFIX}`;
+    },
+    parseProductId: function (fieldName: string): string | null {
+        const prefix = orderItemQuantityField.PREFIX;
+        const suffix = orderItemQuantityField.SUFFIX;
 
-export const getCustomerOrderDetailsPath = (orderNumber: string, orderId: string): string =>
-    `/customer/orders/${orderNumber ?? ''}~${orderId}`;
+        if (!fieldName.startsWith(prefix) || !fieldName.endsWith(suffix)) {
+            return null;
+        }
+
+        return fieldName.slice(prefix.length, fieldName.length - suffix.length);
+    }
+} as const;
+
+export const getCustomerOrderDetailsPath = (
+    { orderId, orderNumber }: { orderId: string, orderNumber: string }
+): string => `/customer/orders/${orderNumber}~${orderId}`;
+
+export const getOrderStatusSteps = (deliveryMethod: TDeliveryMethod): TOrderStatusStep[] =>
+    (Object.entries(ORDER_STATUS_CONFIG) as [TOrderStatus, IOrderStatusConfig][])
+        .filter((entry): entry is [TOrderStatus, IOrderStatusStepConfig] => {
+            const [_, cfg] = entry;
+            return !!cfg.step && (
+                cfg.step.deliveryMethods.includes('all') || 
+                cfg.step.deliveryMethods.includes(deliveryMethod)
+            );
+        })
+        .sort((a, b) => a[1].step.order - b[1].step.order)
+        .map(([status, cfg]) => ({ status, ...cfg.step }));
 
 //////////////////////////
 /// COMMON TYPE GUARDS ///

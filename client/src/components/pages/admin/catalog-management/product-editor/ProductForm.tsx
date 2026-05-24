@@ -23,8 +23,8 @@ import {
     getStringValue,
     getBoolValue
 } from '@/helpers/formHelpers.js';
-import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { toKebabCase, formatProductTitle, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
@@ -154,7 +154,7 @@ const getSubmitStates = (isEditMode: boolean): IGetSubmitStatesResult => {
             addMessage: 'Список товаров будет обновлён.',
             submitBtnLabel: 'Выполнено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

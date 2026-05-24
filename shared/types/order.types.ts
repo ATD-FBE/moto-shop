@@ -87,10 +87,10 @@ export interface IOrderItem {
     quantity: number;
     unit: string;
     appliedDiscount: number;
+    appliedDiscountSource?: TDiscountSource;
     finalUnitPrice: number;
     totalPrice: number;
     originalUnitPrice?: number;
-    appliedDiscountSource?: TDiscountSource;
 }
 
 export interface ICustomerInfo {
@@ -305,7 +305,7 @@ interface IOrderItemsUpdateSuccessData {
 /// Изменение статуса заказа (SSE) ///
 export interface IOrderStatusUpdateBody {
     action: TOrderAction;
-    formFields: {
+    formFields?: {
         shippingCost?: number;
         cancellationReason?: string;
     };

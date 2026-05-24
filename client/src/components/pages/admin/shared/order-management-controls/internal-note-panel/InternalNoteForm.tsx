@@ -27,6 +27,13 @@ import {
     DEFAULT_FIELD_ERROR_MESSAGE
 } from '@shared/fieldRules.js';
 import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    TextareaHTMLAttributes
+} from 'react';
+import type {
     IGetSubmitStatesResult,
     IFieldConfig,
     TFormStatus,
@@ -35,17 +42,7 @@ import type {
     IFieldState,
     IProcessFormFieldsResult
 } from '@/types/index.js';
-import type {
-    JSX,
-    ChangeEvent,
-    FocusEvent,
-    SubmitEvent,
-    TextareaHTMLAttributes
-} from 'react';
-import type {
-    TEntityField,
-    IOrderInternalNoteUpdateBody
-} from '@shared/types/index.js';
+import type { TEntityField, IOrderInternalNoteUpdateBody } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -102,7 +99,7 @@ const getSubmitStates = (): IGetSubmitStatesResult => {
             mainMessage: 'Заметка обновлена!',
             submitBtnLabel: 'Сохранено'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

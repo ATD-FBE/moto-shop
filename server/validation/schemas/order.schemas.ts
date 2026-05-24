@@ -1,6 +1,6 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
-import { makeOrderItemQuantityFieldName } from '@shared/commonHelpers.js';
+import { orderItemQuantityField } from '@shared/commonHelpers.js';
 import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD, ORDER_ACTION } from '@shared/constants.js';
 import type { IDynamicErrorConfig, IValidationInputSchema } from '@server/types/index.js';
 
@@ -13,7 +13,7 @@ const paramsBaseSchema: IValidationInputSchema['params'] = {
 const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig<typeof orderEntity> = {
     idField: 'productId',
     entityField: 'itemQuantity',
-    generateFieldName: makeOrderItemQuantityFieldName
+    generateFieldName: orderItemQuantityField.makeName
 } as const;
 
 export const orderListSchema: IValidationInputSchema = {
@@ -113,6 +113,7 @@ export const orderStatusUpdateSchema: IValidationInputSchema = {
         action: { type: 'string', enum: Object.values(ORDER_ACTION) },
         formFields: {
             type: 'object',
+            optional: true,
             fields: {
                 shippingCost: { type: 'float', optional: true, min: 0, match: true, formField: true },
                 cancellationReason: { type: 'string', optional: true, match: true, formField: true }

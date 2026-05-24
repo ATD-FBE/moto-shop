@@ -183,7 +183,7 @@ export const routeConfig = {
     },
     adminOrderDetails: {
         label: (
-            { orderNumber }: { orderNumber: string }
+            { orderNumber }: { orderNumber?: string }
         ): string => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
         generatePath: (
             { orderId, orderNumber }: { orderId: string, orderNumber: string }
@@ -311,11 +311,9 @@ export const routeConfig = {
     },
     customerOrderDetails: {
         label: (
-            { orderNumber }: { orderNumber: string }
+            { orderNumber }: { orderNumber?: string }
         ): string => orderNumber ? `Заказ №${orderNumber}` : 'Заказ',
-        generatePath: (
-            { orderId, orderNumber }: { orderId: string, orderNumber: string }
-        ): string => getCustomerOrderDetailsPath(orderNumber, orderId),
+        generatePath: getCustomerOrderDetailsPath,
         paths: ['/customer/orders/:orderKey'],
         paramSchema: { orderKey: { split: '~', map: ['orderNumber', 'orderId'] } },
         access: 'customer',
@@ -326,8 +324,7 @@ export const routeConfig = {
         label: 'Оплата картой',
         generatePath: (
             { orderId, orderNumber }: { orderId: string, orderNumber: string }
-        ): string =>
-            `/customer/orders/${orderNumber}~${orderId}/payment/card-online`,
+        ): string => `/customer/orders/${orderNumber}~${orderId}/payment/card-online`,
         paths: ['/customer/orders/:orderKey/payment/card-online'],
         paramSchema: { orderKey: { split: '~', map: ['orderNumber', 'orderId'] } },
         access: 'customer',

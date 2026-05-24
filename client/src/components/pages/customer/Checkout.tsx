@@ -111,7 +111,7 @@ const getSubmitStates = (isCancelPath: boolean): IGetSubmitStatesResult => {
             addMessage: 'Вы будете перенаправлены на страницу заказов.',
             submitBtnLabel: 'Перенаправление...'
         }
-    } as const;
+    };
 
     const lockedStatuses = getLockedStatuses(submitStates);
 

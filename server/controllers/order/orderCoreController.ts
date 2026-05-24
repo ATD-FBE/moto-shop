@@ -580,8 +580,11 @@ export const handleOrderDetailsUpdateRequest: RequestHandler<
             const mergedOrder: TDbOrderFinal =
                 deepMergeNewNullable(currentOrder, newOrderData);
 
-            if (deliveryMethod !== undefined) {
-                mergedOrder.delivery.shippingCost = prepareShippingCost(deliveryMethod, allowCourierExtra);
+            if (deliveryMethod !== undefined || isAllowCourierExtra) {
+                mergedOrder.delivery.shippingCost = prepareShippingCost(
+                    deliveryMethod ?? mergedOrder.delivery.deliveryMethod,
+                    allowCourierExtra
+                );
             }
 
             // Очистка данных для методов доставки
@@ -833,7 +836,7 @@ export const handleOrderStatusUpdateRequest: RequestHandler<
 
     const orderId = req.params.orderId;
     const { action, formFields } = req.body;
-    const { shippingCost, cancellationReason } = formFields;
+    const { shippingCost, cancellationReason } = formFields ?? {};
 
     try {
         // Транзакция MongoDB
