@@ -6,7 +6,10 @@ import type {
     TSuccessResponse
 } from './apiResponse.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface INews {
     id: string;
     publishDate: string;
@@ -15,6 +18,10 @@ export interface INews {
     createdBy?: string;
     updateHistory?: { updatedBy: string; updatedAt: string }[];
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 export interface INewsBody {
     title: string;

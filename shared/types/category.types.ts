@@ -6,7 +6,10 @@ import type {
     TSuccessResponse
 } from './apiResponse.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface ICategory {
     id: string;
     name: string;
@@ -28,6 +31,10 @@ export interface ICategoryNode extends ICategory {
 }
 export type TCategoryTree = ICategoryNode[];
 export type TCategoryMap = Record<string, ICategoryNode>;
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 interface ICategoryBaseSuccessData {
     movedProductsCount: number;

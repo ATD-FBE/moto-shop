@@ -7,7 +7,10 @@ import type {
 } from './apiResponse.types.js';
 import type { IBaseQuery } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface IPromo {
     id: string;
     title: string;
@@ -19,6 +22,10 @@ export interface IPromo {
     createdAt?: string;
     updateHistory?: { updatedBy: string; updatedAt: string }[];
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 interface IPromoCreateBodyBase<TFile> {
     image?: TFile;

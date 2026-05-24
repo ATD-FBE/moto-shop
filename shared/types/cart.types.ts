@@ -5,7 +5,10 @@ import type {
 } from './apiResponse.types.js';
 import type { IProduct, TProductSnapshot } from './product.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface IBaseCartItem {
     id: string;
     quantity: number;
@@ -27,6 +30,10 @@ interface ICartBaseSuccessData {
     cartItemList: IGuestCartItem[];
     customerDiscount: number;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 /// Синхронизация гостевой корзины ///
 export interface IGuestCartItemListBody {

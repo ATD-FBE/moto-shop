@@ -17,7 +17,10 @@ import type {
     TDiscountSource
 } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface IProduct {
     _type: 'full';
     id: string;
@@ -77,6 +80,10 @@ export interface IProductAdjustment {
         };
     };
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 interface IProductCreateBodyBase<TFile> {
     images: TFile[];

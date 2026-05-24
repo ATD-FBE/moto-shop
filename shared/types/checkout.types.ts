@@ -17,7 +17,10 @@ import type {
 } from './order.types.js';
 import { TDiscountSource, TDeliveryMethod, TPaymentMethod } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface ICheckoutDetails {
     customerInfo?: Partial<Pick<ICustomerInfo,
         | 'firstName'
@@ -54,6 +57,10 @@ export interface IInitialOrderItemSnapshot {
     appliedDiscountSnapshot: number;
     appliedDiscountSourceSnapshot: TDiscountSource;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 interface ICheckoutBaseResponseData {
     tradeProductList: IProduct[];

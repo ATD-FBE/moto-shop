@@ -11,7 +11,10 @@ import type {
     TNotificationsSortOption
 } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface INotification {
     id: string;
     status?: TNotificationStatus;
@@ -28,6 +31,10 @@ export interface INotification {
     isRead?: boolean;
     readAt?: string | null;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 export interface INotificationBody {
     recipients: string[];

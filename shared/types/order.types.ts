@@ -30,7 +30,10 @@ import type {
     TOrderAction
 } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface IOrderDataChange extends IDataChange {
     currency?: boolean;
 }
@@ -192,6 +195,10 @@ export interface IRefundablePayment {
     transactionId: string;
     amount: number;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 /// Загрузка списка заказов для одной страницы ///
 export type TOrderListFilterParams = TInferFilterParams<TOrdersFilterOption>;

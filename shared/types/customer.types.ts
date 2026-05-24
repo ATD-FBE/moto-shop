@@ -12,7 +12,10 @@ import type {
     TCustomersFilterOption
 } from './shared.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface ICustomer {
     id: string;
     name: string;
@@ -22,6 +25,10 @@ export interface ICustomer {
     createdAt: string;
     isBanned: boolean;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 interface ICustomerUpdateSuccessData {
     customerUpdateData: Partial<ICustomer>;

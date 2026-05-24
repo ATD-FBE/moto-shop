@@ -16,7 +16,10 @@ import type {
 } from './shared.types.js';
 import type { ICheckoutDetails } from './checkout.types.js';
 
-/// Общие типы ///
+////////////
+/// MAIN ///
+////////////
+
 export interface IUser {
     name: string;
     email: string;
@@ -33,6 +36,10 @@ export interface ISession {
     cartWasMerged?: boolean;
     orderDraftId?: string | null;
 }
+
+////////////////
+/// REQUESTS ///
+////////////////
 
 type TAuthBaseSuccessData = ISession & {
     accessTokenExp: number;
