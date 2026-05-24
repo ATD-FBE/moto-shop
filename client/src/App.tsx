@@ -10,7 +10,7 @@ import GlobalLoader from '@/components/GlobalLoader.jsx';
 import Layout from '@/components/Layout.jsx';
 import RouteGuard from '@/components/RouteGuard.jsx';
 import AppStore from '@/redux/Store.js';
-import StructureRefsProvider from '@/components/StructureRefsContext.jsx';
+import StructureRefsProvider from '@/components/StructureRefsProvider.js';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
 import type { JSX } from 'react';
 
