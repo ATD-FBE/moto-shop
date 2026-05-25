@@ -1,33 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
-import parse from 'html-react-parser';
+import parseHTML from 'html-react-parser';
 import cn from 'classnames';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
 import { getconfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
+import type { JSX } from 'react';
+
+const parse = (parseHTML as any).default || parseHTML;
 
 const appRoot = document.getElementById('app');
 const modalPortalRoot = document.getElementById('modal-root') || document.body;
 
-export default function ConfirmModal() {
+export default function ConfirmModal(): JSX.Element | null {
     const {
         isOpen,
         dismissible = true,
         prompt = '',
         confirmBtnLabel = 'Подтвердить',
         cancelBtnLabel = 'Отмена'
-    } = useSelector(state => state.modalConfirm);
+    } = useAppSelector(state => state.modalConfirm);
 
     const [isVisible, setIsVisible, isVisibleRef] = useSyncedStateWithRef(false); // Анимация
     const [isDisabled, setIsDisabled, isDisabledRef] = useSyncedStateWithRef(false);
     const [hasError, setHasError] = useState(false);
-    const modalRef = useRef(null);
+
+    const modalRef = useRef<HTMLDivElement | null>(null);
     const isFinalizeRef = useRef(false);
     const isClosingRef = useRef(false);
-    const lastFocusedElemRef = useRef(null);
-    const fallbackCloseTimer = useRef(null);
+    const lastFocusedElemRef = useRef<Element | null>(null);
+    const fallbackCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const { onConfirm, onFinalize, onCancel, onClose } = getconfirmModalActions();
 
@@ -47,7 +51,7 @@ export default function ConfirmModal() {
 
     const clearFallbackCloseTimer = () => {
         clearTimeout(fallbackCloseTimer.current);
-        fallbackCloseTimer.current = null;
+        fallbackCloseTimer.current = undefined;
     };
 
     const finalizeClose = () => {
@@ -64,8 +68,8 @@ export default function ConfirmModal() {
             onClose?.();
         }
 
-        appRoot?.removeAttribute('inert');
-        lastFocusedElemRef.current?.focus?.();
+        appRoot?.removeAttribute('inert'); // До фокуса на сохранённом активном элементе
+        if (lastFocusedElemRef.current instanceof HTMLElement) lastFocusedElemRef.current.focus();
         lastFocusedElemRef.current = null;
     };
     
@@ -107,7 +111,7 @@ export default function ConfirmModal() {
         const modal = modalRef.current;
         if (!modal) return;
     
-        const onTransitionEnd = (e) => {
+        const onTransitionEnd = (e: TransitionEvent): void => {
             if (e.target === modal && e.propertyName === 'opacity' && !isVisibleRef.current) {
                 finalizeClose();
             }
@@ -126,14 +130,18 @@ export default function ConfirmModal() {
         if (!wasLastInputKeyboard()) return;
     
         lastFocusedElemRef.current = document.activeElement;
-        modal.querySelector('button.cancel-btn:not([disabled])')?.focus();
+
+        const cancelBtn = modal.querySelector('button.cancel-btn:not([disabled])');
+        if (cancelBtn instanceof HTMLElement) cancelBtn.focus();
     }, [isOpen]);
 
     // Закрытие модального окна через Escape
     useEffect(() => {
         if (!isVisible) return;
     
-        const handleEscape = (e) => e.key === 'Escape' && handleCancel();
+        const handleEscape = (e: KeyboardEvent): void => {
+            if (e.key === 'Escape') handleCancel();
+        }
     
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);

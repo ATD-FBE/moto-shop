@@ -28,7 +28,7 @@ export interface INavItem {
 
 export interface IBreadcrumb {
     label: TRoute['label'];
-    parentPath: TRoutePath | null;
+    parentPath?: TRoutePath;
     generatePath?: Extract<TRoute, { generatePath?: any }>['generatePath'];
     paramSchema?: Extract<TRoute, { paramSchema?: any }>['paramSchema'];
 }

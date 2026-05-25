@@ -324,9 +324,11 @@ export default function Checkout(): JSX.Element | null {
             prompt: 'Вы точно хотите покинуть страницу оформления заказа?',
             confirmBtnLabel: 'Отменить заказ',
             cancelBtnLabel: 'Остаться',
-            onConfirm: () => cancelOrderDraft(),
-            onFinalize: () => redirectOnCancelSuccess(cancelPath),
-            onCancel: () => dispatch(setLockedRouteCancelPath(null))
+            onConfirm: (): Promise<void> => cancelOrderDraft(),
+            onFinalize: (): void => redirectOnCancelSuccess(cancelPath),
+            onCancel: (): void => {
+                dispatch(setLockedRouteCancelPath(null));
+            }
         });
     }, [cancelPath, submitStatus, openConfirmModal, dispatch]);
 

@@ -1,23 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
-import parse from 'html-react-parser';
+import parseHTML from 'html-react-parser';
 import cn from 'classnames';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
 import { getAlertModalActions, closeAlertModal } from '@/services/modalAlertService.js';
 import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
+import type { JSX } from 'react';
 
-const alertIconByType = {
+const parse = (parseHTML as any).default || parseHTML;
+
+const ALERT_ICON_BY_TYPE = {
     info: '❕',
-    warning: '⚠️',
+    warn: '⚠️',
     error: '❌'
-};
+} as const;
 
 const appRoot = document.getElementById('app');
 const modalPortalRoot = document.getElementById('modal-root') || document.body;
 
-export default function AlertModal() {
+export default function AlertModal(): JSX.Element | null {
     const {
         isOpen,
         type = 'info', // 'info', 'warn', 'error'
@@ -25,23 +28,24 @@ export default function AlertModal() {
         title = '',
         message = '',
         dismissBtnLabel = 'OK'
-    } = useSelector(state => state.modalAlert);
+    } = useAppSelector(state => state.modalAlert);
 
     const [isVisible, setIsVisible, isVisibleRef] = useSyncedStateWithRef(false); // Анимация
     const [isDisabled, setIsDisabled] = useState(false);
-    const modalRef = useRef(null);
+
+    const modalRef = useRef<HTMLDivElement | null>(null);
     const isClosingRef = useRef(false);
-    const lastFocusedElemRef = useRef(null);
-    const fallbackCloseTimer = useRef(null);
+    const lastFocusedElemRef = useRef<Element | null>(null);
+    const fallbackCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const { onClose } = getAlertModalActions();
 
-    const clearFallbackCloseTimer = () => {
+    const clearFallbackCloseTimer = (): void => {
         clearTimeout(fallbackCloseTimer.current);
-        fallbackCloseTimer.current = null;
+        fallbackCloseTimer.current = undefined;
     };
 
-    const finalizeClose = () => {
+    const finalizeClose = (): void => {
         if (!isClosingRef.current) return;
         isClosingRef.current = false;
 
@@ -49,12 +53,12 @@ export default function AlertModal() {
         closeAlertModal();
         onClose?.();
 
-        appRoot?.removeAttribute('inert');
-        lastFocusedElemRef.current?.focus?.();
+        appRoot?.removeAttribute('inert'); // До фокуса на сохранённом активном элементе
+        if (lastFocusedElemRef.current instanceof HTMLElement) lastFocusedElemRef.current.focus();
         lastFocusedElemRef.current = null;
     };
     
-    const handleClose = () => {
+    const handleClose = (): void => {
         if (isClosingRef.current) return;
         isClosingRef.current = true;
 
@@ -84,7 +88,7 @@ export default function AlertModal() {
         const modal = modalRef.current;
         if (!modal) return;
     
-        const onTransitionEnd = (e) => {
+        const onTransitionEnd = (e: TransitionEvent): void => {
             if (e.target === modal && e.propertyName === 'opacity' && !isVisibleRef.current) {
                 finalizeClose();
             }
@@ -103,14 +107,18 @@ export default function AlertModal() {
         if (!wasLastInputKeyboard()) return;
     
         lastFocusedElemRef.current = document.activeElement;
-        modal.querySelector('button.dismiss-btn:not([disabled])')?.focus();
+
+        const dismissBtn = modal.querySelector('button.dismiss-btn:not([disabled])');
+        if (dismissBtn instanceof HTMLElement) dismissBtn.focus();
     }, [isOpen]);
 
     // Закрытие модального окна через Escape
     useEffect(() => {
         if (!isVisible) return;
     
-        const handleEscape = (e) => e.key === 'Escape' && handleClose();
+        const handleEscape = (e: KeyboardEvent): void => {
+            if (e.key === 'Escape') handleClose();
+        }
     
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
@@ -131,7 +139,7 @@ export default function AlertModal() {
                 onClick={(e) => e.stopPropagation()}
             >
                 <h3 className="title">
-                    <span className="icon">{alertIconByType[type]}</span>
+                    <span className="icon">{ALERT_ICON_BY_TYPE[type] ?? ''}</span>
                     {title}
                 </h3>
 

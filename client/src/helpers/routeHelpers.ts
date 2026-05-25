@@ -112,7 +112,7 @@ export const buildBreadcrumbMap = (): Record<TRoutePath, IBreadcrumb> => {
         route.paths.forEach(path => {
             acc[path] = {
                 label: route.label,
-                parentPath: 'parent' in route ? routeConfig[route.parent].paths[0] : null,
+                ...('parent' in route && { parentPath: routeConfig[route.parent].paths[0] }),
                 ...('generatePath' in route && { generatePath: route.generatePath }),
                 ...('paramSchema' in route && { paramSchema: route.paramSchema })
             };

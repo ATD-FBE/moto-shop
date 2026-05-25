@@ -575,7 +575,9 @@ export default function OrderDetailsSectionForm({
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
                     message: minOrderAmountMsg + adjustmentsMsg,
-                    onClose: () => dispatch(setNavigationLock(false))
+                    onClose: (): void => {
+                        dispatch(setNavigationLock(false));
+                    }
                 });
                 break;
             }
@@ -596,7 +598,9 @@ export default function OrderDetailsSectionForm({
                     dismissible: false,
                     title: 'Корректировки при изменении товаров в заказе',
                     message: formatOrderAdjustmentLogs(orderItemAdjustments),
-                    onClose: () => dispatch(setNavigationLock(false))
+                    onClose: (): void => {
+                        dispatch(setNavigationLock(false));
+                    }
                 });
                 break;
             }
@@ -648,7 +652,9 @@ export default function OrderDetailsSectionForm({
                             dismissible: false,
                             title: 'Корректировки при изменении товаров в заказе',
                             message: formatOrderAdjustmentLogs(responseData.orderItemAdjustments),
-                            onClose: () => dispatch(setNavigationLock(false))
+                            onClose: (): void => {
+                                dispatch(setNavigationLock(false));
+                            }
                         });
                     }
 

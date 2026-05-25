@@ -321,7 +321,9 @@ export default function Cart(): JSX.Element | null {
                 dismissible: false,
                 title: 'Корзина была синхронизирована с текущими данными каталога',
                 message: adjustmentsMsg,
-                onClose: () => dispatch(setLockedRoute(checkoutPath))
+                onClose: (): void => {
+                    dispatch(setLockedRoute(checkoutPath));
+                }
             });
         } else {
             dispatch(setLockedRoute(checkoutPath));

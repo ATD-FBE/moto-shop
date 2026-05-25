@@ -4,7 +4,7 @@ import type {
     IImageViewerModalState
 } from './redux.types.js';
 
-type TModalAction = ((...args: any[]) => void) | null;
+type TModalAction = ((...args: any[]) => Promise<void> | void) | null;
 
 ///////////////////
 /// ALERT MODAL ///

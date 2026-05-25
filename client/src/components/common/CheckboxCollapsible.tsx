@@ -1,6 +1,24 @@
-import React, { useState, useEffect }  from 'react';
+import { useState, useEffect }  from 'react';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
+import type { JSX, ReactNode } from 'react';
+import type {  } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface ICheckboxCollapsibleProps {
+    checkboxLabel?: string;
+    defaultExpanded?: boolean;
+    contentClass?: string;
+    showContextIndicator?: boolean;
+    children: ReactNode;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function CheckboxCollapsible({
     checkboxLabel = '',
@@ -8,7 +26,7 @@ export default function CheckboxCollapsible({
     contentClass = 'content',
     showContextIndicator = false,
     children
-}) {
+}: ICheckboxCollapsibleProps): JSX.Element {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
     const [showLabelColon, setShowLabelColon] = useState(defaultExpanded);
 
@@ -30,7 +48,7 @@ export default function CheckboxCollapsible({
                 isExpanded={isExpanded}
                 className={`${contentClass}-collapsible`}
                 showContextIndicator={showContextIndicator}
-                onCollapseEnd={() => checkboxLabel && setShowLabelColon(false)}
+                onCollapseEnd={() => checkboxLabel ? setShowLabelColon(false) : undefined}
             >
                 {children}
             </Collapsible>

@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { StructureRefsContext } from '@/components/StructureRefsProvider.js';
+import { StructureRefsContext } from '@/components/StructureRefsProvider.jsx';
 import type { IStructureRefsContext } from '@/types/index.js';
 
 export const useStructureRefs = (): IStructureRefsContext => {
