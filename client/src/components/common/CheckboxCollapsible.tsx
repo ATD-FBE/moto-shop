@@ -2,7 +2,6 @@ import { useState, useEffect }  from 'react';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import type { JSX, ReactNode } from 'react';
-import type {  } from '@/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
