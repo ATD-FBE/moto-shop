@@ -2,6 +2,7 @@ import { routeConfig } from '@/config/appRouting.js';
 import {
     SCREEN_SIZE,
     AUTH_NAV_TYPE,
+    EXTERNAL_SCRIPT_STATUS,
     CATEGORY_FORM_MODE,
     ORDER_DETAILS_EDIT_SECTION,
     FIELD_UI_STATUS,
@@ -25,6 +26,8 @@ export type TRoute = TRouteConfig[keyof typeof routeConfig];
 export type TScreenSize = typeof SCREEN_SIZE[keyof typeof SCREEN_SIZE];
 
 export type TAuthNavType = typeof AUTH_NAV_TYPE[keyof typeof AUTH_NAV_TYPE];
+
+export type TExternalScriptStatus = typeof EXTERNAL_SCRIPT_STATUS[keyof typeof EXTERNAL_SCRIPT_STATUS];
 
 export type TCategoryFormMode = typeof CATEGORY_FORM_MODE[keyof typeof CATEGORY_FORM_MODE];
 

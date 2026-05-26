@@ -47,6 +47,14 @@ export const AUTH_NAV_TYPE = {
     LOGOUT: 'logout'
 } as const;
 
+export const EXTERNAL_SCRIPT_STATUS = {
+    IDLE: 'idle',
+    LOADING: 'loading',
+    WAITING: 'waiting',
+    READY: 'ready',
+    ERROR: 'error'
+} as const;
+
 export const NO_VALUE_LABEL = '---';
 export const TEXT_LOG_LINE_BREAK = '\n\n';
 export const CATEGORY_ROOT_LABEL = '(корень)';

@@ -421,7 +421,9 @@ function OrderDetailsMain({
     const formattedSubtotalAmount = formatCurrency(subtotalAmount);
     const formattedTotalSavings = formatCurrency(totalSavings);
     const formattedTotalAmountSummary = formatCurrency(totalAmount + (shippingCost ?? 0));
-    const formattedOnlineTransactionAmount = formatCurrency(currentOnlineTransaction?.amount);
+    const formattedOnlineTransactionAmount = currentOnlineTransaction?.amount !== undefined
+        ? formatCurrency(currentOnlineTransaction.amount)
+        : NO_VALUE_LABEL;
 
     const packingStatusDisplay =
         ORDER_STATUS_CONFIG[currentOrderStatusEntry.status]?.packingLabel ?? '';

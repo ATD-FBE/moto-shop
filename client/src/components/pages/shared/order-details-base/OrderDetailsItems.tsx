@@ -338,11 +338,13 @@ export default function OrderDetailsItems({
                     const thumbImageSrc = image ?? PRODUCT_IMAGE_PLACEHOLDER;
                     const thumbImageAlt = image ? title : '';
 
-                    const originalTotalPrice = (originalUnitPrice ?? 0) * quantity;
-
-                    const formattedOriginalPrice = formatCurrency(originalUnitPrice);
+                    const formattedOriginalPrice = originalUnitPrice !== undefined
+                        ? formatCurrency(originalUnitPrice)
+                        : NO_VALUE_LABEL;
+                    const formattedOriginalTotalPrice = originalUnitPrice !== undefined
+                        ? formatCurrency(originalUnitPrice * quantity)
+                        : NO_VALUE_LABEL;
                     const formattedFinalPrice = formatCurrency(finalUnitPrice);
-                    const formattedOriginalTotalPrice = formatCurrency(originalTotalPrice);
                     const formattedFinalTotalPrice = formatCurrency(finalTotalPrice);
 
                     const hasDiscount = appliedDiscount > 0;

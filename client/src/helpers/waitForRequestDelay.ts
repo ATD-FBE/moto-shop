@@ -1,4 +1,8 @@
-export default async function waitForRequestDelay(startTime, minTime = 500, signal) {
+export default async function waitForRequestDelay(
+    startTime: number,
+    minTime: number = 500,
+    signal?: AbortSignal
+): Promise<void> {
     if (signal?.aborted) return; // Выход сразу, если запрос отменён
 
     const elapsedTime = Date.now() - startTime;
@@ -6,8 +10,8 @@ export default async function waitForRequestDelay(startTime, minTime = 500, sign
     if (delay <= 0) return;
 
     // Отмена ожидания при отмене запроса во время ожидания
-    await new Promise(resolve => {
-        let timeoutId;
+    await new Promise<void>(resolve => {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
         const cleanup = () => {
             clearTimeout(timeoutId);

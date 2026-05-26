@@ -1,11 +1,11 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
 import cn from 'classnames';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { pluralize } from '@/helpers/textHelpers.js';
 
 export default function CartBadge() {
-    const cartState = useSelector(state => state.cart);
+    const cartState = useAppSelector(state => state.cart);
+    
     const cartItemListCount = cartState.ids.length;
     const cartDiscountedTotal = cartState.discountedTotal;
 

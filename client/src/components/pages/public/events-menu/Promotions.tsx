@@ -251,7 +251,12 @@ function PromoCard({
 
     const promoActivity = now < start ? 'not-started' : now > end ? 'ended' : 'active';
     const isOneDayAction = end.getTime() - start.getTime() <= DAY_IN_MS;
-    const promoDatesFormatOpts = { day: '2-digit', month: '2-digit', year: 'numeric' };
+
+    const promoDatesFormatOpts: Intl.DateTimeFormatOptions = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    };
 
     return (
         <article data-id={id} className={cn('promo-card', promoActivity)}>

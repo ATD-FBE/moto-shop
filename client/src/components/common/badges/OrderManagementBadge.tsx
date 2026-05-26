@@ -1,8 +1,7 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 
 export default function OrderManagementBadge() {
-    const activeCount = useSelector(state => state.auth.user?.activeOrdersCount ?? 0);
+    const activeCount = useAppSelector(state => state.auth.user?.activeOrdersCount ?? 0);
 
     return activeCount > 0 ? (
         <div className="badge-box single-badge">

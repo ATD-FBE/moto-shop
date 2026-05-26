@@ -1,8 +1,7 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 
 export default function NotificationsBadge() {
-    const unreadCount = useSelector(state => state.auth.user?.unreadNotificationsCount ?? 0);
+    const unreadCount = useAppSelector(state => state.auth.user?.unreadNotificationsCount ?? 0);
 
     return unreadCount > 0 ? (
         <div className="badge-box single-badge">

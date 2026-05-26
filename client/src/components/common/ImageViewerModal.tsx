@@ -1,27 +1,43 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useSelector } from 'react-redux';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { closeImageViewerModal, getImageViewerCallbacks } from '@/services/modalImageViewerService.js';
+import type { JSX, MouseEvent } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IClickCoords {
+    x: number;
+    y: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const modalPortalRoot = document.getElementById('modal-root') || document.body;
 
-export default function ImageViewerModal() {
-    const { isOpen, images, initialIndex } = useSelector(state => state.modalImageViewer);
+export default function ImageViewerModal(): JSX.Element | null {
+    const { isOpen, images, initialIndex } = useAppSelector(state => state.modalImageViewer);
+    
     const [currentIdx, setCurrentIdx, currentIdxRef] = useSyncedStateWithRef(initialIndex); // Индекс
     const [isVisible, setIsVisible, isVisibleRef] = useSyncedStateWithRef(false); // Анимация
     const [isZoomable, setIsZoomable] = useState(false); // Масштабируемость картинки
     const [isZoomed, setIsZoomed] = useState(false); // Увеличение картинки при масштабируемости
-    const [clickCoords, setClickCoords] = useState(null);
-    const modalRef = useRef(null);
-    const imageWrapperRef = useRef(null);
-    const mainImageRef = useRef(null);
-    const thumbsContainerScrollRef = useRef(null);
-    const currentThumbRef = useRef(null);
+    const [clickCoords, setClickCoords] = useState<IClickCoords | null>(null);
 
-    const handleClose = (e) => {
+    const modalRef = useRef<HTMLDivElement | null>(null);
+    const imageWrapperRef = useRef<HTMLDivElement | null>(null);
+    const mainImageRef = useRef<HTMLImageElement | null>(null);
+    const thumbsContainerScrollRef = useRef<HTMLDivElement | null>(null);
+    const currentThumbRef = useRef<HTMLButtonElement | null>(null);
+
+    const handleClose = (e?: MouseEvent<HTMLElement>): void => {
         e?.stopPropagation();
 
         if (isVisible) {
@@ -31,32 +47,33 @@ export default function ImageViewerModal() {
         }
     };
 
-    const goToPrev = (e) => {
+    const goToPrev = (e?: MouseEvent<HTMLElement>): void => {
         e?.stopPropagation();
         setCurrentIdx(prevIdx => (prevIdx - 1 + images.length) % images.length);
         setIsZoomed(false);
     };
     
-    const goToNext = (e) => {
+    const goToNext = (e?: MouseEvent<HTMLElement>): void => {
         e?.stopPropagation();
         setCurrentIdx(prevIdx => (prevIdx + 1) % images.length);
         setIsZoomed(false);
     };
 
-    const selectThumbImage = (e, idx) => {
+    const selectThumbImage = (e: MouseEvent<HTMLElement>, idx: number): void => {
         e.stopPropagation();
         setCurrentIdx(idx);
         setIsZoomed(false);
     };
 
-    const zoomImage = (e) => {
+    const zoomImage = (e: MouseEvent<HTMLImageElement>): void => {
         e.stopPropagation();
         if (!isZoomable) return;
 
         const willZoomIn = !isZoomed;
 
         if (willZoomIn) { // Сохранение координат указателя мыши на картинке
-            const imgContainer = imageWrapperRef.current.parentElement;
+            const imgContainer = imageWrapperRef.current?.parentElement;
+            if (!imgContainer) return;
 
             const imgContainerRect = imgContainer.getBoundingClientRect();
             const offsetX = e.clientX - imgContainerRect.left + imgContainer.scrollLeft;
@@ -90,7 +107,7 @@ export default function ImageViewerModal() {
         const modal = modalRef.current;
         if (!modal) return;
     
-        const onTransitionEnd = (e) => {
+        const onTransitionEnd = (e: TransitionEvent): void => {
             if (e.propertyName === 'opacity' && !isVisibleRef.current) {
                 const { onClose } = getImageViewerCallbacks();
                 onClose?.(currentIdxRef.current);
@@ -105,7 +122,10 @@ export default function ImageViewerModal() {
     // Запрет скролла на документе при просмотре картинок
     useEffect(() => {
         document.body.style.overflow = isOpen ? 'hidden' : '';
-        return () => document.body.style.overflow = '';
+
+        return () => {
+            document.body.style.overflow = '';
+        }
     }, [isOpen]);
 
     // Установка флага масштабирования картинки
@@ -115,7 +135,7 @@ export default function ImageViewerModal() {
         const img = mainImageRef.current;
         if (!img) return;
     
-        const checkZoomability = () => {
+        const checkZoomability = (): void => {
             const imgWrapper = imageWrapperRef.current;
             if (!imgWrapper || !img || img.naturalWidth === 0) return;
     
@@ -161,7 +181,7 @@ export default function ImageViewerModal() {
     useEffect(() => {
         if (!isVisible) return;
 
-        const handleKeyDown = (e) => {
+        const handleKeyDown = (e: KeyboardEvent): void => {
             if (e.key === 'Escape') handleClose();
             else if (e.key === 'ArrowLeft') goToPrev();
             else if (e.key === 'ArrowRight') goToNext();
@@ -175,11 +195,12 @@ export default function ImageViewerModal() {
     useEffect(() => {
         if (!isZoomed || !imageWrapperRef.current || !clickCoords) return;
     
-        const imgContainer = imageWrapperRef.current.parentElement;
-        const content = imageWrapperRef.current;
+        const imgContent = imageWrapperRef.current;
+        const imgContainer = imgContent.parentElement;
+        if (!imgContainer) return;
     
-        const scaleFactorX = content.scrollWidth / imgContainer.clientWidth;
-        const scaleFactorY = content.scrollHeight / imgContainer.clientHeight;
+        const scaleFactorX = imgContent.scrollWidth / imgContainer.clientWidth;
+        const scaleFactorY = imgContent.scrollHeight / imgContainer.clientHeight;
     
         const scrollLeft = clickCoords.x * scaleFactorX - imgContainer.clientWidth / 2;
         const scrollTop = clickCoords.y * scaleFactorY - imgContainer.clientHeight / 2;
@@ -191,7 +212,7 @@ export default function ImageViewerModal() {
         });
     }, [isZoomed, clickCoords]);
 
-    if (!isOpen || !images.length) return null;
+    if (!isOpen || !images.length || !images[currentIdx]) return null;
 
     return createPortal(
         <div
@@ -208,7 +229,7 @@ export default function ImageViewerModal() {
                                 ref={idx === currentIdx ? currentThumbRef : null}
                                 className={cn('thumb-btn', { 'current': idx === currentIdx })}
                                 onClick={(e) => selectThumbImage(e, idx)}
-                                aria-label={`${img.title}, выбрать привью изображения номер ${idx + 1}`}
+                                aria-label={`${img.title}, выбрать превью изображения номер ${idx + 1}`}
                             >
                                 <TrackedImage
                                     className="thumb-img"
@@ -230,7 +251,7 @@ export default function ImageViewerModal() {
                             ref={mainImageRef}
                             className={cn('main-image', { 'zoomable': isZoomable && !isZoomed })}
                             src={images[currentIdx].url}
-                            alt={images[currentIdx].title}
+                            alt={images[currentIdx].title ?? ''}
                             onClick={zoomImage}
                             aria-label={isZoomable ? 'Масштабировать изображение' : undefined}
                         />

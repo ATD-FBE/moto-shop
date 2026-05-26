@@ -1,4 +1,4 @@
-import { formatDateToMoscowLog, formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
+import { formatMoscowDate, formatProductTitle, formatCurrency } from '@/helpers/textHelpers.js';
 import { TEXT_LOG_LINE_BREAK, NO_VALUE_LABEL } from '@/config/constants.js';
 import {
     DELIVERY_METHOD,
@@ -64,7 +64,7 @@ export const formatOrderStatusHistoryLogs = (orderStatusHistory: IOrderStatusEnt
         }
 
         // Добавление даты и статуса
-        line += `[${formatDateToMoscowLog(changedAt)}] — Статус: [${status.toUpperCase()}]`;
+        line += `[${formatMoscowDate(changedAt)}] — Статус: [${status.toUpperCase()}]`;
 
         // Добавление причины отмены, если есть
         if (cancellationReason) {
@@ -104,13 +104,13 @@ export const formatFinancialsEventHistoryLogs = (eventHistory: IFinancialsEventE
                 ? `${voidedBy.name} (ID: ${voidedBy.id}, роль: ${voidedBy.role})`
                 : NO_VALUE_LABEL;
                 
-            line += `[АННУЛИРОВАНО от ${formatDateToMoscowLog(voidedAt)}, кем: ${voidedByInfo}`;
+            line += `[АННУЛИРОВАНО от ${formatMoscowDate(voidedAt)}, кем: ${voidedByInfo}`;
             if (voided.note) line += `, причина: "${voided.note}"`;
             line += '] — ';
         }
 
         // Добавление даты
-        line += `[${formatDateToMoscowLog(changedAt)}]`;
+        line += `[${formatMoscowDate(changedAt)}]`;
 
         // Добавление события
         const eventLbl = FINANCIALS_EVENT_CONFIG[event]?.label ?? event;
@@ -149,7 +149,7 @@ export const formatAuditLogs = (auditLog: IAuditLogEntry[] = []): string =>
         const { changes, reason, changedBy, changedAt } = entry;
 
         // Добавление даты
-        let line = `[${formatDateToMoscowLog(changedAt)}]`;
+        let line = `[${formatMoscowDate(changedAt)}]`;
 
         // Добавление изменений
         const changesStr = changes.map(change => {
