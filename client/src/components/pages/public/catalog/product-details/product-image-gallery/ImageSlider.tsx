@@ -30,6 +30,7 @@ export default function ImageSlider({
 }: IImageSliderProps): JSX.Element {
     const imageRef = useRef<HTMLImageElement | null>(null);
 
+    // Включение анимации перехода смены картинки
     useEffect(() => {
         const img = imageRef.current;
         if (!img) return;

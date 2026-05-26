@@ -4515,29 +4515,33 @@ main {
                     background-color: rgba(255, 255, 255, 0.5);
 
                     .current-thumb-img.tracked-image-container {
-                        animation: none;
-
                         &.zoomable {
                             .tracked-image {
                                 cursor: zoom-in;
                             }
                         }
-                        &.animate {
-                            animation: flashZoom var(--fast-animation-duration) ease-in-out;
-                        }
-                    }
+
+                        .tracked-image {
+                            animation: none;
+
+                            &.animate {
+                                animation: flashZoom var(--fast-animation-duration) ease-in-out;
+                            }
                       
-                    @keyframes flashZoom {
-                        0% {
-                            border-radius: 2%;
-                            opacity: 0.3;
-                            transform: scale(0.98);
+                            @keyframes flashZoom {
+                                0% {
+                                    border-radius: 2%;
+                                    opacity: 0.3;
+                                    transform: scale(0.98);
+                                }
+                                100% {
+                                    border-radius: 0;
+                                    opacity: 1;
+                                    transform: scale(1);
+                                }
+                            }
                         }
-                        100% {
-                            border-radius: 0;
-                            opacity: 1;
-                            transform: scale(1);
-                        }
+                        
                     }
                 }
             }
