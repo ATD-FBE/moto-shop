@@ -6,11 +6,7 @@ import type {
     TCurrency,
     TTransactionType,
     TCardOnlineProvider,
-    IRefundablePayment,
-    TUserRole,
-    TPaymentMethod,
-    TRefundMethod,
-    TBankProvider
+    IRefundablePayment
 } from '@shared/types/index.js';
 
 /////////////////////
@@ -36,33 +32,6 @@ export type TFonts = Record<string, {
 export interface IOrderInvoiceResult {
     pdfDoc: PDFKit.PDFDocument;
     filename: string;
-}
-
-export interface IApplyOrderFinancialsParams {
-    transactionType: TTransactionType;
-    financials: ICalculateOrderFinancialsResult;
-    amount: number;
-    method: TPaymentMethod | TRefundMethod;
-    provider: TBankProvider | TCardOnlineProvider;
-    transactionId?: string;
-    originalPaymentId?: string;
-    markAsFailed: boolean;
-    failureReason?: string;
-    externalReference?: string;
-    actor: {
-        _id?: Types.ObjectId;
-        name: string;
-        role: TUserRole
-    };
-    createdAt?: Date;
-}
-export interface IApplyOrderFinancialsResult {
-    newNetPaid: number;
-}
-
-export interface ICalculateOrderFinancialsResult {
-    totalPaid: number;
-    totalRefunded: number;
 }
 
 export interface IOrderItemRef {

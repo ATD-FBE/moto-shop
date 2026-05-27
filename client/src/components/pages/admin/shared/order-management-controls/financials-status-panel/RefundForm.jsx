@@ -344,7 +344,6 @@ export default function RefundForm({
             case FORM_STATUS.FORBIDDEN:
             case FORM_STATUS.BAD_REQUEST:
             case FORM_STATUS.NOT_FOUND:
-            case FORM_STATUS.CONFLICT:
             case FORM_STATUS.ERROR:
             case FORM_STATUS.TIMEOUT:
                 logRequestStatus({ context: LOG_CTX, status, message });

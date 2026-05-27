@@ -354,7 +354,45 @@ export interface IOrderFinancialsEventVoidBody {
 
 export type TOrderFinancialsEventVoidResponse =
     | TAuthErrorResponse
+    | TFieldErrorResponse<'financials'>
     | TGeneralErrorResponse
     | TSuccessResponse;
     
 /// Внесение оплаты за заказ оффлайн-методом (SSE) ///
+export interface IOrderOfflinePaymentApplyBody {
+    transaction: {
+        method: TPaymentMethod;
+        provider?: TBankProvider;
+        amount: number;
+        transactionId?: string;
+        markAsFailed?: boolean;
+        failureReason?: string;
+    }
+}
+
+export type TOrderOfflinePaymentApplyResponse =
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'payment'>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Возврат средств за заказ оффлайн-методом (SSE) ///
+export interface IOrderOfflineRefundApplyBody {
+    transaction: {
+        method: TRefundMethod;
+        provider?: TBankProvider;
+        amount: number;
+        transactionId?: string;
+        markAsFailed?: boolean;
+        failureReason?: string;
+        externalReference?: string;
+    }
+}
+
+export type TOrderOfflineRefundApplyResponse =
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'refund'>
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Создание онлайн платежа для банковской карты ///

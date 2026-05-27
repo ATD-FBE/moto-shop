@@ -66,11 +66,20 @@ import type {
     TSelectedFields
 } from '@server/types/index.js';
 import type {
-    IOrderDataChange,
     TOrderInvoicePdfResponse,
     TOrderRemainingAmountResponse,
     IOrderFinancialsEventVoidBody,
     TOrderFinancialsEventVoidResponse,
+    IOrderOfflinePaymentApplyBody,
+    TOrderOfflinePaymentApplyResponse,
+    IOrderOfflineRefundApplyBody,
+    TOrderOfflineRefundApplyResponse,
+
+    IOrderDataChange,
+    TEntityField,
+    TPaymentMethod,
+    TRefundMethod,
+    TBankProvider
 } from '@shared/types/index.js';
 
 //////////////////////////
@@ -336,54 +345,32 @@ export const handleOrderFinancialsEventVoidRequest: RequestHandler<
 };
 
 /// Внесение оплаты за заказ оффлайн-методом (SSE) ///
-export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
+export const handleOrderOfflinePaymentApplyRequest: RequestHandler<
+    IOrderParams,
+    TOrderOfflinePaymentApplyResponse,
+    IOrderOfflinePaymentApplyBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
+
+    const reqCtx = req.reqCtx;
     const orderId = req.params.orderId;
-    const { transaction } = req.body ?? {};
-    const {
-        method, provider, amount, transactionId, markAsFailed, failureReason
-    } = typeCheck.object(transaction) ? transaction : {};
-
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        transaction: { value: transaction, type: 'object' },
-        method: { value: method, type: 'string', formField: true },
-        provider: { value: provider, type: 'string', optional: true, formField: true },
-        amount: { value: amount, type: 'float', formField: true },
-        transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
-        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
-        failureReason: { value: failureReason, type: 'string', optional: true, formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'payment');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    const { transaction } = req.body;
+    const { method, provider, amount, transactionId, markAsFailed, failureReason } = transaction;
 
     const prepDbFields = {
-        method: method.trim(),
-        provider: provider?.trim(),
-        amount: Number(amount),
+        method: method.trim() as TPaymentMethod,
+        provider: provider?.trim() as TBankProvider | undefined,
+        amount,
         transactionId: transactionId?.trim()
     };
-    const invalidFields = [];
 
-    if (!OFFLINE_PAYMENT_METHODS.includes(prepDbFields.method)) {
-        invalidFields.push('method');
-    }
-    if (isEqualCurrency(prepDbFields.amount, 0) || prepDbFields.amount < 0) {
-        invalidFields.push('amount');
-    }
     if (prepDbFields.method === PAYMENT_METHOD.BANK_TRANSFER) {
-        if (!prepDbFields.provider || !Object.values(BANK_PROVIDER).includes(prepDbFields.provider)) {
+        const invalidFields: TEntityField<'payment'>[] = [];
+
+        if (!prepDbFields.provider) {
             invalidFields.push('provider');
         }
         if (!prepDbFields.transactionId) {
@@ -392,13 +379,13 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
         if (markAsFailed === undefined) {
             invalidFields.push('markAsFailed');
         }
-    }
 
-    if (invalidFields.length > 0) {
-        return safeSendResponse(res, 422, {
-            message: 'Некорректные данные',
-            fieldErrors: getFieldErrors(invalidFields, 'payment')
-        });
+        if (invalidFields.length > 0) {
+            return safeSendResponse(res, 422, {
+                message: 'Некорректные данные',
+                fieldErrors: getFieldErrors(invalidFields, 'payment')
+            });
+        }
     }
 
     try {
@@ -415,9 +402,6 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
 
             const currentOrderStatus = dbOrder.currentStatus;
 
-            if (currentOrderStatus === ORDER_STATUS.DRAFT) {
-                throw createAppError(409, `Заказ ${orderLbl} не оформлен`);
-            }
             if (
                 prepDbFields.method === PAYMENT_METHOD.CASH_ON_RECEIPT &&
                 !CASH_ON_RECEIPT_ALLOWED_STATUSES.includes(currentOrderStatus)
@@ -443,7 +427,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
             if (prepDbFields.method === PAYMENT_METHOD.BANK_TRANSFER) {
                 const isTransactionAlreadyRecorded = checkFinancialsTransactionRecord(
                     financialsEventHistory,
-                    prepDbFields.transactionId
+                    prepDbFields.transactionId!
                 );
 
                 if (isTransactionAlreadyRecorded) {
@@ -484,8 +468,14 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
                 { path: orderDotNotationMap.financialsState, value: updatedDbOrder.financials.state },
                 { path: orderDotNotationMap.totalPaid, value: updatedDbOrder.financials.totalPaid }
             ];
-            const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1).toObject();
-            const orderUpdateData = { orderPatches, newFinancialsEventEntry };
+            const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1)?.toObject();
+
+            const orderUpdateData = {
+                orderPatches,
+                ...(newFinancialsEventEntry && {
+                    newFinancialsEventEntry: prepareFinancialsEventEntry(newFinancialsEventEntry)
+                })
+            };
 
             return { orderLbl, orderUpdateData };
         });
@@ -503,56 +493,35 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
 };
 
 /// Возврат средств за заказ оффлайн-методом (SSE) ///
-export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
+export const handleOrderOfflineRefundApplyRequest: RequestHandler<
+    IOrderParams,
+    TOrderOfflineRefundApplyResponse,
+    IOrderOfflineRefundApplyBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
-    const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
+
+    const reqCtx = req.reqCtx;
     const orderId = req.params.orderId;
-    const { transaction } = req.body ?? {};
+    const { transaction } = req.body;
     const {
         method, provider, amount, transactionId, markAsFailed, failureReason, externalReference
-    } = typeCheck.object(transaction) ? transaction : {};
-
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        transaction: { value: transaction, type: 'object' },
-        method: { value: method, type: 'string', formField: true },
-        provider: { value: provider, type: 'string', optional: true, formField: true },
-        amount: { value: amount, type: 'float', formField: true },
-        transactionId: { value: transactionId, type: 'string', optional: true, formField: true },
-        markAsFailed: { value: markAsFailed, type: 'boolean', optional: true, formField: true },
-        failureReason: { value: failureReason, type: 'string', optional: true, formField: true },
-        externalReference: { value: externalReference, type: 'string', optional: true, formField: true },
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'refund');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    } = transaction;
 
     const prepDbFields = {
-        method: method.trim(),
-        provider: provider?.trim(),
-        amount: Number(amount),
+        method: method.trim() as TRefundMethod,
+        provider: provider?.trim() as TBankProvider | undefined,
+        amount,
         transactionId: transactionId?.trim(),
         externalReference: externalReference?.trim()
     };
-    const invalidFields = [];
 
-    if (!OFFLINE_REFUND_METHODS.includes(prepDbFields.method)) {
-        invalidFields.push('method');
-    }
-    if (isEqualCurrency(prepDbFields.amount, 0) || prepDbFields.amount < 0) {
-        invalidFields.push('amount');
-    }
     if (prepDbFields.method === REFUND_METHOD.BANK_TRANSFER) {
-        if (!prepDbFields.provider || !Object.values(BANK_PROVIDER).includes(prepDbFields.provider)) {
+        const invalidFields: TEntityField<'refund'>[] = [];
+
+        if (!prepDbFields.provider) {
             invalidFields.push('provider');
         }
         if (!prepDbFields.transactionId) {
@@ -561,13 +530,13 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
         if (markAsFailed === undefined) {
             invalidFields.push('markAsFailed');
         }
-    }
 
-    if (invalidFields.length > 0) {
-        return safeSendResponse(res, 422, {
-            message: 'Некорректные данные',
-            fieldErrors: getFieldErrors(invalidFields, 'refund')
-        });
+        if (invalidFields.length > 0) {
+            return safeSendResponse(res, 422, {
+                message: 'Некорректные данные',
+                fieldErrors: getFieldErrors(invalidFields, 'refund')
+            });
+        }
     }
 
     try {
@@ -583,11 +552,6 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
             }
 
             const currentOrderStatus = dbOrder.currentStatus;
-
-            if (currentOrderStatus === ORDER_STATUS.DRAFT) {
-                throw createAppError(409, `Заказ ${orderLbl} не оформлен`);
-            }
-
             const financialsEventHistory = dbOrder.financials.eventHistory;
             const financials = calculateOrderFinancials(financialsEventHistory);
 
@@ -606,7 +570,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
             if (prepDbFields.method === REFUND_METHOD.BANK_TRANSFER) {
                 const isTransactionAlreadyRecorded = checkFinancialsTransactionRecord(
                     financialsEventHistory,
-                    prepDbFields.transactionId
+                    prepDbFields.transactionId!
                 );
 
                 if (isTransactionAlreadyRecorded) {
@@ -648,8 +612,14 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
                 { path: orderDotNotationMap.financialsState, value: updatedDbOrder.financials.state },
                 { path: orderDotNotationMap.totalRefunded, value: updatedDbOrder.financials.totalRefunded }
             ];
-            const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1).toObject();
-            const orderUpdateData = { orderPatches, newFinancialsEventEntry };
+            const newFinancialsEventEntry = updatedDbOrder.financials.eventHistory.at(-1)?.toObject();
+
+            const orderUpdateData = {
+                orderPatches,
+                ...(newFinancialsEventEntry && {
+                    newFinancialsEventEntry: prepareFinancialsEventEntry(newFinancialsEventEntry)
+                })
+            };
         
             return { orderLbl, orderUpdateData };
         });
@@ -1206,7 +1176,7 @@ export const handleWebhook = async (req, res, next) => {
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
 
             if (!dbOrder) {
-                throw createAppError(404, `Заказ ${orderLbl} не найден`);
+                throw createAppError(200, `Заказ ${orderLbl} не найден`);
             }
 
             const currentOrderStatus = dbOrder.currentStatus;
@@ -1220,7 +1190,7 @@ export const handleWebhook = async (req, res, next) => {
                         `в статусе ${ORDER_STATUS.DRAFT}`,
                     data: normalizedWebhook
                 });
-                throw createAppError(409, `Заказ ${orderLbl} не оформлен`);
+                throw createAppError(200, `Заказ ${orderLbl} не оформлен`);
             }
 
             const financialsEventHistory = dbOrder.financials.eventHistory;
@@ -1231,7 +1201,7 @@ export const handleWebhook = async (req, res, next) => {
 
             if (isTransactionAlreadyRecorded) {
                 throw createAppError(
-                    400,
+                    200,
                     `Операция по транзакции ${transactionId} уже произведена для заказа ${orderLbl}`
                 );
             }
@@ -1315,12 +1285,8 @@ export const handleWebhook = async (req, res, next) => {
         sseOrderManagement.sendToAllClients(sseMessageData);
 
         // Отправка успешного ответа YooKassa
-        safeSendResponse(res, 200);
+        safeSendResponse(res, 200, { message: 'OK' });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, 200); // Не повторять уведомления с вебхуком
-        }
-
         next(err);
     }
 };

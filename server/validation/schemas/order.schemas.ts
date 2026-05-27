@@ -1,11 +1,22 @@
 import { buildQueryValidationSchema } from '@server/validation/validationEngine.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';
 import { orderItemQuantityField } from '@shared/commonHelpers.js';
-import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD, ORDER_ACTION } from '@shared/constants.js';
+import {
+    CURRENCY_EPS,
+    ORDER_VIEW_MODE,
+    DELIVERY_METHOD,
+    PAYMENT_METHOD,
+    OFFLINE_PAYMENT_METHODS,
+    OFFLINE_REFUND_METHODS,
+    BANK_PROVIDER,
+    ORDER_ACTION
+} from '@shared/constants.js';
 import type { IDynamicErrorConfig, IValidationInputSchema } from '@server/types/index.js';
 
 const orderEntity = 'order';
 const financialsEntity = 'financials';
+const paymentEntity = 'payment';
+const refundEntity = 'refund';
 
 const paramsBaseSchema: IValidationInputSchema['params'] = {
     orderId: { type: 'objectIdString' }
@@ -147,5 +158,52 @@ export const orderFinancialsEventVoidSchema: IValidationInputSchema = {
     },
     body: {
         voidedNote: { type: 'string', optional: true, match: true, formField: true }
+    }
+} as const;
+
+export const orderOfflinePaymentApplySchema: IValidationInputSchema = {
+    entityType: paymentEntity,
+    params: paramsBaseSchema,
+    body: {
+        transaction: {
+            type: 'object',
+            fields: {
+                method: { type: 'string', enum: OFFLINE_PAYMENT_METHODS, formField: true },
+                provider: {
+                    type: 'string',
+                    optional: true,
+                    enum: Object.values(BANK_PROVIDER),
+                    formField: true
+                },
+                amount: { type: 'float', min: CURRENCY_EPS, match: true, formField: true },
+                transactionId: { type: 'string', optional: true, match: true, formField: true },
+                markAsFailed: { type: 'boolean', optional: true, match: true, formField: true },
+                failureReason: { type: 'string', optional: true, match: true, formField: true }
+            }
+        }
+    }
+} as const;
+
+export const orderOfflineRefundApplySchema: IValidationInputSchema = {
+    entityType: refundEntity,
+    params: paramsBaseSchema,
+    body: {
+        transaction: {
+            type: 'object',
+            fields: {
+                method: { type: 'string', enum: OFFLINE_REFUND_METHODS, formField: true },
+                provider: {
+                    type: 'string',
+                    optional: true,
+                    enum: Object.values(BANK_PROVIDER),
+                    formField: true
+                },
+                amount: { type: 'float', min: CURRENCY_EPS, match: true, formField: true },
+                transactionId: { type: 'string', optional: true, match: true, formField: true },
+                markAsFailed: { type: 'boolean', optional: true, match: true, formField: true },
+                failureReason: { type: 'string', optional: true, match: true, formField: true },
+                externalReference: { type: 'string', optional: true, match: true, formField: true }
+            }
+        }
     }
 } as const;

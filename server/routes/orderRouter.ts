@@ -13,6 +13,8 @@ import {
     orderInvoicePdfSchema,
     orderRemainingAmountSchema,
     orderFinancialsEventVoidSchema,
+    orderOfflinePaymentApplySchema,
+    orderOfflineRefundApplySchema,
 } from '@server/validation/schemas/order.schemas.js';
 import {
     handleOrderListRequest,
@@ -79,31 +81,7 @@ router.get(
     validateInput(orderRemainingAmountSchema),
     handleOrderRemainingAmountRequest
 );
-router.post(
-    '/webhook',
-    handleWebhook
-);
-router.post(
-    '/:orderId/repeat',
-    verifyAuth,
-    verifyUser,
-    verifyRole(CUSTOMER),
-    validateInput(orderRepeatSchema),
-    handleOrderRepeatRequest
-);
-router.post(
-    '/:orderId/financials/payments/online',
-    verifyAuth, verifyUser,
-    verifyRole(CUSTOMER),
-    handleOrderOnlinePaymentCreateRequest
-);
-router.post(
-    '/:orderId/financials/refunds/online/full',
-    verifyAuth,
-    verifyUser,
-    verifyRole(ADMIN),
-    handleOrderOnlineRefundsCreateRequest
-);
+
 router.patch(
     '/:orderId',
     verifyAuth,
@@ -149,6 +127,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderOfflinePaymentApplySchema),
     handleOrderOfflinePaymentApplyRequest
 );
 router.patch(
@@ -156,7 +135,34 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderOfflineRefundApplySchema),
     handleOrderOfflineRefundApplyRequest
+);
+
+router.post(
+    '/webhook',
+    handleWebhook
+);
+router.post(
+    '/:orderId/repeat',
+    verifyAuth,
+    verifyUser,
+    verifyRole(CUSTOMER),
+    validateInput(orderRepeatSchema),
+    handleOrderRepeatRequest
+);
+router.post(
+    '/:orderId/financials/payments/online',
+    verifyAuth, verifyUser,
+    verifyRole(CUSTOMER),
+    handleOrderOnlinePaymentCreateRequest
+);
+router.post(
+    '/:orderId/financials/refunds/online/full',
+    verifyAuth,
+    verifyUser,
+    verifyRole(ADMIN),
+    handleOrderOnlineRefundsCreateRequest
 );
 
 export default router;

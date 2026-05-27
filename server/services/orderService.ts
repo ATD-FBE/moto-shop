@@ -18,6 +18,7 @@ import {
 import { fieldErrorMessages, DEFAULT_FIELD_ERROR_MESSAGE } from '@shared/fieldRules.js';
 import {
     CURRENCY,
+    USER_ROLE,
     DELIVERY_METHOD,
     PAYMENT_METHOD,
     REFUND_METHOD,
@@ -40,11 +41,8 @@ import type {
     TDbProduct,
     IInvoiceDefinition,
     TFonts,
-    ICalculateOrderFinancialsResult,
     IOrderItemRef,
-    IOrderInvoiceResult,
-    IApplyOrderFinancialsParams,
-    IApplyOrderFinancialsResult
+    IOrderInvoiceResult
 } from '@server/types/index.js';
 import type {
     IDotNotationMap,
@@ -61,15 +59,18 @@ import type {
     IFinancialsEventEntrySummary,
     ICurrentOnlineTransaction,
     IAuditLogEntry,
-    IOrderStatusConfig,
-    IOrderStatusStepConfig,
     TEntityType,
     TEntityField,
     TFieldErrors,
     TTransactionStatus,
     IProductAdjustment,
     IOrderDataChange,
-    IOrderItemsUpdateBody
+    IOrderItemsUpdateBody,
+    TTransactionType,
+    TCardOnlineProvider,
+    TPaymentMethod,
+    TRefundMethod,
+    TBankProvider
 } from '@shared/types/index.js';
 
 const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
@@ -77,6 +78,33 @@ const { convert: convertNumberToWordsRu } = numberToWordsRuPkg;
 //////////////////////////
 /// TYPES & INTERFACES ///
 //////////////////////////
+
+export interface IApplyOrderFinancialsParams {
+    transactionType: TTransactionType;
+    financials: ICalculateOrderFinancialsResult;
+    amount: number;
+    method: TPaymentMethod | TRefundMethod;
+    provider?: TBankProvider | TCardOnlineProvider;
+    transactionId?: string;
+    originalPaymentId?: string;
+    markAsFailed?: boolean;
+    failureReason?: string;
+    externalReference?: string;
+    actor: {
+        _id?: Types.ObjectId;
+        name: string;
+        role: typeof USER_ROLE.ADMIN | typeof USER_ROLE.SYSTEM;
+    };
+    createdAt?: Date;
+}
+export interface IApplyOrderFinancialsResult {
+    newNetPaid: number;
+}
+
+export interface ICalculateOrderFinancialsResult {
+    totalPaid: number;
+    totalRefunded: number;
+}
 
 interface IProcessOrderItemsUpdateResult {
     updatedItems: TDbOrderFinalItem[];
@@ -596,14 +624,23 @@ export const applyOrderFinancials = (
         throw new Error(`Некорректный тип транзакции: ${transactionType}`);
     }
 
-    const newNetPaid = newTotalPaid - newTotalRefunded;
     const isBankTransfer =
         (method as unknown) === PAYMENT_METHOD.BANK_TRANSFER || 
         (method as unknown) === REFUND_METHOD.BANK_TRANSFER;
     const isCardOnline =
         (method as unknown) === PAYMENT_METHOD.CARD_ONLINE || 
         (method as unknown) === REFUND_METHOD.CARD_ONLINE;
-    const isCardOffline = (method as unknown) === REFUND_METHOD.CARD_OFFLINE;
+    const isProvider = isBankTransfer || isCardOnline;
+    const isCardOffline = method === REFUND_METHOD.CARD_OFFLINE;
+
+    if (isProvider && (!provider || !transactionId || markAsFailed === undefined)) {
+        throw new Error('Отсутствуют данные для указанного метода оплаты/возврата');
+    }
+    if (isCardOnline && isRefund && !originalPaymentId) {
+        throw new Error(`Отсутствует originalPaymentId для указанного метода онлайн-возврата на карту`);
+    }
+
+    const newNetPaid = newTotalPaid - newTotalRefunded;
     const now = new Date();
 
     dbOrder.lastActivityAt = now;
@@ -615,22 +652,24 @@ export const applyOrderFinancials = (
         dbOrder.totals.totalAmount,
         dbOrder.financials.eventHistory // Старая история, ДО добавления новой записи
     );
-    dbOrder.financials.eventHistory.push({
+
+    const newFinancialsEventEntry: Omit<TDbOrderFinancialsEventEntry, 'eventId'> = {
         event: financialsEvent,
         action: {
             method,
             amount,
-            ...((isBankTransfer || isCardOnline) && {
+            ...(isProvider && {
                 provider,
                 transactionId,
-                ...(markAsFailed && { failureReason })
+                ...(markAsFailed && { failureReason }) // Опционально
             }),
-            ...(isCardOnline && isRefund && { originalPaymentId }),
-            ...(isCardOffline && isRefund && { externalReference })
+            ...(isRefund && isCardOnline && { originalPaymentId }),
+            ...(isRefund && isCardOffline && { externalReference }) // Опционально
         },
         changedBy: { id: actor._id, name: actor.name, role: actor.role },
-        changedAt: createdAt || now
-    });
+        changedAt: createdAt instanceof Date && !isNaN(createdAt.getTime()) ? createdAt : now
+    };
+    dbOrder.financials.eventHistory.push(newFinancialsEventEntry);
 
     return { newNetPaid };
 };
