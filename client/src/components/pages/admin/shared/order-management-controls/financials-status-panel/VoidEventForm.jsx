@@ -177,9 +177,8 @@ export default function VoidEventForm({ orderId, hasFinancialsEvents }) {
         dispatch(setNavigationLock(true));
 
         const { eventId, ...restFormFields } = formFields;
-        const responseData = await dispatch(
-            sendOrderFinancialsEventVoidRequest({ orderId, eventId }, restFormFields)
-        );
+        const params = { orderId, eventId };
+        const responseData = await dispatch(sendOrderFinancialsEventVoidRequest(params, restFormFields));
         if (isUnmountedRef.current) return;
 
         const { status, message, fieldErrors } = responseData;

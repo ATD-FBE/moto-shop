@@ -6,7 +6,8 @@ import type {
     TLimitationErrorResponse,
     TModifiedErrorResponse,
     TGeneralErrorResponse,
-    TSuccessResponse
+    TSuccessResponse,
+    TFileResponse
 } from './apiResponse.types.js';
 import type { IProductAdjustment } from './product.types.js';
 import type {
@@ -196,9 +197,9 @@ export interface IRefundablePayment {
     amount: number;
 }
 
-////////////////
-/// REQUESTS ///
-////////////////
+/////////////////////////////
+/// REQUESTS - ORDER CORE ///
+/////////////////////////////
 
 /// Загрузка списка заказов для одной страницы ///
 export type TOrderListFilterParams = TInferFilterParams<TOrdersFilterOption>;
@@ -324,3 +325,36 @@ export type TOrderStatusUpdateResponse =
     | TLimitationErrorResponse
     | TGeneralErrorResponse
     | TSuccessResponse;
+
+///////////////////////////////////
+/// REQUESTS - ORDER FINANCIALS ///
+///////////////////////////////////
+
+/// Генерация и загрузка счёта заказа в pdf ///
+export type TOrderInvoicePdfResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TFileResponse;
+    
+/// Вычисление и загрузка остатка для оплаты заказа банковской картой онлайн ///
+export type TOrderRemainingAmountResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderRemainingAmountSuccessData>;
+
+interface IOrderRemainingAmountSuccessData {
+    remainingAmount: number;
+    orderNumber: string;
+}
+
+/// Аннулирование записи успешного финансового оффлайн-события в заказе (SSE) ///
+export interface IOrderFinancialsEventVoidBody {
+    voidedNote?: string;
+}
+
+export type TOrderFinancialsEventVoidResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Внесение оплаты за заказ оффлайн-методом (SSE) ///

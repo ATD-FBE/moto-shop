@@ -2,9 +2,11 @@ import { buildQueryValidationSchema } from '@server/validation/validationEngine.
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 const notificationEntity = 'notification';
+
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    notificationId: 'objectIdString'
+    notificationId: { type: 'objectIdString' }
 } as const;
+
 const bodyBaseSchema: IValidationInputSchema['body'] = {
     recipients: {
         type: 'array',
@@ -16,6 +18,8 @@ const bodyBaseSchema: IValidationInputSchema['body'] = {
     message: { type: 'string', match: true, formField: true },
     signature: { type: 'string', match: true, formField: true }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const notificationListSchema: IValidationInputSchema = {
     entityType: notificationEntity,

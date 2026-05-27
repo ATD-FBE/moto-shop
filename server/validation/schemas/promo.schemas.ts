@@ -2,9 +2,11 @@ import { buildQueryValidationSchema } from '@server/validation/validationEngine.
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 const promoEntity = 'promotion';
+
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    promoId: 'objectIdString'
+    promoId: { type: 'objectIdString' }
 } as const;
+
 const bodyBaseSchema: IValidationInputSchema['body'] = {
     image: { type: 'file', optional: true, formField: true },
     title: { type: 'string', match: true, formField: true },
@@ -12,6 +14,8 @@ const bodyBaseSchema: IValidationInputSchema['body'] = {
     startDate: { type: 'date', match: true, formField: true },
     endDate: { type: 'date', match: true, formField: true }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const promoListSchema: IValidationInputSchema = {
     entityType: promoEntity,

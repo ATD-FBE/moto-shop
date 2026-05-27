@@ -10,6 +10,9 @@ import {
     orderDetailsUpdateSchema,
     orderItemsUpdateSchema,
     orderStatusUpdateSchema,
+    orderInvoicePdfSchema,
+    orderRemainingAmountSchema,
+    orderFinancialsEventVoidSchema,
 } from '@server/validation/schemas/order.schemas.js';
 import {
     handleOrderListRequest,
@@ -65,6 +68,7 @@ router.get(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN, CUSTOMER),
+    validateInput(orderInvoicePdfSchema),
     handleOrderInvoicePdfRequest
 );
 router.get(
@@ -72,6 +76,7 @@ router.get(
     verifyAuth,
     verifyUser,
     verifyRole(CUSTOMER),
+    validateInput(orderRemainingAmountSchema),
     handleOrderRemainingAmountRequest
 );
 router.post(
@@ -136,6 +141,7 @@ router.patch(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderFinancialsEventVoidSchema),
     handleOrderFinancialsEventVoidRequest
 );
 router.patch(

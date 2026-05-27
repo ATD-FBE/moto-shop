@@ -1,5 +1,6 @@
-import Order from '@server/db/models/Order.js';
+import { OrderFinal } from '@server/db/models/Order.js';
 import { getCustomerOrderDetailsUrl } from '@server/config/urls.js';
+import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
 import { checkTimeout } from '@server/middlewares/timeoutMiddleware.js';
 import * as sseOrderManagement from '@server/services/sse/sseOrderManagementService.js';
 import {
@@ -8,6 +9,7 @@ import {
     generateOrderInvoicePdf,
     checkFinancialsTransactionRecord,
     getFinancialsState,
+    prepareFinancialsEventEntry,
     getFieldErrors,
     applyOrderFinancials,
     updateCustomerTotalSpent,
@@ -21,13 +23,12 @@ import {
     normalizeWebhook
 } from '@server/services/online-transactions/onlineTransactionsService.js';
 import { logCriticalEvent } from '@server/services/criticalEventService.js';
-import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
+import { requireDbUser, requireRole } from '@server/utils/typeGuards.js';
 import { runInDbTransaction } from '@server/utils/dbUtils.js';
-import { createAppError, prepareAppErrorData } from '@server/utils/errorUtils.js';
-import { parseValidationErrors } from '@server/utils/errorUtils.js';
+import { createAppError } from '@server/utils/errorUtils.js';
 import log from '@server/utils/logger.js';
 import safeSendResponse from '@server/utils/safeSendResponse.js';
-import { ORDER_MODEL_TYPE } from '@server/config/constants.js';
+import { typeCheck, validateObjectFields } from '@server/validation/validationEngine.js';
 import {
     isEqualCurrency,
     getOrderCardRefundStats,
@@ -52,18 +53,50 @@ import {
     SUCCESSFUL_FINANCIALS_EVENTS,
     REQUEST_STATUS
 } from '@shared/constants.js';
+import type { RequestHandler } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { FilterQuery } from 'mongoose';
+import type {
+    TDbOrderFinal,
+    TDbOrderFinancialsEventEntry,
+    TDbProduct,
+    TDbCartItem,
+    TDbOrderAuditLogEntry,
+    TDbOrderStatusHistoryEntry,
+    TSelectedFields
+} from '@server/types/index.js';
+import type {
+    IOrderDataChange,
+    TOrderInvoicePdfResponse,
+    TOrderRemainingAmountResponse,
+    IOrderFinancialsEventVoidBody,
+    TOrderFinancialsEventVoidResponse,
+} from '@shared/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IOrderParams extends ParamsDictionary {
+    orderId: string;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 /// Генерация и загрузка счёта заказа в pdf ///
-export const handleOrderInvoicePdfRequest = async (req, res, next) => {
+export const handleOrderInvoicePdfRequest: RequestHandler<
+    IOrderParams,
+    TOrderInvoicePdfResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-
     try {
-        const dbOrder = await Order.findById(orderId).lean();
+        const dbOrder = await OrderFinal.findById(orderId).lean<TDbOrderFinal>();
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -76,9 +109,6 @@ export const handleOrderInvoicePdfRequest = async (req, res, next) => {
                 message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
                 reason: REQUEST_STATUS.DENIED
             });
-        }
-        if (dbOrder.currentStatus === ORDER_STATUS.DRAFT) {
-            return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не оформлен` });
         }
 
         const { pdfDoc, filename } = generateOrderInvoicePdf(dbOrder);
@@ -94,16 +124,17 @@ export const handleOrderInvoicePdfRequest = async (req, res, next) => {
 };
 
 /// Вычисление и загрузка остатка для оплаты заказа банковской картой онлайн ///
-export const handleOrderRemainingAmountRequest = async (req, res, next) => {
+export const handleOrderRemainingAmountRequest: RequestHandler<
+    IOrderParams,
+    TOrderRemainingAmountResponse
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
 
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
-
     try {
-        const dbOrder = await Order.findById(orderId).lean();
+        const dbOrder = await OrderFinal.findById(orderId).lean<TDbOrderFinal>();
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -116,9 +147,6 @@ export const handleOrderRemainingAmountRequest = async (req, res, next) => {
                 message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
                 reason: REQUEST_STATUS.DENIED
             });
-        }
-        if (dbOrder.currentStatus === ORDER_STATUS.DRAFT) {
-            return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не оформлен` });
         }
 
         const financials = calculateOrderFinancials(dbOrder.financials.eventHistory);
@@ -137,36 +165,26 @@ export const handleOrderRemainingAmountRequest = async (req, res, next) => {
 };
 
 /// Аннулирование записи успешного финансового оффлайн-события в заказе (SSE) ///
-export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
-    const reqCtx = req.reqCtx;
-    const dbUser = req.dbUser;
+export const handleOrderFinancialsEventVoidRequest: RequestHandler<
+    IOrderParams,
+    TOrderFinancialsEventVoidResponse,
+    IOrderFinancialsEventVoidBody
+> = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
 
-    // Предварительная проверка формата данных
+    const dbUser = req.dbUser;
+    if (!requireRole(dbUser, USER_ROLE.ADMIN, next)) return;
+
+    const reqCtx = req.reqCtx;
     const orderId = req.params.orderId;
     const eventId = req.params.eventId;
-    const { voidedNote } = req.body ?? {};
-
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        eventId: { value: eventId, type: 'objectIdString', formField: true }, // Значение из формы вынесено в параметр
-        voidedNote: { value: voidedNote, type: 'string', optional: true, formField: true },
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'financials');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
+    const { voidedNote } = req.body;
 
     // Работа с базой данных
     try {
-        const { orderLbl, eventLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
+        const transactionResult = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -175,10 +193,11 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
                 throw createAppError(404, `Заказ ${orderLbl} не найден`);
             }
 
-            const financialsEventHistory = dbOrder.financials.eventHistory;
+            const financialsEventHistory: TDbOrderFinancialsEventEntry[] = dbOrder.financials.eventHistory;
             const targetFinancialsEventEntry = financialsEventHistory.find(
                 entry => entry.eventId.toString() === eventId
             );
+
             const targetFinEvent = targetFinancialsEventEntry?.event ?? null;
             const eventLbl = `(ID: ${eventId}${targetFinEvent ? `, событие: ${targetFinEvent}` : ''})`;
 
@@ -194,7 +213,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
                     `Запись ${eventLbl} в истории финансов заказа ${orderLbl} уже аннулирована`
                 );
             }
-            if (!SUCCESSFUL_FINANCIALS_EVENTS.includes(targetFinEvent)) {
+            if (!SUCCESSFUL_FINANCIALS_EVENTS.includes(targetFinancialsEventEntry.event)) {
                 throw createAppError(
                     409,
                     `Запись ${eventLbl} в истории финансов заказа ${orderLbl} ` +
@@ -220,7 +239,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             const oldFinancialsState = dbOrder.financials.state;
             const oldLastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
             
-            const isLastEventEntryVoided = oldLastFinancialsEventEntry.eventId.toString() === eventId;
+            const isLastEventEntryVoided = oldLastFinancialsEventEntry?.eventId.toString() === eventId;
 
             // Мутация объекта записи в истории финансовых событий
             targetFinancialsEventEntry.voided = {
@@ -242,7 +261,7 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             const newLastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
 
             // Сбор изменений
-            const changes = [
+            const changes: IOrderDataChange[] = [
                 {
                     field: orderDotNotationMap.financialsState,
                     oldValue: oldFinancialsState,
@@ -263,6 +282,11 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             // Откат последнего времени активности заказа (статус заказ или предыдущее финансовое событие)
             if (isLastEventEntryVoided) {
                 const currentOrderStatusEntry = dbOrder.statusHistory.at(-1);
+
+                if (!currentOrderStatusEntry) {
+                    throw createAppError(500, `История изменения статуса заказа ${orderLbl} пуста`);
+                }
+
                 const maxActivityAt = Math.max(
                     currentOrderStatusEntry.changedAt.getTime(),
                     newLastFinancialsEventEntry?.changedAt.getTime() ?? -Infinity
@@ -291,11 +315,13 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
             const orderPatches = changes.map(({ field, newValue }) => ({ path: field, value: newValue }));
             const orderUpdateData = {
                 orderPatches,
-                voidedFinancialsEventEntry: targetFinancialsEventEntry
+                voidedFinancialsEventEntry: prepareFinancialsEventEntry(targetFinancialsEventEntry)
             };
 
             return { orderLbl, eventLbl, orderUpdateData };
         });
+
+        const { orderLbl, eventLbl, orderUpdateData } = transactionResult;
 
         // Отправка SSE-сообщения админам
         const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
@@ -311,6 +337,8 @@ export const handleOrderFinancialsEventVoidRequest = async (req, res, next) => {
 
 /// Внесение оплаты за заказ оффлайн-методом (SSE) ///
 export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
@@ -376,7 +404,7 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
     try {
         const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -470,25 +498,14 @@ export const handleOrderOfflinePaymentApplyRequest = async (req, res, next) => {
             message: `Оплата за заказ ${orderLbl} оффлайн методом успешно внесена`
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'payment');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Возврат средств за заказ оффлайн-методом (SSE) ///
 export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const reqCtx = req.reqCtx;
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
@@ -556,7 +573,7 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
     try {
         const { orderLbl, orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -645,25 +662,14 @@ export const handleOrderOfflineRefundApplyRequest = async (req, res, next) => {
             message: `Возврат средств по заказу ${orderLbl} оффлайн методом выполнен`
         });
     } catch (err) {
-        if (err.isAppError) {
-            return safeSendResponse(res, err.statusCode, prepareAppErrorData(err));
-        }
-
-        if (err.name === 'ValidationError') {
-            const { systemFieldError, fieldErrors } = parseValidationErrors(err, 'refund');
-            if (systemFieldError) return next(systemFieldError);
-        
-            if (fieldErrors) {
-                return safeSendResponse(res, 422, { message: 'Некорректные данные', fieldErrors });
-            }
-        }
-
         next(err);
     }
 };
 
 /// Создание онлайн платежа для банковской карты ///
 export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
+    if (!requireDbUser(req, next)) return;
+
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
     const { paymentToken, transaction } = req.body ?? {};
@@ -710,7 +716,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 
     try {
         // Поиск заказа и проверка его состояния
-        const dbOrder = await Order.findById(orderId);
+        const dbOrder = await OrderFinal.findById(orderId);
         checkTimeout(req);
 
         const orderNumber = dbOrder?.orderNumber;
@@ -772,7 +778,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         }
 
         // Атомарный апдейт заказа со статусом ожидания создания платежа
-        let updatedDbOrder = await Order.findOneAndUpdate(
+        let updatedDbOrder = await OrderFinal.findOneAndUpdate(
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
@@ -853,7 +859,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         }
 
         // Атомарный апдейт заказа с обновлёнными данными об онлайн-оплате
-        updatedDbOrder = await Order.findOneAndUpdate(
+        updatedDbOrder = await OrderFinal.findOneAndUpdate(
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
@@ -908,7 +914,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
 
     try {
         // Поиск заказа и проверка его состояния
-        const dbOrder = await Order.findById(orderId);
+        const dbOrder = await OrderFinal.findById(orderId);
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
@@ -987,7 +993,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         }
 
         // Атомарный апдейт заказа со статусом ожидания создания возвратов (до проверки таймаута)
-        let updatedDbOrder = await Order.findOneAndUpdate(
+        let updatedDbOrder = await OrderFinal.findOneAndUpdate(
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
@@ -1082,7 +1088,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         }
 
         // Атомарный апдейт заказа с обновлёнными данными об онлайн-транзакции
-        updatedDbOrder = await Order.findOneAndUpdate(
+        updatedDbOrder = await OrderFinal.findOneAndUpdate(
             {
                 _id: orderId,
                 _modelType: ORDER_MODEL_TYPE.FINAL,
@@ -1176,7 +1182,7 @@ export const handleWebhook = async (req, res, next) => {
             orderLookupFilter = { 'financials.eventHistory.action.transactionId': originalPaymentId };
         }
 
-        const foundDbOrder = await Order.findOne(orderLookupFilter).select('_id').lean();
+        const foundDbOrder = await OrderFinal.findOne(orderLookupFilter).select('_id').lean();
         orderId = foundDbOrder?._id.toString();
 
         if (!typeCheck.objectIdString(orderId)) {
@@ -1194,7 +1200,7 @@ export const handleWebhook = async (req, res, next) => {
     try {
         const { orderUpdateData } = await runInDbTransaction(async (session) => {
             // Поиск заказа и проверка его состояния
-            const dbOrder = await Order.findById(orderId).session(session);
+            const dbOrder = await OrderFinal.findById(orderId).session(session);
             checkTimeout(req);
 
             const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;

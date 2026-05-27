@@ -3,9 +3,12 @@ import { customersFilterOptions } from '@shared/filterOptions.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 const customerEntity = 'customer';
+
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    customerId: 'objectIdString'
+    customerId: { type: 'objectIdString' }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const customerListSchema: IValidationInputSchema = {
     entityType: customerEntity,

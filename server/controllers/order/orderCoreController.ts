@@ -16,9 +16,9 @@ import {
     orderDotNotationMap,
     prepareOrder,
     getLastActiveOrderStatus,
-    getFullOrderStatusEntry,
+    prepareOrderStatusEntry,
     prepareShippingCost,
-    getAuditlogEntry,
+    prepareAuditLogEntry,
     getFinancialsState,
     getOrderStatusTransitionData,
     returnProductsToStore,
@@ -641,7 +641,7 @@ export const handleOrderDetailsUpdateRequest: RequestHandler<
 
             const orderUpdateData = {
                 orderPatches,
-                ...(newAuditLogEntry && { newAuditLogEntry: getAuditlogEntry(newAuditLogEntry) })
+                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditLogEntry(newAuditLogEntry) })
             };
 
             return { orderLbl, orderUpdateData };
@@ -796,7 +796,7 @@ export const handleOrderItemsUpdateRequest: RequestHandler<
 
             const orderUpdateData = {
                 orderPatches,
-                ...(newAuditLogEntry && { newAuditLogEntry: getAuditlogEntry(newAuditLogEntry) })
+                ...(newAuditLogEntry && { newAuditLogEntry: prepareAuditLogEntry(newAuditLogEntry) })
             };
 
             return { orderLbl, orderUpdateData, itemAdjustments };
@@ -1068,7 +1068,7 @@ export const handleOrderStatusUpdateRequest: RequestHandler<
             const orderUpdateData = {
                 ...(orderPatches.length > 0 && { orderPatches }),
                 ...(newOrderStatusEntry && {
-                    newOrderStatusEntry: getFullOrderStatusEntry(newOrderStatusEntry, lastActiveStatus)
+                    newOrderStatusEntry: prepareOrderStatusEntry(newOrderStatusEntry, lastActiveStatus)
                 })
             };
 

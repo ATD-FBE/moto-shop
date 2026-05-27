@@ -1,13 +1,17 @@
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 const newsEntity = 'news';
+
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    newsId: 'objectIdString'
+    newsId: { type: 'objectIdString' }
 } as const;
+
 const bodyBaseSchema: IValidationInputSchema['body'] = {
     title: { type: 'string', match: true, formField: true },
     content: { type: 'string', match: true, formField: true }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const newsSchema: IValidationInputSchema = {
     entityType: newsEntity,

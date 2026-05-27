@@ -3,9 +3,12 @@ import { currencyValidation } from '@shared/fieldRules.js';
 import type { IValidationInputSchema } from '@server/types/index.js';
 
 const checkoutEntity = 'checkout';
+
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    orderId: 'objectIdString'
+    orderId: { type: 'objectIdString' }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const orderDraftSyncSchema: IValidationInputSchema = {
     params: paramsBaseSchema

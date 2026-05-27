@@ -46,7 +46,7 @@ export interface IValidationConfig extends IValidationSchema {
 
 export interface IValidationInputSchema {
     entityType?: TEntityType;
-    params?: Record<string, TCheckType>;
+    params?: Record<string, IValidationSchema>;
     body?: Record<string, IValidationSchema>;
     query?: Record<string, IValidationSchema>;
 }

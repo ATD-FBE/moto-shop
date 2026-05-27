@@ -15,6 +15,8 @@ const guestCartSchema: IValidationSchema = {
     }
 } as const;
 
+//////////////////////////////////////////////////////////
+
 export const authRegistrationSchema: IValidationInputSchema = {
     entityType: authEntity,
     body: {

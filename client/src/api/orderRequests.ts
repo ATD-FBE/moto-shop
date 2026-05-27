@@ -13,7 +13,8 @@ import type {
     IOrderItemsUpdateBody,
     TOrderItemsUpdateResponse,
     IOrderStatusUpdateBody,
-    TOrderStatusUpdateResponse
+    TOrderStatusUpdateResponse,
+    TOrderInvoicePdfResponse,
 } from '@shared/types/index.js';
 
 const ORDER_TIMEOUT = 35000;
@@ -190,22 +191,25 @@ export const sendOrderStatusUpdateRequest = (
         const response = await dispatch(apiFetch(url, options, config));
         return await apiResponse(response, { errorPrefix });
     };
-// @ts-ignore
-/// Генерация и загрузка счёта заказа в pdf ///
-export const sendOrderInvoicePdfRequest = (orderId) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/invoice/pdf`;
-    const options = { method: 'GET' };
-    const errorPrefix = 'Не удалось загрузить счёт';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 0,
-        errorPrefix
-    };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix, asFile: true });
-};
+/// Генерация и загрузка счёта заказа в pdf ///
+export const sendOrderInvoicePdfRequest = (
+    orderId: string
+): TAppThunk<Promise<TOrderInvoicePdfResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/invoice/pdf`;
+        const options = { method: 'GET' };
+        const errorPrefix = 'Не удалось загрузить счёт';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 0,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix, asFile: true });
+    };
 // @ts-ignore
 /// Вычисление и загрузка остатка для оплаты заказа банковской картой онлайн ///
 export const sendOrderRemainingAmountRequest = (orderId) => async (dispatch) => {

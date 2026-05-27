@@ -1,7 +1,7 @@
 import type { IValidationSchema, IValidationInputSchema } from '@server/types/index.js';
 
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    productId: 'objectIdString'
+    productId: { type: 'objectIdString' }
 } as const;
 
 const guestCartSchema: IValidationSchema = {
@@ -14,6 +14,8 @@ const guestCartSchema: IValidationSchema = {
         }
     }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const guestCartItemListSchema: IValidationInputSchema = {
     body: {

@@ -441,9 +441,9 @@ export const FINANCIALS_EVENT_CONFIG: Record <TFinancialsEvent, IFinancialsEvent
 } as const;
 
 export const SUCCESSFUL_FINANCIALS_EVENTS: readonly TFinancialsEvent[] =
-    Object.entries(FINANCIALS_EVENT_CONFIG)
+    (Object.entries(FINANCIALS_EVENT_CONFIG) as [TFinancialsEvent, IFinancialsEventConfig][])
         .filter(([_, cfg]) => cfg.successful)
-        .map(([event]) => event as TFinancialsEvent);
+        .map(([event]) => event);
 
 export const REQUEST_STATUS = {
     UNAUTH: 'unauth',

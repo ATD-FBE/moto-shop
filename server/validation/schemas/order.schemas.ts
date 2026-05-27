@@ -5,9 +5,10 @@ import { ORDER_VIEW_MODE, DELIVERY_METHOD, PAYMENT_METHOD, ORDER_ACTION } from '
 import type { IDynamicErrorConfig, IValidationInputSchema } from '@server/types/index.js';
 
 const orderEntity = 'order';
+const financialsEntity = 'financials';
 
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    orderId: 'objectIdString'
+    orderId: { type: 'objectIdString' }
 } as const;
 
 const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig<typeof orderEntity> = {
@@ -15,6 +16,10 @@ const orderItemsUpdateDynamicErrorSchema: IDynamicErrorConfig<typeof orderEntity
     entityField: 'itemQuantity',
     generateFieldName: orderItemQuantityField.makeName
 } as const;
+
+//////////////////
+/// ORDER CORE ///
+//////////////////
 
 export const orderListSchema: IValidationInputSchema = {
     query: buildQueryValidationSchema(ordersFilterOptions)
@@ -119,5 +124,28 @@ export const orderStatusUpdateSchema: IValidationInputSchema = {
                 cancellationReason: { type: 'string', optional: true, match: true, formField: true }
             }
         }
+    }
+} as const;
+
+////////////////////////
+/// ORDER FINANCIALS ///
+////////////////////////
+
+export const orderInvoicePdfSchema: IValidationInputSchema = {
+    params: paramsBaseSchema
+} as const;
+
+export const orderRemainingAmountSchema: IValidationInputSchema = {
+    params: paramsBaseSchema
+} as const;
+
+export const orderFinancialsEventVoidSchema: IValidationInputSchema = {
+    entityType: financialsEntity,
+    params: {
+        ...paramsBaseSchema,
+        eventId: { type: 'objectIdString', formField: true }
+    },
+    body: {
+        voidedNote: { type: 'string', optional: true, match: true, formField: true }
     }
 } as const;

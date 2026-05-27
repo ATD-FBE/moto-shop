@@ -30,7 +30,9 @@ export const validateInput = (
 
     const filesContainer = { file: req.file, files: req.files };
 
-    const parsedParams: Record<string, any> = {};
+    const parsedParams: Record<string, any> = params
+        ? parseValues(req.params ?? {}, params)
+        : req.params ?? {};
     const parsedBody: Record<string, any> = body
         ? parseValues(req.body ?? {}, body, filesContainer)
         : req.body ?? {};
@@ -41,10 +43,9 @@ export const validateInput = (
     const validationConfigMap: Record<string, IValidationConfig> = {};
 
     if (params) {
-        Object.entries(params).forEach(([paramName, type]) => {
-            const paramValue = parseFieldValue(req.params[paramName], type);
-            parsedParams[paramName] = paramValue;
-            validationConfigMap[paramName] = { value: paramValue, type };
+        Object.entries(params).forEach(([paramName, schema]) => {
+            const paramValue = parsedParams[paramName];
+            validationConfigMap[paramName] = buildValidationConfig(schema, paramValue);
         });
     }
     if (body) {

@@ -6,7 +6,7 @@ import type { IValidationSchema, IValidationInputSchema } from '@server/types/in
 const productEntity = 'product';
 
 const paramsBaseSchema: IValidationInputSchema['params'] = {
-    productId: 'objectIdString'
+    productId: { type: 'objectIdString' }
 } as const;
 
 const bodyBaseSchema: IValidationInputSchema['body'] = {
@@ -29,6 +29,8 @@ const productIdsSchema: IValidationSchema = {
     type: 'array',
     items: { type: 'objectIdString' }
 } as const;
+
+//////////////////////////////////////////////////////////
 
 export const productListSchema: IValidationInputSchema = {
     entityType: productEntity,
