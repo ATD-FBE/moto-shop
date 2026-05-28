@@ -15,6 +15,8 @@ import {
     orderFinancialsEventVoidSchema,
     orderOfflinePaymentApplySchema,
     orderOfflineRefundApplySchema,
+    orderOnlinePaymentCreateSchema,
+    orderOnlineRefundsCreateSchema
 } from '@server/validation/schemas/order.schemas.js';
 import {
     handleOrderListRequest,
@@ -34,7 +36,7 @@ import {
     handleOrderOfflineRefundApplyRequest,
     handleOrderOnlinePaymentCreateRequest,
     handleOrderOnlineRefundsCreateRequest,
-    handleWebhook
+    handleOrderFinancialsWebhook
 } from '@server/controllers/order/orderFinancialsController.js';
 import { USER_ROLE } from '@shared/constants.js';
 
@@ -141,7 +143,7 @@ router.patch(
 
 router.post(
     '/webhook',
-    handleWebhook
+    handleOrderFinancialsWebhook
 );
 router.post(
     '/:orderId/repeat',
@@ -153,8 +155,10 @@ router.post(
 );
 router.post(
     '/:orderId/financials/payments/online',
-    verifyAuth, verifyUser,
+    verifyAuth,
+    verifyUser,
     verifyRole(CUSTOMER),
+    validateInput(orderOnlinePaymentCreateSchema),
     handleOrderOnlinePaymentCreateRequest
 );
 router.post(
@@ -162,6 +166,7 @@ router.post(
     verifyAuth,
     verifyUser,
     verifyRole(ADMIN),
+    validateInput(orderOnlineRefundsCreateSchema),
     handleOrderOnlineRefundsCreateRequest
 );
 

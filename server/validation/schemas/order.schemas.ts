@@ -9,6 +9,7 @@ import {
     OFFLINE_PAYMENT_METHODS,
     OFFLINE_REFUND_METHODS,
     BANK_PROVIDER,
+    CARD_ONLINE_PROVIDER,
     ORDER_ACTION
 } from '@shared/constants.js';
 import type { IDynamicErrorConfig, IValidationInputSchema } from '@server/types/index.js';
@@ -206,4 +207,23 @@ export const orderOfflineRefundApplySchema: IValidationInputSchema = {
             }
         }
     }
+} as const;
+
+export const orderOnlinePaymentCreateSchema: IValidationInputSchema = {
+    entityType: paymentEntity,
+    params: paramsBaseSchema,
+    body: {
+        paymentToken: { type: 'string' },
+        transaction: {
+            type: 'object',
+            fields: {
+                provider: { type: 'string', enum: Object.values(CARD_ONLINE_PROVIDER), formField: true },
+                amount: { type: 'float', min: CURRENCY_EPS, match: true, formField: true }
+            }
+        }
+    }
+} as const;
+
+export const orderOnlineRefundsCreateSchema: IValidationInputSchema = {
+    params: paramsBaseSchema
 } as const;

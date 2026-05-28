@@ -396,3 +396,29 @@ export type TOrderOfflineRefundApplyResponse =
     | TSuccessResponse;
     
 /// Создание онлайн платежа для банковской карты ///
+export interface IOrderOnlinePaymentCreateBody {
+    paymentToken: string;
+    transaction: {
+        provider: TCardOnlineProvider;
+        amount: number;
+    }
+}
+
+export type TOrderOnlinePaymentCreateResponse =
+    | TAuthErrorResponse
+    | TFieldErrorResponse<'payment'>
+    | TGeneralErrorResponse
+    | TSuccessResponse<IOrderOnlinePaymentCreateSuccessData>;
+
+interface IOrderOnlinePaymentCreateSuccessData {
+    confirmationUrl: string | null;
+}
+
+/// Создание возвратов для банковских карт ///
+export type TOrderOnlineRefundsCreateResponse =
+    | TAuthErrorResponse
+    | TGeneralErrorResponse
+    | TSuccessResponse;
+    
+/// Обработка уведомления (вебхука) от онлайн-провайдера (банковская карта) ///
+export type TOrderFinancialsWebhookResponse = TSuccessResponse;

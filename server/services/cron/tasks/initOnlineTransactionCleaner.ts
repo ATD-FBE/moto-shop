@@ -29,7 +29,6 @@ import {
 import type {
     TDbOrderFinal,
     TDbOrderWithTx,
-    TDbOrderFinalDoc,
     INormalizedExternalTx,
     TAnyExternalTx
 } from '@server/types/index.js';
@@ -102,7 +101,7 @@ export const startInitOnlineTransactionCleaner = (): void => {
                                     path: orderDotNotationMap.currentOnlineTransaction,
                                     value: undefined
                                 }];
-                                const orderUpdateData: IOrderUpdateData = { orderPatches };
+                                const orderUpdateData = { orderPatches };
     
                                 const sseMessageData = { orderUpdate: { orderId, orderUpdateData } };
                                 sseOrderManagement.sendToAllClients(sseMessageData);

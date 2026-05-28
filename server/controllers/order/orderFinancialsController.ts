@@ -63,7 +63,8 @@ import type {
     TDbCartItem,
     TDbOrderAuditLogEntry,
     TDbOrderStatusHistoryEntry,
-    TSelectedFields
+    TSelectedFields,
+    TDbOrderCurrentOnlineTransaction
 } from '@server/types/index.js';
 import type {
     TOrderInvoicePdfResponse,
@@ -74,13 +75,19 @@ import type {
     TOrderOfflinePaymentApplyResponse,
     IOrderOfflineRefundApplyBody,
     TOrderOfflineRefundApplyResponse,
-
+    IOrderOnlinePaymentCreateBody,
+    TOrderOnlinePaymentCreateResponse,
+    TOrderOnlineRefundsCreateResponse,
+    TOrderFinancialsWebhookResponse,
     IOrderDataChange,
     TEntityField,
     TPaymentMethod,
     TRefundMethod,
-    TBankProvider
+    TBankProvider,
+    TCardOnlineProvider,
+    IRefundablePayment
 } from '@shared/types/index.js';
+import { read } from 'pdfkit';
 
 //////////////////////////
 /// TYPES & INTERFACES ///
@@ -637,60 +644,24 @@ export const handleOrderOfflineRefundApplyRequest: RequestHandler<
 };
 
 /// Создание онлайн платежа для банковской карты ///
-export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
+export const handleOrderOnlinePaymentCreateRequest: RequestHandler<
+    IOrderParams,
+    TOrderOnlinePaymentCreateResponse,
+    IOrderOnlinePaymentCreateBody
+> = async (req, res, next) => {
     if (!requireDbUser(req, next)) return;
 
     const dbUser = req.dbUser;
     const orderId = req.params.orderId;
-    const { paymentToken, transaction } = req.body ?? {};
-    const { provider, amount } = typeCheck.object(transaction) ? transaction : {};
-
-    const validationConfigMap = {
-        orderId: { value: orderId, type: 'objectIdString' },
-        paymentToken: { value: paymentToken, type: 'string' },
-        transaction: { value: transaction, type: 'object' },
-        provider: { value: provider, type: 'string', formField: true },
-        amount: { value: amount, type: 'float', formField: true }
-    };
-
-    const { invalidInputPaths, fieldErrors } = validateObjectFields(validationConfigMap, 'financials');
-
-    if (invalidInputPaths.length > 0) {
-        const invalidPathsStr = invalidInputPaths.join(', ');
-        return safeSendResponse(res, 400, { message: `Неверный формат данных: ${invalidPathsStr}` });
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-        return safeSendResponse(res, 422, { message: 'Неверный формат данных', fieldErrors });
-    }
-
-    if (!paymentToken.trim()) {
-        return safeSendResponse(res, 400, { message: 'Отсутствует платёжный токен' });
-    }
-
-    const amountNum = Number(amount);
-    const invalidFields = [];
-
-    if (!Object.values(CARD_ONLINE_PROVIDER).includes(provider)) {
-        invalidFields.push('provider');
-    }
-    if (isEqualCurrency(amountNum, 0) || amountNum < 0) {
-        invalidFields.push('amount');
-    }
-
-    if (invalidFields.length > 0) {
-        return safeSendResponse(res, 422, {
-            message: 'Некорректные данные',
-            fieldErrors: getFieldErrors(invalidFields, 'payment')
-        });
-    }
+    const { paymentToken, transaction } = req.body;
+    const { provider, amount } = transaction;
 
     try {
         // Поиск заказа и проверка его состояния
-        const dbOrder = await OrderFinal.findById(orderId);
+        const dbOrder = await OrderFinal.findById(orderId).lean<TDbOrderFinal>();
         checkTimeout(req);
 
-        const orderNumber = dbOrder?.orderNumber;
-        const orderLbl = orderNumber ? `№${orderNumber}` : `(ID: ${orderId})`;
+        const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
 
         if (!dbOrder) {
             return safeSendResponse(res, 404, { message: `Заказ ${orderLbl} не найден` });
@@ -739,7 +710,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
             });
         }
         
-        const newNetPaid = netPaid + amountNum;
+        const newNetPaid = netPaid + amount;
 
         if (!isEqualCurrency(newNetPaid, totalAmount) && newNetPaid > totalAmount) {
             return safeSendResponse(res, 403, {
@@ -760,7 +731,7 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
                         type: TRANSACTION_TYPE.PAYMENT,
                         providers: [provider],
                         status: TRANSACTION_STATUS.INIT,
-                        amount: amountNum,
+                        amount,
                         startedAt: new Date()
                     }
                 }
@@ -790,12 +761,12 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
         // Создание онлайн-платежа
         const paymentResult = await createOnlinePayment(provider, {
             paymentToken,
-            amount: amountNum,
+            amount,
             currency: CURRENCY.RUB,
-            returnUrl: getCustomerOrderDetailsUrl(orderNumber, orderId),
+            returnUrl: getCustomerOrderDetailsUrl(orderId, updatedDbOrder.orderNumber),
             description: `Оплата заказа ${orderLbl} для магазина "Мото-Магазин"`,
             orderId,
-            orderNumber,
+            orderNumber: updatedDbOrder.orderNumber,
             customerId: updatedDbOrder.customerId.toString(),
             provider
         });
@@ -825,6 +796,12 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 
             return safeSendResponse(res, 500, {
                 message: `По заказу ${orderLbl} онлайн оплата не создана`
+            });
+        }
+
+        if (!paymentResult.paymentId) {
+            return safeSendResponse(res, 500, {
+                message: `Отсутствует paymentId при создании онлайн оплаты для заказа ${orderLbl}`
             });
         }
 
@@ -875,28 +852,21 @@ export const handleOrderOnlinePaymentCreateRequest = async (req, res, next) => {
 };
 
 /// Создание возвратов для банковских карт ///
-export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
+export const handleOrderOnlineRefundsCreateRequest: RequestHandler<
+    IOrderParams,
+    TOrderOnlineRefundsCreateResponse
+> = async (req, res, next) => {
     const orderId = req.params.orderId;
-
-    if (!typeCheck.objectIdString(orderId)) {
-        return safeSendResponse(res, 400, { message: 'Неверный формат данных: orderId' });
-    }
 
     try {
         // Поиск заказа и проверка его состояния
-        const dbOrder = await OrderFinal.findById(orderId);
+        const dbOrder = await OrderFinal.findById(orderId).lean<TDbOrderFinal>();
         checkTimeout(req);
 
         const orderLbl = dbOrder?.orderNumber ? `№${dbOrder.orderNumber}` : `(ID: ${orderId})`;
 
         if (!dbOrder) {
             return safeSendResponse(res, 404, { message: `Заказ ${orderLbl} не найден` });
-        }
-
-        const currentOrderStatus = dbOrder.currentStatus;
-
-        if (currentOrderStatus === ORDER_STATUS.DRAFT) {
-            return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не оформлен` });
         }
 
         const currentOnlineTx = dbOrder.financials.currentOnlineTransaction;
@@ -928,7 +898,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         const netPaid = financials.totalPaid - financials.totalRefunded;
         const totalAmount = dbOrder.totals.totalAmount;
 
-        const isCancelledOrder = currentOrderStatus === ORDER_STATUS.CANCELLED;
+        const isCancelledOrder = dbOrder.currentStatus === ORDER_STATUS.CANCELLED;
 
         if (!isCancelledOrder && (isEqualCurrency(netPaid, totalAmount) || netPaid < totalAmount)) {
             return safeSendResponse(res, 403, {
@@ -946,7 +916,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
             availableCardRefundAmount: totalRefundAmount,
             refundablePayments: refundTasks,
             refundableProviders: refundProviders,
-        } = getOrderCardRefundStats(financialsEventHistory);
+        } = getOrderCardRefundStats(financialsEventHistory.map(prepareFinancialsEventEntry));
 
         if (!refundTasks.length) {
             return safeSendResponse(res, 409, {
@@ -1003,7 +973,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
         checkTimeout(req);
 
         // Группирование заданий по провайдерам
-        const refundTasksByProvider = new Map(); // provider => [task, ...]
+        const refundTasksByProvider = new Map<TCardOnlineProvider, IRefundablePayment[]>();
 
         refundTasks.forEach(task => {
             const provider = task.provider;
@@ -1015,7 +985,7 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
             currency: CURRENCY.RUB,
             description: `Возврат средств по заказу ${orderLbl} для магазина "Мото-Магазин"`
         };
-        const allRefundIds = [];
+        const allRefundIds: string[] = [];
         
         for (const [provider, providerTasks] of refundTasksByProvider.entries()) {
             const refundResult = await createOnlineRefunds(provider, providerTasks, refundParams);
@@ -1100,7 +1070,10 @@ export const handleOrderOnlineRefundsCreateRequest = async (req, res, next) => {
 };
 
 /// Обработка уведомления (вебхука) от онлайн-провайдера (банковская карта) ///
-export const handleWebhook = async (req, res, next) => {
+export const handleOrderFinancialsWebhook: RequestHandler<
+    {},
+    TOrderFinancialsWebhookResponse
+> = async (req, res, next) => {
     const reqCtx = req.reqCtx;
 
     // Определение провайдера по заголовку
@@ -1144,7 +1117,7 @@ export const handleWebhook = async (req, res, next) => {
     let orderId = normalizedWebhook.orderId;
 
     if (!typeCheck.objectIdString(orderId)) {
-        let orderLookupFilter = {};
+        let orderLookupFilter: Record<string, unknown> = {};
 
         if (transactionType === TRANSACTION_TYPE.PAYMENT) {
             orderLookupFilter = { 'financials.currentOnlineTransaction.transactionIds': transactionId };
@@ -1152,7 +1125,7 @@ export const handleWebhook = async (req, res, next) => {
             orderLookupFilter = { 'financials.eventHistory.action.transactionId': originalPaymentId };
         }
 
-        const foundDbOrder = await OrderFinal.findOne(orderLookupFilter).select('_id').lean();
+        const foundDbOrder = await OrderFinal.findOne(orderLookupFilter).select('_id').lean<TDbOrderFinal>();
         orderId = foundDbOrder?._id.toString();
 
         if (!typeCheck.objectIdString(orderId)) {
@@ -1177,20 +1150,6 @@ export const handleWebhook = async (req, res, next) => {
 
             if (!dbOrder) {
                 throw createAppError(200, `Заказ ${orderLbl} не найден`);
-            }
-
-            const currentOrderStatus = dbOrder.currentStatus;
-
-            if (currentOrderStatus === ORDER_STATUS.DRAFT) {
-                logCriticalEvent({
-                    logContext,
-                    category: 'financials',
-                    reason:
-                        `Получен вебхук от платёжной системы для заказа ${orderLbl} ` +
-                        `в статусе ${ORDER_STATUS.DRAFT}`,
-                    data: normalizedWebhook
-                });
-                throw createAppError(200, `Заказ ${orderLbl} не оформлен`);
             }
 
             const financialsEventHistory = dbOrder.financials.eventHistory;
@@ -1227,21 +1186,21 @@ export const handleWebhook = async (req, res, next) => {
             });
 
             // Обработка данных об онлайн-оплате в заказе
-            const currentOnlineTx = dbOrder.financials.currentOnlineTransaction;
 
-            if (currentOnlineTx) {
-                const isIdExpected = currentOnlineTx.transactionIds.includes(transactionId);
+            if (dbOrder.financials.currentOnlineTransaction) {
+                const txIds = dbOrder.financials.currentOnlineTransaction.transactionIds;
+                const isIdExpected = txIds.includes(transactionId);
 
                 if (isIdExpected) {
-                    // Удаление ID из массива
-                    dbOrder.financials.currentOnlineTransaction.transactionIds = 
-                        currentOnlineTx.transactionIds.filter(id => id !== transactionId);
-
-                    // Удаление данных онлайн транзакции, если массив опустел
-                    if (!dbOrder.financials.currentOnlineTransaction.transactionIds.length) {
+                    // Удаление ID из массива транзакций
+                    const filteredTxIds = txIds.filter(id => id !== transactionId);
+                    
+                    if (filteredTxIds.length > 0) { // Замена массива, если остались ID транзакций
+                        dbOrder.financials.currentOnlineTransaction.transactionIds = filteredTxIds;
+                    } else { // Удаление данных онлайн транзакции, если массив опустел
                         dbOrder.financials.currentOnlineTransaction = undefined;
                     }
-                } else {
+                } else if (!txIds.length) {
                     // Удаление данных онлайн транзакции, массив изначально пуст (статус INIT)
                     dbOrder.financials.currentOnlineTransaction = undefined;
                 }
@@ -1257,7 +1216,7 @@ export const handleWebhook = async (req, res, next) => {
             checkTimeout(req);
 
             // Обновление общей суммы оплат покупателя, если заказ уже завершён
-            if (!markAsFailed && currentOrderStatus === ORDER_STATUS.COMPLETED) {
+            if (!markAsFailed && dbOrder.currentStatus === ORDER_STATUS.COMPLETED) {
                 const netPaid = financials.totalPaid - financials.totalRefunded;
                 const netPaidDelta = newNetPaid - netPaid;
                 await updateCustomerTotalSpent(updatedDbOrder.customerId, netPaidDelta, session, reqCtx);

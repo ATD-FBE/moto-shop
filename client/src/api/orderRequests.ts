@@ -15,6 +15,16 @@ import type {
     IOrderStatusUpdateBody,
     TOrderStatusUpdateResponse,
     TOrderInvoicePdfResponse,
+    TOrderRemainingAmountResponse,
+    IOrderFinancialsEventVoidBody,
+    TOrderFinancialsEventVoidResponse,
+    IOrderOfflinePaymentApplyBody,
+    TOrderOfflinePaymentApplyResponse,
+    IOrderOfflineRefundApplyBody,
+    TOrderOfflineRefundApplyResponse,
+    IOrderOnlinePaymentCreateBody,
+    TOrderOnlinePaymentCreateResponse,
+    TOrderOnlineRefundsCreateResponse
 } from '@shared/types/index.js';
 
 const ORDER_TIMEOUT = 35000;
@@ -210,116 +220,138 @@ export const sendOrderInvoicePdfRequest = (
         const response = await dispatch(apiFetch(url, options, config));
         return await apiResponse(response, { errorPrefix, asFile: true });
     };
-// @ts-ignore
+
 /// Вычисление и загрузка остатка для оплаты заказа банковской картой онлайн ///
-export const sendOrderRemainingAmountRequest = (orderId) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/remaining`;
-    const options = { method: 'GET' };
-    const errorPrefix = 'Не удалось вычислить остаток оплаты заказа';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 250,
-        errorPrefix
+export const sendOrderRemainingAmountRequest = (
+    orderId: string
+): TAppThunk<Promise<TOrderRemainingAmountResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/remaining`;
+        const options = { method: 'GET' };
+        const errorPrefix = 'Не удалось вычислить остаток оплаты заказа';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 250,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
     };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
-// @ts-ignore
 /// Аннулирование записи успешного финансового события в заказе (SSE) ///
-export const sendOrderFinancialsEventVoidRequest = (params, objData) => async (dispatch) => {
-    const { orderId, eventId } = params;
-    const url = `/api/orders/${orderId}/financials/events/${eventId}/void`;
-    const options = {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(objData)
-    };
-    const errorPrefix = 'Не удалось аннулировать запись в истории финансов заказа';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 0,
-        errorPrefix
+export const sendOrderFinancialsEventVoidRequest = (
+    params: { orderId: string, eventId: string },
+    objData: IOrderFinancialsEventVoidBody
+): TAppThunk<Promise<TOrderFinancialsEventVoidResponse>> =>
+    async (dispatch) => {
+        const { orderId, eventId } = params;
+        const url = `/api/orders/${orderId}/financials/events/${eventId}/void`;
+        const options = {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objData)
+        };
+        const errorPrefix = 'Не удалось аннулировать запись в истории финансов заказа';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 0,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
     };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
-// @ts-ignore
 /// Внесение оплаты за заказ оффлайн-методом (SSE) ///
-export const sendOrderOfflinePaymentApplyRequest = (orderId, objData) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/payments/offline`;
-    const options = {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(objData)
-    };
-    const errorPrefix = 'Не удалось внести оплату заказа оффлайн-методом';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 0,
-        errorPrefix
+export const sendOrderOfflinePaymentApplyRequest = (
+    orderId: string,
+    objData: IOrderOfflinePaymentApplyBody
+): TAppThunk<Promise<TOrderOfflinePaymentApplyResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/payments/offline`;
+        const options = {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objData)
+        };
+        const errorPrefix = 'Не удалось внести оплату заказа оффлайн-методом';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 0,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
     };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
-// @ts-ignore
 /// Возврат средств за заказ оффлайн-методом (SSE) ///
-export const sendOrderOfflineRefundApplyRequest = (orderId, objData) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/refunds/offline`;
-    const options = {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(objData)
-    };
-    const errorPrefix = 'Не удалось вернуть средства оффлайн-методом';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 0,
-        errorPrefix
+export const sendOrderOfflineRefundApplyRequest = (
+    orderId: string,
+    objData: IOrderOfflineRefundApplyBody
+): TAppThunk<Promise<TOrderOfflineRefundApplyResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/refunds/offline`;
+        const options = {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objData)
+        };
+        const errorPrefix = 'Не удалось вернуть средства оффлайн-методом';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 0,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
     };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
-// @ts-ignore
 /// Создание онлайн платежа для банковской карты ///
-export const sendOrderOnlinePaymentCreateRequest = (orderId, objData) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/payments/online`;
-    const options = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(objData)
-    };
-    const errorPrefix = 'Не удалось создать онлайн-платёж для карты';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 750,
-        errorPrefix
+export const sendOrderOnlinePaymentCreateRequest = (
+    orderId: string,
+    objData: IOrderOnlinePaymentCreateBody
+): TAppThunk<Promise<TOrderOnlinePaymentCreateResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/payments/online`;
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objData)
+        };
+        const errorPrefix = 'Не удалось создать онлайн-платёж для карты';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 750,
+            errorPrefix
+        };
+
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
     };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
-// @ts-ignore
 /// Создание возвратов для банковских карт ///
-export const sendOrderOnlineRefundsCreateRequest = (orderId) => async (dispatch) => {
-    const url = `/api/orders/${orderId}/financials/refunds/online/full`;
-    const options = { method: 'POST' };
-    const errorPrefix = 'Не удалось создать онлайн-возвраты на карты';
-    const config = {
-        authRequired: true,
-        timeout: ORDER_TIMEOUT,
-        minDelay: 750,
-        errorPrefix
-    };
+export const sendOrderOnlineRefundsCreateRequest = (
+    orderId: string
+): TAppThunk<Promise<TOrderOnlineRefundsCreateResponse>> =>
+    async (dispatch) => {
+        const url = `/api/orders/${orderId}/financials/refunds/online/full`;
+        const options = { method: 'POST' };
+        const errorPrefix = 'Не удалось создать онлайн-возвраты на карты';
+        const config = {
+            authRequired: true,
+            timeout: ORDER_TIMEOUT,
+            minDelay: 750,
+            errorPrefix
+        };
 
-    const response = await dispatch(apiFetch(url, options, config));
-    return await apiResponse(response, { errorPrefix });
-};
+        const response = await dispatch(apiFetch(url, options, config));
+        return await apiResponse(response, { errorPrefix });
+    };
