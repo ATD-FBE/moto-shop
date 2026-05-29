@@ -53,7 +53,7 @@ export const requireFileArrayField = <
     req: R,
     next: NextFunction
 ): req is R & {
-    body: R['body'] & Record<F, Express.Multer.File[]>
+    body: R['body'] & (Record<F, Express.Multer.File[]>)
 } => {
     const value = (req.body as Record<string, unknown>)[fieldName];
 

@@ -593,6 +593,7 @@ export default function ProductForm(
         const initValue = product?.[name];
         const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
         const fieldStateValue = { value: normalizedValue };
+        const hasValue = normalizedValue !== '';
 
         const ruleCheck =
             typeof validation === 'function'
@@ -601,7 +602,6 @@ export default function ProductForm(
                     ? validation.test(normalizedValue)
                     : false;
 
-        const hasValue = normalizedValue !== '';
         const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
         const fieldEntries: TFieldEntries = (isValid && (!optional || hasValue))
             ? [[name, normalizedValue]]

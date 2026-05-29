@@ -35,6 +35,7 @@ import {
     getStringValue,
     getBoolValue
 } from '@/helpers/formHelpers.js';
+import { isEmptyableDeliveryMethod } from '@/helpers/typeGuards.js';
 import {
     formatProductTitle,
     formatCurrency,
@@ -416,9 +417,13 @@ export default function CheckoutForm({
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    fieldsStateRef.current = fieldsState; // Обновление рефа состояния при каждом рендере
+    const deliveryMethod = fieldsState.deliveryMethod.value;
 
-    const deliveryMethod = fieldsState.deliveryMethod.value as TDeliveryMethod | '';
+    if (!isEmptyableDeliveryMethod(deliveryMethod)) {
+        throw new Error('Неверный тип значения поля deliveryMethod в состоянии формы');
+    }
+
+    fieldsStateRef.current = fieldsState; // Обновление рефа состояния при каждом рендере
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -648,6 +653,7 @@ export default function CheckoutForm({
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const hasValue = normalizedValue !== '';
 
                 const ruleCheck =
                     typeof validation === 'function'
@@ -656,7 +662,6 @@ export default function CheckoutForm({
                             ? validation.test(normalizedValue) 
                             : false;
 
-                const hasValue = normalizedValue !== '';
                 const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {

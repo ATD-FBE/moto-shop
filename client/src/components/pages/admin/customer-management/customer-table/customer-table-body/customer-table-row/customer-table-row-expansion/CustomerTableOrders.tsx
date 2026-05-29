@@ -149,7 +149,8 @@ export default function CustomerTableOrders(
     return (
         <div className="customer-table-orders">
             <header className="customer-table-orders-header">
-                <h3>Заказы клиента {customerName}:</h3>
+                <h3>Заказы клиента {customerName}</h3>
+                <p>(в порядке обновления)</p>
             </header>
 
             <CustomerTableOrdersMain

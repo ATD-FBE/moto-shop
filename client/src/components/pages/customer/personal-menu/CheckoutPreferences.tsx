@@ -25,8 +25,9 @@ import {
     getStringValue,
     getBoolValue
 } from '@/helpers/formHelpers.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { isEmptyableDeliveryMethod } from '@/helpers/typeGuards.js';
 import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import { isObjectKey } from '@shared/commonHelpers.js';
 import {
     validationRules,
@@ -310,7 +311,7 @@ const fieldConfigs = extendFieldConfigs(extractFieldConfigs(formGroupConfigs));
 const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
 const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
  
-export default function CheckoutPreferences(): JSX.Element {
+export default function CheckoutPreferences(): JSX.Element | null {
     const user = useAppSelector(state => state.auth.user);
 
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
@@ -321,7 +322,11 @@ export default function CheckoutPreferences(): JSX.Element {
 
     const dispatch = useAppDispatch();
 
-    const deliveryMethod = fieldsState.deliveryMethod.value as TDeliveryMethod | '';
+    const deliveryMethod = fieldsState.deliveryMethod.value;
+
+    if (!isEmptyableDeliveryMethod(deliveryMethod)) {
+        throw new Error('Неверный тип значения поля deliveryMethod в состоянии формы');
+    }
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -437,7 +442,8 @@ export default function CheckoutPreferences(): JSX.Element {
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
-
+                const hasValue = normalizedValue !== '';
+                
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(normalizedValue)
@@ -445,7 +451,6 @@ export default function CheckoutPreferences(): JSX.Element {
                             ? validation.test(normalizedValue) 
                             : false;
 
-                const hasValue = normalizedValue !== '';
                 const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {

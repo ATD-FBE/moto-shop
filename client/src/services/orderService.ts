@@ -14,9 +14,7 @@ import type {
     TBankProvider,
     TCardOnlineProvider,
     IOrderStatusEntry,
-    IOrderStatusEntrySummary,
     IFinancialsEventEntry,
-    IFinancialsEventEntrySummary,
     IAuditLogEntry,
     IProductAdjustment,
     TDeliveryMethod,
@@ -242,21 +240,4 @@ const formatChangeValue = (val: unknown, currency?: boolean): string => {
     if (typeof val === 'object') return JSON.stringify(val);
     if (currency) return `${formatCurrency(val)} ₽`;
     return String(val);
-};
-
-
-///////////////////
-/// TYPE GUARDS ///
-///////////////////
-
-export const isFullOrderStatusEntry = (
-    entry: IOrderStatusEntry | IOrderStatusEntrySummary | undefined
-): entry is IOrderStatusEntry => {
-    return !!entry && 'changedBy' in entry && typeof entry.changedBy === 'object';
-};
-
-export const isFullOrderFinancialsEntry = (
-    entry: IFinancialsEventEntry | IFinancialsEventEntrySummary | undefined
-): entry is IFinancialsEventEntry => {
-    return !!entry && 'eventId' in entry;
 };

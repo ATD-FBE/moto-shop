@@ -1,24 +1,38 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect }  from 'react';
-import { useDispatch } from 'react-redux';
+import { useMemo, useReducer, useState, useRef, useEffect }  from 'react';
 import cn from 'classnames';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import {
     sendOrderOfflineRefundApplyRequest,
     sendOrderOnlineRefundsCreateRequest
 } from '@/api/orderRequests.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/logHelpers.js';
-import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
-import { isEqualCurrency } from '@shared/commonHelpers.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue,
+    getBoolValue
+} from '@/helpers/formHelpers.js';
+import { isEmptyableRefundMethod } from '@/helpers/typeGuards.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { formatCurrency, toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { isEqualCurrency, isObjectKey } from '@shared/commonHelpers.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import {
     REFUND_METHOD,
     REFUND_METHOD_OPTIONS,
@@ -26,8 +40,71 @@ import {
     BANK_PROVIDER_OPTIONS,
     ORDER_STATUS
 } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes
+} from 'react';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    IFieldConfig,
+    TFieldStateValue,
+    TFieldApiValue,
+    IFieldState,
+    TFormState,
+    IProcessFormFieldsResult,
+    TAppThunk
+} from '@/types/index.js';
+import type {
+    TEntityField,
+    TRefundMethod,
+    TOrderStatus,
+    IOrderOfflineRefundApplyBody,
+    TOrderOfflineRefundApplyResponse,
+    TOrderOnlineRefundsCreateResponse
+} from '@shared/types/index.js';
 
-const getSubmitStates = (markAsFailed) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'refund'>>;
+
+interface IRefundFormProps {
+    orderId: string;
+    orderStatus: TOrderStatus;
+    netPaid: number;
+    totalAmount: number;
+    availableCardRefundAmount: number;
+}
+
+interface IGetDefaultFieldsStateParams {
+    keepValueFields?: TFieldName[];
+    currentState?: TFormState<TFieldName>;
+}
+
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+type TApiFormFields = {
+    [K in keyof IOrderOfflineRefundApplyBody['transaction']]: TFieldApiValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (markAsFailed: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, FORBIDDEN, BAD_REQUEST,
@@ -35,7 +112,7 @@ const getSubmitStates = (markAsFailed) => {
     } = FORM_STATUS;
     const actionLabel = 'Вернуть средства';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка ресурсов...' },
@@ -58,18 +135,17 @@ const getSubmitStates = (markAsFailed) => {
         }
     };
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const isOnlineRefundUnavailable = (method, availableCardRefundAmount) =>
-    method === REFUND_METHOD.CARD_ONLINE &&
-    availableCardRefundAmount === 0;
+const isOnlineRefundUnavailable = (
+    method: TRefundMethod | '',
+    availableCardRefundAmount: number
+): boolean => method === REFUND_METHOD.CARD_ONLINE && availableCardRefundAmount === 0;
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'method',
         label: 'Способ возврата',
@@ -78,7 +154,12 @@ const fieldConfigs = [
             { value: '', label: '--- Выбрать способ возврата ---' },
             ...REFUND_METHOD_OPTIONS
         ],
-        getNote: ({ method, availableCardRefundAmount }) => {
+        getNote: (
+            { method, availableCardRefundAmount }: {
+                method: TRefundMethod | '';
+                availableCardRefundAmount: number;
+            }
+        ): string | null => {
             if (method !== REFUND_METHOD.CARD_ONLINE) return null;
             if (availableCardRefundAmount > 0) {
                 const formattedAmount = formatCurrency(availableCardRefundAmount);
@@ -86,7 +167,13 @@ const fieldConfigs = [
             }
             return 'Текущий заказ не содержит оплат по картам';
         },
-        shouldNote: ({ method, availableCardRefundAmount, isRefundDisabled }) =>
+        shouldNote: (
+            { method, availableCardRefundAmount, isRefundDisabled }: {
+                method: TRefundMethod | '';
+                availableCardRefundAmount: number;
+                isRefundDisabled: boolean;
+            }
+        ): boolean =>
             !isOnlineRefundUnavailable(method, availableCardRefundAmount) &&
             !isRefundDisabled
     },
@@ -95,7 +182,9 @@ const fieldConfigs = [
         label: 'Банк',
         elem: 'select',
         options: BANK_PROVIDER_OPTIONS,
-        canApply: ({ method }) => method === REFUND_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TRefundMethod | '' }
+        ): boolean => method === REFUND_METHOD.BANK_TRANSFER
     },
     {
         name: 'amount',
@@ -104,7 +193,9 @@ const fieldConfigs = [
         type: 'number',
         step: 0.01,
         min: 0,
-        canApply: ({ method }) => OFFLINE_REFUND_METHODS.includes(method)
+        canApply: (
+            { method }: { method: TRefundMethod | '' }
+        ): boolean => !!method && OFFLINE_REFUND_METHODS.includes(method)
     },
     {
         name: 'transactionId',
@@ -114,14 +205,18 @@ const fieldConfigs = [
         placeholder: 'Укажите ID банковского перевода',
         autoComplete: 'off',
         trim: true,
-        canApply: ({ method }) => method === REFUND_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TRefundMethod | '' }
+        ): boolean => method === REFUND_METHOD.BANK_TRANSFER
     },
     {
         name: 'markAsFailed',
         label: 'Результат перевода',
         elem: 'checkbox',
         checkboxLabel: 'Отметить возврат как неудачный',
-        canApply: ({ method }) => method === REFUND_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TRefundMethod | '' }
+        ): boolean => method === REFUND_METHOD.BANK_TRANSFER
     },
     {
         name: 'failureReason',
@@ -132,7 +227,9 @@ const fieldConfigs = [
         autoComplete: 'off',
         trim: true,
         optional: true,
-        canApply: ({ method, markAsFailed }) => method === REFUND_METHOD.BANK_TRANSFER && markAsFailed
+        canApply: (
+            { method, markAsFailed }: { method: TRefundMethod | '', markAsFailed: boolean }
+        ): boolean => method === REFUND_METHOD.BANK_TRANSFER && markAsFailed
     },
     {
         name: 'externalReference',
@@ -143,35 +240,14 @@ const fieldConfigs = [
         autoComplete: 'off',
         trim: true,
         optional: true,
-        canApply: ({ method }) => method === REFUND_METHOD.CARD_OFFLINE
+        canApply: (
+            { method }: { method: TRefundMethod | '' }
+        ): boolean => method === REFUND_METHOD.CARD_OFFLINE
     }
-];
+] as const satisfies readonly IFieldConfig[]);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
-
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
 export default function RefundForm({
     orderId,
@@ -179,15 +255,22 @@ export default function RefundForm({
     netPaid,
     totalAmount,
     availableCardRefundAmount
-}) {
+}: IRefundFormProps): JSX.Element | null {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const [initialized, setInitialized] = useState(false);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const method = fieldsState.method.value;
     const markAsFailed = fieldsState.markAsFailed.value;
+
+    if (!isEmptyableRefundMethod(method)) {
+        throw new Error('Неверный тип значения поля method в состоянии формы');
+    }
+    if (typeof markAsFailed !== 'boolean') {
+        throw new Error('Неверный тип значения поля markAsFailed в состоянии формы');
+    }
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -195,7 +278,7 @@ export default function RefundForm({
                 cfg.name,
                 typeof cfg.canApply === 'function' ? cfg.canApply({ method, markAsFailed }) : true
             ])
-        ),
+        ) as Record<TFieldName, boolean>,
         [method, markAsFailed]
     );
     const { submitStates, lockedStatuses } = useMemo(
@@ -210,8 +293,10 @@ export default function RefundForm({
 
     const isFormLocked = lockedStatuses.has(submitStatus) || isRefundDisabled;
 
-    const getDefaultFieldsState = ({ keepValueFields = [], currentValues = {} } = {}) => {
-        const baseDefaults = {
+    const getDefaultFieldsState = (
+        { keepValueFields = [], currentState }: IGetDefaultFieldsStateParams = {}
+    ): TFieldsStateUpdates => {
+        const baseDefaults: Record<TFieldName, TFieldStateValue> = {
             method: '',
             provider: BANK_PROVIDER_OPTIONS[0].value,
             amount: 0,
@@ -222,16 +307,21 @@ export default function RefundForm({
         };
     
         return Object.fromEntries(
-            Object.entries(baseDefaults).map(([name, defaultValue]) => {
-                const keep = keepValueFields.includes(name);
-                const value = keep ? currentValues[name]?.value ?? defaultValue : defaultValue;
-                return [name, { value, uiStatus: '', error: '' }];
-            })
+            (Object.entries(baseDefaults) as [TFieldName, TFieldStateValue][])
+                .map(([name, defaultValue]) => {
+                    const keep = keepValueFields.includes(name);
+                    const value = keep ? currentState?.[name]?.value ?? defaultValue : defaultValue;
+                    return [name, { value, uiStatus: '', error: '' }];
+                })
         );
     };
 
-    const handleFieldChange = (e) => {
-        const { type, name, value, checked } = e.currentTarget;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
+        const checked = 'checked' in target ? target.checked : false;
         let processedValue;
 
         if (type === 'number' && value !== '') {
@@ -248,8 +338,11 @@ export default function RefundForm({
         });
     };
 
-    const handleFieldBlur = (e) => {
-        const { name, value } = e.currentTarget;
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+        const target = e.currentTarget;
+        const { name, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -259,8 +352,11 @@ export default function RefundForm({
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TFieldName,
+        IOrderOfflineRefundApplyBody['transaction']
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) return acc;
@@ -272,25 +368,29 @@ export default function RefundForm({
                 }
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const hasValue = normalizedValue !== '';
+
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(normalizedValue)
-                        : validation.test(normalizedValue);
+                        : typeof normalizedValue === 'string' 
+                            ? validation.test(normalizedValue) 
+                            : false;
 
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                    const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.refund[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.refund[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {
                     if (normalizedValue !== '') {
-                        acc.formFields[name] = normalizedValue;
+                        (acc.formFields as TApiFormFields)[name] = normalizedValue;
                         acc.changedFields.push(name);
                     }
                 } else {
@@ -299,20 +399,25 @@ export default function RefundForm({
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IOrderOfflineRefundApplyBody['transaction'],
+                changedFields: [] as TFieldName[]
+            }
         );
     
         return result;
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         if (isOnlineRefundUnavailable(method, availableCardRefundAmount)) {
             return setSubmitStatus(FORM_STATUS.FORBIDDEN);
         }
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -323,18 +428,16 @@ export default function RefundForm({
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        let requestThunk;
-
-        if (method === REFUND_METHOD.CARD_ONLINE) {
-            requestThunk = sendOrderOnlineRefundsCreateRequest(orderId);
-        } else {
-            requestThunk = sendOrderOfflineRefundApplyRequest(orderId, { transaction: formFields });
-        }
+        const requestThunk = (
+            method === REFUND_METHOD.CARD_ONLINE
+                ? sendOrderOnlineRefundsCreateRequest(orderId)
+                : sendOrderOfflineRefundApplyRequest(orderId, { transaction: formFields })
+        ) as TAppThunk<Promise<TOrderOnlineRefundsCreateResponse | TOrderOfflineRefundApplyResponse>>;
 
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'ORDER: OFFLINE REFUND';
 
         switch (status) {
@@ -352,10 +455,12 @@ export default function RefundForm({
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -368,7 +473,7 @@ export default function RefundForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -381,7 +486,7 @@ export default function RefundForm({
 
                     const resetPayload = getDefaultFieldsState({
                         keepValueFields: ['method', 'provider'],
-                        currentValues: fieldsState
+                        currentState: fieldsState
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: resetPayload });
 
@@ -414,8 +519,9 @@ export default function RefundForm({
 
     // Сброс ошибок полей и статуса формы при смене метода
     useEffect(() => {
-        const fieldsStateUpdates = {};
+        const fieldsStateUpdates: TFieldsStateUpdates = {};
         Object.keys(fieldsState).forEach(name => {
+            if (!isObjectKey(name, fieldConfigMap)) return;
             fieldsStateUpdates[name] = { uiStatus: '', error: '' };
         });
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -443,11 +549,10 @@ export default function RefundForm({
                     type,
                     step,
                     min,
-                    maxLength,
                     options,
+                    checkboxLabel,
                     placeholder,
                     autoComplete,
-                    checkboxLabel,
                     trim,
                     optional,
                     getNote,
@@ -465,26 +570,20 @@ export default function RefundForm({
                         : false;
                     const collapsible = !!canApply;
 
-                    const elemProps = {
+                    const baseElemProps: TFieldElemProps = {
                         id: fieldId,
                         name,
-                        type,
-                        step,
-                        min,
-                        maxLength,
-                        placeholder,
-                        value: fieldsState[name]?.value,
                         autoComplete,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleFieldBlur : undefined,
                         disabled: isFormLocked || !isApplicable
                     };
-
-                    let fieldElem;
-
-                    if (elem === 'select') {
-                        fieldElem = (
-                            <select {...elemProps}>
+    
+                    const fieldElem = (() => {
+                        if (elem === 'select') return (
+                            <select
+                                {...baseElemProps}
+                                value={getStringValue(fieldsState[name]?.value)}
+                            >
                                 {options.map((option, idx) => (
                                     <option key={`${idx}-${option.value}`} value={option.value}>
                                         {option.label}
@@ -492,18 +591,27 @@ export default function RefundForm({
                                 ))}
                             </select>
                         );
-                    } else if (elem === 'checkbox') {
-                        fieldElem = (
+                        
+                        if (elem === 'checkbox') return (
                             <DesignedCheckbox
-                                {...elemProps}
+                                {...baseElemProps}
                                 label={checkboxLabel}
-                                checked={fieldsState[name]?.value}
-                                value={undefined}
+                                checked={getBoolValue(fieldsState[name]?.value)}
                             />
                         );
-                    } else {
-                        fieldElem = React.createElement(elem, elemProps);
-                    }
+                    
+                        return (
+                            <input
+                                {...baseElemProps}
+                                type={type}
+                                step={step}
+                                min={min}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                onBlur={trim ? handleFieldBlur : undefined}
+                            />
+                        );
+                    })();
 
                     const formEntryElem = (
                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>

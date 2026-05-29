@@ -75,11 +75,15 @@ export interface IFieldConfig {
     readonly address?: boolean;
     readonly checkboxLabel?: string;
     readonly tooltip?: string;
+    readonly note?: string;
     readonly relatedFields?: string[];
     readonly enabled?: boolean;
     readonly optional?: boolean;
     readonly lock?: boolean;
     readonly canApply?: (data: any) => boolean;
+    readonly getNote?: (data: any) => string | null;
+    readonly shouldNote?: (data: any) => boolean;
+    readonly shouldDisable?: (data: any) => boolean;
 }
 
 export interface IFieldState {

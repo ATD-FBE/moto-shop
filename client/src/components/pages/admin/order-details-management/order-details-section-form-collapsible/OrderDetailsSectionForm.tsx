@@ -25,6 +25,7 @@ import {
     getStringValue,
     getBoolValue
 } from '@/helpers/formHelpers.js';
+import { isEmptyableDeliveryMethod } from '@/helpers/typeGuards.js';
 import { logRequestStatus } from '@/helpers/logHelpers.js';
 import { toKebabCase, getFieldInfoClass, formatCurrency } from '@/helpers/textHelpers.js';
 import { isObjectKey } from '@shared/commonHelpers.js';
@@ -340,7 +341,12 @@ export default function OrderDetailsSectionForm({
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();
 
-    const deliveryMethod = (fieldsState.deliveryMethod?.value ?? '') as TDeliveryMethod | '';
+    // Поле deliveryMethod присутствует только в секции delivery
+    const deliveryMethod = fieldsState.deliveryMethod?.value;
+
+    if (section === ORDER_DETAILS_EDIT_SECTION.DELIVERY && !isEmptyableDeliveryMethod(deliveryMethod)) {
+        throw new Error('Неверный тип значения поля deliveryMethod в состоянии формы');
+    }
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(

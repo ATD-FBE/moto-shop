@@ -279,6 +279,7 @@ export default function BulkProductForm(
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
                 const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const hasValue = normalizedValue !== '';
 
                 const ruleCheck =
                     typeof validation === 'function'
@@ -287,7 +288,6 @@ export default function BulkProductForm(
                             ? validation.test(normalizedValue)
                             : false;
 
-                const hasValue = normalizedValue !== '';
                 const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
     
                 acc.fieldsStateUpdates[name] = {

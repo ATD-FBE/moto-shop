@@ -353,11 +353,12 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
         const { name, trim, optional } = config;
         const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
         const fieldStateValue = { value: normalizedValue };
+        const hasValue = normalizedValue !== '';
+
         const ruleCheck = validation instanceof RegExp && typeof normalizedValue === 'string'
             ? validation.test(normalizedValue)
             : false;
 
-        const hasValue = normalizedValue !== '';
         const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
         const fieldEntries: TFieldEntries = (isValid && (!optional || hasValue))
             ? [[name, normalizedValue]]
@@ -437,6 +438,7 @@ export default function PromoEditor({ promoId }: IPromoEditorProps): JSX.Element
                 ? sendPromoUpdateRequest(promoId, formFields as TPromoUpdateBodyClient)
                 : sendPromoCreateRequest(formFields as TPromoCreateBodyClient)
         ) as TAppThunk<Promise<TPromoCreateResponse | TPromoUpdateResponse>>;
+        
         const responseData = await dispatch(requestThunk);
         if (isUnmountedRef.current) return;
 

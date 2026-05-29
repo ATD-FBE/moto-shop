@@ -27,8 +27,6 @@ import {
     buildCustomerFullName,
     buildShippingAddressDisplay,
     getShippingCostDisplay,
-    isFullOrderStatusEntry,
-    isFullOrderFinancialsEntry
 } from '@/services/orderService.js';
 import {
     getInitSortParam,
@@ -36,6 +34,7 @@ import {
     getInitLimitParam,
     getInitFilterParams
 } from '@/helpers/urlParamsHelper.js';
+import { isFullOrderStatusEntry, isFullOrderFinancialsEntry } from '@/helpers/typeGuards.js';
 import { formatCurrency, formatProductTitle } from '@/helpers/textHelpers.js';
 import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
 import { ordersFilterOptions } from '@shared/filterOptions.js';

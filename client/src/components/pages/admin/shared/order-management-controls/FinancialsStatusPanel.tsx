@@ -95,11 +95,11 @@ export default function FinancialsStatusPanel({
                     <p className="financials-summary">
                         {'Фактически оплачено'}
                         <span className="info" title="Сумма, оплаченная с учётом возвратов">ⓘ</span>
-                        {'/Всего: '}
+                        {' / Всего: '}
                         <span className={cn('net-paid', financialsStateConfig?.intent ?? '')}>
                             {formattedNetPaid}
                         </span>
-                        {'/'}
+                        {' / '}
                         <span className="total-amount">{formattedTotalAmount}</span>
                         {' руб.'}
                     </p>

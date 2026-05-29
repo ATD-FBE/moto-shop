@@ -17,10 +17,9 @@ import { ORDER_DETAILS_EDIT_SECTION, NO_VALUE_LABEL, DATA_LOAD_STATUS } from '@/
 import {
     buildCustomerFullName,
     buildShippingAddressDisplay,
-    getShippingCostDisplay,
-    isFullOrderStatusEntry,
-    isFullOrderFinancialsEntry
+    getShippingCostDisplay
 } from '@/services/orderService.js';
+import { isFullOrderStatusEntry, isFullOrderFinancialsEntry } from '@/helpers/typeGuards.js';
 import { parseRouteParams } from '@/helpers/routeHelpers.js';
 import { logRequestStatus, logMissingProps } from '@/helpers/logHelpers.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';

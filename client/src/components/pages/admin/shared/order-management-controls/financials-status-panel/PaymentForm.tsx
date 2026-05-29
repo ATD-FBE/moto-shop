@@ -1,21 +1,35 @@
-import React, { useMemo, useReducer, useState, useRef, useEffect }  from 'react';
-import { useDispatch } from 'react-redux';
+import { useMemo, useReducer, useState, useRef, useEffect }  from 'react';
 import cn from 'classnames';
 import DesignedCheckbox from '@/components/common/DesignedCheckbox.jsx';
 import Collapsible from '@/components/common/Collapsible.jsx';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { sendOrderOfflinePaymentApplyRequest } from '@/api/orderRequests.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { logRequestStatus } from '@/helpers/logHelpers.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { isEqualCurrency } from '@shared/commonHelpers.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
 import {
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
     SUCCESS_DELAY
 } from '@/config/constants.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue,
+    getBoolValue
+} from '@/helpers/formHelpers.js';
+import { isEmptyablePaymentMethod } from '@/helpers/typeGuards.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { isEqualCurrency, isObjectKey } from '@shared/commonHelpers.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import {
     PAYMENT_METHOD,
     OFFLINE_PAYMENT_METHOD_OPTIONS,
@@ -24,15 +38,81 @@ import {
     ORDER_STATUS,
     CASH_ON_RECEIPT_ALLOWED_STATUSES
 } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes
+} from 'react';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    IFieldConfig,
+    TFieldStateValue,
+    TFieldApiValue,
+    IFieldState,
+    TFormState,
+    IProcessFormFieldsResult
+} from '@/types/index.js';
+import type {
+    TEntityField,
+    TPaymentMethod,
+    TOrderStatus,
+    IOrderOfflinePaymentApplyBody
+} from '@shared/types/index.js';
 
-const getSubmitStates = (markAsFailed) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'payment'>>;
+
+interface IIsPaymentBlockedParams {
+    method: TPaymentMethod | '';
+    orderStatus: TOrderStatus;
+    isPaymentDisabled: boolean;
+}
+
+interface IPaymentFormProps {
+    orderId: string;
+    orderStatus: TOrderStatus;
+    defaultMethod: TPaymentMethod;
+    netPaid: number;
+    totalAmount: number;
+}
+
+interface IGetDefaultFieldsStateParams {
+    keepValueFields?: TFieldName[];
+    currentState?: TFormState<TFieldName>;
+}
+
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+type TApiFormFields = {
+    [K in keyof IOrderOfflinePaymentApplyBody['transaction']]: TFieldApiValue;
+};
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (markAsFailed: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, FORBIDDEN, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Внести оплату';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [FORBIDDEN]: { ...base[FORBIDDEN], submitBtnLabel: actionLabel },
@@ -53,22 +133,23 @@ const getSubmitStates = (markAsFailed) => {
         }
     };
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const isCashOnReceiptUnavailable = (method, orderStatus) =>
+const isCashOnReceiptUnavailable = (
+    method: TPaymentMethod | '',
+    orderStatus: TOrderStatus
+): boolean =>
     method === PAYMENT_METHOD.CASH_ON_RECEIPT &&
     !CASH_ON_RECEIPT_ALLOWED_STATUSES.includes(orderStatus);
 
-const isPaymentBlocked = ({ method, orderStatus, isPaymentDisabled }) =>
-    isCashOnReceiptUnavailable(method, orderStatus) &&
-    !isPaymentDisabled;
+const isPaymentBlocked = (
+    { method, orderStatus, isPaymentDisabled }: IIsPaymentBlockedParams
+): boolean => isCashOnReceiptUnavailable(method, orderStatus) && !isPaymentDisabled;
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'method',
         label: 'Способ оплаты',
@@ -78,14 +159,16 @@ const fieldConfigs = [
             ...OFFLINE_PAYMENT_METHOD_OPTIONS
         ],
         note: 'Заказ ещё не принят',
-        shouldNote: isPaymentBlocked,
+        shouldNote: isPaymentBlocked
     },
     {
         name: 'provider',
         label: 'Банк',
         elem: 'select',
         options: BANK_PROVIDER_OPTIONS,
-        canApply: ({ method }) => method === PAYMENT_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TPaymentMethod | '' }
+        ): boolean => method === PAYMENT_METHOD.BANK_TRANSFER
     },
     {
         name: 'amount',
@@ -95,7 +178,7 @@ const fieldConfigs = [
         step: 0.01,
         min: 0,
         shouldDisable: isPaymentBlocked,
-        canApply: ({ method }) => Boolean(method)
+        canApply: ({ method }: { method: TPaymentMethod | '' }): boolean => Boolean(method)
     },
     {
         name: 'transactionId',
@@ -105,14 +188,18 @@ const fieldConfigs = [
         placeholder: 'Укажите ID банковского перевода',
         autoComplete: 'off',
         trim: true,
-        canApply: ({ method }) => method === PAYMENT_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TPaymentMethod | '' }
+        ): boolean => method === PAYMENT_METHOD.BANK_TRANSFER
     },
     {
         name: 'markAsFailed',
         label: 'Результат перевода',
         elem: 'checkbox',
         checkboxLabel: 'Отметить платёж как неудачный',
-        canApply: ({ method }) => method === PAYMENT_METHOD.BANK_TRANSFER
+        canApply: (
+            { method }: { method: TPaymentMethod | '' }
+        ): boolean => method === PAYMENT_METHOD.BANK_TRANSFER
     },
     {
         name: 'failureReason',
@@ -123,35 +210,14 @@ const fieldConfigs = [
         autoComplete: 'off',
         trim: true,
         optional: true,
-        canApply: ({ method, markAsFailed }) => method === PAYMENT_METHOD.BANK_TRANSFER && markAsFailed
+        canApply: (
+            { method, markAsFailed }: { method: TPaymentMethod | '', markAsFailed: boolean }
+        ): boolean => method === PAYMENT_METHOD.BANK_TRANSFER && markAsFailed
     }
-];
+] as const satisfies readonly IFieldConfig[]);
 
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
-
-const initialFieldsState = fieldConfigs.reduce((acc, { name }) => {
-    acc[name] = { value: '', uiStatus: '', error: '' };
-    return acc;
-}, {});
-
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
-
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
 export default function PaymentForm({
     orderId,
@@ -159,15 +225,22 @@ export default function PaymentForm({
     defaultMethod,
     netPaid,
     totalAmount
-}) {
+}: IPaymentFormProps): JSX.Element | null {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.DEFAULT);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.DEFAULT);
     const [initialized, setInitialized] = useState(false);
     const isUnmountedRef = useRef(false);
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const method = fieldsState.method.value;
     const markAsFailed = fieldsState.markAsFailed.value;
+
+    if (!isEmptyablePaymentMethod(method)) {
+        throw new Error('Неверный тип значения поля method в состоянии формы');
+    }
+    if (typeof markAsFailed !== 'boolean') {
+        throw new Error('Неверный тип значения поля markAsFailed в состоянии формы');
+    }
 
     const applicabilityMap = useMemo(
         () => Object.fromEntries(
@@ -175,7 +248,7 @@ export default function PaymentForm({
                 cfg.name,
                 typeof cfg.canApply === 'function' ? cfg.canApply({ method, markAsFailed }) : true
             ])
-        ),
+        ) as Record<TFieldName, boolean>,
         [method, markAsFailed]
     );
     const { submitStates, lockedStatuses } = useMemo(
@@ -190,8 +263,10 @@ export default function PaymentForm({
     
     const isFormLocked = lockedStatuses.has(submitStatus) || isPaymentDisabled;
 
-    const getDefaultFieldsState = ({ keepValueFields = [], currentValues = {} } = {}) => {
-        const baseDefaults = {
+    const getDefaultFieldsState = (
+        { keepValueFields = [], currentState }: IGetDefaultFieldsStateParams = {}
+    ): TFieldsStateUpdates => {
+        const baseDefaults: Record<TFieldName, TFieldStateValue> = {
             method: OFFLINE_PAYMENT_METHODS.includes(defaultMethod) ? defaultMethod : '',
             provider: BANK_PROVIDER_OPTIONS[0].value,
             amount: 0,
@@ -201,16 +276,21 @@ export default function PaymentForm({
         };
     
         return Object.fromEntries(
-            Object.entries(baseDefaults).map(([name, defaultValue]) => {
-                const keep = keepValueFields.includes(name);
-                const value = keep ? currentValues[name]?.value ?? defaultValue : defaultValue;
-                return [name, { value, uiStatus: '', error: '' }];
-            })
+            (Object.entries(baseDefaults) as [TFieldName, TFieldStateValue][])
+                .map(([name, defaultValue]) => {
+                    const keep = keepValueFields.includes(name);
+                    const value = keep ? currentState?.[name]?.value ?? defaultValue : defaultValue;
+                    return [name, { value, uiStatus: '', error: '' }];
+                })
         );
     };
 
-    const handleFieldChange = (e) => {
-        const { type, name, value, checked } = e.currentTarget;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
+        const checked = 'checked' in target ? target.checked : false;
         let processedValue;
 
         if (type === 'number' && value !== '') {
@@ -227,8 +307,11 @@ export default function PaymentForm({
         });
     };
 
-    const handleFieldBlur = (e) => {
-        const { name, value } = e.currentTarget;
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
+        const target = e.currentTarget;
+        const { name, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -238,8 +321,11 @@ export default function PaymentForm({
         });
     };
 
-    const processFormFields = () => {
-        const result = Object.entries(fieldsState).reduce(
+    const processFormFields = (): IProcessFormFieldsResult<
+        TFieldName,
+        IOrderOfflinePaymentApplyBody['transaction']
+    > => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const isApplicable = applicabilityMap[name];
                 if (!isApplicable) return acc;
@@ -251,25 +337,29 @@ export default function PaymentForm({
                 }
 
                 const { trim, optional } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const hasValue = normalizedValue !== '';
+
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(normalizedValue)
-                        : validation.test(normalizedValue);
+                        : typeof normalizedValue === 'string' 
+                            ? validation.test(normalizedValue) 
+                            : false;
 
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.payment[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.payment[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {
-                    if (normalizedValue !== '') {
-                        acc.formFields[name] = normalizedValue;
+                    if (hasValue) {
+                        (acc.formFields as TApiFormFields)[name] = normalizedValue;
                         acc.changedFields.push(name);
                     }
                 } else {
@@ -278,20 +368,25 @@ export default function PaymentForm({
         
                 return acc;
             },
-            { allValid: true, fieldsStateUpdates: {}, formFields: {}, changedFields: [] }
+            {
+                allValid: true,
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                formFields: {} as IOrderOfflinePaymentApplyBody['transaction'],
+                changedFields: [] as TFieldName[]
+            }
         );
     
         return result;
     };
 
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         if (isCashOnReceiptUnavailable(method, orderStatus)) {
             return setSubmitStatus(FORM_STATUS.FORBIDDEN);
         }
 
-        const { allValid, fieldsStateUpdates, formFields, changedFields } = processFormFields();
+        const { allValid, fieldsStateUpdates, formFields, changedFields = [] } = processFormFields();
         
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
@@ -307,7 +402,7 @@ export default function PaymentForm({
         }));
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'ORDER: OFFLINE PAYMENT';
 
         switch (status) {
@@ -325,10 +420,12 @@ export default function PaymentForm({
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -341,7 +438,7 @@ export default function PaymentForm({
             case FORM_STATUS.SUCCESS: {
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -354,7 +451,7 @@ export default function PaymentForm({
 
                     const resetPayload = getDefaultFieldsState({
                         keepValueFields: ['method', 'provider'],
-                        currentValues: fieldsState
+                        currentState: fieldsState
                     });
                     dispatchFieldsState({ type: 'UPDATE', payload: resetPayload });
 
@@ -384,8 +481,9 @@ export default function PaymentForm({
 
     // Сброс ошибок полей и статуса формы при смене метода
     useEffect(() => {
-        const fieldsStateUpdates = {};
+        const fieldsStateUpdates: TFieldsStateUpdates = {};
         Object.keys(fieldsState).forEach(name => {
+            if (!isObjectKey(name, fieldConfigMap)) return;
             fieldsStateUpdates[name] = { uiStatus: '', error: '' };
         });
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -411,12 +509,12 @@ export default function PaymentForm({
                     label,
                     elem,
                     type,
-                    placeholder,
-                    autoComplete,
                     step,
                     min,
                     options,
                     checkboxLabel,
+                    placeholder,
+                    autoComplete,
                     trim,
                     optional,
                     note,
@@ -435,25 +533,20 @@ export default function PaymentForm({
                         : false;
                     const collapsible = !!canApply;
 
-                    const elemProps = {
+                    const baseElemProps: TFieldElemProps = {
                         id: fieldId,
                         name,
-                        type,
-                        step,
-                        min,
-                        placeholder,
-                        value: fieldsState[name]?.value,
                         autoComplete,
                         onChange: handleFieldChange,
-                        onBlur: trim ? handleFieldBlur : undefined,
                         disabled: isFormLocked || !isApplicable || isDisabled
                     };
-
-                    let fieldElem;
-
-                    if (elem === 'select') {
-                        fieldElem = (
-                            <select {...elemProps}>
+    
+                    const fieldElem = (() => {
+                        if (elem === 'select') return (
+                            <select
+                                {...baseElemProps}
+                                value={getStringValue(fieldsState[name]?.value)}
+                            >
                                 {options.map((option, idx) => (
                                     <option key={`${idx}-${option.value}`} value={option.value}>
                                         {option.label}
@@ -461,18 +554,27 @@ export default function PaymentForm({
                                 ))}
                             </select>
                         );
-                    } else if (elem === 'checkbox') {
-                        fieldElem = (
+                        
+                        if (elem === 'checkbox') return (
                             <DesignedCheckbox
-                                {...elemProps}
+                                {...baseElemProps}
                                 label={checkboxLabel}
-                                checked={fieldsState[name]?.value}
-                                value={undefined}
+                                checked={getBoolValue(fieldsState[name]?.value)}
                             />
                         );
-                    } else {
-                        fieldElem = React.createElement(elem, elemProps);
-                    }
+                    
+                        return (
+                            <input
+                                {...baseElemProps}
+                                type={type}
+                                step={step}
+                                min={min}
+                                placeholder={placeholder}
+                                value={getStringValue(fieldsState[name]?.value)}
+                                onBlur={trim ? handleFieldBlur : undefined}
+                            />
+                        );
+                    })();
 
                     const formEntryElem = (
                         <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>
