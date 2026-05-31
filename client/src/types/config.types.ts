@@ -54,3 +54,32 @@ export interface IBaseSubmitState {
 }
 
 export type TSubmitStates = Record<TFormStatus, IBaseSubmitState>;
+
+////////////////////////
+/// EXTERNAL SCRIPTS ///
+////////////////////////
+
+export interface IYooMoneyCheckoutConstructor {
+    new (shopId: string, options?: { language?: 'ru' | 'en' }): IYooMoneyCheckoutInstance;
+}
+
+export interface IYooMoneyCheckoutInstance {
+    tokenize: (cheackoutData: Record<string, string>) => Promise<{
+        status: string,
+        data?: {
+            response: {
+                paymentToken: string;
+            }
+        }
+        error?: {
+            type: string,
+            message?: string,
+            status_code: number,
+            code?: string,
+            params: {
+                code: string,
+                message: string
+            }[]
+        }
+    }>;
+}

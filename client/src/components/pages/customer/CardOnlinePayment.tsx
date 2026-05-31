@@ -1,8 +1,8 @@
-import React, { useReducer, useState, useRef, useMemo, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useReducer, useState, useRef, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import useExternalScript from '@/hooks/useExternalScript.js';
 import {
     sendOrderRemainingAmountRequest,
@@ -10,30 +10,123 @@ import {
 } from '@/api/orderRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { YOOKASSA_SCRIPT } from '@/config/externalScripts.js';
-import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { parseRouteParams } from '@/helpers/routeHelpers.js';
-import { processFormattedFieldDeletion, calcFormattedFieldCursorPos } from '@/helpers/formHelpers.js';
-import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
-import { logRequestStatus } from '@/helpers/logHelpers.js';
 import {
     YOOKASSA_SHOP_ID,
     FORM_STATUS,
     BASE_SUBMIT_STATES,
     FIELD_UI_STATUS,
-    SUCCESS_DELAY
+    SUCCESS_DELAY,
+    EXTERNAL_SCRIPT_STATUS
 } from '@/config/constants.js';
-import { validationRules, fieldErrorMessages } from '@shared/fieldRules.js';
+import { setNavigationLock } from '@/redux/slices/uiSlice.js';
+import {
+    getLockedStatuses,
+    extendFieldConfigs,
+    createFieldConfigMap,
+    createInitialFieldsState,
+    fieldsStateReducer,
+    getStringValue
+} from '@/helpers/formHelpers.js';
+import { parseRouteParams } from '@/helpers/routeHelpers.js';
+import { processFormattedFieldDeletion, calcFormattedFieldCursorPos } from '@/helpers/formHelpers.js';
+import { toKebabCase, getFieldInfoClass } from '@/helpers/textHelpers.js';
+import { logRequestStatus } from '@/helpers/logHelpers.js';
+import { toError, isObjectKey } from '@shared/commonHelpers.js';
 import { resolveRequestStatus } from '@shared/statusResolver.js';
+import {
+    validationRules,
+    fieldErrorMessages,
+    DEFAULT_FIELD_ERROR_MESSAGE
+} from '@shared/fieldRules.js';
 import { CARD_ONLINE_PROVIDER_OPTIONS } from '@shared/constants.js';
+import type {
+    JSX,
+    ChangeEvent,
+    KeyboardEvent,
+    FocusEvent,
+    SubmitEvent,
+    InputHTMLAttributes,
+    SelectHTMLAttributes
+} from 'react';
+import type {
+    IGetSubmitStatesResult,
+    TFormStatus,
+    TSubmitStates,
+    IFieldConfig,
+    TFieldApiValue,
+    IFieldState,
+    TFormState,
+    IProcessFormFieldsResult as IOriginalProcessFormFieldsResult,
+    TFieldStateValue,
+    IYooMoneyCheckoutInstance
+} from '@/types/index.js';
+import type {
+    TEntityField,
+    TRequestStatus,
+    IOrderOnlinePaymentCreateBody
+} from '@shared/types/index.js';
 
-const getSubmitStates = (hasConfirmationUrl) => {
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TFieldConfigs = typeof fieldConfigs;
+type TFieldConfig = TFieldConfigs[number];
+type TFieldName = Extract<TFieldConfig['name'], TEntityField<'payment'>>;
+
+type TFieldsStateUpdates = Partial<Record<TFieldName, Partial<IFieldState>>>;
+
+type TFormBody = IOrderOnlinePaymentCreateBody['transaction'];
+
+type TFormFields = TFormBody & {
+    cardNumber: string;
+    cvc: string;
+    expiryDate: string;
+};
+
+type TApiFormFields = {
+    [K in keyof TFormFields]: TFieldApiValue;
+};
+
+type TCollectAndValidateFieldsResult = IOriginalProcessFormFieldsResult<TFieldName, TFormBody> & {
+    checkoutFields: Record<string, string>;
+};
+
+type TTokenizeYooMoneyCheckoutFieldsResult = {
+    errorRequestStatus: TRequestStatus;
+    checkoutFieldErrors?: TFieldsStateUpdates;
+} | {
+    paymentToken: string;
+};
+
+type TProcessFormFieldsResult = {
+    fieldsStateUpdates: TFieldsStateUpdates;
+} & (
+    {
+        errorRequestStatus: TRequestStatus;
+    } | {
+        paymentToken: string;
+        formFields: TFormBody;
+        changedFields: TFieldName[];
+    }
+);
+
+type TFieldElemProps =
+    InputHTMLAttributes<HTMLInputElement> &
+    SelectHTMLAttributes<HTMLSelectElement>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
+
+const getSubmitStates = (hasConfirmationUrl: boolean): IGetSubmitStatesResult => {
     const base = BASE_SUBMIT_STATES;
     const {
         DEFAULT, LOADING, LOAD_ERROR, BAD_REQUEST, NOT_FOUND, INVALID, ERROR, TIMEOUT, SUCCESS
     } = FORM_STATUS;
     const actionLabel = 'Оплатить';
 
-    const submitStates = {
+    const submitStates: TSubmitStates = {
         ...base,
         [DEFAULT]: { submitBtnLabel: actionLabel },
         [LOADING]: { ...base[LOADING], mainMessage: 'Загрузка ресурсов...' },
@@ -57,14 +150,12 @@ const getSubmitStates = (hasConfirmationUrl) => {
         }
     };
 
-    const lockedStatuses = Object.entries(submitStates)
-        .map(([status, state]) => state.locked && status)
-        .filter(Boolean);
+    const lockedStatuses = getLockedStatuses(submitStates);
 
-    return { submitStates, lockedStatuses: new Set(lockedStatuses) };
+    return { submitStates, lockedStatuses };
 };
 
-const fieldConfigs = [
+const fieldConfigs = extendFieldConfigs([
     {
         name: 'provider',
         label: 'Провайдер',
@@ -81,44 +172,37 @@ const fieldConfigs = [
     },
     {
         name: 'cardNumber',
-        checkout: { fields: [{ name: 'number', errorCode: 'invalid_number' }] },
         label: 'Номер карты',
         elem: 'input',
         type: 'text',
         maxLength: 19, // 4 * 4 цифры + 3 пробела между группами
         placeholder: '0000 0000 0000 0000',
         autoComplete: 'cc-number',
+        checkout: { fields: [{ name: 'number', errorCode: 'invalid_number' }] },
         hasFormatSeparators: true,
         charRegex: /\d/,
-        format: (value) => {
+        format: (value: string): string => {
             const digits = value.replace(/\D/g, '').slice(0, 16);
         
             return digits.length < 16
                 ? digits.replace(/(\d{4})/g, '$1 ')
                 : digits.replace(/(\d{4})(?=\d)/g, '$1 ');
         },
-        submitTransform: (value) => value.replace(/\s/g, '')
+        submitTransform: (value: string): string => value.replace(/\s/g, '')
     },
     {
         name: 'cvc',
-        checkout: { fields: [{ name: 'cvc', errorCode: 'invalid_cvc' }] },
         label: 'Код CVC',
         elem: 'input',
         type: 'password',
         maxLength: 4,
         placeholder: '000(0)',
         autoComplete: 'cc-csc',
-        format: (value) => value.replace(/\D/g, '').slice(0, 4)
+        checkout: { fields: [{ name: 'cvc', errorCode: 'invalid_cvc' }] },
+        format: (value: string): string => value.replace(/\D/g, '').slice(0, 4)
     },
     {
         name: 'expiryDate',
-        checkout: {
-            fields: [
-                { name: 'month', errorCode: 'invalid_expiry_month' },
-                { name: 'year', errorCode: 'invalid_expiry_year' }
-            ],
-            split: '/'
-        },
         label: 'Срок действия',
         elem: 'input',
         type: 'text',
@@ -126,17 +210,20 @@ const fieldConfigs = [
         placeholder: 'ММ / ГГ',
         autoComplete: 'cc-exp',
         trim: true,
+        checkout: {
+            fields: [
+                { name: 'month', errorCode: 'invalid_expiry_month' },
+                { name: 'year', errorCode: 'invalid_expiry_year' }
+            ],
+            split: '/'
+        },
         hasFormatSeparators: true,
         charRegex: /\d/,
-        format: (value) => value.replace(/\D/g, '').replace(/(\d{2})/, '$1 / ').slice(0, 7),
-        submitTransform: (value) => value.replace(/\s/g, '')
+        format: (value: string): string =>
+            value.replace(/\D/g, '').replace(/(\d{2})/, '$1 / ').slice(0, 7),
+        submitTransform: (value: string): string => value.replace(/\s/g, '')
     }
-];
-
-const fieldConfigMap = fieldConfigs.reduce((acc, config) => {
-    acc[config.name] = config;
-    return acc;
-}, {});
+] as const satisfies readonly IFieldConfig[]);
 
 const fieldNameByCheckoutErrorCode = fieldConfigs.reduce((acc, config) => {
     config.checkout?.fields.forEach(({ errorCode }) => {
@@ -144,39 +231,28 @@ const fieldNameByCheckoutErrorCode = fieldConfigs.reduce((acc, config) => {
     });
     
     return acc;
-}, {});
+}, {} as Record<string, TFieldName>);
 
-const initialFieldsState = fieldConfigs.reduce((acc, { name, options }) => {
-    acc[name] = { value: options?.[0].value ?? '', uiStatus: '', error: '' };
-    return acc;
-}, {});
+const fieldConfigMap = createFieldConfigMap<TFieldName, TFieldConfig>(fieldConfigs);
+const initialFieldsState = createInitialFieldsState<TFieldName>(fieldConfigs);
 
-const fieldsStateReducer = (state, action) => {
-    const { type, payload } = action;
+export default function CardOnlinePayment(): JSX.Element | null {
+    const { orderId, orderNumber } = parseRouteParams({
+        routeKey: 'customerOrderCardOnlinePayment',
+        params: useParams()
+    });
+    
+    if (!orderId || !orderNumber) return null;
 
-    switch (type) {
-        case 'UPDATE':
-            const newState = { ...state };
-            for (const name in payload) {
-                newState[name] = { ...(state[name] ?? {}), ...payload[name] };
-            }
-            return newState;
-
-        default:
-            return state;
-    }
-};
-
-export default function CardOnlinePayment() {
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
-    const [submitStatus, setSubmitStatus] = useState(FORM_STATUS.LOADING);
+    const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);
     const [loadingRemainingAmount, setLoadingRemainingAmount] = useState(false);
-    const [confirmationUrl, setConfirmationUrl] = useState(null);
+    const [confirmationUrl, setConfirmationUrl] = useState<string | null>(null);
 
-    const checkoutRef = useRef(null);
+    const yooMoneyCheckoutRef = useRef<IYooMoneyCheckoutInstance | null>(null);
     const isUnmountedRef = useRef(false);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
     const hasConfirmationUrl = Boolean(confirmationUrl);
@@ -186,47 +262,46 @@ export default function CardOnlinePayment() {
         [hasConfirmationUrl]
     );
 
-    const { orderNumber, orderId } = parseRouteParams({
-        routeKey: 'customerOrderCardOnlinePayment',
-        params: useParams()
-    });
-
     const isFormLocked = lockedStatuses.has(submitStatus) || loadingRemainingAmount;
 
-    const onCheckoutLoad = () => {
+    const onCheckoutLoad = (): void => {
         if (isUnmountedRef.current) return;
         
-        if (!checkoutRef.current) {
-            checkoutRef.current = new window.YooMoneyCheckout(YOOKASSA_SHOP_ID, { language: 'ru' });
+        if (!yooMoneyCheckoutRef.current && window.YooMoneyCheckout) {
+            yooMoneyCheckoutRef.current = new window.YooMoneyCheckout(YOOKASSA_SHOP_ID, {
+                language: 'ru'
+            });
         }
 
         setSubmitStatus(FORM_STATUS.DEFAULT);
     };
 
-    const onCheckoutLoadError = () => {
+    const onCheckoutLoadError = (): void => {
         if (isUnmountedRef.current) return;
 
         console.error('Ошибка при загрузке скрипта Checkout.js');
         setSubmitStatus(FORM_STATUS.LOAD_ERROR);
     };
 
-    const onCheckoutReload = () => {
+    const onCheckoutReload = (): void => {
         setSubmitStatus(FORM_STATUS.LOADING);
         reloadScript();
     }
 
-    const calcRemainingAmount = async () => {
+    const calcRemainingAmount = async (): Promise<void> => {
         setLoadingRemainingAmount(true);
 
         const responseData = await dispatch(sendOrderRemainingAmountRequest(orderId));
         if (isUnmountedRef.current) return;
 
-        const { status, message, remainingAmount, orderNumber } = responseData;
+        const { status, message } = responseData;
         logRequestStatus({ context: 'ORDER: LOAD REMAINING AMOUNT', status, message });
 
         if (status !== FORM_STATUS.SUCCESS) {
             setSubmitStatus(status);
         } else {
+            const { remainingAmount, orderNumber } = responseData;
+
             dispatchFieldsState({
                 type: 'UPDATE',
                 payload: { amount: { value: remainingAmount, uiStatus: '', error: '' } }
@@ -240,11 +315,13 @@ export default function CardOnlinePayment() {
         setLoadingRemainingAmount(false);
     };
 
-    const handleFieldChange = (e) => {
-        const input = e.currentTarget; // Сохранение ссылки на объект для доступа к методам в коллбэках
-        const { name, type, value, selectionStart } = input;
+    const handleFieldChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+        const target = e.currentTarget;
+        const { name, type, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const { format, hasFormatSeparators, charRegex = /\d/ } = fieldConfigMap[name] ?? {};
-        let processedValue;
+        let processedValue: TFieldStateValue | undefined;
 
         if (format) {
             processedValue = format(value)
@@ -260,25 +337,37 @@ export default function CardOnlinePayment() {
         });
         
         // Пересчёт и установка позиции курсора при форматировании с разделителями после ререндера
-        if (format && hasFormatSeparators) {
+        if (
+            hasFormatSeparators &&
+            format && // На всякий случай, если будет рассогласовние с hasFormatSeparators в конфиге
+            target instanceof HTMLInputElement &&
+            typeof processedValue === 'string'
+        ) {
+            const cursorPos = target.selectionStart;
+
             requestAnimationFrame(() => {
                 const newCursorPos = calcFormattedFieldCursorPos(
+                    cursorPos,
                     value,
-                    selectionStart,
                     processedValue,
                     charRegex
                 );
-                input.setSelectionRange(newCursorPos, newCursorPos);
+
+                const safePos = Math.min(newCursorPos, target.value.length);
+                target.setSelectionRange(safePos, safePos);
             });
         }
     };
 
-    const handleFieldKeyDown = (e) => {
-        const input = e.currentTarget; // Сохранение ссылки на объект для доступа к методам в коллбэках
-        const { name, value, selectionStart, selectionEnd } = input;
+    const handleFieldKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+        const target = e.currentTarget;
+        const { name, value } = target;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const config = fieldConfigMap[name];
         if (!config?.hasFormatSeparators) return;
     
+        const { selectionStart, selectionEnd } = target;
         const result = processFormattedFieldDeletion(e, {
             value,
             selectionStart,
@@ -299,12 +388,15 @@ export default function CardOnlinePayment() {
     
         // Установка позиции курсора после ререндера
         requestAnimationFrame(() => {
-            input.setSelectionRange(result.nextCursorPos, result.nextCursorPos);
+            const safePos = Math.min(result.nextCursorPos, target.value.length);
+            target.setSelectionRange(safePos, safePos);
         });
     };
 
-    const handleFieldBlur = (e) => {
+    const handleFieldBlur = (e: FocusEvent<HTMLInputElement>): void => {
         const { name, value } = e.currentTarget;
+        if (!isObjectKey(name, fieldConfigMap)) return;
+
         const normalizedValue = value.trim();
         if (normalizedValue === value) return;
 
@@ -314,8 +406,10 @@ export default function CardOnlinePayment() {
         });
     };
 
-    const collectAndValidateFields = (fieldsState) => {
-        const result = Object.entries(fieldsState).reduce(
+    const collectAndValidateFields = (
+        fieldsState: TFormState<TFieldName>
+    ): TCollectAndValidateFieldsResult => {
+        const result = (Object.entries(fieldsState) as [TFieldName, IFieldState][]).reduce(
             (acc, [name, { value }]) => {
                 const validation = validationRules.payment[name];
                 if (!validation) {
@@ -324,36 +418,42 @@ export default function CardOnlinePayment() {
                 }
 
                 const { checkout, trim, optional, submitTransform } = fieldConfigMap[name] ?? {};
-                const normalizedValue = trim ? value.trim() : value;
+                const normalizedValue = typeof value === 'string' && trim ? value.trim() : value;
+                const hasValue = normalizedValue !== '';
 
                 const ruleCheck =
                     typeof validation === 'function'
                         ? validation(normalizedValue, { split: checkout?.split })
-                        : validation.test(normalizedValue);
+                        : typeof normalizedValue === 'string' 
+                            ? validation.test(normalizedValue) 
+                            : false;
 
-                const isValid = optional ? (!normalizedValue || ruleCheck) : ruleCheck;
+                const isValid = optional ? (!hasValue || ruleCheck) : ruleCheck;
 
                 acc.fieldsStateUpdates[name] = {
                     value: normalizedValue,
                     uiStatus: isValid ? FIELD_UI_STATUS.VALID : FIELD_UI_STATUS.INVALID,
                     error: isValid
                         ? ''
-                        : fieldErrorMessages.payment[name].default || fieldErrorMessages.DEFAULT
+                        : fieldErrorMessages.payment[name].default || DEFAULT_FIELD_ERROR_MESSAGE
                 };
 
                 if (isValid) {
-                    const submittedValue = submitTransform?.(normalizedValue) ?? normalizedValue;
+                    const submittedValue = submitTransform && typeof normalizedValue === 'string'
+                        ? submitTransform(normalizedValue)
+                        : normalizedValue;
 
-                    if (checkout) {
+                    if (checkout && typeof submittedValue === 'string') {
                         const splittedValues = checkout.split
                             ? submittedValue.split(checkout.split)
                             : [submittedValue];
                     
                         checkout.fields.forEach((field, idx) => {
-                            acc.checkoutFields[field.name] = splittedValues[idx];
+                            const value = splittedValues[idx];
+                            if (value) acc.checkoutFields[field.name] = value;
                         });
                     } else {
-                        acc.formFields[name] = submittedValue;
+                        (acc.formFields as TApiFormFields)[name] = submittedValue;
                     }
 
                     acc.changedFields.push(name);
@@ -365,23 +465,30 @@ export default function CardOnlinePayment() {
             },
             {
                 allValid: true,
-                fieldsStateUpdates: {},
-                checkoutFields: {},
-                formFields: {},
-                changedFields: []
+                fieldsStateUpdates: {} as TFieldsStateUpdates,
+                checkoutFields: {} as Record<string, string>,
+                formFields: {} as IOrderOnlinePaymentCreateBody['transaction'],
+                changedFields: [] as TFieldName[]
             }
         );
     
         return result;
     };
 
-    const tokenizeCheckoutFields = async (checkout, checkoutFields) => {
+    const tokenizeYooMoneyCheckoutFields = async (
+        checkout: IYooMoneyCheckoutInstance | null,
+        checkoutFields: Record<string, string>
+    ): Promise<TTokenizeYooMoneyCheckoutFieldsResult> => {
         try {
+            if (!checkout) {
+                throw new Error('Экземпляр YooMoney Checkout не инициализирован');
+            }
+
             const response = await checkout.tokenize(checkoutFields);
     
-            if (response.status === 'error') {
+            if (response.status === 'error' && response.error) {
                 if (response.error.type === 'validation_error') {
-                    const checkoutFieldErrors = {};
+                    const checkoutFieldErrors: TFieldsStateUpdates = {};
         
                     response.error.params.forEach(param => {
                         const fieldName = fieldNameByCheckoutErrorCode[param.code];
@@ -392,7 +499,7 @@ export default function CardOnlinePayment() {
                             error:
                                 fieldErrorMessages.payment[fieldName]?.default ||
                                 param.message ||
-                                fieldErrorMessages.DEFAULT
+                                DEFAULT_FIELD_ERROR_MESSAGE
                         };
                     });
         
@@ -409,13 +516,20 @@ export default function CardOnlinePayment() {
                 return { errorRequestStatus: resolveRequestStatus(statusCode) };
             }
         
-            return { paymentToken: response.data.response.paymentToken };
+            const paymentToken = response.data?.response?.paymentToken;
+
+            if (!paymentToken) {
+                throw new Error(`Токен оплаты отсутствует, статус: ${response.status}`);
+            }
+
+            return { paymentToken };
         } catch (err) {
+            console.error(toError(err).message);
             return { errorRequestStatus: FORM_STATUS.ERROR };
         }
     };
 
-    const processFormFields = async () => {
+    const processFormFields = async (): Promise<TProcessFormFieldsResult> => {
         // Валидация, сбор и структуризация значений полей
         const collected = collectAndValidateFields(fieldsState);
     
@@ -427,52 +541,61 @@ export default function CardOnlinePayment() {
         }
     
         // Валидация полей карты через скрипт YouMoney и получение платёжного токена
-        const checkoutResult = await tokenizeCheckoutFields(
-            checkoutRef.current,
+        const tokenizeResult = await tokenizeYooMoneyCheckoutFields(
+            yooMoneyCheckoutRef.current,
             collected.checkoutFields
         );
 
-        // Объединение состояний полей при ошибках валидации через скрипт
-        let mergedFieldsStateUpdates = collected.fieldsStateUpdates;
+        if ('errorRequestStatus' in tokenizeResult) {
+            // Объединение состояний полей при ошибках валидации через скрипт
+            const tokenizeErrors = tokenizeResult.checkoutFieldErrors;
+            let mergedFieldsStateUpdates: TFieldsStateUpdates = collected.fieldsStateUpdates;
 
-        if (checkoutResult.checkoutFieldErrors) {
-            mergedFieldsStateUpdates = Object.fromEntries(
-                Object.entries(collected.fieldsStateUpdates).map(([name, state]) => [
-                    name,
-                    checkoutResult.checkoutFieldErrors[name]
-                        ? { ...state, ...checkoutResult.checkoutFieldErrors[name] }
-                        : state
-                ])
-            );
+            if (tokenizeErrors) {
+                mergedFieldsStateUpdates = Object.fromEntries(
+                    (Object.entries(collected.fieldsStateUpdates) as [TFieldName, Partial<IFieldState>][])
+                        .map(([name, state]) => [
+                            name,
+                            tokenizeErrors[name]
+                                ? { ...state, ...tokenizeErrors[name] }
+                                : state
+                        ])
+                );
+            }
+
+            return {
+                fieldsStateUpdates: mergedFieldsStateUpdates,
+                errorRequestStatus: tokenizeResult.errorRequestStatus
+            };
         }
     
         return {
-            fieldsStateUpdates: mergedFieldsStateUpdates,
-            errorRequestStatus: checkoutResult.errorRequestStatus,
-            paymentToken: checkoutResult.paymentToken,
+            fieldsStateUpdates: collected.fieldsStateUpdates,
+            paymentToken: tokenizeResult.paymentToken,
             formFields: collected.formFields,
-            changedFields: collected.changedFields
+            changedFields: collected.changedFields = []
         };
     };
     
-    const handleFormSubmit = async (e) => {
+    const handleFormSubmit = async (e: SubmitEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
 
         setSubmitStatus(FORM_STATUS.SENDING);
         dispatch(setNavigationLock(true));
 
-        const {
-            fieldsStateUpdates, errorRequestStatus, paymentToken, formFields, changedFields
-        } = await processFormFields();
+        const processResult = await processFormFields();
         if (isUnmountedRef.current) return;
 
+        const { fieldsStateUpdates } = processResult;
         dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
 
-        if (errorRequestStatus) {
-            setSubmitStatus(errorRequestStatus);
+        if ('errorRequestStatus' in processResult) {
+            setSubmitStatus(processResult.errorRequestStatus);
             dispatch(setNavigationLock(false));
             return;
         }
+
+        const { paymentToken, formFields, changedFields } = processResult;
 
         // Отправка данных на сервер
         const responseData = await dispatch(sendOrderOnlinePaymentCreateRequest(orderId, {
@@ -481,7 +604,7 @@ export default function CardOnlinePayment() {
         }));
         if (isUnmountedRef.current) return;
 
-        const { status, message, fieldErrors, confirmationUrl } = responseData;
+        const { status, message } = responseData;
         const LOG_CTX = 'ORDER: ONLINE PAYMENT';
 
         switch (status) {
@@ -500,10 +623,12 @@ export default function CardOnlinePayment() {
                 break;
 
             case FORM_STATUS.INVALID: {
+                const { fieldErrors } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message, details: fieldErrors });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 Object.entries(fieldErrors).forEach(([name, error]) => {
+                    if (!isObjectKey(name, fieldConfigMap)) return;
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.INVALID, error };
                 });
                 dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
@@ -514,9 +639,10 @@ export default function CardOnlinePayment() {
             }
         
             case FORM_STATUS.SUCCESS: {
+                const { confirmationUrl } = responseData;
                 logRequestStatus({ context: LOG_CTX, status, message });
 
-                const fieldsStateUpdates = {};
+                const fieldsStateUpdates: TFieldsStateUpdates = {};
                 changedFields.forEach(name => {
                     fieldsStateUpdates[name] = { uiStatus: FIELD_UI_STATUS.CHANGED };
                 });
@@ -533,9 +659,10 @@ export default function CardOnlinePayment() {
                     } else {
                         if (isUnmountedRef.current) return;
                         
-                        navigate(
-                            routeConfig.customerOrderDetails.generatePath({ orderId, orderNumber })
-                        );
+                        navigate(routeConfig.customerOrderDetails.generatePath({
+                            orderId,
+                            orderNumber
+                        }));
                     }
                 }, SUCCESS_DELAY);
                 break;
@@ -561,8 +688,8 @@ export default function CardOnlinePayment() {
 
     // Обработка статуса загрузки скрипта YooKassa
     useEffect(() => {
-        if (scriptStatus === 'ready') onCheckoutLoad();
-        if (scriptStatus === 'error') onCheckoutLoadError();
+        if (scriptStatus === EXTERNAL_SCRIPT_STATUS.READY) onCheckoutLoad();
+        if (scriptStatus === EXTERNAL_SCRIPT_STATUS.ERROR) onCheckoutLoadError();
     }, [scriptStatus]);
 
     // Сброс статуса формы при отсутствии ошибок полей
@@ -592,28 +719,23 @@ export default function CardOnlinePayment() {
                         autoComplete,
                         trim
                     }) => {
-                        const fieldId = `news-${toKebabCase(name)}`;
+                        const fieldId = `order-${orderId}-online-payment-${toKebabCase(name)}`;
                         const fieldInfoClass = getFieldInfoClass(elem, type, name);
 
-                        const elemProps = {
+                        const baseElemProps: TFieldElemProps = {
                             id: fieldId,
                             name,
-                            type,
-                            maxLength,
-                            placeholder,
-                            value: fieldsState[name]?.value,
                             autoComplete,
-                            onKeyDown: handleFieldKeyDown,
                             onChange: handleFieldChange,
-                            onBlur: trim ? handleFieldBlur : undefined,
                             disabled: isFormLocked
                         };
-
-                        let fieldElem;
-
-                        if (elem === 'select') {
-                            fieldElem = (
-                                <select {...elemProps}>
+        
+                        const fieldElem = (() => {
+                            if (elem === 'select') return (
+                                <select
+                                    {...baseElemProps}
+                                    value={getStringValue(fieldsState[name]?.value)}
+                                >
                                     {options.map((option, idx) => (
                                         <option key={`${idx}-${option.value}`} value={option.value}>
                                             {option.label}
@@ -621,9 +743,19 @@ export default function CardOnlinePayment() {
                                     ))}
                                 </select>
                             );
-                        } else {
-                            fieldElem = React.createElement(elem, elemProps);
-                        }
+                        
+                            return (
+                                <input
+                                    {...baseElemProps}
+                                    type={type}
+                                    maxLength={maxLength}
+                                    placeholder={placeholder}
+                                    value={getStringValue(fieldsState[name]?.value)}
+                                    onKeyDown={handleFieldKeyDown}
+                                    onBlur={trim ? handleFieldBlur : undefined}
+                                />
+                            );
+                        })();
 
                         return (
                             <div key={fieldId} className={cn('form-entry', fieldInfoClass)}>

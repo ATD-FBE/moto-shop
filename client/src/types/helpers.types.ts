@@ -66,6 +66,7 @@ export interface IFieldConfig {
     readonly accept?: string;
     readonly allowedTypes?: readonly string[];
     readonly maxSizeMB?: number;
+    readonly maxLength?: number;
     readonly options?: readonly { value: string; label: string; }[]
     readonly defaultValue?: TFieldStateValue;
     readonly outputValue?: string;
@@ -80,10 +81,23 @@ export interface IFieldConfig {
     readonly enabled?: boolean;
     readonly optional?: boolean;
     readonly lock?: boolean;
+    readonly checkout?: ICheckoutFieldConfig;
+    readonly hasFormatSeparators?: boolean;
+    readonly charRegex?: RegExp;
     readonly canApply?: (data: any) => boolean;
     readonly getNote?: (data: any) => string | null;
     readonly shouldNote?: (data: any) => boolean;
     readonly shouldDisable?: (data: any) => boolean;
+    readonly format?: (value: string) => string;
+    readonly submitTransform?: (value: string) => string;
+}
+
+interface ICheckoutFieldConfig {
+    fields: {
+        name: string;
+        errorCode: string;
+    }[];
+    split?: string;
 }
 
 export interface IFieldState {
@@ -124,18 +138,4 @@ export interface IProcessSingleFormFieldResult<TFieldName extends string, TFormB
     isValid: boolean;
     fieldsStateUpdates: Partial<Record<TFieldName, Partial<IFieldState>>>;
     formFields: TFormBody;
-}
-
-export interface IProcessFormattedFieldDeletionContext {
-    value: string;
-    selectionStart: number | null;
-    selectionEnd: number | null;
-    charRegex?: RegExp;
-    format?: (val: string) => string;
-}
-
-export interface IProcessFormattedFieldDeletionResult {
-    preventDefault: boolean;
-    nextValue: string;
-    nextCursorPos: number;
 }

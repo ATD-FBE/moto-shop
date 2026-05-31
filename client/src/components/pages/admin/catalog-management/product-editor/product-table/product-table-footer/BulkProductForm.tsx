@@ -43,6 +43,7 @@ import type {
     IFieldConfig,
     TFormStatus,
     TSubmitStates,
+    TFieldStateValue,
     TFieldApiValue,
     IFieldState,
     IProcessFormFieldsResult,
@@ -233,7 +234,7 @@ export default function BulkProductForm(
         if (!isObjectKey(name, fieldConfigMap)) return;
 
         const checked = 'checked' in target ? target.checked : false;
-        let processedValue: string | number | boolean | undefined;
+        let processedValue: TFieldStateValue | undefined;
         
         if (type === 'number' && value !== '') {
             processedValue = Number(value.replace(',', '.'))

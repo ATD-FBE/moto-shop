@@ -480,7 +480,7 @@ export default function ProductForm(
         const files = 'files' in target ? Array.from(target.files || []) : [];
         const checked = 'checked' in target ? target.checked : false;
         const isImages = name === 'images';
-        let processedValue: string | number | boolean | undefined;
+        let processedValue: TFieldStateValue | undefined;
         
         if (type === 'number' && value !== '') {
             processedValue = Number(value.replace(',', '.'))

@@ -7,10 +7,30 @@ import type {
     IFieldConfig,
     IFieldState,
     TFormState,
-    TFieldsAction,
-    IProcessFormattedFieldDeletionContext,
-    IProcessFormattedFieldDeletionResult
+    TFieldsAction
 } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IProcessFormattedFieldDeletionContext {
+    value: string;
+    selectionStart: number | null;
+    selectionEnd: number | null;
+    charRegex?: RegExp;
+    format?: (val: string) => string;
+}
+
+interface IProcessFormattedFieldDeletionResult {
+    preventDefault: boolean;
+    nextValue: string;
+    nextCursorPos: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export const getLockedStatuses = (submitStates: TSubmitStates): Set<TFormStatus> => {
     const lockedArray = (Object.entries(submitStates) as [TFormStatus, { locked: boolean }][])
@@ -83,10 +103,17 @@ export const createInitialFieldsState = <TFieldName extends string>(
     const { extraStateFields, autoSave } = options;
 
     const state = fieldConfigs.reduce((acc, config) => {
-        const { enabled, name, elem, type, defaultValue } = config;
+        const { enabled, name, elem, type, defaultValue, options } = config;
 
         const state: IFieldState = {
-            value: defaultValue !== undefined ? defaultValue : elem === 'checkbox' ? false : '',
+            value:
+                defaultValue !== undefined
+                    ? defaultValue
+                    : elem === 'checkbox'
+                        ? false
+                        : options
+                            ? options[0]?.value ?? ''
+                            : '',
             uiStatus: '',
             error: ''
         };
@@ -117,7 +144,7 @@ export const createInitialFieldsState = <TFieldName extends string>(
         }
 
         if (autoSave) {
-            state.savedValue = elem === 'checkbox' ? false : '';
+            state.savedValue = elem === 'checkbox' ? false : options ? options[0]?.value ?? '' : '';
             state.saveStatus = '';
             state.saveStatusMessage = '';
         }
@@ -292,20 +319,20 @@ export const processFormattedFieldDeletion = (
     return {
         preventDefault: true, // Браузер не изменит value инпута (onChange не сработает)
         nextValue: formattedValue,
-        nextCursorPos: calcFormattedFieldCursorPos(newValue, newCursorPos, formattedValue, charRegex)
+        nextCursorPos: calcFormattedFieldCursorPos(newCursorPos, newValue, formattedValue, charRegex)
     };
 };
 
 export const calcFormattedFieldCursorPos = (
+    oldCursorPos: number | null,
     rawString: string,
-    rawCursorPos: number,
     formattedString: string,
     charRegex: RegExp
 ): number => {
     // Поиск значащих символов до курсора в старой строке
     let validCharsCount = 0;
     
-    for (let i = 0; i < rawCursorPos; i++) {
+    for (let i = 0; i < (oldCursorPos ?? 0); i++) {
         if (charRegex.test(rawString.charAt(i))) {
             validCharsCount++;
         }

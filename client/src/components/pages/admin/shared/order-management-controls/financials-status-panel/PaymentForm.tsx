@@ -291,7 +291,7 @@ export default function PaymentForm({
         if (!isObjectKey(name, fieldConfigMap)) return;
 
         const checked = 'checked' in target ? target.checked : false;
-        let processedValue;
+        let processedValue: TFieldStateValue | undefined;
 
         if (type === 'number' && value !== '') {
             processedValue = Number(value.replace(',', '.'));

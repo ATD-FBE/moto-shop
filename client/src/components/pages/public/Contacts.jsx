@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPANY_DETAILS, WORKING_HOURS } from '@shared/company.ts';
+import { COMPANY_DETAILS, WORKING_HOURS } from '@shared/company.js';
  
 export default function Contacts() {
     const phoneLink = COMPANY_DETAILS.phone.replace(/[^\d+]/g, '');

@@ -1,7 +1,7 @@
-import { TUserRole } from '@shared/constants.js';
-import type { TStorageType, TMongoMode, TBucketType } from './config.types.ts';
-import type { TTokenDecodedUser } from './utils.types.ts';
-import type { TDbUserDoc } from './db.types.ts';
+import type { IYooMoneyCheckoutConstructor } from '@/types/index.js';
+import type { TStorageType, TMongoMode, TBucketType } from '@server/types/config.types.js';
+import type { TTokenDecodedUser } from '@server/types/utils.types.js';
+import type { TDbUserDoc } from '@server/types/db.types.js';
 import type { TEntityType } from '@shared/types/shared.types.js';
 
 declare global {
@@ -32,17 +32,6 @@ declare global {
         }
     }
 
-    interface Error {
-        errors?: Record<string, unknown>;
-        isTimeoutCheck?: boolean;
-        isAppError?: boolean;
-        statusCode?: number;
-        code?: string | number;
-        details?: Record<string, unknown>;
-        isMulterError?: boolean;
-        field?: string;
-    }
-
     namespace Express {
         interface Request {
             reqCtx: string;
@@ -58,6 +47,21 @@ declare global {
                 message: string;
             };
         }
+    }
+
+    interface Error {
+        errors?: Record<string, unknown>;
+        isTimeoutCheck?: boolean;
+        isAppError?: boolean;
+        statusCode?: number;
+        code?: string | number;
+        details?: Record<string, unknown>;
+        isMulterError?: boolean;
+        field?: string;
+    }
+
+    interface Window {
+        YooMoneyCheckout?: IYooMoneyCheckoutConstructor;
     }
 }
 
