@@ -5,7 +5,7 @@ import { AUTH_NAV_TYPE } from '@/config/constants.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { handleLogout } from '@/services/authService.js';
 import type { JSX } from 'react';
-import type { INavItem } from '@/types/index.js';
+import type { TNavigationMap } from '@/types/index.js';
 import type { TUserRole } from '@shared/types/index.js';
 
 //////////////////////////
@@ -15,7 +15,7 @@ import type { TUserRole } from '@shared/types/index.js';
 interface IAuthNavProps {
     userRole: TUserRole;
     userName: string;
-    navigationMap: Record<string, INavItem[]>;
+    navigationMap: TNavigationMap;
     setActiveClass: (paths: readonly string[]) => 'active' | '';
 }
 

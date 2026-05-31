@@ -1,11 +1,13 @@
-import { useSelector } from 'react-redux';
 import cn from 'classnames';
 import ResourceLoader from './ResourceLoader.jsx';
 import MainTitle from './MainTitle.jsx';
 import MainNav from './MainNav.jsx';
 import AuthNav from './AuthNav.jsx';
 import DashboardNav from './DashboardNav.jsx';
+import { useAppSelector } from '@/hooks/storeHooks.js';
 import { DASHBOARD_TITLES } from '@/config/constants.js';
+import type { JSX } from 'react';
+import type { IHeaderContentProps } from '@/types/index.js';
 
 export default function HeaderContentLargeScreen({
     userRole,
@@ -13,8 +15,11 @@ export default function HeaderContentLargeScreen({
     navigationMap,
     setActiveClass,
     setFeaturedClass
-}) {
-    const isDashboardActive = useSelector(state => state.ui.isDashboardPanelActive);
+}: IHeaderContentProps): JSX.Element {
+    const isDashboardActive = useAppSelector(state => state.ui.isDashboardPanelActive);
+    const dashboardTitle = userRole in DASHBOARD_TITLES
+        ? DASHBOARD_TITLES[userRole]
+        : `Панель (${userRole})`;
 
     return (
         <>
@@ -40,7 +45,7 @@ export default function HeaderContentLargeScreen({
             {isDashboardActive && (
                 <div className={`dashboard-panel ${userRole}-role`}>
                     <header className="dashboard-header">
-                        <h2>{DASHBOARD_TITLES[userRole.toUpperCase()] || userRole}</h2>
+                        <h2>{dashboardTitle}</h2>
                     </header>
 
                     <DashboardNav

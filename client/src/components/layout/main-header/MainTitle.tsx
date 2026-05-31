@@ -1,8 +1,8 @@
-import React from 'react';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
+import type { JSX } from 'react';
 
-export default function MainTitle() {
+export default function MainTitle(): JSX.Element {
     return (
         <div className="main-title">
             <TrackedImage

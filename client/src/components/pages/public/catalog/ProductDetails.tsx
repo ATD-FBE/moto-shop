@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import ProductImageGallery from './product-details/ProductImageGallery.jsx';
 import ProductInfo from './product-details/ProductInfo.jsx';
+import NotFound from '@/components/pages/NotFound.jsx';
 import { sendProductRequest } from '@/api/productRequests.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { parseRouteParams } from '@/helpers/routeHelpers.js';
@@ -36,6 +37,8 @@ export default function ProductDetails(): JSX.Element {
         params: useParams()
     });
 
+    if (!productId) return <NotFound />;
+
     const productLoadStatus =
         productLoading
             ? DATA_LOAD_STATUS.LOADING
@@ -51,11 +54,11 @@ export default function ProductDetails(): JSX.Element {
     const title = formatProductTitle(name, brand);
 
     const loadProduct = async (): Promise<void> => {
-        if (!productId) {
+        /*if (!productId) {
             setProductLoading(false);
             setProductLoadError(true);
             return;
-        }
+        }*/
 
         setProductLoadError(false);
         setProductLoading(true);
@@ -74,10 +77,13 @@ export default function ProductDetails(): JSX.Element {
             setProduct(product);
             dispatch(reconcileCartWithProducts([product]));
 
-            const { id, sku, name, brand } = product;
-            const title = formatProductTitle(name, brand);
+            const title = formatProductTitle(product.name, product.brand);
             const slug = generateSlug(title);
-            const updatedUrl = routeConfig.productDetails.generatePath({ productId: id, slug, sku });
+            const updatedUrl = routeConfig.productDetails.generatePath({
+                productId: product.id,
+                slug,
+                sku: product.sku
+            });
 
             if (location.pathname !== updatedUrl) {
                 navigate(updatedUrl, { replace: true });
@@ -116,7 +122,7 @@ export default function ProductDetails(): JSX.Element {
                 />
 
                 <ProductInfo
-                    id={productId}
+                    productId={productId}
                     sku={sku ?? NO_VALUE_LABEL}
                     name={name ?? NO_VALUE_LABEL}
                     brand={brand ?? NO_VALUE_LABEL}

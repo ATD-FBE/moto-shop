@@ -1,6 +1,6 @@
-import React from 'react';
+import type { JSX } from 'react';
  
-export default function Guarantees() {
+export default function Guarantees(): JSX.Element {
     return (
         <div className="guarantees-page">
             <header className="guarantees-header">

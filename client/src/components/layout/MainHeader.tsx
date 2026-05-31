@@ -1,27 +1,32 @@
 import { forwardRef, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
-import { navigationMap } from '@/config/appRouting.js';
 import HeaderContentSmallScreen from './main-header/HeaderContentSmallScreen.jsx';
 import HeaderContentMediumScreen from './main-header/HeaderContentMediumScreen.jsx';
 import HeaderContentLargeScreen from './main-header/HeaderContentLargeScreen.jsx';
-import { setDashboardPanelActivity } from '@/redux/slices/uiSlice.js';
+import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
+import { navigationMap } from '@/config/appRouting.js';
 import { SCREEN_SIZE } from '@/config/constants.js';
+import { setDashboardPanelActivity } from '@/redux/slices/uiSlice.js';
+import { USER_ROLE } from '@shared/constants.js';
+import type { JSX } from 'react';
+import type { INavItem, TScreenSize, IHeaderContentProps } from '@/types/index.js';
 
-const MainHeader = forwardRef(function (_, ref) {
-    const { screenSize } = useSelector(state => state.ui);
-    const { isAuthenticated, user } = useSelector(state => state.auth);
+const MainHeader = forwardRef<HTMLElement, {}>(function (_, ref): JSX.Element {
+    const { screenSize } = useAppSelector(state => state.ui);
+    const { isAuthenticated, user } = useAppSelector(state => state.auth);
 
-    const dispatch = useDispatch();
-    const location = useLocation();
+    const dispatch = useAppDispatch();
+    const location = useAppLocation();
 
-    const userRole = isAuthenticated ? user?.role ?? 'guest' : 'guest';
+    const userRole = isAuthenticated ? user?.role ?? USER_ROLE.GUEST : USER_ROLE.GUEST;
     const userName = isAuthenticated ? user?.name ?? 'Гость' : 'Гость';
 
-    const setActiveClass = (paths) => paths?.includes(location.pathname) ? 'active' : '';
-    const setFeaturedClass = (navItem) => navItem.featured ? 'featured' : '';
+    const setActiveClass = (paths: readonly string[]): 'active' | '' =>
+        paths?.includes(location.pathname) ? 'active' : '';
 
-    const props = {
+    const setFeaturedClass = (navItem: INavItem): 'featured' | '' =>
+        navItem.featured ? 'featured' : '';
+
+    const props: IHeaderContentProps = {
         userRole,
         userName,
         navigationMap,
@@ -29,7 +34,7 @@ const MainHeader = forwardRef(function (_, ref) {
         setFeaturedClass
     };
 
-    const headerContentsBySize = {
+    const headerContentsBySize: Record<TScreenSize, JSX.Element> = {
         [SCREEN_SIZE.XS]: <HeaderContentSmallScreen {...props} />,
         [SCREEN_SIZE.SMALL]: <HeaderContentSmallScreen {...props} />,
         [SCREEN_SIZE.MEDIUM]: <HeaderContentMediumScreen {...props} />,
@@ -38,12 +43,12 @@ const MainHeader = forwardRef(function (_, ref) {
 
     const screenSizeKey = Object.entries(SCREEN_SIZE)
         .find(([_, max]) => max === screenSize)
-        ?.[0].toLowerCase();
+        ?.[0].toLowerCase() ?? 'undefined';
 
     // Установка флага активности dashboard-панели в хэдере
     useEffect(() => {
         const isDashboardPanelActive =
-            [SCREEN_SIZE.LARGE].includes(screenSize) &&
+            screenSize === SCREEN_SIZE.LARGE &&
             !!navigationMap[`${userRole}Dashboard`];
             
         dispatch(setDashboardPanelActivity(isDashboardPanelActive));

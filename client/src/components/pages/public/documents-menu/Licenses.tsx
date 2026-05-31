@@ -1,4 +1,6 @@
-export default function Licenses() {
+import type { JSX } from 'react';
+
+export default function Licenses(): JSX.Element {
     return (
         <div className="licenses-page">
             <header className="licenses-header">

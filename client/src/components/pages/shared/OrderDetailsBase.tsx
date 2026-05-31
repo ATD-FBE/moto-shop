@@ -9,6 +9,7 @@ import OrderDetailsSectionEditButton from '@/components/pages/admin/order-detail
 import OrderDetailsSectionFormCollapsible from '@/components/pages/admin/order-details-management/OrderDetailsSectionFormCollapsible.jsx';
 import { OrderRefreshButton, OrderInvoiceButton } from '@/components/parts/OrderParts.jsx';
 import OrderDetailsItems from './order-details-base/OrderDetailsItems.jsx';
+import NotFound from '@/components/pages/NotFound.jsx';
 import { useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { subscribeToOrderUpdates } from '@/components/sse/SseOrderManagement.jsx';
 import { sendOrderRequest } from '@/api/orderRequests.js';
@@ -115,6 +116,8 @@ export default function OrderDetailsBase({
     const params = useParams();
 
     const { orderId, orderNumber } = parseRouteParams({ routeKey, params });
+    
+    if (!orderId || !orderNumber) return <NotFound />;
 
     const orderLoadStatus =
         orderLoading
@@ -124,8 +127,6 @@ export default function OrderDetailsBase({
                 : DATA_LOAD_STATUS.READY;
 
     const loadOrder = async (): Promise<void> => {
-        if (!orderId) return;
-
         setOrderLoadError(false);
         setOrderLoading(true);
 
@@ -143,8 +144,10 @@ export default function OrderDetailsBase({
             const { order } = responseData;
             setOrder(order);
 
-            const { id, orderNumber } = order;
-            const updatedUrl = routeConfig[routeKey]?.generatePath({ orderId: id, orderNumber }) ?? '/';
+            const updatedUrl = routeConfig[routeKey]?.generatePath({
+                orderId: order.id,
+                orderNumber: order.orderNumber
+            }) ?? '/';
 
             if (location.pathname !== updatedUrl) {
                 navigate(updatedUrl, { replace: true });

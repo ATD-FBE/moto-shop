@@ -1,9 +1,9 @@
-import React from 'react';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { MIN_ORDER_AMOUNT } from '@shared/constants.js';
 import { COMPANY_DETAILS, WORKING_HOURS } from '@shared/company.js';
+import type { JSX } from 'react';
  
-export default function Delivery() {
+export default function Delivery(): JSX.Element {
     const openWorkingHoursText = WORKING_HOURS
         .filter(item => !item.closed)
         .map(item => `${item.days.toLowerCase()}: ${item.time}`)

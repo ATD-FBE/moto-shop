@@ -1,6 +1,6 @@
-import React from 'react';
+import type { JSX } from 'react';
 
-export default function BackgroundImage() {
+export default function BackgroundImage(): JSX.Element {
     return (
         <div className="background-wrapper">
             <picture>

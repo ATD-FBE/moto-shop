@@ -301,10 +301,14 @@ export interface IDotNotationPatch {
 // Утилита для получения всех ключей модели и заданных для неё путей через точку в карте
 export type IDotNotationMap = Record<string, string>;
 
-type ExtractDotPaths<T> = T extends { _dotNotationMap: infer M }
+export type TDbField<TModel> = Extract<keyof TModel, string> | TExtractDotPaths<TModel>;
+
+type TExtractDotPaths<T> = T extends { _dotNotationMap: infer M }
     ? M extends IDotNotationMap
         ? M[keyof M]
         : never
     : never;
 
-export type TDbField<TModel> = Extract<keyof TModel, string> | ExtractDotPaths<TModel>;
+// Утилиты для получения литеральных ключей и значений объекта
+export type TGetObjectKeys<T> = T extends any ? keyof T : never;
+export type TGetObjectValues<T> = T extends any ? T[keyof T] : never;

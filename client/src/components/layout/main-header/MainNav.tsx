@@ -1,18 +1,37 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import cn from 'classnames';
 import BlockableLink from '@/components/common/BlockableLink.jsx';
 import DropdownNav from './DropdownNav.jsx';
+import type { JSX, RefObject } from 'react';
+import type { IHeaderContentProps, INavItem } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TMainNavProps = Pick<IHeaderContentProps,
+    | 'navigationMap'
+    | 'setActiveClass'
+    | 'setFeaturedClass'
+> & {
+    burgerMenuRef?: RefObject<HTMLDivElement | null>;
+};
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function MainNav({
     navigationMap,
     setActiveClass,
     setFeaturedClass,
     burgerMenuRef
-}) {
-    const [activeDropdownIdx, setActiveDropdownIdx] = useState(null);
-    const mainNavItems = navigationMap.main;
+}: TMainNavProps): JSX.Element {
+    const [activeDropdownIdx, setActiveDropdownIdx] = useState<number | null>(null);
 
-    const getActivePaths = (navItem) => // Возвращает массив путей
+    const mainNavItems = navigationMap.main ?? [];
+
+    const getActivePaths = (navItem: INavItem) => // Возвращает массив путей
         navItem.children 
             ? [...navItem.paths, ...navItem.children.flatMap(childNavItem => childNavItem.paths)]
             : navItem.paths;
@@ -21,8 +40,8 @@ export default function MainNav({
         <nav className="main-nav">
             <ul>
                 {mainNavItems.map((navItem, idx) => {
-                    if ('children' in navItem) {
-                        const navItemRef = useRef(null);
+                    if (navItem.children) {
+                        const navItemRef = useRef<HTMLLIElement | null>(null);
 
                         return (
                             <li
@@ -32,12 +51,16 @@ export default function MainNav({
                                 onMouseEnter={() => setActiveDropdownIdx(idx)}
                                 onMouseLeave={() => setActiveDropdownIdx(null)}
                             >
-                                <BlockableLink to={navItem.paths[0]}>{navItem.label}</BlockableLink>
+                                <BlockableLink to={navItem.paths[0]}>
+                                    {typeof navItem.label === 'string'
+                                        ? navItem.label
+                                        : navItem.paths[0]}
+                                </BlockableLink>
 
                                 <DropdownNav
                                     anchorRef={navItemRef}
                                     burgerMenuRef={burgerMenuRef}
-                                    show={activeDropdownIdx === idx}
+                                    isShow={activeDropdownIdx === idx}
                                 >
                                     <ul>
                                         {navItem.children.map(childNavItem => (
@@ -46,10 +69,14 @@ export default function MainNav({
                                                 className={setActiveClass(childNavItem.paths)}
                                             >
                                                 <BlockableLink to={childNavItem.paths[0]}>
-                                                    {childNavItem.label}
-                                                    {childNavItem.countBadge && (
+                                                    {typeof childNavItem.label === 'string'
+                                                        ? childNavItem.label
+                                                        : childNavItem.paths[0]}
+
+                                                    {/* Бэйдж для счетчика */}
+                                                    {/*childNavItem.countBadge && (
                                                         <span className="new-count"></span>
-                                                    )}
+                                                    )*/}
                                                 </BlockableLink>
                                             </li>
                                         ))}
@@ -61,9 +88,16 @@ export default function MainNav({
                         return (
                             <li
                                 key={navItem.paths[0]}
-                                className={cn(setFeaturedClass(navItem), setActiveClass(navItem.paths))}
+                                className={cn(
+                                    setFeaturedClass(navItem),
+                                    setActiveClass(navItem.paths)
+                                )}
                             >
-                                <BlockableLink to={navItem.paths[0]}>{navItem.label}</BlockableLink>
+                                <BlockableLink to={navItem.paths[0]}>
+                                    {typeof navItem.label === 'string'
+                                        ? navItem.label
+                                        : navItem.paths[0]}
+                                </BlockableLink>
                             </li>
                         );
                     }

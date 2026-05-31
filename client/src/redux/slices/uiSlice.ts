@@ -1,11 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { To } from 'react-router-dom';
+import { SCREEN_SIZE } from '@/config/constants.js';
 import type { IUiState } from '@/types/index.js';
 import type { TScreenSize } from '@/types/index.js';
 
 const initialState: IUiState = {
     isTouchDevice: false,
-    screenSize: null,
+    screenSize: SCREEN_SIZE.LARGE,
     isDashboardPanelActive: false,
     isNavigationLocked: false,
     lockedRoute: null,

@@ -11,7 +11,7 @@ export default function CompanyDetails(): JSX.Element {
     const isUnmountedRef = useRef(false);
     const dispatch = useAppDispatch();
 
-    const downloadCompanyDetails = async () => {
+    const downloadCompanyDetails = async (): Promise<void> => {
         const responseData = await dispatch(sendCompanyDetailsPdfRequest());
         if (isUnmountedRef.current) return;
 

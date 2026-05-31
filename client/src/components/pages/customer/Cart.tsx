@@ -42,7 +42,7 @@ import type {
 
 interface ICartItemListProps {
     cartItemElemMapRef: RefObject<Record<string, HTMLLIElement>>;
-    screenSize: TScreenSize | null;
+    screenSize: TScreenSize;
     loadStatus: TDataLoadStatus;
     onReload: () => Promise<void>;
     cartItemList: ICartItem[];

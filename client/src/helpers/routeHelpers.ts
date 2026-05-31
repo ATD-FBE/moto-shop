@@ -1,10 +1,18 @@
 import { routeConfig } from '@/config/appRouting.js';
 import { AUTH_NAV_TYPE } from '@/config/constants.js';
 import { REGISTERED_USER_ROLES, USER_ROLE } from '@shared/constants.js';
-import type { TRouteConfig, TRoute, TRoutePath, INavItem, IBreadcrumb } from '@/types/index.js';
+import type {
+    TRouteConfig,
+    TRoute,
+    TRoutePath,
+    TNavigationMap,
+    INavItem,
+    IBreadcrumb
+} from '@/types/index.js';
+import type { TGetObjectKeys, TGetObjectValues } from '@shared/types/index.js';
 
 export const buildNavigationMap = () => {
-    const navigationMap: Record<string, INavItem[]> = {};
+    const navigationMap: TNavigationMap = {};
 
     // Создание элемента меню навигации
     const buildNavItem = (route: TRoute): INavItem => {
@@ -122,11 +130,6 @@ export const buildBreadcrumbMap = (): Record<TRoutePath, IBreadcrumb> => {
     }, {} as Record<TRoutePath, IBreadcrumb>);
 };
 
-interface IParamSchema {
-    split: string;
-    map: string[];
-}
-
 export const parseRouteParams = (
     { routeKey, params }: { routeKey: keyof TRouteConfig, params: Record<string, string | undefined> }
 ): Record<string, string | undefined> => {
@@ -134,7 +137,10 @@ export const parseRouteParams = (
     const route = routeConfig[routeKey];
     if (!route || !('paramSchema' in route)) return result;
 
-    const paramSchemaEntries = Object.entries(route.paramSchema) as [string, IParamSchema][];
+    const paramSchemaEntries = Object.entries(route.paramSchema) as [
+        TGetObjectKeys<typeof route.paramSchema>,
+        TGetObjectValues<typeof route.paramSchema>
+    ][];
 
     for (const [paramName, schema] of paramSchemaEntries) {
         const rawValue = params[paramName];
@@ -150,7 +156,7 @@ export const parseRouteParams = (
         const parts = rawValue.split(schema.split);
 
         schema.map.forEach((key, idx) => {
-            result[key] = parts[idx] || undefined;
+            result[key] = parts[idx];
         });
     }
 

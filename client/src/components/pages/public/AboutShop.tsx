@@ -1,8 +1,8 @@
-import React from 'react';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
 import { COMPANY_DETAILS } from '@shared/company.js';
+import type { JSX } from 'react';
  
-export default function AboutShop() {
+export default function AboutShop(): JSX.Element {
     return (
         <div className="about-shop-page">
             <header className="about-shop-header">

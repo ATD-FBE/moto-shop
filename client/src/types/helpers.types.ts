@@ -16,6 +16,8 @@ type TNavBadge = Extract<TRouteNav, { badge?: any }>['badge'];
 
 export type TRoutePath = TRoute['paths'][number];
 
+export type TNavigationMap = Record<string, INavItem[]>;
+
 export interface INavItem {
     label: TRoute['label'] | string;
     paths: TRoute['paths'] | string[];

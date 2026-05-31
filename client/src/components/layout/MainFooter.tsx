@@ -1,7 +1,8 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { COMPANY_DETAILS } from '@shared/company.js';
+import type { JSX } from 'react';
 
-const MainFooter = forwardRef(function (_, ref) {
+const MainFooter = forwardRef<HTMLElement, {}>(function (_, ref): JSX.Element {
     const currentYear = new Date().getFullYear();
     const phoneLink = COMPANY_DETAILS.phone.replace(/[^\d+]/g, '');
 

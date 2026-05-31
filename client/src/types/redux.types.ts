@@ -42,7 +42,7 @@ export interface IAuthState {
 
 export interface IUiState {
     isTouchDevice: boolean;
-    screenSize: TScreenSize | null;
+    screenSize: TScreenSize;
     isDashboardPanelActive: boolean;
     isNavigationLocked: boolean;
     lockedRoute: ILockedRoute | null;

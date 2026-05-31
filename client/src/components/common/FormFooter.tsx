@@ -1,6 +1,6 @@
-import { JSX } from 'react';
 import cn from 'classnames';
 import { FORM_STATUS } from '@/config/constants.js';
+import type { JSX } from 'react';
 import type { TFormStatus, TSubmitStates } from '@/types/index.js';
 
 interface IFormFooterProps {

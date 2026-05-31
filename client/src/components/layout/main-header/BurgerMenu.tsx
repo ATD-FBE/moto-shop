@@ -1,28 +1,49 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import MainNav from './MainNav.jsx';
 import DashboardNav from './DashboardNav.jsx';
+import type { JSX } from 'react';
+import type { IHeaderContentProps } from '@/types/index.js';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+type TBurgerMenuProps = Pick<IHeaderContentProps,
+    | 'userRole'
+    | 'navigationMap'
+    | 'setActiveClass'
+    | 'setFeaturedClass'
+>;
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function BurgerMenu({
     userRole,
     navigationMap,
     setActiveClass,
     setFeaturedClass
-}) {
+}: TBurgerMenuProps): JSX.Element {
     const [isMenuOpen, setMenuOpen] = useState(false);
-    const burgerMenuContainerRef = useRef(null);
-    const burgerMenuRef = useRef(null);
+    const burgerMenuContainerRef = useRef<HTMLDivElement | null>(null);
+    const burgerMenuRef = useRef<HTMLDivElement | null>(null);
 
     const hasDashboardNav = !!navigationMap[`${userRole}Dashboard`];
 
     useEffect(() => {
         if (!isMenuOpen) return;
 
-        const handleClickOutside = (e) => {
+        const handleClickOutside = (e: MouseEvent): void => {
+            if (!(e.target instanceof Node)) return;
+
+            const target = e.target instanceof Element ? e.target : e.target.parentElement;
+            if (!target) return;
+
             if (
-                burgerMenuContainerRef.current &&
-                !burgerMenuContainerRef.current.contains(e.target) &&
-                !e.target.closest('.dropdown-portal')
+                !burgerMenuContainerRef.current?.contains(target) &&
+                !target.closest('.dropdown-portal')
             ) {
                 setMenuOpen(false);
             }
@@ -34,8 +55,8 @@ export default function BurgerMenu({
 
     return (
         <div
-            className={cn('burger-menu-container', { 'menu-open': isMenuOpen })}
             ref={burgerMenuContainerRef}
+            className={cn('burger-menu-container', { 'menu-open': isMenuOpen })}
         >
             <button
                 className="burger-menu-btn"
@@ -47,7 +68,7 @@ export default function BurgerMenu({
                 <span className="title">Меню</span>
             </button>
 
-            <div className="burger-menu" ref={burgerMenuRef}>
+            <div ref={burgerMenuRef} className="burger-menu">
                 <MainNav
                     navigationMap={navigationMap}
                     setActiveClass={setActiveClass}

@@ -1,17 +1,44 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import { useStructureRefs } from '@/hooks/useStructureRefs.js';
+import type { JSX, ReactNode, RefObject } from 'react';
+
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
+interface IDropdownNavProps {
+    anchorRef: RefObject<HTMLLIElement | null>;
+    burgerMenuRef?: RefObject<HTMLDivElement | null>;
+    isShow: boolean;
+    children: ReactNode;
+}
+
+interface IDropdownPosition {
+    top: number;
+    left: number;
+}
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 const dropdownPortalRoot = document.getElementById('dropdown-root') || document.body;
 
-export default function DropdownNav({ anchorRef, burgerMenuRef, show, children }) {
-    const [position, setPosition] = useState({ top: 0, left: 0 });
-    const dropdownRef = useRef(null);
-
+export default function DropdownNav({
+    anchorRef,
+    burgerMenuRef,
+    isShow,
+    children
+}: IDropdownNavProps): JSX.Element {
+    const [position, setPosition] = useState<IDropdownPosition>({ top: 0, left: 0 });
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
     const { mainHeaderRef } = useStructureRefs();
 
-    const updatePosition = () => {
+    const updatePosition = (): void => {
+        if (!anchorRef.current) return;
+
         const anchorRect = anchorRef.current.getBoundingClientRect();
         const isBurgerMenu = !!burgerMenuRef?.current;
 
@@ -35,7 +62,7 @@ export default function DropdownNav({ anchorRef, burgerMenuRef, show, children }
     };
   
     useEffect(() => {
-        if (!anchorRef.current || !show) return;
+        if (!anchorRef.current || !isShow) return;
 
         updatePosition();
 
@@ -50,12 +77,12 @@ export default function DropdownNav({ anchorRef, burgerMenuRef, show, children }
             window.removeEventListener('scroll', updatePosition);
             burgerMenu?.removeEventListener('scroll', updatePosition);
         };
-    }, [anchorRef, burgerMenuRef, show]);
+    }, [anchorRef, burgerMenuRef, isShow]);
   
     return createPortal(
         <div
             ref={dropdownRef}
-            className={cn('dropdown-portal', { 'show': show })}
+            className={cn('dropdown-portal', { 'show': isShow })}
             style={{
                 left: position.left,
                 top: position.top

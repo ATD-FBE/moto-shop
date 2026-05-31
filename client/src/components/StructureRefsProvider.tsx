@@ -1,4 +1,5 @@
-import { JSX, ReactNode, createContext, useRef } from 'react';
+import { createContext, useRef } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { IStructureRefsContext } from '@/types/index.js';
 
 // Создание контекста и провайдера для рефов, которые нужно пробросить в любой дочерний компонент

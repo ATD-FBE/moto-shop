@@ -11,7 +11,7 @@ import type { TUserRole } from '@shared/types/index.js';
 //////////////////////////
 
 interface IProductInfoProps {
-    id: string | undefined;
+    productId: string;
     sku: string;
     name: string;
     brand: string;
@@ -34,7 +34,7 @@ interface IProductInfoProps {
 /////////////////////
 
 export default function ProductInfo({
-    id,
+    productId,
     sku,
     name,
     brand,
@@ -51,7 +51,7 @@ export default function ProductInfo({
     isAuthenticated,
     uiBlocked
 }: IProductInfoProps): JSX.Element {
-    const cartItem = id ? useAppSelector(state => state.cart.byId[id]) : null;
+    const cartItem = useAppSelector(state => state.cart.byId[productId]);
     const isCartAccessible = useAppSelector(state => state.cart.isAccessible);
 
     const quantity = cartItem?.quantity ?? 0;
@@ -121,9 +121,9 @@ export default function ProductInfo({
                         </div>
                     )}
 
-                    {showCartControls && id && (
+                    {showCartControls && (
                         <ProductQuantitySelector
-                            productId={id}
+                            productId={productId}
                             availableQuantity={available}
                             orderedQuantity={quantity}
                             quantityReduced={quantityReduced}

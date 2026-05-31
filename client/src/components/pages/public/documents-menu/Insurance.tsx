@@ -1,6 +1,6 @@
-import React from 'react';
+import type { JSX } from 'react';
  
-export default function Insurance() {
+export default function Insurance(): JSX.Element {
     return (
         <div className="insurance-page">
             <header className="insurance-header">

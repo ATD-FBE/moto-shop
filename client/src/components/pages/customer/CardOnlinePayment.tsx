@@ -2,6 +2,7 @@ import { useReducer, useState, useRef, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import FormFooter from '@/components/common/FormFooter.jsx';
+import NotFound from '@/components/pages/NotFound.jsx';
 import { useAppDispatch } from '@/hooks/storeHooks.js';
 import useExternalScript from '@/hooks/useExternalScript.js';
 import {
@@ -242,7 +243,7 @@ export default function CardOnlinePayment(): JSX.Element | null {
         params: useParams()
     });
     
-    if (!orderId || !orderNumber) return null;
+    if (!orderId || !orderNumber) return <NotFound />;
 
     const [fieldsState, dispatchFieldsState] = useReducer(fieldsStateReducer, initialFieldsState);
     const [submitStatus, setSubmitStatus] = useState<TFormStatus>(FORM_STATUS.LOADING);

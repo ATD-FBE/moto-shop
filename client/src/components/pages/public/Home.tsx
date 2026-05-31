@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
@@ -6,13 +6,14 @@ import { routeConfig } from '@/config/appRouting.js';
 import { formatCurrency } from '@/helpers/textHelpers.js';
 import { MIN_ORDER_AMOUNT } from '@shared/constants.js';
 import { WORKING_HOURS } from '@shared/company.js';
+import type { JSX } from 'react';
  
-export default function Home() {
+export default function Home(): JSX.Element {
     const [bannerLoaded, setBannerLoaded] = useState(false);
     const [search, setSearch] = useState('');
     const navigate = useNavigate();
 
-    const handleSearch = () => {
+    const handleSearch = (): void => {
         const normalizedSearch = search.trim();
         if (!normalizedSearch) return;
 

@@ -1,4 +1,4 @@
-import { REQUEST_STATUS, INTENT } from '@shared/constants.js';
+import { USER_ROLE, REQUEST_STATUS, INTENT } from '@shared/constants.js';
 import type { TSubmitStates, TFieldSaveStatus } from '@/types/index.js';
 
 export const APP_ENV = process.env.APP_ENV;
@@ -36,9 +36,9 @@ export const SCREEN_SIZE = {
 } as const;
 
 export const DASHBOARD_TITLES = {
-    GUEST: 'Добро пожаловать!',
-    ADMIN: 'Панель администратора',
-    CUSTOMER: 'Панель покупателя'
+    [USER_ROLE.GUEST]: 'Добро пожаловать!',
+    [USER_ROLE.ADMIN]: 'Панель администратора',
+    [USER_ROLE.CUSTOMER]: 'Панель покупателя'
 } as const;
 
 export const AUTH_NAV_TYPE = {

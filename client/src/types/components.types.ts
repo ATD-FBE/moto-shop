@@ -1,7 +1,9 @@
 import { CATEGORY_FORM_MODE } from '@/config/constants.js';
-import { REQUEST_STATUS } from '@shared/constants.js';
+import { USER_ROLE, REQUEST_STATUS } from '@shared/constants.js';
 import type { RefObject, Dispatch, SetStateAction } from 'react';
+import type { TNavigationMap, INavItem } from '@/types/index.js';
 import type {
+    TRegisteredUserRole,
     INotification,
     IProduct,
     TSuccessStatus,
@@ -12,13 +14,25 @@ import type {
     IOrderItemsUpdateBody
 } from '@shared/types/index.js';
 
-/////////////////////////////
-/// STRUCTUR REFS CONTEXT ///
-/////////////////////////////
+//////////////////////////////
+/// STRUCTURE REFS CONTEXT ///
+//////////////////////////////
 
 export interface IStructureRefsContext {
     mainHeaderRef: RefObject<HTMLElement | null>;
     mainFooterRef: RefObject<HTMLElement | null>;
+}
+
+//////////////////////
+/// HEADER CONTENT ///
+//////////////////////
+
+export interface IHeaderContentProps {
+    userRole: TRegisteredUserRole | typeof USER_ROLE.GUEST;
+    userName: string;
+    navigationMap: TNavigationMap;
+    setActiveClass: (paths: readonly string[]) => 'active' | '';
+    setFeaturedClass: (navItem: INavItem) => 'featured' | '';
 }
 
 ///////////////
