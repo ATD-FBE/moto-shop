@@ -1,5 +1,5 @@
 import './styles/global.scss';
-import React, { useEffect } from 'react';
+import { useEffect, createElement } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -54,7 +54,7 @@ const App = (): JSX.Element => {
                                         }
                                     >
                                         // Outlet для ProtectedPageContent (вложенный маршрут)
-                                        <Route index element={React.createElement(component)} />
+                                        <Route index element={createElement(component)} />
                                     </Route>
                                 ))
                             )}
