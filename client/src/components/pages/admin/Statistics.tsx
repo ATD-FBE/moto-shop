@@ -5,7 +5,7 @@ export default function Statistics() {
                 <h2>Статистика и отчёты</h2>
             </header>
 
-
+            <div className="statistics-main">Блок статистики</div>
         </div>
     );
 }
