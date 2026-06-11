@@ -58,8 +58,8 @@ export default function Home(): JSX.Element {
 
             <div className="home-search-bar">
                 <p className="search-title">
-                    Найти нужную деталь можно, воспользовавшись
-                    поиском<span className="warn">*</span> в каталоге товаров прямо отсюда:
+                    Найти нужную деталь можно,
+                    воспользовавшись поиском<span className="warn">*</span> в каталоге товаров:
                 </p>
 
                 <div className="search-controls">
@@ -77,6 +77,7 @@ export default function Home(): JSX.Element {
                         className="search-btn"
                         onClick={handleSearch}
                         disabled={search.trim() === ''}
+                        aria-label="Поиск товаров в каталоге"
                     >
                         Поиск
                     </button>
@@ -92,11 +93,11 @@ export default function Home(): JSX.Element {
                 <h4 className="home-onboarding-title">Как здесь всё устроено:</h4>
 
                 <ul className="home-onboarding-list">
-                    <li>Добавляй товары в корзину — даже без регистрации.</li>
-                    <li>Корзина сохранится, пока ты думаешь.</li>
+                    <li>Добавляйте товары в корзину — даже без регистрации.</li>
+                    <li>Корзина сохранится, пока вы думаете и подсчитываете.</li>
                     <li>Оформить заказ можно будет сразу после авторизации.</li>
                     <li>Минимальная сумма заказа — {formatCurrency(MIN_ORDER_AMOUNT)} ₽</li>
-                    <li>Если сомневаешься — мы подскажем и подберём.</li>
+                    <li>Если сомневаетесь — мы подскажем и подберём.</li>
                 </ul>
             </div>
 
@@ -104,6 +105,7 @@ export default function Home(): JSX.Element {
                 <button
                     className="nav-catalog-btn"
                     onClick={() => navigate(routeConfig.catalog.paths[0])}
+                    aria-label="Перейти на страницу каталога магазина"
                 >
                     Перейти в каталог
                 </button>
@@ -125,7 +127,7 @@ export default function Home(): JSX.Element {
                 <p>
                     Все лицензии и сертификаты, а также условия доставки и оплаты,
                     можно найти на соответствующих страницах сайта.
-                    Если возникнут вопросы, наши контакты всегда под рукой — напиши нам или позвони.
+                    Если возникнут вопросы, наши контакты всегда под рукой — напишите нам или позвоните.
                 </p>
             </div>
         </div>

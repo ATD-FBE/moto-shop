@@ -30,7 +30,7 @@ export default function AboutShop(): JSX.Element {
                             <span className="letter-enhance">М</span>ото-
                             <span className="letter-enhance">М</span>агазин
                         </b>"
-                        — это твой надёжный партнёр в мире мототехники, деталей, аксессуаров,
+                        — это ваш надёжный партнёр в мире мототехники, деталей, аксессуаров,
                         неонов на колёса, перчаток с шипами и прочей байкерской прелести.
                         Мы предлагаем товары для тех, кто:
                     </p>
@@ -42,10 +42,10 @@ export default function AboutShop(): JSX.Element {
                     
                     <p className="mt-short">
                         Ассортимент регулярно обновляется, и сейчас насчитывает... ну, много.
-                        Очень много. Возможно, больше, чем ты сможешь унести даже на «Урале с
+                        Очень много. Возможно, больше, чем вы сможете унести даже на «Урале с
                         коляской». От расходников до редких мелочей, от стильной экипировки
                         до запчастей для нестандартных сборок — у нас найдётся всё, что нужно и
-                        даже то, о чём ты не знал, что нужно.
+                        даже то, о чём вы не знали, что нужно.
                     </p>
                 </div>
 
@@ -97,7 +97,7 @@ export default function AboutShop(): JSX.Element {
                             <span className="icon-marker color-blue">📬</span>
                             <p className="ml-large">
                                 Работаем как по предоплате, так и по системе наложенного платежа
-                                (до определённой суммы — не обнаглей).
+                                (до определённой суммы — не обнаглейте).
                             </p>
                         </li>
                     </ul>
@@ -128,7 +128,7 @@ export default function AboutShop(): JSX.Element {
                         <li className="marked-text">
                             <span className="icon-marker color-green">✔️</span>
                             <p className="ml-large">
-                                Комбинируй всё что хочешь: запчасти, шлемы, масло, дудки, кофры —
+                                Комбинируйте всё что хотите: запчасти, шлемы, масло, дудки, кофры —
                                 в один заказ.
                             </p>
                         </li>
@@ -142,8 +142,8 @@ export default function AboutShop(): JSX.Element {
                         <li className="marked-text">
                             <span className="icon-marker color-green">✔️</span>
                             <p className="ml-large">
-                                Обмен и возврат возможны, если товар ещё не стал частью твоей
-                                кастом-легенды.
+                                Обмен и возврат возможны, если товар ещё не стал частью вашей
+                                кастом-легенды и сохранён его первоначальный товарный вид.
                             </p>
                         </li>
                         <li className="marked-text">
@@ -158,7 +158,7 @@ export default function AboutShop(): JSX.Element {
                 
                 <div className="section-info mt-large">
                     <p>
-                        Если ты оптовик — мы тоже тебя не забудем. Напиши нам
+                        Если вы оптовик — мы вас также не забудем. Напишите нам
                         на <a href={`mailto:${COMPANY_DETAILS.emails.opt}`} className="email-link">
                             {COMPANY_DETAILS.emails.opt}
                         </a>,
@@ -169,8 +169,8 @@ export default function AboutShop(): JSX.Element {
                         <span className="icon-marker color-blue">📨</span>
                         <span className="ml-large">
                             По любым вопросам, предложениям или философским размышлениям на тему:
-                            <i>«Что лучше — карбюратор или инжектор?»</i> — пиши нам.
-                            Ответим с аргументами.
+                            {' '}<i>«Что лучше — карбюратор или инжектор?»</i>{' '}
+                            — пишите нам. Ответим с аргументами прямо из гаража.
                         </span>
                     </p>
                 </div>
