@@ -13,7 +13,7 @@ import {
     SUCCESS_DELAY
 } from '@/config/constants.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
-import { login, resetSuppressAuthRedirect } from '@/redux/slices/authSlice.js';
+import { login, resetSuppressAuthRedirect, resetForceRedirectToLogin } from '@/redux/slices/authSlice.js';
 import { prepareGuestCartPayload } from '@/services/guestCartService.js';
 import { saveUserToLocalStorage, initCustomerSession } from '@/services/authService.js';
 import {
@@ -317,8 +317,10 @@ export default function LoginForm(): JSX.Element {
         }
     };
 
-    // Очистка при размонтировании
+    // Сброс флага принудительного редиректа на логин и очистка при размонтировании
     useEffect(() => {
+        dispatch(resetForceRedirectToLogin());
+
         return () => {
             isUnmountedRef.current = true;
             dispatch(resetSuppressAuthRedirect());

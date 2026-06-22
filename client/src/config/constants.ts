@@ -1,4 +1,4 @@
-import { USER_ROLE, REQUEST_STATUS, INTENT } from '@shared/constants.js';
+import { SEC_IN_MS, USER_ROLE, REQUEST_STATUS, INTENT } from '@shared/constants.js';
 import type { TSubmitStates, TFieldSaveStatus } from '@/types/index.js';
 
 export const APP_ENV = process.env.APP_ENV;
@@ -9,11 +9,11 @@ export const CLIENT_PORT = process.env.CLIENT_PORT;
 export const SERVER_PORT = process.env.SERVER_PORT;
 export const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID;
 
-export const ACCESS_TOKEN_BUFFER = 10000;
-export const REFRESH_TOKEN_BUFFER = 60000;
+export const ACCESS_TOKEN_BUFFER = 10 * SEC_IN_MS;
+export const REFRESH_TOKEN_BUFFER = 30 * SEC_IN_MS;
 
-export const SUCCESS_DELAY = 1800;
-export const PRODUCT_AUTOSLIDE_TIMER = 5000;
+export const SUCCESS_DELAY = 1.8 * SEC_IN_MS;
+export const PRODUCT_AUTOSLIDE_TIMER = 5 * SEC_IN_MS;
 
 export const LOAD_STATUS_MIN_HEIGHT = parseInt(
     getComputedStyle(document.documentElement).getPropertyValue('--load-status-min-height'),

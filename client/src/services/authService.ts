@@ -187,18 +187,29 @@ export const checkAuth = (): TAppThunk<Promise<void>> =>
 
         // Access token просрочен — проверка refresh token
         const isRefreshTokenValid = now + REFRESH_TOKEN_BUFFER < refreshTokenExpiresAt;
-        if (!isRefreshTokenValid) return await dispatch(handleLogout());
+        const LOG_CTX = 'AUTH: ROUTE REFRESH';
+
+        if (!isRefreshTokenValid) {
+            logRequestStatus({
+                context: LOG_CTX,
+                status: REQUEST_STATUS.UNAUTH,
+                message: 'Срок действия токена обновления истёк'
+            });
+
+            await dispatch(handleLogout({ forceRedirectToLogin: true }));
+            return;
+        }
 
         // Refresh token валиден — обновление access token
         const responseData = await dispatch(sendAuthRefreshRequest());
         const { status, message } = responseData;
 
-        logRequestStatus({ context: 'AUTH: ROUTE REFRESH', status, message });
+        logRequestStatus({ context: LOG_CTX, status, message });
 
         if (status === REQUEST_STATUS.SUCCESS) {
             dispatch(setAccessTokenExpiry(responseData.accessTokenExp));
         } else if (status === REQUEST_STATUS.UNAUTH) {
-            await dispatch(handleLogout());
+            await dispatch(handleLogout({ forceRedirectToLogin: true }));
         }
     };
 

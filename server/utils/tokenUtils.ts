@@ -6,13 +6,15 @@ import { SEC_IN_MS } from '@shared/constants.js';
 import type { ITokenUserPayload, TTokenType, ITokenTypeConfig } from '@server/types/index.js';
 
 const TOKEN_CONFIG: Record<TTokenType, ITokenTypeConfig> = {
-    'access': { 
-        key: config.jwt.accessSecretKey, 
-        time: '1h' 
+    'access': {
+        key: config.jwt.accessSecretKey,
+        time: '1h'
+        //time: '10s'
     },
-    'refresh': { 
-        key: config.jwt.refreshSecretKey, 
-        time: '7d' 
+    'refresh': {
+        key: config.jwt.refreshSecretKey,
+        time: '7d'
+        //time: '30s'
     }
 };
 

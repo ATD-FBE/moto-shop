@@ -55,6 +55,14 @@ const authSlice = createSlice({
             forceRedirectToLogin: action.payload
         }),
 
+        resetSuppressAuthRedirect: (state) => {
+            state.suppressAuthRedirect = false;
+        },
+
+        resetForceRedirectToLogin: (state) => {
+            state.forceRedirectToLogin = false;
+        },
+
         updateUser: (state, action: PayloadAction<IUser>) => {
             state.user = action.payload;
         },
@@ -66,10 +74,6 @@ const authSlice = createSlice({
 
         setAccessTokenExpiry(state, action: PayloadAction<number>) {
             state.accessTokenExpiresAt = action.payload;
-        },
-
-        resetSuppressAuthRedirect: (state) => {
-            state.suppressAuthRedirect = false;
         },
 
         adjustUnreadNotifications: (state, action: PayloadAction<number>) => {
@@ -97,10 +101,11 @@ const authSlice = createSlice({
 export const {
     login,
     logout,
+    resetSuppressAuthRedirect,
+    resetForceRedirectToLogin,
     updateUser,
     updateCustomerDiscount,
     setAccessTokenExpiry,
-    resetSuppressAuthRedirect,
     adjustUnreadNotifications,
     adjustActiveOrders
 } = authSlice.actions;
