@@ -99,6 +99,7 @@ export default function Breadcrumbs({ path }: IBreadcrumbsProps): JSX.Element | 
             .sort((a, b) => (a === '*' ? 1 : b === '*' ? -1 : 0))
             .find(pattern => {
                 if (pattern === '*') return true;
+                
                 const regexPattern = pattern
                     .replace(/[\/.*+?^${}|\[\]()\\]/g, '\\$&')
                     .replace(/:[^\/]+/g, '[^/]+');

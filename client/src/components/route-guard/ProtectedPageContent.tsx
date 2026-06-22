@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, createElement } from 'react';
-import { useOutlet } from 'react-router-dom';
+import { useOutlet, matchPath } from 'react-router-dom';
 import Breadcrumbs from '@/components/common/Breadcrumbs.jsx';
 import { useAppSelector, useAppDispatch, useAppLocation } from '@/hooks/storeHooks.js';
 import { routeConfig } from '@/config/appRouting.js';
 import { checkAuth } from '@/services/authService.js';
 import { setNavigationLock } from '@/redux/slices/uiSlice.js';
 import { abortAllApiControllers } from '@/services/apiControllerService.js';
+import { toError } from '@shared/commonHelpers.js';
 import type { JSX, ReactNode } from 'react';
 
 export default function ProtectedPageContent(): JSX.Element {
@@ -17,27 +18,36 @@ export default function ProtectedPageContent(): JSX.Element {
     const dispatch = useAppDispatch();
     const location = useAppLocation();
 
-    // Контент страницы вложенного маршрута (статичен). Если отсутствует - страница не найдена.
-    const outlet = useOutlet() || createElement(routeConfig.notFound.component);
-
     // Маршрут для хлебных крошек
     const [breadcrumbPath, setBreadcrumbPath] = useState(location.pathname);
 
-    const handleRouteChange = async () => {
+    // Контент страницы вложенного маршрута (статичен). Если отсутствует - страница не найдена.
+    const outlet = useOutlet() || createElement(routeConfig.notFound.component);
+
+    /*const currentRoute = Object.values(routeConfig).find(route => 
+        route.paths.some(pattern => matchPath(pattern, location.pathname))
+    ) || routeConfig.notFound;*/
+
+    const handleRouteChange = async (): Promise<void> => {
         abortAllApiControllers(); // Отмена API-запросов через контроллеры
+        dispatch(setNavigationLock(true)); // Блокировка навигации
 
-        if (isAuthenticated) {
-            dispatch(setNavigationLock(true));
-
-            await dispatch(checkAuth());
+        try {
+            // Проверка/обновление токена и импорт компонента страницы в кэш браузера (одновременно)
+            await Promise.all([
+                isAuthenticated ? dispatch(checkAuth()) : Promise.resolve(),
+                //'importComponent' in currentRoute ? currentRoute.importComponent() : Promise.resolve()
+            ]);
             if (isUnmountedRef.current) return;
 
+            setBreadcrumbPath(location.pathname); // Обновление хлебных крошек
+            setDisplayedContent(outlet); // Обновление контента страницы
+        } catch (err) {
+            console.error('Ошибка загрузки страницы:', toError(err).message);
+        } finally {
             dispatch(setNavigationLock(false));
         }
-
-        setBreadcrumbPath(location.pathname); // Обновление хлебных крошек
-        setDisplayedContent(outlet); // Обновление контента страницы
-    };
+    }
     
     // Очистка при размонтировании
     useEffect(() => {

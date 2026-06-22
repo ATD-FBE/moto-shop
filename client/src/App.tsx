@@ -1,5 +1,5 @@
 import './styles/global.scss';
-import { useEffect, createElement } from 'react';
+import { useEffect, lazy, createElement } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -12,13 +12,21 @@ import RouteGuard from '@/components/RouteGuard.jsx';
 import AppStore from '@/redux/Store.js';
 import StructureRefsProvider from '@/components/StructureRefsProvider.jsx';
 import useDeviceInfo from '@/hooks/useDeviceInfo.js';
-import type { JSX } from 'react';
+import type { JSX, LazyExoticComponent } from 'react';
 
 const appRootElement = document.getElementById('app');
 
 if (!appRootElement) {
     throw new Error('Не удалось найти корневой элемент "app". Проверьте index.html!');
 }
+
+const lazyComponents: Record<string, LazyExoticComponent<any>> = {};
+
+Object.entries(routeConfig).forEach(([key, route]) => {
+    if ('importComponent' in route) {
+        lazyComponents[key] = lazy(route.importComponent);
+    }
+});
 
 const App = (): JSX.Element => {
     const isSessionReady = useAppSelector(state => state.ui.isSessionReady);
@@ -43,7 +51,7 @@ const App = (): JSX.Element => {
                                 <Layout />
                             </StructureRefsProvider>
                         }>
-                            {Object.values(routeConfig).map(({ paths, access, component }, idx) =>
+                            {/*Object.values(routeConfig).map(({ paths, access }, idx) =>
                                 paths.map(path => (
                                     <Route
                                         key={`${idx}-${path}`}
@@ -54,9 +62,34 @@ const App = (): JSX.Element => {
                                         }
                                     >
                                         // Outlet для ProtectedPageContent (вложенный маршрут)
-                                        <Route index element={createElement(component)} />
+                                        <Route index element={null} />
                                     </Route>
                                 ))
+                            )*/}
+
+                            {Object.entries(routeConfig).map(([key, { paths, access, component }], idx) =>
+                                paths.map(path => {
+                                    const ComponentToRender = lazyComponents[key] || component;
+
+                                    return (
+                                        <Route
+                                            key={`${idx}-${path}`}
+                                            path={path}
+                                            element={
+                                                // Outlet для Layout
+                                                <RouteGuard access={access} />
+                                            }
+                                        >
+                                            // Outlet для ProtectedPageContent (вложенный маршрут)
+                                            <Route 
+                                                index 
+                                                element={ComponentToRender
+                                                    ? createElement(ComponentToRender)
+                                                    : null} 
+                                            />
+                                        </Route>
+                                    );
+                                })
                             )}
                         </Route>
                     </Routes>
