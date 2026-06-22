@@ -37,11 +37,10 @@ export const CategorySchema = new Schema({
 CategorySchema.pre(
     'deleteOne',
     { document: true, query: false },
-    function(next): void {
+    async function(): Promise<void> {
         if (this.slug === UNSORTED_CATEGORY_SLUG) {
-            return next(new Error(`Категорию ${this.name} удалять нельзя`));
+            throw new Error(`Категорию ${this.name} удалять нельзя`);
         }
-        next();
     }
 );
 

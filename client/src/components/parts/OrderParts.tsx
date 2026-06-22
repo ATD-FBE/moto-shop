@@ -135,7 +135,7 @@ export function OrderCardInfoGrid({
     const netPaid = totalPaid - totalRefunded;
     const paymentBalance = netPaid - totalAmount;
 
-    const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(orderStatus);
+    const isActiveOrder = ORDER_ACTIVE_STATUSES.some(s => s === orderStatus);
     const isOverpaid = !isEqualCurrency(paymentBalance, 0) && paymentBalance > 0;
     const isUnpaid = !isEqualCurrency(paymentBalance, 0) && paymentBalance < 0;
 

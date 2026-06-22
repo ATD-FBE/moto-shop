@@ -1,3 +1,4 @@
+import { setServers } from 'node:dns/promises';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
@@ -11,6 +12,8 @@ import { isCriticalError } from '@server/utils/errorUtils.js';
 import log from '@server/utils/logger.js';
 import { toError } from '@shared/commonHelpers.js';
 import type { TShutdownSignal } from '@server/types/index.js';
+
+setServers(['1.1.1.1', '8.8.8.8']);
 
 const ENV = config.env;
 const PROTOCOL = config.protocol;

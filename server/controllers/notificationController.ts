@@ -16,7 +16,7 @@ import { notificationsPageLimitOptions } from '@shared/pageLimitOptions.js';
 import { USER_ROLE, NOTIFICATION_STATUS, REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 import type {
     TDbNotification,
     TDbNotificationBase,
@@ -70,10 +70,10 @@ export const handleNotificationListRequest: RequestHandler<
         switch (dbUser.role) {
             case USER_ROLE.ADMIN: {
                 // Подсчёт документов
-                const draftsFilter: FilterQuery<TDbNotificationManaged> = {
+                const draftsFilter: QueryFilter<TDbNotificationManaged> = {
                     status: NOTIFICATION_STATUS.DRAFT
                 };
-                const nonDraftsFilter: FilterQuery<TDbNotificationManaged> = {
+                const nonDraftsFilter: QueryFilter<TDbNotificationManaged> = {
                     status: { $ne: NOTIFICATION_STATUS.DRAFT }
                 };
                 const [draftsCount, nonDraftsCount] = await Promise.all([

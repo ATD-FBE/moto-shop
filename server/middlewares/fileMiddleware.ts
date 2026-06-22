@@ -3,6 +3,7 @@ import express, { type RequestHandler } from 'express';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import config from '@server/config/config.js';
+import { STORAGE_URL_PATH } from '@server/config/paths.js';
 import s3Client from '@server/config/s3Client.js';
 import { PUBLIC_PATH, BUILD_PATH, STORAGE_ROOT } from '@server/config/paths.js';
 import { STORAGE_TYPE } from '@server/config/constants.js';
@@ -24,9 +25,9 @@ export const serveReactApp: RequestHandler = (_req, res, next) => {
 };
 
 export const serveStorageFiles: RequestHandler = async (req, res, next) => {
-    const storageKey = req.params[0]; // Часть пути после /files/
+    const storageKey = req.path.replace(/^\//, '');
 
-    if (!storageKey) {
+    if (!storageKey || storageKey === req.path) {
         return res.status(404).end();
     }
 

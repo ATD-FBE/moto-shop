@@ -25,13 +25,14 @@ import checkoutRouter from '@server/routes/checkoutRouter.js';
 import orderRouter from '@server/routes/orderRouter.js';
 import sseRouter from '@server/routes/sseRouter.js';
 import { STORAGE_URL_PATH } from '@server/config/paths.js';
+import type { Express } from 'express';
 
-const app = express();
+const app: Express = express();
 const apiRouter = express.Router();
 
 app.use('/build', serveBuildFiles(express)); // Работает в продакшне
 app.use(servePublicFiles(express)); // Работает в продакшне
-app.get(`${STORAGE_URL_PATH}/*`, serveStorageFiles);
+app.use(STORAGE_URL_PATH, serveStorageFiles);
 
 app.set('trust proxy', true); // Для определения IP адреса в requestContext
 
@@ -39,7 +40,7 @@ app.use(requestContext);
 app.use(errorTracker);
 app.use(cookieParser());
 app.use(express.json({
-    verify: (req: Request, res: Response, buf: Buffer) => {
+    verify: (req: Request, _res: Response, buf: Buffer) => {
         req.rawBody = buf;
     }
 }));
@@ -59,7 +60,7 @@ apiRouter.use('/orders', reqTimeout(30000), orderRouter);
 app.use('/api', apiRouter);
 
 app.use('/sse', sseCorsMiddleware, sseRouter);
-app.get('*', serveReactApp); // Работает в продакшне
+app.use(serveReactApp); // Работает в продакшне
 app.use(globalErrorHandler);
 
 export default app;

@@ -28,7 +28,7 @@ import { productsPageLimitOptions, productEditorPageLimitOptions } from '@shared
 import { USER_ROLE, PRODUCTS_PAGE_CONTEXT, PRODUCT_FILES_LIMIT, REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 import type { TDbProduct, TDbProductView, TDbCategory } from '@server/types/index.js';
 import type {
     TProductListFilterParams,
@@ -548,7 +548,7 @@ export const handleBulkProductUpdateRequest: RequestHandler<
             }
 
             // Подготовка данных
-            const updateQuery: FilterQuery<TDbProduct> = { $set: {}, $unset: {} };
+            const updateQuery: QueryFilter<TDbProduct> = { $set: {}, $unset: {} };
 
             if (brand !== undefined) {
                 const trimmedBrand = brand?.trim();

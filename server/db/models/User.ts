@@ -64,40 +64,32 @@ export const UserSchema = new Schema({
 });
 
 // Хук срабатывает ДО валидации полей mongoose
-UserSchema.pre('validate', function(next) {
+UserSchema.pre('validate', function() {
     // При регистрации поле 'password' обязательное
     if (this.isNew && !this.password) {
         this.invalidate('password', 'Path `password` is invalid');
     }
-
-    next();
 });
 
 // Хук срабатывает ПОСЛЕ валидации полей mongoose, но перед сохранением документа
-UserSchema.pre('save', async function(next) {
-    try {
-        // Удаление ненужных полей у админа после его создания
-        if (this.isNew && this.role === USER_ROLE.ADMIN) {
-            this.set('notifications', undefined, { strict: false });
-            this.set('discount', undefined, { strict: false });
-            this.set('cart', undefined, { strict: false });
-            this.set('totalSpent', undefined, { strict: false });
-            this.set('checkoutPrefs', undefined, { strict: false });
-            this.set('orders', undefined, { strict: false });
-            this.set('isBanned', undefined, { strict: false });
-        }
+UserSchema.pre('save', async function() {
+    // Удаление ненужных полей у админа после его создания
+    if (this.isNew && this.role === USER_ROLE.ADMIN) {
+        this.set('notifications', undefined, { strict: false });
+        this.set('discount', undefined, { strict: false });
+        this.set('cart', undefined, { strict: false });
+        this.set('totalSpent', undefined, { strict: false });
+        this.set('checkoutPrefs', undefined, { strict: false });
+        this.set('orders', undefined, { strict: false });
+        this.set('isBanned', undefined, { strict: false });
+    }
 
-        // Хеширование пароля при создании нового юзера или изменении пароля у существующего
-        if (this.isModified('password') && typeof this.password === 'string') {
-            const salt = await bcrypt.genSalt(SALT_ROUNDS);
-            this.hashedPassword = await bcrypt.hash(this.password, salt);
-            this.markModified('hashedPassword');
-            this.set('password', undefined, { strict: false }); // Удаление поля password
-        }
-
-        next();
-    } catch (err) {
-        next(toError(err));
+    // Хеширование пароля при создании нового юзера или изменении пароля у существующего
+    if (this.isModified('password') && typeof this.password === 'string') {
+        const salt = await bcrypt.genSalt(SALT_ROUNDS);
+        this.hashedPassword = await bcrypt.hash(this.password, salt);
+        this.markModified('hashedPassword');
+        this.set('password', undefined, { strict: false }); // Удаление поля password
     }
 });
 

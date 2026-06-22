@@ -1,4 +1,4 @@
-import { Types, type ClientSession, type FilterQuery, type PipelineStage } from 'mongoose';
+import { Types, type ClientSession, type QueryFilter, type PipelineStage } from 'mongoose';
 import Order from '@server/db/models/Order.js';
 import User from '@server/db/models/User.js';
 import Product from '@server/db/models/Product.js';
@@ -322,7 +322,7 @@ export const buildProductsComputedFields = (
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter && !needReservedFilter) return [];
 
-    const fields: FilterQuery<TDbProductView> = {};
+    const fields: QueryFilter<TDbProductView> = {};
     const now = Date.now();
 
     const availableStockExpr = { $subtract: ['$stock', '$reserved'] };

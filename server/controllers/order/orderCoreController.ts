@@ -58,7 +58,7 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 import type {
     TDbOrderFinal,
     TDbProduct,
@@ -134,7 +134,7 @@ export const handleOrderListRequest: RequestHandler<
     >(req.query, ordersFilterOptions);
 
     // Общая фильтрация по поиску и параметрам
-    const baseFilter: FilterQuery<TDbOrderFinal> = { ...searchMatch, ...filterMatch };
+    const baseFilter: QueryFilter<TDbOrderFinal> = { ...searchMatch, ...filterMatch };
 
     // Настройка пагинации
     const page = Math.max(req.query.page ?? 1, 1);
@@ -272,8 +272,10 @@ export const handleOrderListRequest: RequestHandler<
                 });
         }
 
-        if (!baseFilter.currentStatus) baseFilter.currentStatus = { $ne: ORDER_STATUS.DRAFT };
-        const dbFilteredOrders = await OrderFinal.find({ ...baseFilter }).select('_id').lean<TDbOrderFinal[]>();
+        const dbFilteredOrders = await OrderFinal
+            .find({ ...baseFilter })
+            .select('_id')
+            .lean<TDbOrderFinal[]>();
         checkTimeout(req);
 
         const filteredOrderIdList = dbFilteredOrders.map(ord => ord._id.toString());
@@ -417,7 +419,7 @@ export const handleOrderRepeatRequest: RequestHandler<
                     reason: REQUEST_STATUS.DENIED
                 });
             }
-            if (!ORDER_FINAL_STATUSES.includes(dbOrder.currentStatus)) {
+            if (!ORDER_FINAL_STATUSES.some(s => s === dbOrder.currentStatus)) {
                 throw createAppError(403, `Статус заказа ${orderLbl} не позволяет его повторить`, {
                     reason: REQUEST_STATUS.DENIED
                 });
@@ -854,7 +856,7 @@ export const handleOrderStatusUpdateRequest: RequestHandler<
             // Проверка разрешения операций для текущего статуса
             const currentOrderStatus = dbOrder.currentStatus;
 
-            if (!ORDER_ACTIVE_STATUSES.includes(currentOrderStatus)) {
+            if (!ORDER_ACTIVE_STATUSES.some(s => s === currentOrderStatus)) {
                 throw createAppError(409, `Заказ ${orderLbl} не активен`);
             }
 
@@ -1081,7 +1083,7 @@ export const handleOrderStatusUpdateRequest: RequestHandler<
         // Отправка SSE-сообщения админам
         const sseMessageData = {
             orderUpdate: { orderId, orderUpdateData },
-            ...(newOrderStatus && ORDER_FINAL_STATUSES.includes(newOrderStatus) && {
+            ...(newOrderStatus && ORDER_FINAL_STATUSES.some(s => s === newOrderStatus) && {
                 newActiveOrdersChange: -1
             })
         };

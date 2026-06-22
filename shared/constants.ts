@@ -6,6 +6,9 @@ import type {
     TTransactionStatus,
     ITransactionStatusConfig,
     TOrderStatus,
+    TActiveOrderStatus,
+    TFinalOrderStatus,
+    TCashOnReceiptAllowedOrderStatus,
     TFinancialsState,
     ITransactionTypeConfig,
     IOrderStatusConfig,
@@ -218,7 +221,7 @@ export const ORDER_STATUS = {
     CANCELLED: 'cancelled'
 } as const;
 
-export const ORDER_STATUS_CONFIG: Record<TOrderStatus, IOrderStatusConfig> = {
+export const ORDER_STATUS_CONFIG = {
     [ORDER_STATUS.DRAFT]: {
         label: 'Черновик заказа',
         packingLabel: null,
@@ -352,19 +355,21 @@ export const ORDER_STATUS_CONFIG: Record<TOrderStatus, IOrderStatusConfig> = {
             deliveryMethods: ['all']
         }
     }
-} as const;
+} as const satisfies Record<TOrderStatus, IOrderStatusConfig>;
 
-export const ORDER_ACTIVE_STATUSES: readonly TOrderStatus[] = Object.entries(ORDER_STATUS_CONFIG)
-  .filter(([_, cfg]) => cfg.active)
-  .map(([status]) => status as TOrderStatus);
+export const ORDER_ACTIVE_STATUSES = Object.entries(ORDER_STATUS_CONFIG)
+    .filter(([_, cfg]) => 'active' in cfg && cfg.active)
+    .map(([status]) => status as TActiveOrderStatus) as readonly TActiveOrderStatus[];
 
-export const ORDER_FINAL_STATUSES: readonly TOrderStatus[] = Object.entries(ORDER_STATUS_CONFIG)
-    .filter(([_, cfg]) => cfg.final)
-    .map(([status]) => status as TOrderStatus);
+export const ORDER_FINAL_STATUSES = Object.entries(ORDER_STATUS_CONFIG)
+    .filter(([_, cfg]) => 'final' in cfg && cfg.final)
+    .map(([status]) => status as TFinalOrderStatus) as readonly TFinalOrderStatus[];
 
-export const CASH_ON_RECEIPT_ALLOWED_STATUSES: readonly TOrderStatus[] = Object.entries(ORDER_STATUS_CONFIG)
-    .filter(([_, cfg]) => cfg.cashOnReceiptAllowed)
-    .map(([status]) => status as TOrderStatus);
+export const CASH_ON_RECEIPT_ALLOWED_STATUSES = Object.entries(ORDER_STATUS_CONFIG)
+    .filter(([_, cfg]) => 'cashOnReceiptAllowed' in cfg && cfg.cashOnReceiptAllowed)
+    .map(
+        ([status]) => status as TCashOnReceiptAllowedOrderStatus
+    ) as readonly TCashOnReceiptAllowedOrderStatus[];
 
 export const FINANCIALS_STATE = {
     // Состояния активного/завершённого заказа

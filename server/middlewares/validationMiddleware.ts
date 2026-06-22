@@ -71,7 +71,15 @@ export const validateInput = (
     if (isValid) {
         if (params) req.params = parsedParams;
         if (body) req.body = parsedBody;
-        if (query) req.query = parsedQuery;
+
+        if (query) {
+            // query нельзя менять полностью в Express 5, только его содержимое
+            for (const key in req.query) {
+                delete req.query[key];
+            }
+            Object.assign(req.query, parsedQuery);
+        }
+
         return next();
     }
 

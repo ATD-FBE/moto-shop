@@ -55,7 +55,7 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 import type {
     TDbOrderFinal,
     TDbOrderFinancialsEventEntry,
@@ -411,7 +411,7 @@ export const handleOrderOfflinePaymentApplyRequest: RequestHandler<
 
             if (
                 prepDbFields.method === PAYMENT_METHOD.CASH_ON_RECEIPT &&
-                !CASH_ON_RECEIPT_ALLOWED_STATUSES.includes(currentOrderStatus)
+                !CASH_ON_RECEIPT_ALLOWED_STATUSES.some(s => s === currentOrderStatus)
             ) {
                 throw createAppError(403, `Запрещено: заказ ${orderLbl} ещё не принят`);
             }
@@ -672,7 +672,7 @@ export const handleOrderOnlinePaymentCreateRequest: RequestHandler<
                 reason: REQUEST_STATUS.DENIED
             });
         }
-        if (!ORDER_ACTIVE_STATUSES.includes(dbOrder.currentStatus)) {
+        if (!ORDER_ACTIVE_STATUSES.some(s => s === dbOrder.currentStatus)) {
             return safeSendResponse(res, 409, { message: `Заказ ${orderLbl} не активен` });
         }
 

@@ -167,7 +167,7 @@ export default function OrderStatusSteps({
     };
 
     const isRollbackFormVisible = (stepIdx: number): boolean =>
-        ORDER_ACTIVE_STATUSES.includes(currentOrderStatus) &&
+        ORDER_ACTIVE_STATUSES.some(s => s === currentOrderStatus) &&
         (orderStatusSteps[stepIdx - 1]?.rollbackAllowed ?? false);
 
     const isUpdateOrderStatusBtnDisabled = (stepStatus: TOrderStatus): boolean =>

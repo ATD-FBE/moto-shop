@@ -16,7 +16,7 @@ import {
 } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { FilterQuery } from 'mongoose';
+import type { QueryFilter } from 'mongoose';
 import type { TDbPromo, TDbPromoBase, TDbPromoManaged } from '@server/types/index.js';
 import type {
     TPromoListQuery,
@@ -78,7 +78,7 @@ export const handlePromoListRequest: RequestHandler<
             const announceStart = new Date(clientDateTimeUTC);
             announceStart.setDate(announceStart.getDate() + PROMO_ANNOUNCE_OFFSET_DAYS);
 
-            const findFilter: FilterQuery<TDbPromo> = {
+            const findFilter: QueryFilter<TDbPromo> = {
                 startDate: { $lte: announceStart }, // Дата анонса акции меньше текущего времени клиента
                 endDate: { $gte: clientDateTimeUTC } // Дата конца акции больше текущего времени клиента
             };

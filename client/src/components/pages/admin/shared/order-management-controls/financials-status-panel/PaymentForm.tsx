@@ -143,7 +143,7 @@ const isCashOnReceiptUnavailable = (
     orderStatus: TOrderStatus
 ): boolean =>
     method === PAYMENT_METHOD.CASH_ON_RECEIPT &&
-    !CASH_ON_RECEIPT_ALLOWED_STATUSES.includes(orderStatus);
+    !CASH_ON_RECEIPT_ALLOWED_STATUSES.some(s => s === orderStatus);
 
 const isPaymentBlocked = (
     { method, orderStatus, isPaymentDisabled }: IIsPaymentBlockedParams

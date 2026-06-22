@@ -3,7 +3,7 @@ import log from './logger.js';
 import { SEARCH_TYPES, DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
 import { escapeRegExp } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS, MAX_TIMEZONE_OFFSET_MINUTES } from '@shared/constants.js';
-import type { FilterQuery, PipelineStage } from 'mongoose';
+import type { QueryFilter, PipelineStage } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
     TDbField,
@@ -24,8 +24,8 @@ interface IParseSortResult<TModel extends object> {
 
 interface IOrderedFiltersArgs {
     computedFields?: PipelineStage[];
-    searchMatch?: FilterQuery<any>;
-    filterMatch?: FilterQuery<any>;
+    searchMatch?: QueryFilter<any>;
+    filterMatch?: QueryFilter<any>;
     extraFilters?: PipelineStage[];
     searchType?: TSearchTypes;
 }
@@ -38,9 +38,9 @@ export const buildSearchMatch = <T extends object>(
     searchParam: unknown,
     allowedSearchFields: readonly (keyof T)[],
     searchType: TSearchTypes
-): FilterQuery<T> => {
+): QueryFilter<T> => {
     const search = typeof searchParam === 'string' ? searchParam.trim() : '';
-    const searchMatch: FilterQuery<T> = {};
+    const searchMatch: QueryFilter<T> = {};
 
     if (!search) return searchMatch;
 
@@ -54,7 +54,7 @@ export const buildSearchMatch = <T extends object>(
             const safeSearch = escapeRegExp(search);
             searchMatch.$or = allowedSearchFields.map(field => ({
                 [field]: { $regex: safeSearch, $options: 'i' }
-            } as FilterQuery<T>));
+            } as QueryFilter<T>));
             break;
 
         case SEARCH_TYPES.TEXT: // Индексированный текстовый поиск (по хотя бы одному слову целиком)
@@ -71,7 +71,7 @@ export const buildSearchMatch = <T extends object>(
 export const buildFilterMatch = <TModel extends object, TFilter extends TFilterParamsServer>(
     query: TQuery<TModel, TFilter>,
     filterOptions: readonly TFilterOption<TModel>[]
-): FilterQuery<TModel> => {
+): QueryFilter<TModel> => {
     const filterMatch = {} as Record<TDbField<TModel>, any>;
 
     filterOptions.forEach(option => {
@@ -197,7 +197,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
         }
     });
 
-    return filterMatch as FilterQuery<TModel>;
+    return filterMatch as QueryFilter<TModel>;
 };
 
 export const parseSortParam = <TModel extends object>(

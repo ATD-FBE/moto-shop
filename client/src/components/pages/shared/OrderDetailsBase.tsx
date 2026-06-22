@@ -376,8 +376,8 @@ function OrderDetailsMain({
     const confirmedDate = new Date(confirmedAt).toLocaleString();
     const lastFinancialsEventEntry = getLastFinancialsEventEntry(financialsEventHistory);
 
-    const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
-    const isOrderFinal = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
+    const isActiveOrder = ORDER_ACTIVE_STATUSES.some(s => s === currentOrderStatusEntry.status);
+    const isOrderFinal = ORDER_FINAL_STATUSES.some(s => s === currentOrderStatusEntry.status);
     const isConfirmedOrder = currentOrderStatusEntry.status === ORDER_STATUS.CONFIRMED;
     const isCompletedOrder = currentOrderStatusEntry.status === ORDER_STATUS.COMPLETED;
     const isCancelledOrder = currentOrderStatusEntry.status === ORDER_STATUS.CANCELLED;

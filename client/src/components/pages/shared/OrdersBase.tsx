@@ -555,8 +555,8 @@ function OrderCard({
         return null; 
     }
 
-    const isActiveOrder = ORDER_ACTIVE_STATUSES.includes(currentOrderStatusEntry.status);
-    const isOrderFinal = ORDER_FINAL_STATUSES.includes(currentOrderStatusEntry.status);
+    const isActiveOrder = ORDER_ACTIVE_STATUSES.some(s => s === currentOrderStatusEntry.status);
+    const isOrderFinal = ORDER_FINAL_STATUSES.some(s => s === currentOrderStatusEntry.status);
     const isCompletedOrder = currentOrderStatusEntry.status === ORDER_STATUS.COMPLETED;
     const isCancelledOrder = currentOrderStatusEntry.status === ORDER_STATUS.CANCELLED;
 

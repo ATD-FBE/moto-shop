@@ -20,6 +20,7 @@ import {
     CARD_ONLINE_PROVIDER,
     ORDER_ACTION,
     ORDER_STATUS,
+    ORDER_STATUS_CONFIG,
     FINANCIALS_STATE,
     FINANCIALS_EVENT,
     REQUEST_STATUS,
@@ -86,11 +87,21 @@ export type TOrderAction = typeof ORDER_ACTION[keyof typeof ORDER_ACTION];
 
 export type TOrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
+export type TActiveOrderStatus = {
+    [K in TOrderStatus]: typeof ORDER_STATUS_CONFIG[K] extends { active: true } ? K : never;
+}[TOrderStatus];
+
+export type TFinalOrderStatus = {
+    [K in TOrderStatus]: typeof ORDER_STATUS_CONFIG[K] extends { final: true } ? K : never;
+}[TOrderStatus];
+
+export type TCashOnReceiptAllowedOrderStatus = {
+    [K in TOrderStatus]: typeof ORDER_STATUS_CONFIG[K] extends { cashOnReceiptAllowed: true } ? K : never;
+}[TOrderStatus];
+
 export type TFinancialsState = typeof FINANCIALS_STATE[keyof typeof FINANCIALS_STATE];
 
 export type TFinancialsEvent = typeof FINANCIALS_EVENT[keyof typeof FINANCIALS_EVENT];
-
-
 
 export type TRequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
 
