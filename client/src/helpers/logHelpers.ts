@@ -51,6 +51,7 @@ export const logRequestStatus = (
         case REQUEST_STATUS.MODIFIED:
         case REQUEST_STATUS.UNCHANGED:
         case REQUEST_STATUS.INVALID:
+        case REQUEST_STATUS.ABORTED:
             if (!PROD_ENV) console.warn(...logArgs);
             break;
 

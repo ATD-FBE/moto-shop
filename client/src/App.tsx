@@ -20,12 +20,10 @@ if (!appRootElement) {
     throw new Error('Не удалось найти корневой элемент "app". Проверьте index.html!');
 }
 
-const lazyComponents: Record<string, LazyExoticComponent<any>> = {};
+export const lazyComponents: Record<string, LazyExoticComponent<any>> = {};
 
 Object.entries(routeConfig).forEach(([key, route]) => {
-    if ('importComponent' in route) {
-        lazyComponents[key] = lazy(route.importComponent);
-    }
+    lazyComponents[key] = lazy(route.importComponent);
 });
 
 const App = (): JSX.Element => {
@@ -51,25 +49,9 @@ const App = (): JSX.Element => {
                                 <Layout />
                             </StructureRefsProvider>
                         }>
-                            {/*Object.values(routeConfig).map(({ paths, access }, idx) =>
-                                paths.map(path => (
-                                    <Route
-                                        key={`${idx}-${path}`}
-                                        path={path}
-                                        element={
-                                            // Outlet для Layout
-                                            <RouteGuard access={access} />
-                                        }
-                                    >
-                                        // Outlet для ProtectedPageContent (вложенный маршрут)
-                                        <Route index element={null} />
-                                    </Route>
-                                ))
-                            )*/}
-
-                            {Object.entries(routeConfig).map(([key, { paths, access, component }], idx) =>
+                            {Object.entries(routeConfig).map(([key, { paths, access }], idx) =>
                                 paths.map(path => {
-                                    const ComponentToRender = lazyComponents[key] || component;
+                                    const LazyComponent = lazyComponents[key];
 
                                     return (
                                         <Route
@@ -83,9 +65,9 @@ const App = (): JSX.Element => {
                                             // Outlet для ProtectedPageContent (вложенный маршрут)
                                             <Route 
                                                 index 
-                                                element={ComponentToRender
-                                                    ? createElement(ComponentToRender)
-                                                    : null} 
+                                                element={
+                                                    LazyComponent ? createElement(LazyComponent) : null
+                                                } 
                                             />
                                         </Route>
                                     );

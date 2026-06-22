@@ -5,8 +5,12 @@ import { useAppSelector } from '@/hooks/storeHooks.js';
 import type { JSX } from 'react';
 
 export default function ResourceLoader(): JSX.Element {
-    const { activeApiRequests, activeMediaRequests } = useAppSelector(state => state.loading);
-    const isLoading = activeApiRequests > 0 || activeMediaRequests > 0;
+    const {
+        activePageRequests,
+        activeApiRequests,
+        activeMediaRequests
+    } = useAppSelector(state => state.loading);
+    const isLoading = activePageRequests > 0 || activeApiRequests > 0 || activeMediaRequests > 0;
 
     return (
         <div className="resource-loader">

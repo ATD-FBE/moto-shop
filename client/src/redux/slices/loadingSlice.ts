@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { ILoadingState } from '@/types/index.js';
 
 const initialState: ILoadingState = {
+    activePageRequests: 0,
     activeApiRequests: 0,
     activeMediaRequests: 0
 };
@@ -10,6 +11,14 @@ const loadingSlice = createSlice({
     name: 'loading',
     initialState,
     reducers: {
+        incrementPageRequests: (state) => {
+            state.activePageRequests++;
+        },
+
+        decrementPageRequests: (state) => {
+            state.activePageRequests--;
+        },
+
         incrementApiRequests: (state) => {
             state.activeApiRequests++;
         },
@@ -29,6 +38,8 @@ const loadingSlice = createSlice({
 });
 
 export const {
+    incrementPageRequests,
+    decrementPageRequests,
     incrementApiRequests,
     decrementApiRequests,
     incrementMediaRequests,

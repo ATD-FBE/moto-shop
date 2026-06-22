@@ -57,6 +57,7 @@ interface ILockedRoute {
 }
 
 export interface ILoadingState {
+    activePageRequests: number;
     activeApiRequests: number;
     activeMediaRequests: number;
 }
