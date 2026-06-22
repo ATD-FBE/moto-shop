@@ -38,7 +38,7 @@ export default function ProtectedRoute(
 
     // Защита маршрутов в соответствии с их доступом и роли пользователя
     const userRole = user?.role || USER_ROLE.GUEST;
-    const isPrivilegedUser = ['admin'].includes(userRole);
+    const isPrivilegedUser = isAuthenticated && userRole === USER_ROLE.ADMIN;
     const personalPath = userRole !== USER_ROLE.GUEST
         ? routeConfig[`${userRole}Personal`]?.paths[0] || '/'
         : '/';

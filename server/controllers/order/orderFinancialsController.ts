@@ -120,7 +120,7 @@ export const handleOrderInvoicePdfRequest: RequestHandler<
         if (!dbOrder) {
             return safeSendResponse(res, 404, { message: `Заказ ${orderLbl} не найден` });
         }
-        if (dbUser.role === 'customer' && !dbOrder.customerId.equals(dbUser._id)) {
+        if (dbUser.role === USER_ROLE.CUSTOMER && !dbOrder.customerId.equals(dbUser._id)) {
             return safeSendResponse(res, 403, {
                 message: `Запрещено: заказ ${orderLbl} принадлежит другому клиенту`,
                 reason: REQUEST_STATUS.DENIED
