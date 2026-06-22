@@ -57,15 +57,11 @@ export const handleAuthRegistrationRequest: RequestHandler<
                 name: name.trim(),
                 email: email.trim(),
                 password,
-                role,
-                ...(role === USER_ROLE.CUSTOMER && {
-                    notifications: [],
-                    discount: 0
-                })
+                role
             });
 
             // Дополнение документа пользователя данными о сессии
-            const sessionData = await prepareSession(newDbUser.toObject(), guestCart);
+            const sessionData = await prepareSession(newDbUser, guestCart);
             checkTimeout(req);
     
             // Сохранение дкоумента нового пользователя
@@ -131,7 +127,7 @@ export const handleAuthLoginRequest: RequestHandler<
             }
 
             // Получение данных сессии
-            const sessionData = await prepareSession(dbUser.toObject(), guestCart);
+            const sessionData = await prepareSession(dbUser, guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {
@@ -348,7 +344,7 @@ export const handleAuthSessionRequest: RequestHandler<
 
     try {
         const { sessionData } = await runInDbTransaction(async (session) => {
-            const sessionData = await prepareSession(dbUser.toObject(), guestCart);
+            const sessionData = await prepareSession(dbUser, guestCart);
             checkTimeout(req);
 
             if (sessionData.cartWasMerged) {

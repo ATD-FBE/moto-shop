@@ -11,7 +11,7 @@ import {
     prepareOrderDraftFinancials
 } from '@server/services/checkoutService.js';
 import { USER_ROLE, ORDER_STATUS, ORDER_ACTIVE_STATUSES } from '@shared/constants.js';
-import type { TDbUser, TDbOrderDraft } from '@server/types/index.js';
+import type { TDbUser, TDbUserDoc, TDbOrderDraft } from '@server/types/index.js';
 import type { IUser, IGuestCartItem, ISession, ICheckoutDetails } from '@shared/types/index.js';
 
 export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
@@ -43,9 +43,12 @@ export const prepareUser = async (dbUser: TDbUser): Promise<IUser> => {
     throw new Error(`Неизвестная роль пользователя: ${dbUser.role}`);
 };
 
-export const prepareSession = async (dbUser: TDbUser, guestCart: IGuestCartItem[]): Promise<ISession> => {
+export const prepareSession = async (
+    dbUser: TDbUserDoc,
+    guestCart: IGuestCartItem[]
+): Promise<ISession> => {
     // Данные пользователя
-    const user = await prepareUser(dbUser);
+    const user = await prepareUser(dbUser.toObject());
 
     if (dbUser.role !== USER_ROLE.CUSTOMER) {
         return { user };
@@ -63,8 +66,8 @@ export const prepareSession = async (dbUser: TDbUser, guestCart: IGuestCartItem[
 
     if (guestCart.length > 0 && !orderDraftId) {
         const dbGuestCart = await prepareDbGuestCart(guestCart);
-        const mergedCart = mergeCarts(dbUser.cart ?? [], dbGuestCart);
-        const cartsAreDifferent = areCartsDifferent(dbUser.cart ?? [], mergedCart);
+        const mergedCart = mergeCarts(dbUser.cart, dbGuestCart);
+        const cartsAreDifferent = areCartsDifferent(dbUser.cart, mergedCart);
         
         if (cartsAreDifferent) {
             dbUser.cart.splice(0, dbUser.cart.length, ...mergedCart);
@@ -73,7 +76,7 @@ export const prepareSession = async (dbUser: TDbUser, guestCart: IGuestCartItem[
     }
 
     // Данные корзины
-    const { tradeProductList, cartItemList } = await prepareCart(dbUser.cart ?? [], {
+    const { tradeProductList, cartItemList } = await prepareCart(dbUser.cart, {
         checkoutMode: Boolean(orderDraft)
     });
 
