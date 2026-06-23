@@ -1,8 +1,8 @@
-/_logs/
-/.vscode/
-/node_modules/
-/client/build/
-/server/config/.env*
-!/server/config/.env.example
-/storage/
-/*.txt
+_logs/
+.vscode/
+node_modules/
+client/build/
+server/config/.env*
+!server/config/.env.example
+storage/
+*.txt

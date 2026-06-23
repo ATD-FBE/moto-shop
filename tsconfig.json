@@ -15,15 +15,10 @@
 
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
-		"allowJs": true,
-		"checkJs": false,
 		"noEmit": true,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-
-		"sourceMap": true,
-		"declaration": true,
-		"declarationMap": true,
+		"sourceMap": true
 	},
 	"include": [
 		"client/**/*",
