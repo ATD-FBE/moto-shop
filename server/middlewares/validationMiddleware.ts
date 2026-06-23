@@ -73,11 +73,13 @@ export const validateInput = (
         if (body) req.body = parsedBody;
 
         if (query) {
-            // query нельзя менять полностью в Express 5, только его содержимое
-            for (const key in req.query) {
-                delete req.query[key];
-            }
-            Object.assign(req.query, parsedQuery);
+            // query нельзя менять в Express 5, поэтому снимается ограничение через defineProperty
+            Object.defineProperty(req, 'query', {
+                value: parsedQuery,
+                writable: true,
+                configurable: true,
+                enumerable: true
+            });
         }
 
         return next();

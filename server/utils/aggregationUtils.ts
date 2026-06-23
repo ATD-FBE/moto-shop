@@ -3,7 +3,7 @@ import log from './logger.js';
 import { SEARCH_TYPES, DEFAULT_SEARCH_TYPE } from '@server/config/constants.js';
 import { escapeRegExp } from '@shared/commonHelpers.js';
 import { MAX_DATE_TS, MAX_TIMEZONE_OFFSET_MINUTES } from '@shared/constants.js';
-import type { QueryFilter, PipelineStage } from 'mongoose';
+import type { QueryFilter, PipelineStage, Expression } from 'mongoose';
 import type { TSearchTypes } from '@server/types/index.js';
 import type {
     TDbField,
@@ -34,13 +34,13 @@ interface IOrderedFiltersArgs {
 /// FUNCTIONALITY ///
 /////////////////////
 
-export const buildSearchMatch = <T extends object>(
+export const buildSearchMatch = <T extends { _id: Types.ObjectId }>(
     searchParam: unknown,
     allowedSearchFields: readonly (keyof T)[],
     searchType: TSearchTypes
 ): QueryFilter<T> => {
     const search = typeof searchParam === 'string' ? searchParam.trim() : '';
-    const searchMatch: QueryFilter<T> = {};
+    const searchMatch: QueryFilter<T> & { $text?: { $search: string } } = {};
 
     if (!search) return searchMatch;
 
@@ -54,7 +54,7 @@ export const buildSearchMatch = <T extends object>(
             const safeSearch = escapeRegExp(search);
             searchMatch.$or = allowedSearchFields.map(field => ({
                 [field]: { $regex: safeSearch, $options: 'i' }
-            } as QueryFilter<T>));
+            }));
             break;
 
         case SEARCH_TYPES.TEXT: // Индексированный текстовый поиск (по хотя бы одному слову целиком)
@@ -72,7 +72,7 @@ export const buildFilterMatch = <TModel extends object, TFilter extends TFilterP
     query: TQuery<TModel, TFilter>,
     filterOptions: readonly TFilterOption<TModel>[]
 ): QueryFilter<TModel> => {
-    const filterMatch = {} as Record<TDbField<TModel>, any>;
+    const filterMatch = {} as Record<TDbField<TModel>, Expression>;
 
     filterOptions.forEach(option => {
         const { dbField, type } = option;

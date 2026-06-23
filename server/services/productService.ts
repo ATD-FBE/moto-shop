@@ -1,4 +1,4 @@
-import { Types, type ClientSession, type QueryFilter, type PipelineStage } from 'mongoose';
+import { Types } from 'mongoose';
 import Order from '@server/db/models/Order.js';
 import User from '@server/db/models/User.js';
 import Product from '@server/db/models/Product.js';
@@ -18,6 +18,7 @@ import {
     PRODUCT_THUMBNAIL_PRESETS,
     ORDER_STATUS
 } from '@shared/constants.js';
+import type { ClientSession, PipelineStage, Expression } from 'mongoose';
 import type {
     TDbProduct,
     IDbProductComputedFields,
@@ -322,47 +323,35 @@ export const buildProductsComputedFields = (
 
     if (!needInStockFilter && !needBrandNewFilter && !needRestockedFilter && !needReservedFilter) return [];
 
-    const fields: QueryFilter<TDbProductView> = {};
+    const fields: Record<string, Expression> = {};
     const now = Date.now();
 
     const availableStockExpr = { $subtract: ['$stock', '$reserved'] };
 
     if (needInStockFilter) {
-        fields.inStock = { $cond: [{ $gt: [availableStockExpr, 0] }, true, false] };
+        fields.inStock = { $gt: [availableStockExpr, 0] };
     }
     
     if (needBrandNewFilter) {
         fields.isBrandNew = {
-            $cond: [
-                {
-                    $and: [
-                        { $gte: ['$createdAt', new Date(now - PRODUCT_BRAND_NEW_THRESHOLD_MS)] },
-                        { $gt: [availableStockExpr, 0] }
-                    ]
-                },
-                true,
-                false
+            $and: [
+                { $gte: ['$createdAt', new Date(now - PRODUCT_BRAND_NEW_THRESHOLD_MS)] },
+                { $gt: [availableStockExpr, 0] }
             ]
         };
     }
     
     if (needRestockedFilter) {
         fields.isRestocked = {
-            $cond: [
-                {
-                    $and: [
-                        { $gte: ['$lastRestockAt', new Date(now - PRODUCT_RESTOCK_THRESHOLD_MS)] },
-                        { $gt: [availableStockExpr, 0] }
-                    ]
-                },
-                true,
-                false
+            $and: [
+                { $gte: ['$lastRestockAt', new Date(now - PRODUCT_RESTOCK_THRESHOLD_MS)] },
+                { $gt: [availableStockExpr, 0] }
             ]
         };
     }
 
     if (needReservedFilter) {
-        fields.isReserved = { $cond: [{ $gt: ['$reserved', 0] }, true, false] };
+        fields.isReserved = { $gt: ['$reserved', 0] };
     }
 
     return [{ $addFields: fields }];

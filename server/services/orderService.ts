@@ -305,7 +305,10 @@ export const getLastActiveOrderStatus = (
     statusHistory: TDbOrderStatusHistoryEntry[]
 ): TOrderStatus => {
     const lastActive = statusHistory
-        .filter(e => ORDER_STATUS_CONFIG[e.status]?.active)
+        .filter(e => {
+            const orderStatusCfg = ORDER_STATUS_CONFIG[e.status];
+            return 'active' in orderStatusCfg && orderStatusCfg.active;
+        })
         .at(-1)?.status;
 
     return lastActive ?? ORDER_STATUS.CONFIRMED;
@@ -687,7 +690,7 @@ export const updateCustomerTotalSpent = async (
     const updateResult = await User.updateOne(
         { _id: customerId },
         [{ $set: { totalSpent: { $round: [{ $add: ['$totalSpent', amountDeltaSafe] }, 2] } } }],
-        { session }
+        { session, updatePipeline: true }
     );
 
     // Логирование события, когда покупатель не найден в базе

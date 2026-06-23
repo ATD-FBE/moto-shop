@@ -6,7 +6,7 @@ import {
     prepareProduct,
     prepareProductSnapshot
 } from './productService.js';
-import { ORDER_RESERVE_BATCH_SIZE, ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
+import { ORDER_ADJUSTMENT_TYPE } from '@server/config/constants.js';
 import { getAppliedDiscountData } from '@shared/commonHelpers.js';
 import type {
     TDbUser,
@@ -114,27 +114,23 @@ export const reserveProducts = async (
 ): Promise<Set<string>> => {
     const failedItemIdsSet: Set<string> = new Set();
 
-    // Резервирование количества товаров порциями
-    for (let i = 0; i < remainingDbOrderItemsToReserve.length; i += ORDER_RESERVE_BATCH_SIZE) {
-        const batch = remainingDbOrderItemsToReserve.slice(i, i + ORDER_RESERVE_BATCH_SIZE);
+    // Последовательное резервирование товаров
+    for (const item of remainingDbOrderItemsToReserve) {
+        const updateResult = await Product.updateOne(
+            {
+                _id: item.productId,
+                $expr: { // Проверка доступности товара (stock - reserved >= quantity)
+                    $gte: [{ $subtract: ['$stock', '$reserved'] }, item.quantity]
+                }
+            },
+            buildProductInventoryUpdatePipeline(ORDER_ADJUSTMENT_TYPE.RESERVE, item.quantity),
+            { session, updatePipeline: true }
+        );
 
-        await Promise.all(batch.map(async (item) => {
-            const updateResult = await Product.updateOne(
-                {
-                    _id: item.productId,
-                    $expr: { // Проверка доступности товара (stock - reserved >= quantity)
-                        $gte: [{ $subtract: ['$stock', '$reserved'] }, item.quantity]
-                    }
-                },
-                buildProductInventoryUpdatePipeline(ORDER_ADJUSTMENT_TYPE.RESERVE, item.quantity),
-                { session }
-            );
-
-            // Изменения не сохраняются, если товар не доступен => Запоминание ID товара
-            if (!updateResult.modifiedCount) {
-                failedItemIdsSet.add(item.productId.toString());
-            }
-        }));
+        // Изменения не сохраняются, если товар не доступен => Запоминание ID товара
+        if (!updateResult.modifiedCount) {
+            failedItemIdsSet.add(item.productId.toString());
+        }
     }
 
     return failedItemIdsSet;

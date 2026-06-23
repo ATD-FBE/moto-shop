@@ -74,7 +74,6 @@ export const ORDER_DRAFT_EXPIRATION = 15 * MIN_IN_MS; // 15 минут
 //export const ORDER_DRAFT_EXPIRATION = 10 * 1000;
 
 export const ONLINE_TRANSACTION_INIT_EXPIRATION = 5 * MIN_IN_MS; // 5 минут
-export const ORDER_RESERVE_BATCH_SIZE = 10;
 
 // Поля из БД для новостей
 export const BASE_DB_NEWS_FIELDS: TSelectedFields<TDbNews> = {
