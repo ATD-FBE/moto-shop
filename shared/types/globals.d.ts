@@ -7,7 +7,7 @@ import type { TEntityType } from '@shared/types/shared.types.js';
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
-            NODE_ENV: 'development' | 'testing' | 'production';
+            NODE_ENV: 'development' | 'localnet' | 'production';
             PROTOCOL: 'http' | 'https';
             HOST: string;
             DOMAIN: string;

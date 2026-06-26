@@ -11,14 +11,14 @@ import {
 import config from './server/config/config.js';
 
 export default {
-    mode: ['production', 'development'].includes(config.env) ? config.env : 'development',
+    mode: ['production', 'development'].some(env => env === config.env) ? config.env : 'development',
     entry: './client/src/App.jsx',
     output: {
         path: BUILD_PATH,
         publicPath: `/${BUILD_FOLDER}/`,
         filename: 'bundle.js'
     },
-    devtool: config.env === 'testing' ? 'eval-cheap-module-source-map' : undefined,
+    devtool: config.env === 'localnet' ? 'eval-cheap-module-source-map' : undefined,
     devServer: {
         host: config.host,
         port: config.clientPort,

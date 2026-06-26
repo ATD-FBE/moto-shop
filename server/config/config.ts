@@ -74,7 +74,7 @@ const resolveStorageConfig = (): TStorageConfig => {
     }
 };
 
-const config: IAppConfig = {
+const config = {
     env: environment,
     protocol: process.env.PROTOCOL || 'http',
     host: process.env.HOST || 'localhost',
@@ -92,6 +92,6 @@ const config: IAppConfig = {
         shopId: process.env.YOOKASSA_SHOP_ID,
         secretKey: process.env.YOOKASSA_SECRET_KEY
     }
-};
+} as const satisfies IAppConfig;
 
 export default config;

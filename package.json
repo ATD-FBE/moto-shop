@@ -1,6 +1,6 @@
 {
     "name": "magazine_app",
-    "description": "React + Redux + Node.js + MongoDB",
+    "description": "React + Redux + Node.js + Express + MongoDB",
     "version": "1.0.0",
     "author": "ATD",
     "type": "module",
@@ -59,6 +59,7 @@
         "@types/cookie-parser": "^1.4.10",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
+        "@types/jest": "^30.0.0",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/multer": "^2.1.0",
         "@types/node": "^26.0.0",
@@ -68,6 +69,8 @@
         "@types/react-dom": "^19.2.3",
         "concurrently": "^10.0.3",
         "env-cmd": "^11.0.0",
+        "jest": "^30.4.2",
+        "ts-jest": "^29.4.11",
         "webpack-dev-server": "^5.2.5"
     },
     "overrides": {
@@ -79,16 +82,17 @@
         "@parcel/watcher@2.5.6": true,
         "bcrypt@6.0.0": true,
         "esbuild@0.28.1": true,
-        "sharp@0.34.5": true
+        "unrs-resolver@1.12.2": true
     },
     "scripts": {
         "tsc": "tsc --noEmit",
+        "test": "cross-env NODE_OPTIONS=\"--experimental-vm-modules --no-warnings\" jest",
         "start": "cross-env NODE_ENV=development concurrently \"nodemon --exec tsx server/main.ts\" \"npm run dev\" \"npm run ngrok:dev\"",
-        "test": "cross-env NODE_ENV=testing concurrently \"nodemon --exec tsx server/main.ts\" \"npm run dev\" \"npm run ngrok:test\"",
-        "prod": "cross-env NODE_ENV=production tsx server/main.ts",
+        "lan": "cross-env NODE_ENV=localnet concurrently \"nodemon --exec tsx server/main.ts\" \"npm run dev\" \"npm run ngrok:lan\"",
         "dev": "cross-env NODE_OPTIONS=\"--import tsx\" webpack serve",
+        "prod": "cross-env NODE_ENV=production tsx server/main.ts",
         "build": "cross-env NODE_OPTIONS=\"--import tsx\" NODE_ENV=production webpack-cli",
         "ngrok:dev": "env-cmd -f server/config/.env.development --use-shell \"ngrok http %SERVER_PORT%\"",
-        "ngrok:test": "env-cmd -f server/config/.env.testing --use-shell \"ngrok http %HOST%:%SERVER_PORT%\""
+        "ngrok:lan": "env-cmd -f server/config/.env.localnet --use-shell \"ngrok http %HOST%:%SERVER_PORT%\""
     }
 }

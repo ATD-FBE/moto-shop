@@ -73,11 +73,6 @@ export const isObjectsEqual = (a: Record<string, string>, b: Record<string, stri
     return true;
 };
 
-export const getValueByPath = (path: string, obj: Record<string, any>): unknown => {
-    if (!obj || typeof obj !== 'object') return undefined;
-    return path.split('.').reduce((acc, key) => acc?.[key], obj);
-};
-
 export const getFilterOptionsByContext = <TModel extends object, TContext extends string>(
     options: readonly TFilterOptionConfig<TModel, TContext>[],
     context: TContext,

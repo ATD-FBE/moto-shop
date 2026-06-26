@@ -1,8 +1,20 @@
-_logs/
+# Настройки редактора
 .vscode/
+
+# Зависимости
 node_modules/
-client/build/
+
+# Тестовые отчёты
+coverage/
+
+# ENV - файлы
 server/config/.env*
 !server/config/.env.example
+
+# Создаваемые папки в проекте
+_logs/
+client/build/
 storage/
+
+# Информационные текстовые файлы
 *.txt
