@@ -1,5 +1,11 @@
 import { updateCustomerDiscount } from '@/redux/slices/authSlice.js';
-import { selectCartItemList, setCart, upsertCartItem, removeCartItem, updateCartTotals } from '@/redux/slices/cartSlice.js';
+import {
+    selectCartItemList,
+    setCart,
+    upsertCartItem,
+    removeCartItem,
+    updateCartTotals
+} from '@/redux/slices/cartSlice.js';
 import { upsertProductsInStore } from '@/redux/slices/productsSlice.js';
 import { saveGuestCartToLocalStorage } from '@/services/guestCartService.js';
 import type { TAppThunk, TRootState, ICartTotals } from '@/types/index.js';
@@ -45,6 +51,43 @@ export const refreshCartTotals = (): TAppThunk<void> => (dispatch, getState) => 
     const cartTotals = calculateCartTotals(cartProductData, customerDiscount);
 
     dispatch(updateCartTotals(cartTotals));
+};
+
+export const buildCartProductData = (
+    cartItemList: ICartItem[],
+    productMap: Record<string, IProduct>
+): ICartProductDataEntry[] =>
+    cartItemList
+        .filter(cartItem => !cartItem.deleted)
+        .map(cartItem => {
+            const product = productMap[cartItem.id];
+
+            return {
+                price: product?.price ?? 0,
+                discount: product?.discount ?? 0,
+                quantity: cartItem.quantity
+            };
+        });
+
+export const calculateCartTotals = (
+    cartProductData: ICartProductDataEntry[],
+    customerDiscount: number
+): ICartTotals => {
+    const { rawTotal, discountedTotal } = cartProductData.reduce((acc, cartItem) => {
+        const { price, quantity, discount: productDiscount } = cartItem;
+        acc.rawTotal += price * quantity;
+
+        const effectiveDiscount = Math.max(productDiscount, customerDiscount);
+        const discountFactor = 1 - effectiveDiscount / 100;
+        acc.discountedTotal += price * quantity * discountFactor;
+
+        return acc;
+    }, { rawTotal: 0, discountedTotal: 0 });
+
+    return {
+        rawTotal: Number(rawTotal.toFixed(2)),
+        discountedTotal: Number(discountedTotal.toFixed(2))
+    };
 };
 
 export const applyCartState = (
@@ -136,41 +179,4 @@ export const reconcileCartWithProducts = (
 const saveGuestCart = (getState: () => TRootState): void => {
     const cartItemList = selectCartItemList(getState());
     saveGuestCartToLocalStorage(cartItemList);
-};
-
-const buildCartProductData = (
-    cartItemList: ICartItem[],
-    productMap: Record<string, IProduct>
-): ICartProductDataEntry[] =>
-    cartItemList
-        .filter(cartItem => !cartItem.deleted)
-        .map(cartItem => {
-            const product = productMap[cartItem.id];
-
-            return {
-                price: product?.price ?? 0,
-                discount: product?.discount ?? 0,
-                quantity: cartItem.quantity
-            };
-        });
-
-const calculateCartTotals = (
-    cartProductData: ICartProductDataEntry[],
-    customerDiscount: number
-): ICartTotals => {
-    const { rawTotal, discountedTotal } = cartProductData.reduce((acc, cartItem) => {
-        const { price, quantity, discount: productDiscount } = cartItem;
-        acc.rawTotal += price * quantity;
-
-        const effectiveDiscount = Math.max(productDiscount, customerDiscount);
-        const discountFactor = 1 - effectiveDiscount / 100;
-        acc.discountedTotal += price * quantity * discountFactor;
-
-        return acc;
-    }, { rawTotal: 0, discountedTotal: 0 });
-
-    return {
-        rawTotal: Number(rawTotal.toFixed(2)),
-        discountedTotal: Number(discountedTotal.toFixed(2))
-    };
 };

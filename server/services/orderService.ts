@@ -489,8 +489,8 @@ export const calculateOrderTotals = (
 
 export const calculateOrderFinancials = (
     history: TDbOrderFinancialsEventEntry[]
-): ICalculateOrderFinancialsResult => {
-    return history.reduce(
+): ICalculateOrderFinancialsResult =>
+    history.reduce(
         (acc, entry) => {
             if (entry.voided?.flag) return acc;
 
@@ -503,7 +503,6 @@ export const calculateOrderFinancials = (
         },
         { totalPaid: 0, totalRefunded: 0 }
     );
-};
 
 export const getFinancialsState = (
     orderStatus: Omit<TOrderStatus, typeof ORDER_STATUS.DRAFT>,

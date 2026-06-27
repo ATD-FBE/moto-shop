@@ -45,9 +45,9 @@ export const isDbDataModified = (
     // Если null в новом значении удаляет поле (preserveNull = false), то его будущее значение undefined
     // preserveNull интерпретирует новое значение null как валидное (соответствует БД)
     if (oldData === undefined && newData === undefined) return false; // Ничего не было и не стало
+    if (oldData === null && newData === undefined) return true; // null -> undefined = удаление
     if (oldData === undefined && newData === null) return preserveNull; // null сохраняется или удаляет поле
     if (oldData === null && newData === null) return !preserveNull; // null удаляет поле — это изменение
-    if (oldData === null && newData === undefined) return true; // null -> undefined = удаление
 
     // Одно из значений дата => сравнение дат
     const oldIsDate = isDateLike(oldData);
@@ -67,7 +67,12 @@ export const isDbDataModified = (
     if (Array.isArray(oldData) || Array.isArray(newData)) {
         if (!Array.isArray(oldData) || !Array.isArray(newData)) return true;
         if (oldData.length !== newData.length) return true;
-        return oldData.some((item, idx) => isDbDataModified(item, newData[idx], { preserveNull }));
+
+        return oldData.some((item, idx) => isDbDataModified(item, newData[idx], {
+            preserveNull: typeCheck.object(item) || typeCheck.object(newData[idx])
+                ? preserveNull
+                : true
+        }));
     }
 
     const oldIsObj = typeCheck.object(oldData);

@@ -9,7 +9,7 @@ import { DISCOUNT_SOURCE } from '@shared/constants.js';
 
 describe('Модуль Common Helpers', () => {
     // ==========================================
-    // 1. ensureArray
+    // ensureArray
     // ==========================================
 
     describe('Функция ensureArray', () => {
@@ -31,7 +31,7 @@ describe('Модуль Common Helpers', () => {
     });
 
     // ==========================================
-    // 2. toError
+    // toError
     // ==========================================
 
     describe('Функция toError', () => {
@@ -74,7 +74,7 @@ describe('Модуль Common Helpers', () => {
     });
 
     // ==========================================
-    // 3. getAppliedDiscountData
+    // getAppliedDiscountData
     // ==========================================
 
     describe('Функция getAppliedDiscountData', () => {
@@ -116,7 +116,7 @@ describe('Модуль Common Helpers', () => {
     });
 
     // ==========================================
-    // 4. formatDateOnly
+    // formatDateOnly
     // ==========================================
 
     describe('Функция formatDateOnly', () => {
@@ -156,7 +156,7 @@ describe('Модуль Common Helpers', () => {
     });
 
     // ==========================================
-    // 5. formatDateOnly
+    // formatDateOnly
     // ==========================================
 
     describe('Функция getLastFinancialsEventEntry', () => {

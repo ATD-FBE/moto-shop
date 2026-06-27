@@ -2,11 +2,8 @@ import { createDefaultEsmPreset } from 'ts-jest';
 
 const tsJestPreset = createDefaultEsmPreset();
 
-/** @type {import('jest').Config} */
-export default {
-    testEnvironment: 'node',
+const commonProjectConfig = {
     ...tsJestPreset,
-    verbose: true,
     setupFiles: ['<rootDir>/jest.setup.js'],
     moduleNameMapper: {
         // Алиасы путей (расширение в конце импорта - .js, .ts, .jsx, .tsx ИЛИ отсутствует)
@@ -17,4 +14,29 @@ export default {
         // Локальный поиск для относительных импортов внутри папок
         '^\\.(.*)\\.(js|jsx|ts|tsx)$': '.$1'
     }
+};
+
+/** @type {import('jest').Config} */
+export default {
+    verbose: true,
+    projects: [
+        {
+            displayName: 'server',
+            testEnvironment: 'node',
+            testMatch: ['<rootDir>/server/__tests__/**/*.[jt]s?(x)'],
+            ...commonProjectConfig
+        },
+        {
+            displayName: 'client',
+            testEnvironment: 'jsdom', // Виртуальный браузер для фронта
+            testMatch: ['<rootDir>/client/src/__tests__/**/*.[jt]s?(x)'],
+            ...commonProjectConfig
+        },
+        {
+            displayName: 'shared',
+            testEnvironment: 'node',
+            testMatch: ['<rootDir>/shared/__tests__/**/*.[jt]s?(x)'],
+            ...commonProjectConfig
+        }
+    ]
 };

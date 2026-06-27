@@ -1,4 +1,5 @@
 import { SEC_IN_MS, USER_ROLE, REQUEST_STATUS, INTENT } from '@shared/constants.js';
+import { getCssNumber } from '@/helpers/cssHelpers.js';
 import type { TSubmitStates, TFieldSaveStatus } from '@/types/index.js';
 
 export const APP_ENV = process.env.APP_ENV;
@@ -15,18 +16,9 @@ export const REFRESH_TOKEN_BUFFER = 30 * SEC_IN_MS;
 export const SUCCESS_DELAY = 1.8 * SEC_IN_MS;
 export const PRODUCT_AUTOSLIDE_TIMER = 5 * SEC_IN_MS;
 
-export const LOAD_STATUS_MIN_HEIGHT = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue('--load-status-min-height'),
-    10
-);
-export const MODAL_ANIMATION_DURATION = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue('--modal-animation-duration'),
-    10
-);
-export const COLLAPSIBLE_ANIMATION_DURATION = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue('--collapsible-animation-duration'),
-    10
-);
+export const LOAD_STATUS_MIN_HEIGHT = getCssNumber('--load-status-min-height', 100);
+export const MODAL_ANIMATION_DURATION = getCssNumber('--modal-animation-duration', 150);
+export const COLLAPSIBLE_ANIMATION_DURATION = getCssNumber('--collapsible-animation-duration', 200);
 
 export const SCREEN_SIZE = {
     XS: 540,
