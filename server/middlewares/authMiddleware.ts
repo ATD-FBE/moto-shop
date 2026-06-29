@@ -7,7 +7,6 @@ import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { toError } from '@shared/commonHelpers.js';
 import { REQUEST_STATUS } from '@shared/constants.js';
 import type { RequestHandler } from 'express';
-import type { TTokenDecodedUser  } from '@server/types/index.js';
 import type { TRegisteredUserRole } from '@shared/types/index.js';
 
 export const disableCache: RequestHandler = (_req, res, next) => {
@@ -29,7 +28,7 @@ export const verifyAuth: RequestHandler = async (req, res, next) => {
             return safeSendResponse(res, 401, { message: 'Неверный формат или поврежденный токен' });
         }
 
-        req.user = decodedUser as TTokenDecodedUser;
+        req.user = decodedUser;
         next();
     } catch (err) {
         const error = toError(err);
@@ -100,7 +99,7 @@ export const optionalAuth: RequestHandler = async (req, res, next) => {
                 return safeSendResponse(res, 401, { message: 'Неверный формат или поврежденный токен' });
             }
 
-            req.user = decodedUser as TTokenDecodedUser;
+            req.user = decodedUser;
         }
         
         next();
