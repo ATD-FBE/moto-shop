@@ -3,7 +3,6 @@ import express, { type RequestHandler } from 'express';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import config from '@server/config/config.js';
-import { STORAGE_URL_PATH } from '@server/config/paths.js';
 import s3Client from '@server/config/s3Client.js';
 import { PUBLIC_PATH, BUILD_PATH, STORAGE_ROOT } from '@server/config/paths.js';
 import { STORAGE_TYPE } from '@server/config/constants.js';
@@ -49,26 +48,17 @@ export const serveStorageFiles: RequestHandler = async (req, res, next) => {
                     const response = await s3Client.send(getCommand);
                     const stream = response.Body;
 
-                    if (!stream || typeof (stream as any).pipe !== 'function') {
+                    if (!stream || !('pipe' in stream) || typeof stream.pipe !== 'function') {
                         throw new Error('S3 Response Body не является потоком');
                     }
                     
                     // Установка заголовков на сервере для пришедших данных
-                    if (response.ContentType) {
-                        res.set('Content-Type', response.ContentType);
-                    }
-                    if (response.ContentLength) {
-                        res.set('Content-Length', response.ContentLength.toString());
-                    }
+                    if (response.ContentType) res.set('Content-Type', response.ContentType);
+                    if (response.ContentLength) res.set('Content-Length', response.ContentLength.toString());
 
                     // Обработка стрима - Скачивание файла с хранилища s3 через сервер
-                    const readableStream = stream as import('stream').Readable;
-
-                    readableStream.on('error', (err) => {
-                        next(err);
-                    });
-
-                    return readableStream.pipe(res);
+                    stream.on('error', (err) => next(err));
+                    return stream.pipe(res);
                 }
     
                 case 'private': {
