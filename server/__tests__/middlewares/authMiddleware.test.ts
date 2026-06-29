@@ -89,14 +89,15 @@ describe('Middlewares - Модуль Auth Middleware', () => {
         });
 
         it('должен успешно валидировать токен, записать user в req и вызвать next()', async () => {
-            mockRequest.cookies = { accessToken: 'valid.token.signature' };
+            const accessToken = 'valid.token.signature';
+            mockRequest.cookies = { accessToken };
 
             const fakeDecodedUser = { _id: 'user123', role: USER_ROLE.CUSTOMER };
             jwtVerifySpy.mockReturnValue(fakeDecodedUser);
 
             await verifyAuth(mockRequest, mockResponse, nextFunction);
 
-            expect(jwt.verify).toHaveBeenCalledWith('valid.token.signature', expect.any(String));
+            expect(jwt.verify).toHaveBeenCalledWith(accessToken, expect.any(String));
             expect(mockRequest.user).toEqual(fakeDecodedUser);
             expect(nextFunction).toHaveBeenCalledTimes(1);
         });

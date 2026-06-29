@@ -39,7 +39,7 @@ export const serveStorageFiles: RequestHandler = async (req, res, next) => {
         try {
             const getCommand = new GetObjectCommand({
                 Bucket: config.storage.bucket,
-                Key: storageKey,
+                Key: storageKey
             });
     
             switch (config.storage.bucketType) {
@@ -62,7 +62,7 @@ export const serveStorageFiles: RequestHandler = async (req, res, next) => {
                 }
     
                 case 'private': {
-                    // Генерирация ссылки, действующей 1 час
+                    // Генерация ссылки, действующей 1 час
                     const signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
 
                     // Скачивание файла с s3 напрямую по подписанному URL

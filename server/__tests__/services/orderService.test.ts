@@ -9,7 +9,7 @@ import type {
     TDbOrderFinancialsEventEntry
 } from '@server/types/index.js';
 
-describe('Модуль Order Service', () => {
+describe('Services - Модуль Order Service', () => {
     // ==========================================
     // calculateOrderTotals
     // ==========================================
