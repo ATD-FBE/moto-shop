@@ -1,7 +1,5 @@
 import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
-//import { isTokenDecodedUser } from '@server/utils/typeGuards.js';
-//import safeSendResponse from '@server/utils/safeSendResponse.js';
 import { disableCache, verifyAuth } from '@server/middlewares/authMiddleware.js';
 import { USER_ROLE } from '@shared/constants.js';
 import type { Request, Response, NextFunction } from 'express';
