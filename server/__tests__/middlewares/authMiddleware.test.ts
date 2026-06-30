@@ -126,11 +126,10 @@ describe('Middlewares - Модуль Auth Middleware', () => {
             }
         );
 
-        it('должен передавать неизвестные ошибки в глобальный обработчик через next(error)', async () => {
+        it('должен передать неизвестную ошибку в глобальный обработчик через next(error)', async () => {
             mockRequest.cookies = { accessToken: 'some.token' };
 
-            const errorMessage = 'Unexpected Error';
-            const unexpectedError = new Error(errorMessage);
+            const unexpectedError = new Error('Unexpected Error');
 
             jwtVerifySpy.mockImplementation(() => {
                 throw unexpectedError;

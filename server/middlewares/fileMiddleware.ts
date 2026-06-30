@@ -1,7 +1,7 @@
 import { join } from 'path';
 import express, { type RequestHandler } from 'express';
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import config from '@server/config/config.js';
 import s3Client from '@server/config/s3Client.js';
 import { PUBLIC_PATH, BUILD_PATH, STORAGE_ROOT } from '@server/config/paths.js';
