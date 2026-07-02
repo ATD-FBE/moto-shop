@@ -7,7 +7,6 @@ import { DraftCustomerInfoSchema } from './schemas/order/CustomerInfoSchemas.js'
 import { DraftDeliverySchema } from './schemas/order/DeliverySchemas.js';
 import { DraftFinancialsSchema } from './schemas/order/FinancialsSchemas.js';
 import { validationRules } from '@shared/fieldRules.js';
-import { toError } from '@shared/commonHelpers.js';
 import { USER_ROLE, REGISTERED_USER_ROLES } from '@shared/constants.js';
 import type { TDbUser } from '@server/types/index.js';
 
