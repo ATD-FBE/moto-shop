@@ -18,6 +18,7 @@ declare global {
             JWT_REFRESH_SECRET_KEY: string;
             ADMIN_REG_CODE: string;
             MONGO_MODE: TMongoMode;
+            MONGO_URI_TEST?: string;
             MONGO_URI_LOCAL?: string;
             MONGO_URI_ATLAS?: string;
             STORAGE_TYPE: TStorageType;
