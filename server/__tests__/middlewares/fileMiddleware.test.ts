@@ -17,7 +17,7 @@ jest.unstable_mockModule('@aws-sdk/s3-request-presigner', () => ({
 const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
 const { serveStorageFiles } = await import('@server/middlewares/fileMiddleware.js');
 
-describe('Middlewares - Модуль File Middleware', () => {
+describe('Middlewares Unit Tests - Модуль File Middleware', () => {
     let originalStorage: TStorageConfig;
 
     let mockRequest: Request;

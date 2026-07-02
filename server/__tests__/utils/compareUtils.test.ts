@@ -5,7 +5,7 @@ import type {
     
 } from '@server/types/index.js';
 
-describe('Utils - Модуль Compare Utils', () => {
+describe('Utils Unit Tests - Модуль Compare Utils', () => {
     // ==========================================
     // isDbDataModified
     // ==========================================

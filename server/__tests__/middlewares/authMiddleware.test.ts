@@ -4,7 +4,7 @@ import { disableCache, verifyAuth } from '@server/middlewares/authMiddleware.js'
 import { USER_ROLE } from '@shared/constants.js';
 import type { Request, Response, NextFunction } from 'express';
 
-describe('Middlewares - Модуль Auth Middleware', () => {
+describe('Middlewares Unit Tests - Модуль Auth Middleware', () => {
     let mockRequest: Request;
     let mockResponse: Response;
     let nextFunction: NextFunction;
