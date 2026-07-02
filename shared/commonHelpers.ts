@@ -288,6 +288,13 @@ export const getOrderStatusSteps = (deliveryMethod: TDeliveryMethod): TOrderStat
 /// COMMON TYPE GUARDS ///
 //////////////////////////
 
+// assert-функция определяется через function, иначе нужно типизировать саму функцию
+export function assertDefined<T>(val: T, name: string): asserts val is NonNullable<T> {
+    if (val == null) {
+        throw new Error(`${name} не определён`);
+    }
+}
+
 export const isObjectKey = <T extends object>(
     key: PropertyKey,
     obj: T
