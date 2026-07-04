@@ -7,6 +7,7 @@ import News from '@server/db/models/News.js';
 import { generateToken } from '@server/utils/tokenUtils.js';
 import { assertDefined } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
+import type { Response } from 'express';
 import type { TDbUser, TDbNews } from '@server/types/index.js';
 
 describe('Integration Tests - Модуль News Controller', () => {
@@ -221,8 +222,8 @@ describe('Integration Tests - Модуль News Controller', () => {
         it('[админ] -> должен вернуть ошибку 400 для невалидного ID новости', async () => {
             assertDefined(admin, 'admin');
 
-            const accessToken = generateToken(admin, 'access');
             const invalidNewsId = '[123zxc]';
+            const accessToken = generateToken(admin, 'access');
 
             const response = await request(app)
                 .get(`/api/news/${invalidNewsId}`)
@@ -381,6 +382,49 @@ describe('Integration Tests - Модуль News Controller', () => {
             newsDbSpy.mockRestore(); // Очистка моков
         });
 
+        it('[админ] -> должен откатить изменения в транзакции при таймауте и вернуть 408', async () => {
+            assertDefined(admin, 'admin');
+
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 3',
+                content: 'Текст новости 3'
+            };
+
+            let timeoutCallback: (() => void) | undefined;
+
+            const responseSetTimeoutSpy = jest.spyOn(app.response, 'setTimeout')
+                .mockImplementationOnce(function (this: Response, _duration: unknown, cb: unknown) {
+                    if (typeof cb === 'function') timeoutCallback = cb as () => void;
+                    return this; 
+                });
+
+            const newsDbCreateSpy = jest.spyOn(News, 'create')
+                .mockImplementationOnce(async function (...args) {
+                    timeoutCallback?.(); 
+                    
+                    const originalMethod = News.create.bind(News);
+                    return originalMethod(...args);
+                });
+
+            const response = await request(app)
+                .post('/api/news')
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(408);
+    
+            expect(response.body).toHaveProperty('message');
+
+            // Проверка того, что новость не создалась в БД
+            const createdNews = await News.findOne({ title: body.title }).lean<TDbNews>();
+            expect(createdNews).toBeNull();
+
+            // Очистка моков
+            responseSetTimeoutSpy.mockRestore();
+            newsDbCreateSpy.mockRestore();
+        });
+
         it('[админ] -> должен успешно создать новость и вернуть статус 201', async () => {
             assertDefined(admin, 'admin');
 
@@ -407,6 +451,7 @@ describe('Integration Tests - Модуль News Controller', () => {
 
             expect(createdNews.content).toBe(body.content);
             expect(createdNews.createdBy.toString()).toBe(admin._id.toString());
+            expect(createdNews.updateHistory).toHaveLength(0);
         });
     });
 
@@ -460,6 +505,341 @@ describe('Integration Tests - Модуль News Controller', () => {
             expect(response.body).toHaveProperty('message');
         });
 
+        it('[админ] -> должен вернуть ошибку 400 для невалидного ID новости', async () => {
+            assertDefined(admin, 'admin');
 
+            const invalidNewsId = '[123zxc]';
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 1 (изм.)',
+                content: 'Текст новости 1 (изм.)'
+            };
+
+            const response = await request(app)
+                .put(`/api/news/${invalidNewsId}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(400);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[админ] -> должен вернуть ошибку 404 для отсутствующей новости в БД', async () => {
+            assertDefined(admin, 'admin');
+
+            const missingNewsId = '68ee44a23705025f5a02d891';
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 1 (изм.)',
+                content: 'Текст новости 1 (изм.)'
+            };
+
+            const response = await request(app)
+                .put(`/api/news/${missingNewsId}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(404);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[админ] -> должен вернуть ошибку 204 без тела ответа для неизменённой новости', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 1',
+                content: 'Текст новости 1'
+            };
+
+            const response = await request(app)
+                .put(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect(204);
+    
+            expect(response.body).not.toHaveProperty('message');
+        });
+
+        it('[админ] -> должен передавать ошибку БД в globalErrorHandler со статусом 500', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news2, 'news2');
+
+            const news2Id = news2._id.toString();
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 2 (изм.)',
+                content: 'Текст новости 2 (изм.)'
+            };
+
+            const newsDbSaveSpy = jest.spyOn(News.prototype, 'save').mockImplementationOnce(() => {
+                throw new Error('Критическая ошибка MongoDB (Тест)');
+            });
+    
+            const response = await request(app)
+                .put(`/api/news/${news2Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(500);
+    
+            expect(response.body).toHaveProperty('message');
+
+            newsDbSaveSpy.mockRestore(); // Очистка моков
+        });
+
+        it('[админ] -> должен откатить изменения в транзакции при таймауте и вернуть 408', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 1 (изм.)',
+                content: 'Текст новости 1 (изм.)'
+            };
+
+            let timeoutCallback: (() => void) | undefined;
+
+            const responseSetTimeoutSpy = jest.spyOn(app.response, 'setTimeout')
+                .mockImplementationOnce(function (this: Response, _duration: unknown, cb: unknown) {
+                    if (typeof cb === 'function') timeoutCallback = cb as () => void;
+                    return this; 
+                });
+
+            const newsDbSaveSpy = jest.spyOn(News.prototype, 'save')
+                .mockImplementationOnce(async function (this: mongoose.Document, ...args) {
+                    timeoutCallback?.(); 
+                    
+                    const originalMethod = News.prototype.save.bind(this);
+                    return originalMethod(...args);
+                });
+
+            const response = await request(app)
+                .put(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(408);
+    
+            expect(response.body).toHaveProperty('message');
+
+            // Проверка того, что новость не сохранились в БД с изменениями
+            const corruptedNews = await News.findOne({ title: body.title }).lean<TDbNews>();
+            expect(corruptedNews).toBeNull();
+
+            // Проверка того, что целевая новость в БД не изменилась
+            const rolledBackNews = await News.findOne({ title: news1.title }).lean<TDbNews>();
+            
+            expect(rolledBackNews).not.toBeNull(); 
+            assertDefined(rolledBackNews, 'rolledBackNews');
+
+            expect(rolledBackNews.content).toBe(news1.content);
+            expect(rolledBackNews.updateHistory).toHaveLength(0);
+
+            // Очистка моков
+            responseSetTimeoutSpy.mockRestore();
+            newsDbSaveSpy.mockRestore();
+        });
+
+        it('[админ] -> должен успешно изменить новость и вернуть статус 200', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(admin, 'access');
+            const body = {
+                title: 'Новость 1 (изм.)',
+                content: 'Текст новости 1 (изм.)'
+            };
+
+            const response = await request(app)
+                .put(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .send(body)
+                .expect('Content-Type', /json/)
+                .expect(200);
+    
+            expect(response.body).toHaveProperty('message');
+
+            // Проверка фактического изменения новости в базе
+            const updatedNews = await News.findOne({ title: body.title }).lean<TDbNews>();
+            
+            expect(updatedNews).not.toBeNull(); 
+            assertDefined(updatedNews, 'updatedNews');
+
+            expect(updatedNews.content).toBe(body.content);
+
+            expect(updatedNews.updateHistory).toHaveLength(1);
+            assertDefined(updatedNews.updateHistory[0], 'updatedNews.updateHistory[0]');
+
+            expect(updatedNews.updateHistory[0].updatedBy.toString()).toBe(admin._id.toString());
+        });
+    });
+
+    // ==========================================
+    // DELETE /api/news/:newsId
+    // ==========================================
+
+    describe('Запрос DELETE /api/news/:newsId', () => {
+        it('[гость] -> должен вернуть ошибку 401', async () => {
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+
+            const response = await request(app)
+                .delete(`/api/news/${news1Id}`)
+                .expect('Content-Type', /json/)
+                .expect(401);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[отсутствующий в базе юзер] -> должен вернуть ошибку 410', async () => {
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const missingUser = { _id: '68ee44a23705025f5a02d892', role: USER_ROLE.ADMIN };
+            const accessToken = generateToken(missingUser, 'access');
+
+            const response = await request(app)
+                .delete(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(410);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[авторизованный юзер, не админ] -> должен вернуть ошибку 403', async () => {
+            assertDefined(customer, 'customer');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(customer, 'access');
+
+            const response = await request(app)
+                .delete(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(403);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[админ] -> должен вернуть ошибку 400 для невалидного ID новости', async () => {
+            assertDefined(admin, 'admin');
+
+            const invalidNewsId = '{ q: 123zxc }';
+            const accessToken = generateToken(admin, 'access');
+
+            const response = await request(app)
+                .delete(`/api/news/${invalidNewsId}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(400);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[админ] -> должен вернуть ошибку 404 для отсутствующей новости в БД', async () => {
+            assertDefined(admin, 'admin');
+
+            const missingNewsId = '68ee44a23705025f5a02d891';
+            const accessToken = generateToken(admin, 'access');
+
+            const response = await request(app)
+                .delete(`/api/news/${missingNewsId}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(404);
+    
+            expect(response.body).toHaveProperty('message');
+        });
+
+        it('[админ] -> должен передавать ошибку БД в globalErrorHandler со статусом 500', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news2, 'news2');
+
+            const news2Id = news2._id.toString();
+            const accessToken = generateToken(admin, 'access');
+
+            const newsDbSpy = jest.spyOn(News, 'findByIdAndDelete').mockImplementationOnce(() => {
+                throw new Error('Критическая ошибка MongoDB (Тест)');
+            });
+    
+            const response = await request(app)
+                .delete(`/api/news/${news2Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(500);
+    
+            expect(response.body).toHaveProperty('message');
+
+            newsDbSpy.mockRestore(); // Очистка моков
+        });
+
+        it('[админ] -> должен откатить изменения в транзакции при таймауте и вернуть 408', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(admin, 'access');
+            let timeoutCallback: (() => void) | undefined;
+
+            const responseSetTimeoutSpy = jest.spyOn(app.response, 'setTimeout')
+                .mockImplementationOnce(function (this: Response, _duration: unknown, cb: unknown) {
+                    if (typeof cb === 'function') timeoutCallback = cb as () => void;
+                    return this; 
+                });
+
+            const newsDbFindByIdAndDeleteSpy = jest.spyOn(News, 'findByIdAndDelete')
+                .mockImplementationOnce(function (...args) {
+                    timeoutCallback?.(); 
+                    
+                    const originalMethod = News.findByIdAndDelete.bind(News);
+                    return originalMethod(...args);
+                });
+
+            const response = await request(app)
+                .delete(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(408);
+    
+            expect(response.body).toHaveProperty('message');
+
+            // Проверка того, что новость не удалена из БД
+            const rolledBackNews = await News.findById(news1Id).lean<TDbNews>();
+            expect(rolledBackNews).not.toBeNull();
+
+            // Очистка моков
+            responseSetTimeoutSpy.mockRestore();
+            newsDbFindByIdAndDeleteSpy.mockRestore();
+        });
+
+        it('[админ] -> должен успешно удалить новость и вернуть статус 200', async () => {
+            assertDefined(admin, 'admin');
+            assertDefined(news1, 'news1');
+
+            const news1Id = news1._id.toString();
+            const accessToken = generateToken(admin, 'access');
+
+            const response = await request(app)
+                .delete(`/api/news/${news1Id}`)
+                .set('Cookie', [`accessToken=${accessToken}`])
+                .expect('Content-Type', /json/)
+                .expect(200);
+    
+            expect(response.body).toHaveProperty('message');
+
+            // Проверка фактического удаления новости в базе
+            const deletedNews = await News.findById(news1Id).lean<TDbNews>();
+            expect(deletedNews).toBeNull();
+        });
     });
 });
