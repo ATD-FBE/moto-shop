@@ -94,14 +94,27 @@ export const handleNewsCreateRequest: RequestHandler<
     const { title, content } = req.body;
 
     try {
-        const newNews = await News.create({
-            title: title.trim(),
-            content: content.trim(),
-            createdBy: userId
-        });
-        checkTimeout(req);
+        const { newsTitle } = await runInDbTransaction(async (session) => {
+            const [createdNews] = await News.create(
+                [
+                    {
+                        title: title.trim(),
+                        content: content.trim(),
+                        createdBy: userId
+                    }
+                ],
+                { session }
+            );
+            checkTimeout(req);
 
-        safeSendResponse(res, 201, { message: `Новость "${newNews.title}" успешно создана` });
+            if (!createdNews) {
+                throw createAppError(500, 'Ошибка создания новости: документ не был возвращен');
+            }
+
+            return { newsTitle: createdNews.title };
+        });
+
+        safeSendResponse(res, 201, { message: `Новость "${newsTitle}" успешно создана` });
     } catch (err) {
         next(err);
     }
@@ -163,7 +176,7 @@ export const handleNewsDeleteRequest: RequestHandler<
         const { newsLbl } = await runInDbTransaction(async (session) => {
             const dbNews = await News.findByIdAndDelete(newsId).lean<TDbNews>().session(session);
             checkTimeout(req);
-
+    
             const newsLbl = dbNews ? `"${dbNews.title}"` : `(ID: ${newsId})`;
     
             if (!dbNews) {
