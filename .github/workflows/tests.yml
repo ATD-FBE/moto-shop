@@ -1,0 +1,42 @@
+name: Run Tests
+
+# Триггер запуска при каждом push в ветку main (или master) или pull из них
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-process:
+    # Выделение виртуальной машины на Linux
+    runs-on: ubuntu-latest
+
+    # Подключение дополнительных сервисов (MongoDB)
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+    # Скачивание кода из Git
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    # Установка чистой Node.js
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm' # Кэширование зависимостей для ускорения сборки
+
+    # Чистая установка всех пакетов из package-lock.json
+    - name: Install Dependencies
+      run: npm ci
+
+    # Запуск тестов (команда из скриптов package.json)
+    - name: Run Unit and Integration Tests
+      env:
+        CI: true # Переменная GitHub (наглядное дублирование)
+      run: npm test
