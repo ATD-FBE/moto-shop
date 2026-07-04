@@ -8,6 +8,7 @@ import type {
 } from '@server/types/index.js';
 
 export const MONGO_MODE = {
+    TEST: 'test',
     LOCAL: 'local',
     ATLAS: 'atlas'
 } as const;

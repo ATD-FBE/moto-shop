@@ -13,6 +13,5 @@ console.log = (...args) => {
     originalLog(...args);
 };
 
-const envFile = process.env.CI ? '.env.test' : '.env.development'; // CI - Тест на GitHub
-const devEnvPath = path.resolve(process.cwd(), 'server', 'config', envFile);
+const devEnvPath = path.resolve(process.cwd(), 'server', 'config', '.env.test');
 dotenv.config({ path: devEnvPath });

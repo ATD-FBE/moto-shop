@@ -11,6 +11,11 @@ const resolveDatabaseConfig = (): IDatabaseConfig => {
     const mode = process.env.MONGO_MODE;
 
     switch (mode) {
+        case MONGO_MODE.TEST:
+            const testUri = process.env.MONGO_URI_TEST;
+            if (!testUri) throw new Error('MONGO_URI_TEST не задан в переменных окружения');
+            return { mode, uri: testUri };
+            
         case MONGO_MODE.LOCAL:
             const localUri = process.env.MONGO_URI_LOCAL;
             if (!localUri) throw new Error('MONGO_URI_LOCAL не задан в переменных окружения');
