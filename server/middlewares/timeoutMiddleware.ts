@@ -21,5 +21,5 @@ export const checkTimeout = (req: Request<any, any, any, any>): void => {
     }
 };
 
-// checkTimeout оборывает дальнейшее выполнение обработчика после выполнения таймера в requestTimeout
+// После выполнения таймера в requestTimeout checkTimeout обрывает дальнейшее выполнение обработчика
 // Глобальный обработчик ошибок не реагирует на ошибку checkTimeout благодаря флагу isTimeoutCheck
