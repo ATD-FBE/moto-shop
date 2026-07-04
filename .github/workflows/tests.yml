@@ -34,8 +34,8 @@ jobs:
 
     # Подключение к MongoDB и инициализация реплики из одного узла
     - name: Initialize MongoDB Replica Set
-      run: mongosh --host 127.0.0.1:27017 --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
-
+      run: docker exec $(docker ps -q --filter ancestor=mongo:6.0) mongosh --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+    
     # Чистая установка всех пакетов из package-lock.json
     - name: Install Dependencies
       run: npm ci
