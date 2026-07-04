@@ -17,7 +17,7 @@ jest.unstable_mockModule('@server/config/s3Client.js', () => ({
         send: jest.fn() // При типе хранилища FS -> s3Client всегда будет объектом с методом send
     }
 }));
-
+    
 // ДИНАМИЧЕСКИЕ ИМПОРТЫ
 const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
 const { default: s3Client } = await import('@server/config/s3Client.js');
