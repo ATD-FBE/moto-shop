@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import app from '@server/core/app.js';
 import User from '@server/db/models/User.js';
 import News from '@server/db/models/News.js';
+import config from '@server/config/config.js';
 import { generateToken } from '@server/utils/tokenUtils.js';
 import { assertDefined } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
@@ -17,7 +18,7 @@ describe('Integration Tests - Модуль News Controller', () => {
     let news2: TDbNews | undefined;
 
     beforeAll(async () => {
-        const testDbUri = process.env.MONGO_URI_TEST || 'mongodb://localhost:27017/test_motoshopdb';
+        const testDbUri = config.database.uri;
         
         if (mongoose.connection.readyState === 0) {
             await mongoose.connect(testDbUri);
