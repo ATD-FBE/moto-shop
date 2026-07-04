@@ -23,11 +23,7 @@ import type { TStorageProvider, TDbOrderFinalItem } from '@server/types/index.js
 
 sharp.cache(false); // Отменить кэширование оригинальных файлов картинок, чтобы они удалялись при ошибке
 
-if (config.storage.type !== STORAGE_TYPE.S3) {
-    throw new Error('S3 Provider инициализирован, но в конфиге выбран другой тип хранилища');
-}
-
-const s3Bucket = config.storage.bucket;
+const s3Bucket = config.storage.type === STORAGE_TYPE.S3 ? config.storage.bucket : '';
 
 export const s3StorageProvider: TStorageProvider = {
     initStorage: async () => {

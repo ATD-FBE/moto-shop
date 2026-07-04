@@ -3,7 +3,6 @@ import { join } from 'path';
 import { Readable } from 'stream';
 import config from '@server/config/config.js';
 import { STORAGE_ROOT } from '@server/config/paths.js';
-import s3Client from '@server/config/s3Client.js';
 import { STORAGE_TYPE } from '@server/config/constants.js';
 import type { Request, Response, NextFunction } from 'express';
 import type { TStorageConfig } from '@server/types/index.js';
@@ -13,8 +12,15 @@ jest.unstable_mockModule('@aws-sdk/s3-request-presigner', () => ({
     getSignedUrl: jest.fn()
 }));
 
+jest.unstable_mockModule('@server/config/s3Client.js', () => ({
+    default: {
+        send: jest.fn() // При типе хранилища FS -> s3Client всегда будет объектом с методом send
+    }
+}));
+
 // ДИНАМИЧЕСКИЕ ИМПОРТЫ
 const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+const { default: s3Client } = await import('@server/config/s3Client.js');
 const { serveStorageFiles } = await import('@server/middlewares/fileMiddleware.js');
 
 describe('Middlewares Unit Tests - Модуль File Middleware', () => {
