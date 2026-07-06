@@ -4,7 +4,6 @@ const tsJestPreset = createDefaultEsmPreset();
 
 const commonProjectConfig = {
     ...tsJestPreset,
-    setupFiles: ['<rootDir>/jest.setup.js'],
     moduleNameMapper: {
         // Алиасы путей (расширение в конце импорта - .js, .ts, .jsx, .tsx ИЛИ отсутствует)
         '^@/(.*?)(\\.(js|jsx|ts|tsx))?$': '<rootDir>/client/src/$1',
@@ -24,12 +23,14 @@ export default {
             displayName: 'server',
             testEnvironment: 'node',
             testMatch: ['<rootDir>/server/__tests__/**/*.[jt]s?(x)'],
+            setupFiles: ['<rootDir>/jest.setup.server.js'],
             ...commonProjectConfig
         },
         {
             displayName: 'client',
             testEnvironment: 'jsdom', // Виртуальный браузер для фронта
             testMatch: ['<rootDir>/client/src/__tests__/**/*.[jt]s?(x)'],
+            setupFilesAfterEnv: ['<rootDir>/jest.setup.client.js'],
             ...commonProjectConfig
         },
         {
