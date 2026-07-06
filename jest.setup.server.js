@@ -1,6 +1,7 @@
-import dotenv from 'dotenv';
 import path from 'path';
+import dotenv from 'dotenv';
 
+// Чистка ненужных логов в консоли
 const originalLog = console.log;
 
 console.log = (...args) => {
@@ -13,5 +14,6 @@ console.log = (...args) => {
     originalLog(...args);
 };
 
+// Установка переменных окружения для теста
 const devEnvPath = path.resolve(process.cwd(), 'server', 'config', '.env.test');
 dotenv.config({ path: devEnvPath });
