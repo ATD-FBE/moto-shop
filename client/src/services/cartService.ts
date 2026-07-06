@@ -126,6 +126,7 @@ export const reconcileCartWithProducts = (
                 return null;
             } else if (newProduct.available < cartItem.quantity) {
                 updatedCartItem = { ...cartItem, quantity: newProduct.available };
+                shouldRefreshTotals = true;
             }
         } else {
             if (newProduct.available < cartItem.quantity) {
@@ -150,13 +151,12 @@ export const reconcileCartWithProducts = (
             }
         }
 
-
         if (updatedCartItem) shouldUpdateCart = true;
 
         // Проверка изменения цены или скидки
-        const oldProduct = oldProductMap[cartItem.id];
-
         if (!shouldRefreshTotals) {
+            const oldProduct = oldProductMap[cartItem.id];
+
             if (oldProduct && (
                 newProduct.price !== oldProduct.price ||
                 newProduct.discount !== oldProduct.discount
