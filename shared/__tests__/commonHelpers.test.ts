@@ -7,7 +7,7 @@ import {
 } from '@shared/commonHelpers.js';
 import { DISCOUNT_SOURCE } from '@shared/constants.js';
 
-describe('Модуль Common Helpers', () => {
+describe('Helpers Unit Tests - Модуль Common Helpers', () => {
     // ==========================================
     // ensureArray
     // ==========================================

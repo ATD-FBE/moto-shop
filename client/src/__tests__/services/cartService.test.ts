@@ -4,7 +4,7 @@ import {
 } from '@/services/cartService.js';
 import type { ICartItem, IProduct } from '@shared/types/index.js';
 
-describe('Модуль Cart Service', () => {
+describe('Services Unit Tests - Модуль Cart Service', () => {
     // ==========================================
     // buildCartProductData
     // ==========================================
