@@ -2,7 +2,7 @@ import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { ICartState, ICartTotals, TRootState } from '@/types/index.js';
 import type { IBaseCartItem, IGuestCartItem, ICartItem } from '@shared/types/index.js';
 
-const defaultCartItemExtendedParams = {
+export const defaultCartItemExtendedParams = {
     quantityReduced: false,
     outOfStock: false,
     inactive: false,
