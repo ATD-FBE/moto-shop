@@ -106,7 +106,7 @@ export const reconcileCartWithProducts = (
 ): TAppThunk<void> => (dispatch, getState) => {
     const state = getState();
     const cartItemList = selectCartItemList(state);
-    const isGuestCart = !state.auth.isAuthenticated;
+    const isGuest = !state.auth.isAuthenticated;
     const oldProductMap = state.products.byId;
     const newProductMap = new Map(productList.map(prod => [prod.id, prod]));
     let shouldUpdateCart = false;
@@ -119,7 +119,7 @@ export const reconcileCartWithProducts = (
         // Проверка доступности количества и соответствия флагов товаров в корзине
         let updatedCartItem: ICartItem | null = null;
 
-        if (isGuestCart) {
+        if (isGuest) {
             if (!newProduct.isActive || newProduct.available === 0) {
                 shouldUpdateCart = true;
                 shouldRefreshTotals = true;
@@ -170,7 +170,7 @@ export const reconcileCartWithProducts = (
 
     dispatch(upsertProductsInStore(productList)); // До обновления сумм!
     if (shouldUpdateCart) {
-        if (isGuestCart) saveGuestCartToLocalStorage(updatedCartItemList);
+        if (isGuest) saveGuestCartToLocalStorage(updatedCartItemList);
         dispatch(setCart(updatedCartItemList)); // До обновления сумм!
     }
     if (shouldRefreshTotals) dispatch(refreshCartTotals());
