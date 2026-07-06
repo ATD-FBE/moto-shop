@@ -54,12 +54,6 @@ export default function ProductDetails(): JSX.Element {
     const title = formatProductTitle(name, brand);
 
     const loadProduct = async (): Promise<void> => {
-        /*if (!productId) {
-            setProductLoading(false);
-            setProductLoadError(true);
-            return;
-        }*/
-
         setProductLoadError(false);
         setProductLoading(true);
 
