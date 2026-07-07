@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from '@/redux/slices/authSlice.js';
+import authReducer, { login } from '@/redux/slices/authSlice.js';
 import cartReducer, {
     defaultCartItemExtendedParams as defCartItemExtParams
 } from '@/redux/slices/cartSlice.js';
@@ -11,6 +11,7 @@ import {
 } from '@/services/cartService.js';
 import { loadGuestCartFromLocalStorage } from '@/services/guestCartService.js';
 import { assertDefined } from '@shared/commonHelpers.js';
+import { USER_ROLE } from '@shared/constants.js';
 import type { EnhancedStore } from '@reduxjs/toolkit';
 import type { TRootState, TAppDispatch } from '@/types/index.js';
 import type { ICartItem, IProduct } from '@shared/types/index.js';
@@ -128,6 +129,13 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
     // ==========================================
 
     describe('Thunk-функция reconcileCartWithProducts', () => {
+        const CUSTOMER_BASE = {
+            name: 'Tested Customer',
+            email: 'test-customer@motoshop.ru',
+            role: USER_ROLE.CUSTOMER,
+            discount: 0
+        };
+
         const PROD_1_ID = 'moto-detail-1';
         const PROD_2_ID = 'moto-detail-2';
 
@@ -286,6 +294,40 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                 const guestCart = loadGuestCartFromLocalStorage();
                 expect(guestCart.length).toBe(2);
                 expect(guestCart[0]).toEqual({ ...CART_ITEM_1_BASE, quantity: 1 });
+            }
+        );
+
+        it(
+            'должна добавить флаг quantityReduced для товара в корзине покупателя, ' +
+            'если его кол-во на складе меньше, чем заказано, и флаг quantityReduced отсутствовал',
+            () => {
+                const serverProducts = [
+                    { ...PROD_1_BASE, available: 1 },
+                    { ...PROD_2_BASE }
+                ];
+        
+                store.dispatch(login({ user: CUSTOMER_BASE }));
+                store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+                // Проверка данных после изменения состояния
+                const resultState = store.getState();
+
+                expect(resultState.auth.isAuthenticated).toBe(true);
+
+                const prod1 = resultState.products.byId[PROD_1_ID];
+                expect(prod1).not.toBeNull();
+                assertDefined(prod1, 'prod1');
+                expect(prod1.available).toBe(1);
+                
+                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+                expect(resultState.cart.rawTotal).toEqual(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toEqual(3800);   // Без изменений
+
+                const cartItem1 = resultState.cart.byId[PROD_1_ID];
+                expect(cartItem1).not.toBeNull();
+                assertDefined(cartItem1, 'cartItem1');
+                expect(cartItem1.quantity).toBe(2);
+                expect(cartItem1.quantityReduced).toBe(true);
             }
         );
     });
