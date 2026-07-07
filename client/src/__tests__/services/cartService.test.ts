@@ -1,7 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer, { login } from '@/redux/slices/authSlice.js';
 import cartReducer, {
-    defaultCartItemExtendedParams as defCartItemExtParams
+    defaultCartItemExtendedParams as defCartItemExtParams,
+    setCart
 } from '@/redux/slices/cartSlice.js';
 import productsReducer from '@/redux/slices/productsSlice.js';
 import {
@@ -207,32 +208,29 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             localStorageMock.clear();
         });
 
-        it(
-            'должна оставить товар в корзине без изменений, если сервер не прислал его в списке',
-            () => {
-                const serverProducts = [{ ...PROD_2_BASE }];
+        it('должна оставить товар в корзине без изменений, если сервер не прислал его в списке', () => {
+            const serverProducts = [{ ...PROD_2_BASE }];
 
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+            store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+            // Проверка данных после изменения состояния
+            const resultState = store.getState();
             
-                // Проверка данных после изменения состояния
-                const resultState = store.getState();
-                
-                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
-                
-                const cartItem1 = resultState.cart.byId[PROD_1_ID];
-                expect(cartItem1).not.toBeNull();
-                assertDefined(cartItem1, 'cartItem1');
-                expect(cartItem1.quantity).toBe(2);
-                expect(cartItem1.outOfStock).toBe(false);
+            expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+            
+            const cartItem1 = resultState.cart.byId[PROD_1_ID];
+            expect(cartItem1).not.toBeNull();
+            assertDefined(cartItem1, 'cartItem1');
+            expect(cartItem1.quantity).toBe(2);
+            expect(cartItem1.outOfStock).toBe(false);
 
-                expect(resultState.cart.rawTotal).toEqual(4000);
-                expect(resultState.cart.discountedTotal).toEqual(3800);
-            
-                const guestCart = loadGuestCartFromLocalStorage();
-                expect(guestCart.length).toBe(2);
-                expect(guestCart.find(item => item.id === PROD_1_ID)).toBeDefined();
-            }
-        );
+            expect(resultState.cart.rawTotal).toEqual(4000);          // Без изменений
+            expect(resultState.cart.discountedTotal).toEqual(3800);   // Без изменений
+        
+            const guestCart = loadGuestCartFromLocalStorage();
+            expect(guestCart.length).toBe(2);
+            expect(guestCart.find(item => item.id === PROD_1_ID)).toBeDefined();
+        });
     
         it(
             'должна удалить товар из корзины гостя, обновить суммы и localStorage, ' +
@@ -254,8 +252,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                 expect(prod1.available).toBe(0);
                 
                 expect(resultState.cart.ids).toEqual([PROD_2_ID]);
-                expect(resultState.cart.rawTotal).toEqual(2000);
-                expect(resultState.cart.discountedTotal).toEqual(1800);
+                expect(resultState.cart.rawTotal).toBe(2000);          // 0 * 1000 + 1 * 2000
+                expect(resultState.cart.discountedTotal).toBe(1800);   // 0 * 1000 + 1 * (2000 - 10%)
         
                 const guestCart = loadGuestCartFromLocalStorage();
                 expect(guestCart.length).toBe(1);
@@ -283,8 +281,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                 expect(prod1.available).toBe(1);
                 
                 expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
-                expect(resultState.cart.rawTotal).toEqual(3000);          // 1 * 1000 + 1 * 2000
-                expect(resultState.cart.discountedTotal).toEqual(2800);   // 1 * 1000 + 1 * (2000 - 10%)
+                expect(resultState.cart.rawTotal).toBe(3000);          // 1 * 1000 + 1 * 2000
+                expect(resultState.cart.discountedTotal).toBe(2800);   // 1 * 1000 + 1 * (2000 - 10%)
 
                 const cartItem1 = resultState.cart.byId[PROD_1_ID];
                 expect(cartItem1).not.toBeNull();
@@ -298,8 +296,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
         );
 
         it(
-            'должна добавить флаг quantityReduced для товара в корзине покупателя, ' +
-            'если его кол-во на складе меньше, чем заказано, и флаг quantityReduced отсутствовал',
+            'должна установить флаг quantityReduced в true для товара в корзине покупателя, ' +
+            'если его кол-во на складе меньше, чем заказано в корзине',
             () => {
                 const serverProducts = [
                     { ...PROD_1_BASE, available: 1 },
@@ -320,8 +318,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                 expect(prod1.available).toBe(1);
                 
                 expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
-                expect(resultState.cart.rawTotal).toEqual(4000);          // Без изменений
-                expect(resultState.cart.discountedTotal).toEqual(3800);   // Без изменений
+                expect(resultState.cart.rawTotal).toBe(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toBe(3800);   // Без изменений
 
                 const cartItem1 = resultState.cart.byId[PROD_1_ID];
                 expect(cartItem1).not.toBeNull();
@@ -330,5 +328,182 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                 expect(cartItem1.quantityReduced).toBe(true);
             }
         );
+
+        it(
+            'должна установить флаги quantityReduced и outOfStock в true для товара в корзине покупателя, ' +
+            'если его кол-во на складе больше не доступно',
+            () => {
+                const serverProducts = [
+                    { ...PROD_1_BASE },
+                    { ...PROD_2_BASE, available: 0 }
+                ];
+        
+                store.dispatch(login({ user: CUSTOMER_BASE }));
+                store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+                // Проверка данных после изменения состояния
+                const resultState = store.getState();
+
+                expect(resultState.auth.isAuthenticated).toBe(true);
+
+                const prod2 = resultState.products.byId[PROD_2_ID];
+                expect(prod2).not.toBeNull();
+                assertDefined(prod2, 'prod2');
+                expect(prod2.available).toBe(0);
+                
+                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+                expect(resultState.cart.rawTotal).toBe(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toBe(3800);   // Без изменений
+
+                const cartItem2 = resultState.cart.byId[PROD_2_ID];
+                expect(cartItem2).not.toBeNull();
+                assertDefined(cartItem2, 'cartItem2');
+                expect(cartItem2.quantity).toBe(1);
+                expect(cartItem2.quantityReduced).toBe(true);
+                expect(cartItem2.outOfStock).toBe(true);
+            }
+        );
+
+        it(
+            'должна установить флаги quantityReduced и outOfStock в false для товара в корзине покупателя, ' +
+            'если его кол-во на складе увеличилось и стало больше или равно заказанному количеству',
+            () => {
+                store.dispatch(setCart([
+                    { 
+                        ...CART_ITEM_1_BASE, 
+                        quantityReduced: true, // Инициализация флага в true
+                        outOfStock: true       // Инициализация флага в true
+                    },
+                    { ...CART_ITEM_2_BASE }
+                ]));
+
+                const serverProducts = [
+                    { ...PROD_1_BASE, available: 20 },
+                    { ...PROD_2_BASE }
+                ];
+        
+                store.dispatch(login({ user: CUSTOMER_BASE }));
+                store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+                // Проверка данных после изменения состояния
+                const resultState = store.getState();
+
+                expect(resultState.auth.isAuthenticated).toBe(true);
+
+                const prod1 = resultState.products.byId[PROD_1_ID];
+                expect(prod1).not.toBeNull();
+                assertDefined(prod1, 'prod1');
+                expect(prod1.available).toBe(20);
+                
+                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+                expect(resultState.cart.rawTotal).toBe(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toBe(3800);   // Без изменений
+
+                const cartItem1 = resultState.cart.byId[PROD_1_ID];
+                expect(cartItem1).not.toBeNull();
+                assertDefined(cartItem1, 'cartItem1');
+                expect(cartItem1.quantity).toBe(2);
+                expect(cartItem1.quantityReduced).toBe(false);
+                expect(cartItem1.outOfStock).toBe(false);
+            }
+        );
+
+        it(
+            'должна установить флаг inactive в true для товара в корзине покупателя, ' +
+            'если товар не доступен для продажи',
+            () => {
+                const serverProducts = [
+                    { ...PROD_1_BASE, isActive: false },
+                    { ...PROD_2_BASE }
+                ];
+        
+                store.dispatch(login({ user: CUSTOMER_BASE }));
+                store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+                // Проверка данных после изменения состояния
+                const resultState = store.getState();
+
+                expect(resultState.auth.isAuthenticated).toBe(true);
+
+                const prod1 = resultState.products.byId[PROD_1_ID];
+                expect(prod1).not.toBeNull();
+                assertDefined(prod1, 'prod1');
+                expect(prod1.isActive).toBe(false);
+                
+                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+                expect(resultState.cart.rawTotal).toBe(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toBe(3800);   // Без изменений
+
+                const cartItem1 = resultState.cart.byId[PROD_1_ID];
+                expect(cartItem1).not.toBeNull();
+                assertDefined(cartItem1, 'cartItem1');
+                expect(cartItem1.inactive).toBe(true);
+            }
+        );
+
+        it(
+            'должна установить флаг deleted в false для товара в корзине покупателя, ' +
+            'если товар присутствует в серверном списке',
+            () => {
+                store.dispatch(setCart([
+                    { 
+                        ...CART_ITEM_1_BASE, 
+                        deleted: true, // Инициализация флага в true
+                    },
+                    { ...CART_ITEM_2_BASE }
+                ]));
+
+                const serverProducts = [
+                    { ...PROD_1_BASE },
+                    { ...PROD_2_BASE }
+                ];
+        
+                store.dispatch(login({ user: CUSTOMER_BASE }));
+                store.dispatch(reconcileCartWithProducts(serverProducts));
+        
+                // Проверка данных после изменения состояния
+                const resultState = store.getState();
+
+                expect(resultState.auth.isAuthenticated).toBe(true);
+
+                const prod1 = resultState.products.byId[PROD_1_ID];
+                expect(prod1).not.toBeNull();
+                
+                expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+                expect(resultState.cart.rawTotal).toBe(4000);          // Без изменений
+                expect(resultState.cart.discountedTotal).toBe(3800);   // Без изменений
+
+                const cartItem1 = resultState.cart.byId[PROD_1_ID];
+                expect(cartItem1).not.toBeNull();
+                assertDefined(cartItem1, 'cartItem1');
+                expect(cartItem1.deleted).toBe(false);
+            }
+        );
+
+        it('должна пересчитать суммы заказа, если у товара изменилась цена и/или скидка', () => {
+            const serverProducts = [
+                { ...PROD_1_BASE, price: 1500 },
+                { ...PROD_2_BASE, discount: 5 }
+            ];
+    
+            store.dispatch(reconcileCartWithProducts(serverProducts));
+    
+            // Проверка данных после изменения состояния
+            const resultState = store.getState();
+
+            const prod1 = resultState.products.byId[PROD_1_ID];
+            expect(prod1).not.toBeNull();
+            assertDefined(prod1, 'prod1');
+            expect(prod1.price).toBe(1500);
+
+            const prod2 = resultState.products.byId[PROD_2_ID];
+            expect(prod2).not.toBeNull();
+            assertDefined(prod2, 'prod2');
+            expect(prod2.discount).toBe(5);
+            
+            expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
+            expect(resultState.cart.rawTotal).toBe(5000);          // 2 * 1500 + 1 * 2000
+            expect(resultState.cart.discountedTotal).toBe(4900);   // 2 * 1500 + 1 * (2000 - 5%)
+        });
     });
 });
