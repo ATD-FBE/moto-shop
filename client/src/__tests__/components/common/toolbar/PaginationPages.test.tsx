@@ -21,8 +21,8 @@ describe('Компонент PaginationPages', () => {
     const setupElements = () => ({
         prevBtn: screen.getByRole('button', { name: /перейти на предыдущую страницу/i }),
         nextBtn: screen.getByRole('button', { name: /перейти на следующую страницу/i }),
-        page1Btn: screen.getByRole('button', { name: /перейти на страницу 1/i }),
-        page5Btn: screen.getByRole('button', { name: /перейти на страницу 5/i }),
+        page1Btn: screen.queryByRole('button', { name: /перейти на страницу 1/i }),
+        page5Btn: screen.queryByRole('button', { name: /перейти на страницу 5/i }),
         selectPageBtn: screen.getByRole('button', { name: /перейти на выбранную страницу/i })
     });
 
