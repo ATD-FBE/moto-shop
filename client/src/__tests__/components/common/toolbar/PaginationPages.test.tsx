@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import PaginationPages from '@/components/common/toolbar/PaginationPages.jsx';
 
-describe('PaginationPages Component', () => {
+describe('Компонент PaginationPages', () => {
     // Заготовка фейковой функции-шпиона
     const mockSetPage = jest.fn();
 
