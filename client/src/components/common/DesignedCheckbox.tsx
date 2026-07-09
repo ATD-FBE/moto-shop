@@ -2,6 +2,10 @@ import { useRef } from 'react';
 import cn from 'classnames';
 import type { JSX, InputHTMLAttributes, FocusEvent, KeyboardEvent } from 'react';
 
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
 interface IDesignedCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onBlur'> {
     label?: string;
     labelSide?: 'left' | 'right';
@@ -10,6 +14,10 @@ interface IDesignedCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputEleme
     checkIconColor?: 'blue' | 'red' | 'green';
     onBlur?: (e: FocusEvent<HTMLInputElement>) => void; // Переопределение blur для span
 }
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function DesignedCheckbox({
     id,

@@ -3,6 +3,10 @@ import { FORM_STATUS } from '@/config/constants.js';
 import type { JSX } from 'react';
 import type { TFormStatus, TSubmitStates } from '@/types/index.js';
 
+//////////////////////////
+/// TYPES & INTERFACES ///
+//////////////////////////
+
 interface IFormFooterProps {
     submitStates: TSubmitStates;
     submitStatus: TFormStatus;
@@ -10,6 +14,10 @@ interface IFormFooterProps {
     reloadBtnLabel?: string;
     reloadData?: () => void;
 }
+
+/////////////////////
+/// FUNCTIONALITY ///
+/////////////////////
 
 export default function FormFooter({
     submitStates,
