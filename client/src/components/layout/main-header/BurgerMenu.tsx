@@ -57,6 +57,7 @@ export default function BurgerMenu({
         <div
             ref={burgerMenuContainerRef}
             className={cn('burger-menu-container', { 'menu-open': isMenuOpen })}
+            data-testid="burger-menu-container"
         >
             <button
                 className="burger-menu-btn"
@@ -68,7 +69,7 @@ export default function BurgerMenu({
                 <span className="title">Меню</span>
             </button>
 
-            <div ref={burgerMenuRef} className="burger-menu">
+            <div ref={burgerMenuRef} className="burger-menu" data-testid="burger-menu-content">
                 <MainNav
                     navigationMap={navigationMap}
                     setActiveClass={setActiveClass}
