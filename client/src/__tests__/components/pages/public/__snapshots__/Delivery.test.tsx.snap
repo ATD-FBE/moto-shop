@@ -1,0 +1,293 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Delivery Component Snapshot должен корректно рендерить страницу доставки и соответствовать снимку 1`] = `
+<DocumentFragment>
+  <div
+    class="delivery-page"
+  >
+    <header
+      class="delivery-header"
+    >
+      <h2>
+        Доставка и оплата в «Мото-Магазине»
+      </h2>
+    </header>
+    <div
+      class="delivery-main"
+    >
+      <div
+        class="section-info"
+      >
+        <h3>
+          Оплата
+        </h3>
+        <p
+          class="mt-short"
+        >
+          Минимальная сумма заказа — 1 000,00 ₽ (значение может меняться, но здравый смысл — константа).
+        </p>
+        <p
+          class="mt-short"
+        >
+          Способы оплаты:
+        </p>
+        <ul
+          class="mt-short"
+        >
+          <li>
+            <b>
+              Карта онлайн
+            </b>
+             — теперь всё официально и без костылей! Оплата проходит моментально через ЮKassa (Visa, Mastercard, МИР). Безопасно, быстро, как хороший спортбайк. 
+            <span
+              class="color-green"
+            >
+              💳
+            </span>
+          </li>
+          <li>
+            <b>
+              Наличные
+            </b>
+             при получении заказа (для любителей классики при самовывозе или доставке).
+          </li>
+          <li>
+            <b>
+              Банковский перевод
+            </b>
+            (для тех, кто любит цифры, контроль и бумажную бухгалтерию).
+          </li>
+        </ul>
+        <p
+          class="left-border mt-short"
+        >
+          Присылайте подтверждение оплаты на почту: 
+          <a
+            class="email-link"
+            href="mailto:payments@moto-shop.ru"
+          >
+            payments@moto-shop.ru
+          </a>
+           — иначе наши админы включат режим детективов, а это может задержать отправку.
+          <br />
+          Вы также можете оплатить заказ частями различными способами, не только выбранным. Комбинируйте на здоровье! 
+          <span
+            class="color-orange"
+          >
+            🔄
+          </span>
+        </p>
+      </div>
+      <div
+        class="section-info mt-large"
+      >
+        <h3>
+          Доставка
+        </h3>
+        <p
+          class="mt-short"
+        >
+          Способов получить заказ несколько — выбирайте тот, который ближе по духу и расстоянию:
+        </p>
+        <ul
+          class="no-list-markers mt-short"
+        >
+          <li
+            class="marked-text mb-short"
+          >
+            <span
+              class="icon-marker color-blue"
+            >
+              🚶
+            </span>
+            <p
+              class="ml-large"
+            >
+              <b>
+                Самовывоз
+              </b>
+              <br />
+              Забрать заказ самостоятельно по адресу: 
+              <span
+                class="shop-address"
+              >
+                Дорожная Республика, г. Моторск, ул. Механиков, д. 7, стр. 2 (пн–пт: 08:00-17:00)
+              </span>
+              .
+              <br />
+              Быстро, бесплатно и без ожиданий курьера.
+            </p>
+          </li>
+          <li
+            class="marked-text mt-short"
+          >
+            <span
+              class="icon-marker color-blue"
+            >
+              🛵
+            </span>
+            <p
+              class="ml-large"
+            >
+              <b>
+                Курьер магазина
+              </b>
+            </p>
+            <ul
+              class="no-mt-mb ml-large"
+            >
+              <li>
+                <i>
+                  Бесплатно
+                </i>
+                 — доставка по городу в радиусе 10 км от магазина.
+              </li>
+              <li>
+                <i>
+                  Курьер «Экстра»
+                </i>
+                 — если дальше или срочно, стоимость рассчитывается при получении заказа.
+              </li>
+            </ul>
+          </li>
+          <li
+            class="marked-text mt-short"
+          >
+            <span
+              class="icon-marker color-blue"
+            >
+              🚚
+            </span>
+            <p
+              class="ml-large"
+            >
+              <b>
+                Транспортная компания
+              </b>
+              <br />
+              Отправка через условную 
+              <i>
+                «Транспортную компанию»
+              </i>
+              .
+              <br />
+              Стоимость доставки становится известна при получении — всё честно, без гаданий на калькуляторе.
+            </p>
+          </li>
+        </ul>
+      </div>
+      <div
+        class="section-info mt-large"
+      >
+        <h3>
+          О сроках и упаковке
+        </h3>
+        <ul
+          class="no-list-markers mt-short"
+        >
+          <li
+            class="marked-text"
+          >
+            <span
+              class="icon-marker color-green"
+            >
+              ✔️
+            </span>
+            <p
+              class="ml-large"
+            >
+              Заказы передаются на доставку после сборки и упаковки, обычно в течение 
+              <b>
+                24 часов
+              </b>
+              .
+            </p>
+          </li>
+          <li
+            class="marked-text"
+          >
+            <span
+              class="icon-marker color-green"
+            >
+              ✔️
+            </span>
+            <p
+              class="ml-large"
+            >
+              Все посылки надёжно упакованы: удары, падения, проливные дожди — ваши покупки выживут.
+            </p>
+          </li>
+          <li
+            class="marked-text"
+          >
+            <span
+              class="icon-marker color-green"
+            >
+              ✔️
+            </span>
+            <p
+              class="ml-large"
+            >
+              Срок доставки зависит от выбранного способа и логистической загруженности — любите сюрпризы? Мы тоже.
+            </p>
+          </li>
+        </ul>
+      </div>
+      <div
+        class="section-info mt-large"
+      >
+        <h3>
+          Связь и вопросы
+        </h3>
+        <p
+          class="mt-short"
+        >
+          Если что-то непонятно, есть сомнения или вы просто боитесь рёва мотора на старте — пишите или звоните:
+        </p>
+        <div
+          class="centered-content mt-short"
+        >
+          <p
+            class="marked-text"
+          >
+            <span
+              class="icon-marker color-blue"
+            >
+              📧
+            </span>
+            <span
+              class="ml-large"
+            >
+              <a
+                class="email-link"
+                href="mailto:info@moto-shop.ru"
+              >
+                info@moto-shop.ru
+              </a>
+            </span>
+          </p>
+          <p
+            class="marked-text mt-short"
+          >
+            <span
+              class="icon-marker color-blue"
+            >
+              📞
+            </span>
+            <span
+              class="ml-large"
+            >
+              <a
+                class="phone-link"
+                href="tel:+79001234567"
+              >
+                +7 (900) 123-45-67
+              </a>
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

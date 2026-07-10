@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import cn from 'classnames';
 import { logMissingProps } from '@/helpers/logHelpers.js';
 import type { JSX, Dispatch, SetStateAction } from 'react';
-import type {  } from '@shared/types/index.js';
 
 //////////////////////////
 /// TYPES & INTERFACES ///

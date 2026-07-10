@@ -19,7 +19,6 @@ interface ICollapsibleProps {
 /// FUNCTIONALITY ///
 /////////////////////
 
-
 export default function Collapsible({
     isExpanded,
     className = '',
