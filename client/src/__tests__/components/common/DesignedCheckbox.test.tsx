@@ -20,7 +20,6 @@ describe('Компонент DesignedCheckbox', () => {
         iconSpan: screen.getByText(defaultProps.checkIcon)
     });
 
-    // Очистка функции-шпиона перед каждым тестом, чтобы вызовы не копились
     beforeEach(() => {
         mockOnChange.mockClear();
         mockOnBlur.mockClear();
