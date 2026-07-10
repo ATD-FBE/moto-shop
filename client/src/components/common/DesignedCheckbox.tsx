@@ -31,7 +31,7 @@ export default function DesignedCheckbox({
     onChange,
     onBlur,
     disabled = false,
-    ...rest
+    ...restProps
 }: IDesignedCheckboxProps): JSX.Element {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const spanRef = useRef<HTMLSpanElement | null>(null);
@@ -54,7 +54,7 @@ export default function DesignedCheckbox({
             currentTarget: {
                 name: input.name,
                 type: input.type,
-                value: input.value,
+                value: input.value, // 'on' по дефолту для чекбокс-инпута
                 checked: input.checked
             }
         } as FocusEvent<HTMLInputElement>;
@@ -85,7 +85,7 @@ export default function DesignedCheckbox({
 
             <input
                 ref={inputRef}
-                {...rest}
+                {...restProps}
                 id={id}
                 name={name}
                 type="checkbox"
@@ -100,6 +100,7 @@ export default function DesignedCheckbox({
                 tabIndex={disabled ? -1 : 0}
                 onKeyDown={handleSpanKeyDown}
                 onBlur={handleSpanBlur}
+                data-testid="designed-checkbox-view"
             >
                 <span
                     className={cn('check-icon', `color-${checkIconColor}`, { 'visible': checked })}
@@ -115,7 +116,7 @@ export default function DesignedCheckbox({
                     onMouseDown={handleLabelMouseDown}
                     onClick={handleLabelClick}
                 >
-                    {label}{showColon && ':'}
+                    {label}
                 </span>}
         </label>
     );
