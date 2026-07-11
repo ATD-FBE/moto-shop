@@ -4,13 +4,11 @@ import { userEvent } from '@testing-library/user-event';
 import { assertDefined } from '@shared/commonHelpers.js';
 import { USER_ROLE } from '@shared/constants.js';
 
-jest.unstable_mockModule('@/components/layout/main-header/DashboardNav.jsx', () => {
-    return {
-        default: function MockDashboardNav() {
-            return <nav data-testid="dashboard-nav">Mocked Dashboard Nav</nav>;
-        }
-    };
-});
+jest.unstable_mockModule('@/components/layout/main-header/DashboardNav.jsx', () => ({
+    default: function MockDashboardNav() {
+        return <nav data-testid="dashboard-nav">Mocked Dashboard Nav</nav>;
+    }
+}));
 
 const { default: BurgerMenu } = await import('@/components/layout/main-header/BurgerMenu.jsx');
 
