@@ -472,11 +472,15 @@ export default function Cart(): JSX.Element | null {
 
                         <div className="cart-total-amounts">
                             {hasDiscount && (
-                                <p className="cart-original-total">{formattedOriginalTotal} руб.</p>
+                                <p className="cart-original-total" data-testid="cart-original-total">
+                                    {formattedOriginalTotal} руб.
+                                </p>
                             )}
-                            <p className="cart-current-total">{formattedCurrentTotal} руб.</p>
+                            <p className="cart-current-total" data-testid="cart-current-total">
+                                {formattedCurrentTotal} руб.
+                            </p>
                             {hasDiscount && (
-                                <p className="cart-saved-total">
+                                <p className="cart-saved-total" data-testid="cart-saved-total">
                                     Экономия: {formattedSavedTotal} руб.
                                 </p>
                             )}
@@ -517,7 +521,7 @@ export default function Cart(): JSX.Element | null {
 
                     <div className="cart-main-controls">
                         <div className="cart-main-info">
-                            <p>
+                            <p data-testid="prod-counter">
                                 {'В корзине'}
                                 &nbsp;
                                 <span className="total-cart-items">{totalCartItems}</span>
