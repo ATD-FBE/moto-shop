@@ -23,14 +23,18 @@ export default {
             displayName: 'server',
             testEnvironment: 'node',
             testMatch: ['<rootDir>/server/__tests__/**/*.[jt]s?(x)'],
-            setupFiles: ['<rootDir>/jest.setup.server.js'],
+            setupFiles: ['<rootDir>/jest/jest.setup.server.js'],
             ...commonProjectConfig
         },
         {
             displayName: 'client',
-            testEnvironment: 'jsdom', // Виртуальный браузер для фронта
+            // Исправленный виртуальный браузер для фронта
+            testEnvironment: '<rootDir>/jest/FixJSDOMEnvironment.js',
+            testEnvironmentOptions: {
+                customExportConditions: [''] // Для правильного подтягивания MSW
+            },
             testMatch: ['<rootDir>/client/src/__tests__/**/*.[jt]s?(x)'],
-            setupFilesAfterEnv: ['<rootDir>/jest.setup.client.js'],
+            setupFilesAfterEnv: ['<rootDir>/jest/jest.setup.client.js'],
             ...commonProjectConfig
         },
         {
