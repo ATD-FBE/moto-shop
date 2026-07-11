@@ -137,8 +137,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             discount: 0
         };
 
-        const PROD_1_ID = 'moto-detail-1';
-        const PROD_2_ID = 'moto-detail-2';
+        const PROD_1_ID = 'moto-prod-1';
+        const PROD_2_ID = 'moto-prod-2';
 
         const PROD_1_BASE = {
             id: PROD_1_ID,
