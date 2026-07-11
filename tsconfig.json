@@ -26,7 +26,8 @@
 	"include": [
 		"client/**/*",
 		"server/**/*",
-		"shared/**/*"
+		"shared/**/*",
+		"jest/**/*"
 	],
 	"exclude": [
 		"node_modules",
