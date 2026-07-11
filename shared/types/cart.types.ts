@@ -25,9 +25,10 @@ export interface ICartItem {
     deleted: boolean;
     productSnapshot: TProductSnapshot | null;
 }
-interface ICartBaseSuccessData {
+
+interface ICartSuccessData {
     tradeProductList: IProduct[];
-    cartItemList: IGuestCartItem[];
+    cartItemList: ICartItem[];
     customerDiscount: number;
 }
 
@@ -53,7 +54,7 @@ interface IGuestCartItemListSuccessData {
 export type TCartItemListResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
-    | TSuccessResponse<ICartBaseSuccessData>;
+    | TSuccessResponse<ICartSuccessData>;
     
 /// Добавление/изменение количества/удаление товара в корзине ///
 export interface ICartItemUpdateBody {
@@ -80,7 +81,7 @@ export type TCartItemRestoreResponse =
 export type TCartWarningsFixResponse =
     | TAuthErrorResponse
     | TGeneralErrorResponse
-    | TSuccessResponse<ICartBaseSuccessData>;
+    | TSuccessResponse<ICartSuccessData>;
     
 /// Удаление товара из корзины ///
 export type TCartItemRemoveResponse =
