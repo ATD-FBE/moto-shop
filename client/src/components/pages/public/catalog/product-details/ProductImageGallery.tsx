@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ImageSlider from './product-image-gallery/ImageSlider.jsx';
 import ImageThumbnails from './product-image-gallery/ImageThumbnails.jsx';
+import { useAppDispatch } from '@/hooks/storeHooks.js';
 import { openImageViewerModal } from '@/services/modalImageViewerService.js';
 import {
     DATA_LOAD_STATUS,
@@ -37,6 +38,8 @@ export default function ProductImageGallery({
 }: IProductImageGalleryProps): JSX.Element {
     const [currentThumbIdx, setCurrentThumbIdx] = useState(mainImageIndex);
     const sliderTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+    const dispatch = useAppDispatch();
 
     const isReady = loadStatus === DATA_LOAD_STATUS.READY;
     const hasProductImage = isReady && images.length > 0;
@@ -81,7 +84,7 @@ export default function ProductImageGallery({
     const handleSliderImageClick = (): void => {
         clearInterval(sliderTimerRef.current);
 
-        openImageViewerModal({
+        dispatch(openImageViewerModal({
             images: images.map(img => ({ url: img.original, title })),
             initialIndex: currentThumbIdx,
             ...(images.length > 1 && {
@@ -90,7 +93,7 @@ export default function ProductImageGallery({
                     startAutoSlide();
                 }
             })
-        });
+        }));
     };
 
     // Обновление главного индекса после загрузки товара

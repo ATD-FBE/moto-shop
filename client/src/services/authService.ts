@@ -1,4 +1,3 @@
-import AppStore from '@/redux/Store.js';
 import {
     sendAuthSessionRequest,
     sendAuthRefreshRequest,
@@ -122,7 +121,7 @@ export const loadSession = (): TAppThunk<Promise<void>> =>
             dispatch(login({ isLocalSession: true, user: localUser }));
             dispatch(setCartAccessibility(false)); // Блокировака корзины
 
-            delayAndShowAlert({
+            dispatch(delayAndShowAlert({
                 type: 'error',
                 dismissible: false,
                 title: 'Ошибка сервера...',
@@ -130,7 +129,7 @@ export const loadSession = (): TAppThunk<Promise<void>> =>
                     'Загружены локальные данные пользователя.\n' +
                     'Добавление товаров, работа с корзиной и все функции, требующие авторизации, ' +
                     'временно недоступны.'
-            });
+            }));
         } catch (err) {
             console.error('Ошибка при парсинге локальных данных пользователя:', toError(err));
             dispatch(logout(false)); // Разлогинивание при ошибке парсинга локальных данных
@@ -161,14 +160,14 @@ export const initCustomerSession = ({
         }
         
         if (cartWasMerged) {
-            delayAndShowAlert({
+            dispatch(delayAndShowAlert({
                 type: 'info',
                 title: 'Обновление корзины товаров',
                 message: 'Товары из гостевой корзины перенесены в корзину аккаунта.' +
                     (!isFirstLogin
                         ? ' При совпадении товаров использовано количество из гостевой версии.'
                         : '')
-            });
+            }));
         }
 
         return { redirectTo };
@@ -257,9 +256,10 @@ const isValidUser = (data: any): data is IUser => {
     return data && typeof data === 'object' && 'id' in data && 'email' in data && 'role' in data;
 };
 
-const delayAndShowAlert = (alertOptions: TOpenAlertModalParams, delay = 1000) => {
-    setTimeout(() => {
-        const isAuthenticated = AppStore.getState().auth.isAuthenticated;
-        if (isAuthenticated) openAlertModal(alertOptions);
-    }, delay);
-};
+const delayAndShowAlert = (alertOptions: TOpenAlertModalParams, delay = 1000): TAppThunk<void> =>
+    (dispatch, getState) => {
+        setTimeout(() => {
+            const isAuthenticated = getState().auth.isAuthenticated;
+            if (isAuthenticated) dispatch(openAlertModal(alertOptions));
+        }, delay);
+    };

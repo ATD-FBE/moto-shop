@@ -43,12 +43,12 @@ export const syncGuestCart = (): TAppThunk<Promise<void>> => async (dispatch) =>
 
     if (status !== REQUEST_STATUS.SUCCESS) {
         dispatch(setCartAccessibility(false));
-        openAlertModal({
+        dispatch(openAlertModal({
             type: 'error',
             dismissible: false,
             title: 'Ошибка синхронизации корзины',
             message: 'Гостевая корзина временно недоступна.'
-        });
+        }));
         return;
     }
 

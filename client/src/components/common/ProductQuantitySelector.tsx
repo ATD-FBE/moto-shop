@@ -112,12 +112,12 @@ export default function ProductQuantitySelector({
             logRequestStatus({ context: 'CART: UPSERT', status, message });
 
             if (status !== REQUEST_STATUS.SUCCESS) {
-                openAlertModal({
+                dispatch(openAlertModal({
                     type: 'error',
                     dismissible: false,
                     title: 'Не удалось изменить количество товара в корзине',
                     message: 'Ошибка при обновлении количества товаров.\nПодробности ошибки в консоли.'
-                });
+                }));
             } else {
                 updateCart({ cartItem, isGuestCart: false });
             }

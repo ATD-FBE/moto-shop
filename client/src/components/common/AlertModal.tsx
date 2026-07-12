@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import parseHTML from 'html-react-parser';
 import cn from 'classnames';
-import { useAppSelector } from '@/hooks/storeHooks.js';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
 import { getAlertModalActions, closeAlertModal } from '@/services/modalAlertService.js';
@@ -38,6 +38,8 @@ export default function AlertModal(): JSX.Element | null {
     const lastFocusedElemRef = useRef<Element | null>(null);
     const fallbackCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+    const dispatch = useAppDispatch();
+
     const { onClose } = getAlertModalActions();
 
     const clearFallbackCloseTimer = (): void => {
@@ -50,7 +52,7 @@ export default function AlertModal(): JSX.Element | null {
         isClosingRef.current = false;
 
         clearFallbackCloseTimer();
-        closeAlertModal();
+        dispatch(closeAlertModal());
         onClose?.();
 
         appRoot?.removeAttribute('inert'); // До фокуса на сохранённом активном элементе

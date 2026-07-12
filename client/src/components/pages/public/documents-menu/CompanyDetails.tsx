@@ -19,12 +19,12 @@ export default function CompanyDetails(): JSX.Element {
         logRequestStatus({ context: 'COMPANY: LOAD DETAILS', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось скачать документ',
                 message: 'Ошибка при скачивании реквизитов магазина.\nПодробности ошибки в консоли.'
-            });
+            }));
         } else {
             const { blob, filename } = responseData;
             triggerFileDownload(blob, filename);

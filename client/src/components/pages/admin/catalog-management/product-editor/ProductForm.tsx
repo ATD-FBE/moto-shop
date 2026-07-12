@@ -379,10 +379,10 @@ export default function ProductForm(
     };
 
     const handleThumbImageClick = (idx: number): void => {
-        openImageViewerModal({
+        dispatch(openImageViewerModal({
             images: images.map(img => ({ url: img.originalUrl, title: img.title })),
             initialIndex: idx
-        });
+        }));
     };
 
     const setMainImage = (targetIdx: number): void => {

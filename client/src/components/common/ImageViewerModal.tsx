@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import TrackedImage from '@/components/common/TrackedImage.jsx';
-import { useAppSelector } from '@/hooks/storeHooks.js';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { closeImageViewerModal, getImageViewerCallbacks } from '@/services/modalImageViewerService.js';
 import type { JSX, MouseEvent } from 'react';
@@ -37,13 +37,15 @@ export default function ImageViewerModal(): JSX.Element | null {
     const thumbsContainerScrollRef = useRef<HTMLDivElement | null>(null);
     const currentThumbRef = useRef<HTMLButtonElement | null>(null);
 
+    const dispatch = useAppDispatch();
+
     const handleClose = (e?: MouseEvent<HTMLElement>): void => {
         e?.stopPropagation();
 
         if (isVisible) {
             setIsVisible(false);
         } else { // Анимация открытия модалки не успела начаться
-            closeImageViewerModal();
+            dispatch(closeImageViewerModal());
         }
     };
 
@@ -111,7 +113,7 @@ export default function ImageViewerModal(): JSX.Element | null {
             if (e.propertyName === 'opacity' && !isVisibleRef.current) {
                 const { onClose } = getImageViewerCallbacks();
                 onClose?.(currentIdxRef.current);
-                closeImageViewerModal();
+                dispatch(closeImageViewerModal());
             }
         };
     

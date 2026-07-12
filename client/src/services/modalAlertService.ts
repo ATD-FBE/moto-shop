@@ -1,6 +1,5 @@
-import AppStore from '@/redux/Store.js';
 import { showAlertModal, hideAlertModal } from '@/redux/slices/modalAlertSlice.js';
-import type { TOpenAlertModalParams, TAlertModalActions } from '@/types/index.js';
+import type { TOpenAlertModalParams, TAlertModalActions, TAppThunk } from '@/types/index.js';
 
 // Передача функций, которые нельзя хранить в Redux Store
 let alertModalActions: TAlertModalActions = { onClose: null };
@@ -13,18 +12,24 @@ export const openAlertModal = ({
     message,
     dismissBtnLabel,
     onClose = null
-}: TOpenAlertModalParams): void => {
-    setTimeout(() => {
-        alertModalActions = { onClose };
-        AppStore.dispatch(showAlertModal({ type, dismissible, title, message, dismissBtnLabel }));
-    }, openDelay);
-};
+}: TOpenAlertModalParams): TAppThunk<void> =>
+    (dispatch) => {
+        const trigger = () => {
+            alertModalActions = { onClose };
+            dispatch(showAlertModal({ type, dismissible, title, message, dismissBtnLabel }));
+        };
 
-export const getAlertModalActions = (): TAlertModalActions => {
-    return alertModalActions;
-};
+        if (openDelay > 0) {
+            setTimeout(trigger, openDelay);
+        } else {
+            trigger();
+        }
+    };
 
-export const closeAlertModal = (): void => {
-    alertModalActions = { onClose: null };
-    AppStore.dispatch(hideAlertModal());
-};
+export const getAlertModalActions = (): TAlertModalActions => alertModalActions;
+
+export const closeAlertModal = (): TAppThunk<void> =>
+    (dispatch) => {
+        alertModalActions = { onClose: null };
+        dispatch(hideAlertModal());
+    };

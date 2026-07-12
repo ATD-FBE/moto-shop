@@ -109,11 +109,11 @@ export default function News(): JSX.Element {
             setNewsList(prev => prev.filter(news => news.id !== newsId));
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: `Удалить новость «${news.title}»?`,
             onConfirm: () => processNewsDeletion(news.id),
             onFinalize: () => finalizaNewsDeletion(news.id)
-        });
+        }));
     };
 
     // Очистка при размонтировании

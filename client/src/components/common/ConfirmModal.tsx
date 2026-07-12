@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import parseHTML from 'html-react-parser';
 import cn from 'classnames';
-import { useAppSelector } from '@/hooks/storeHooks.js';
+import { useAppSelector, useAppDispatch } from '@/hooks/storeHooks.js';
 import useSyncedStateWithRef from '@/hooks/useSyncedStateWithRef.js';
 import { wasLastInputKeyboard } from '@/helpers/inputMethod.js';
-import { getconfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
+import { getConfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { MODAL_ANIMATION_DURATION } from '@/config/constants.js';
 import type { JSX } from 'react';
 
@@ -33,7 +33,9 @@ export default function ConfirmModal(): JSX.Element | null {
     const lastFocusedElemRef = useRef<Element | null>(null);
     const fallbackCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    const { onConfirm, onFinalize, onCancel, onClose } = getconfirmModalActions();
+    const dispatch = useAppDispatch();
+
+    const { onConfirm, onFinalize, onCancel, onClose } = getConfirmModalActions();
 
     const handleConfirm = async () => {
         try {
@@ -59,7 +61,7 @@ export default function ConfirmModal(): JSX.Element | null {
         isClosingRef.current = false;
 
         clearFallbackCloseTimer();
-        closeConfirmModal();
+        dispatch(closeConfirmModal());
 
         if (isFinalizeRef.current) {
             isFinalizeRef.current = false;

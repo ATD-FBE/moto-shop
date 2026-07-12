@@ -149,11 +149,11 @@ export default function ProductEditor({
             setOperationBusy(false);
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: `Товар «${product.name}» будет удалён.\n\nПодтвердить выполнение?`,
             onConfirm: () => processProductDeletion(product.id),
             onFinalize: finalizeProductDeletion
-        });
+        }));
     };
 
     const confirmBulkProductDeletion = (productIds: string[]): void => {
@@ -187,11 +187,11 @@ export default function ProductEditor({
             setOperationBusy(false);
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: 'Выбранные товары будут удалены.\n\nПодтвердить выполнение?',
             onConfirm: () => processBulkProductDeletions(productIds),
             onFinalize: finalizeBulkProductDeletion
-        });
+        }));
     };
 
     // Очистка при размонтировании
