@@ -1,39 +1,29 @@
-import { jest } from '@jest/globals';
 import { userEvent } from '@testing-library/user-event';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 import { ReactElement } from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
-import uiReducer from '@/redux/slices/uiSlice.js';
 import authReducer from '@/redux/slices/authSlice.js';
+import uiReducer from '@/redux/slices/uiSlice.js';
+import modalAlertReducer from '@/redux/slices/modalAlertSlice.js';
+import modalConfirmReducer from '@/redux/slices/modalConfirmSlice.js';
 import cartReducer, {
     defaultCartItemExtendedParams as defCartItemExtParams
 } from '@/redux/slices/cartSlice.js';
 import productsReducer from '@/redux/slices/productsSlice.js';
-import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
-import { DATA_LOAD_STATUS, SCREEN_SIZE } from '@/config/constants.js';
+import Cart from '@/components/pages/customer/Cart.jsx';
+import AlertModal from '@/components/common/AlertModal.jsx';
+import ConfirmModal from '@/components/common/ConfirmModal.jsx';
+import { getConfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
+import { SCREEN_SIZE } from '@/config/constants.js';
+import { assertDefined } from '@shared/commonHelpers.js';
 import { USER_ROLE, MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
-import type {
-    IUser,
-    ICartItem,
-    IProduct,
-    TProductSnapshot
-} from '@shared/types/index.js';
+import type { IUser, ICartItem, IProduct } from '@shared/types/index.js';
 
-jest.unstable_mockModule('@/services/modalAlertService.js', () => ({
-    openAlertModal: jest.fn(),
-}));
-jest.unstable_mockModule('@/services/modalConfirmService.js', () => ({
-    openConfirmModal: jest.fn(),
-}));
-
-const { default: Cart } = await import('@/components/pages/customer/Cart.jsx');
-const { openAlertModal } = await import('@/services/modalAlertService.js');
-const { openConfirmModal } = await import('@/services/modalConfirmService.js');
-
-const CUSTOMER_BASE: IUser = {
+const CUSTOMER_MOCK: IUser = {
     name: 'Tested Customer',
     email: 'test-customer@motoshop.ru',
     role: USER_ROLE.CUSTOMER,
@@ -43,7 +33,7 @@ const CUSTOMER_BASE: IUser = {
 const PROD_1_ID = 'moto-prod-1';
 const PROD_2_ID = 'moto-prod-2';
 
-const PROD_1_BASE: IProduct = {
+const PROD_1_MOCK: IProduct = {
     _type: 'full',
     id: PROD_1_ID,
     images: [],
@@ -56,7 +46,7 @@ const PROD_1_BASE: IProduct = {
     discount: 15,
     isActive: true
 };
-const PROD_2_BASE: IProduct = {
+const PROD_2_MOCK: IProduct = {
     _type: 'full',
     id: PROD_2_ID,
     images: [],
@@ -70,14 +60,17 @@ const PROD_2_BASE: IProduct = {
     isActive: true
 };
 
-const CART_ITEM_1_BASE: ICartItem = { ...defCartItemExtParams, id: PROD_1_ID, quantity: 2 };
-const CART_ITEM_2_BASE: ICartItem = { ...defCartItemExtParams, id: PROD_2_ID, quantity: 5 };
+const CART_ITEM_1_MOCK: ICartItem = { ...defCartItemExtParams, id: PROD_1_ID, quantity: 2 };
+const CART_ITEM_2_MOCK: ICartItem = { ...defCartItemExtParams, id: PROD_2_ID, quantity: 5 };
 
-const CART_ITEM_LIST_RESPONSE_BASE = {
+const CART_ITEM_LIST_RESPONSE_MOCK = {
     message: 'Корзина успешно загружена',
-    tradeProductList: [PROD_1_BASE, PROD_2_BASE],
-    cartItemList: [CART_ITEM_1_BASE, CART_ITEM_2_BASE],
+    tradeProductList: [PROD_1_MOCK, PROD_2_MOCK],
+    cartItemList: [CART_ITEM_1_MOCK, CART_ITEM_2_MOCK],
     customerDiscount: 10
+};
+const CART_CLEAR_RESPONSE_MOCK = {
+    message: 'Корзина успешно очищена'
 };
 
 // rawTotal: 2 * 20000 + 5 * 1000 = 40000 + 5000 = 45000
@@ -85,28 +78,35 @@ const CART_ITEM_LIST_RESPONSE_BASE = {
 
 const server = setupServer(
     http.get('/api/cart', () => {
-        return HttpResponse.json(CART_ITEM_LIST_RESPONSE_BASE, { status: 200 });
+        return HttpResponse.json(CART_ITEM_LIST_RESPONSE_MOCK, { status: 200 });
+    }),
+    http.delete('/api/cart/clear', () => {
+        return HttpResponse.json(CART_CLEAR_RESPONSE_MOCK, { status: 200 });
     })
 );
 
 function renderWithProviders(uiElement: ReactElement) {
     const defaultAuthState = authReducer(undefined, { type: '@@INIT' });
+    const defaultUiState = uiReducer(undefined, { type: '@@INIT' });
+    const defaultModalAlertState = modalAlertReducer(undefined, { type: '@@INIT' });
+    const defaultModalConfirmState = modalConfirmReducer(undefined, { type: '@@INIT' });
     const defaultCartState = cartReducer(undefined, { type: '@@INIT' });
     const defaultProductsState = productsReducer(undefined, { type: '@@INIT' });
-    const defaultUiState = uiReducer(undefined, { type: '@@INIT' });
 
-    const store = configureStore({
+    const testStore = configureStore({
         reducer: {
             auth: authReducer,
+            ui: uiReducer,
+            modalAlert: modalAlertReducer,
+            modalConfirm: modalConfirmReducer,
             cart: cartReducer,
             products: productsReducer,
-            ui: uiReducer
         },
         preloadedState: {
             auth: {
                 ...defaultAuthState,
                 isAuthenticated: true,
-                user: CUSTOMER_BASE
+                user: CUSTOMER_MOCK
             },
             ui: {
                 ...defaultUiState,
@@ -114,13 +114,15 @@ function renderWithProviders(uiElement: ReactElement) {
                 screenSize: SCREEN_SIZE.LARGE,
                 isDashboardPanelActive: true
             },
+            modalAlert: defaultModalAlertState,
+            modalConfirm: defaultModalConfirmState,
             cart: defaultCartState,
             products: defaultProductsState
         }
     });
 
     return render(
-        <Provider store={store}>
+        <Provider store={testStore}>
             <MemoryRouter>
                 {uiElement}
             </MemoryRouter>
@@ -200,7 +202,7 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         server.use(
             http.get('/api/cart', () => {
                 return HttpResponse.json({
-                    ...CART_ITEM_LIST_RESPONSE_BASE,
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
                     tradeProductList: [],
                     cartItemList: []
                 });
@@ -225,6 +227,69 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
             expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
             expect(screen.queryByText(/корзина пуста/i)).toBeNull();
+        });
+    });
+
+    it('корректно обрабатывает очистку корзины', async () => {
+        const user = userEvent.setup();
+
+        server.use(
+            http.delete('/api/cart/clear', () => {
+                return HttpResponse.json({ message: 'Ошибка очистки корзины' }, { status: 500 });
+            })
+        );
+    
+        renderWithProviders(
+            <>
+                <ConfirmModal />
+                <Cart />
+            </>
+        );
+    
+        const clearCartBtn = screen.getByRole('button', { name: /очистить корзину/i });
+        expect(clearCartBtn).toBeInTheDocument();
+        expect(clearCartBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(clearCartBtn).not.toBeDisabled();
+        });
+        
+        // Клик на кнопку очистки корзины
+        await user.click(clearCartBtn);
+
+        const confirmModalBtn = await screen.findByRole('button', { name: /подтвердить/i });
+        expect(confirmModalBtn).toBeInTheDocument();
+        expect(confirmModalBtn).not.toBeDisabled();
+
+        // Первый клик на кнопку подтверждения очистки корзины в модалке -> ошибка
+        await user.click(confirmModalBtn);
+
+        await waitFor(() => {
+            expect(screen.getByText(/ошибка при выполнении действия/i)).toBeInTheDocument();
+            expect(confirmModalBtn).not.toBeDisabled();
+        });
+
+        // Сброс обработчиков и второй клик на кнопку подтверждения очистки корзины в модалке -> успех
+        server.resetHandlers();
+
+        await user.click(confirmModalBtn);
+
+        // Имитация закрытия модалки в связи с отсутствием анимации в JSDOM
+        const { onFinalize } = getConfirmModalActions();
+        expect(onFinalize).toBeDefined();
+        assertDefined(onFinalize, 'onFinalize');
+        act(() => {
+            onFinalize();
+        });
+
+        await waitFor(() => {
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 0 товарных позиций');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('0,00 руб.');
+            expect(screen.getByText(/корзина пуста/i)).toBeInTheDocument();
+            expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
         });
     });
 });
