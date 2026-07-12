@@ -130,11 +130,11 @@ export default function Promotions(): JSX.Element {
             setPromoList(prev => prev.filter(promo => promo.id !== promoId));
         }
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: `Удалить акцию «${promo.title}»?`,
             onConfirm: () => processPromoDeletion(promo.id),
             onFinalize: () => finalizePromoDeletion(promo.id)
-        });
+        }));
     };
 
     // Очистка при размонтировании

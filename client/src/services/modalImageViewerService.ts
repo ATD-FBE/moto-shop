@@ -1,22 +1,21 @@
-import AppStore from '@/redux/Store.js';
 import { showImageViewerModal, hideImageViewerModal } from '@/redux/slices/modalImageViewerSlice.js';
-import type { TOpenImageViewerModalParams, TImageViewerModalActions } from '@/types/index.js';
+import type { TOpenImageViewerModalParams, TImageViewerModalActions, TAppThunk } from '@/types/index.js';
 
 // Передача функций, которые нельзя хранить в Redux
 let imageViewerModalActions: TImageViewerModalActions = { onClose: null };
 
 export const openImageViewerModal = (
     { images, initialIndex, onClose = null }: TOpenImageViewerModalParams
-): void => {
-    imageViewerModalActions = { onClose };
-    AppStore.dispatch(showImageViewerModal({ images, initialIndex }));
-};
+): TAppThunk<void> =>
+    (dispatch) => {
+        imageViewerModalActions = { onClose };
+        dispatch(showImageViewerModal({ images, initialIndex }));
+    };
 
-export const getImageViewerCallbacks = (): TImageViewerModalActions => {
-    return imageViewerModalActions;
-};
+export const getImageViewerCallbacks = (): TImageViewerModalActions => imageViewerModalActions;
 
-export const closeImageViewerModal = (): void => {
-    imageViewerModalActions = { onClose: null };
-    AppStore.dispatch(hideImageViewerModal());
-};
+export const closeImageViewerModal = (): TAppThunk<void> =>
+    (dispatch) => {
+        imageViewerModalActions = { onClose: null };
+        dispatch(hideImageViewerModal());
+    };

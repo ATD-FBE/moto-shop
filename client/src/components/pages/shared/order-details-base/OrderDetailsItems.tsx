@@ -117,14 +117,14 @@ export default function OrderDetailsItems({
         logRequestStatus({ context: 'ORDER: LOAD ITEMS AVAILABILITY', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось загрузить данные для заказа',
                 message:
                     'Ошибка при попытке получить доступное на складе количество товаров в заказе.\n' +
                     'Подробности ошибки в консоли.'
-            });
+            }));
         } else {
             const { orderItemsAvailabilityMap } = responseData;
             setItemsAvailabilityMap(orderItemsAvailabilityMap);

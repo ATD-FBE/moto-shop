@@ -279,25 +279,25 @@ export default function Cart(): JSX.Element | null {
                         `\n\n${formatCheckoutAdjustmentLogs(cartItemAdjustments)}`
                     : '';
                 
-                openAlertModal({
+                dispatch(openAlertModal({
                     type: 'error',
                     dismissible: false,
                     title: 'Сумма заказа меньше минимальной',
                     message: minOrderAmountMsg + adjustmentsMsg,
                     onClose: () => setCheckoutInProgress(false)
-                });
+                }));
 
                 return;
             }
             
             // Ошибка сервера и др.
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось создать черновик заказа',
                 message: 'Ошибка при оформлении заказа.\nПодробности ошибки в консоли.',
                 onClose: () => setCheckoutInProgress(false)
-            });
+            }));
             return;
         }
 
@@ -316,7 +316,7 @@ export default function Cart(): JSX.Element | null {
                 '<span className="bold underline">Изменения товаров в корзине:</span>' +
                 `\n\n${formatCheckoutAdjustmentLogs(cartItemAdjustments)}`;
 
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'warn',
                 dismissible: false,
                 title: 'Корзина была синхронизирована с текущими данными каталога',
@@ -324,7 +324,7 @@ export default function Cart(): JSX.Element | null {
                 onClose: (): void => {
                     dispatch(setLockedRoute(checkoutPath));
                 }
-            });
+            }));
         } else {
             dispatch(setLockedRoute(checkoutPath));
         }
@@ -365,11 +365,11 @@ export default function Cart(): JSX.Element | null {
             }
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: cartClearingPrompt,
             onConfirm: proccessCartClearing,
             onFinalize: finalizeCartClearing
-        });
+        }));
     };
 
     const fixCartWarnings = async (): Promise<void> => {

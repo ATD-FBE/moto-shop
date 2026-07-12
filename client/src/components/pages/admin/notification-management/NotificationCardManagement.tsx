@@ -70,12 +70,12 @@ export default function NotificationCardManagement({
         logRequestStatus({ context: 'NOTIFICATION: SEND', status, message });
         
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось отправить уведомление',
                 message: 'Ошибка при отправке уведомления.\nПодробности ошибки в консоли.'
-            });
+            }));
         } else {
             updateNotificationState(notificationId, responseData.notificationUpdateData);
         }
@@ -123,11 +123,11 @@ export default function NotificationCardManagement({
             removeNotificationIdInProgress(notificationId);
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: `Удалить уведомление «${notification.subject}»?`,
             onConfirm: () => processNotificationDeletion(notification.id),
             onFinalize: () => finalizeNotificationDeletion(notification.id)
-        });
+        }));
     };
 
     // Очистка при размонтировании

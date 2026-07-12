@@ -63,11 +63,11 @@ export default function OrderRepeatButton({
                 navigate(cartPath);
             };
 
-            openConfirmModal({
+            dispatch(openConfirmModal({
                 prompt: 'Корзина не пуста. Повторение заказа заменит текущее содержимое.\nПродолжить?',
                 onConfirm: processOrderRepeating,
                 onFinalize: finalizeOrderRepeating
-            });
+            }));
 
             return;
         }
@@ -82,7 +82,7 @@ export default function OrderRepeatButton({
         logRequestStatus({ context: LOG_CTX, status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось повторить заказ',
@@ -92,7 +92,7 @@ export default function OrderRepeatButton({
                     setOrderRepeating(false);
                     onLoading?.(false);
                 }
-            });
+            }));
         } else {
             navigate(cartPath);
         }

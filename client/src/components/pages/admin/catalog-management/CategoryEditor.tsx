@@ -88,7 +88,7 @@ export default function CategoryEditor({
                 const перемещён = pluralize(movedProductsCount, ['перемещён', 'перемещены',
                     'перемещены']);
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     type: 'warn',
                     dismissible: false,
                     title: 'Внимание!',
@@ -97,7 +97,7 @@ export default function CategoryEditor({
                         `${movedProductsCount} ${товар}, ранее ${находившийся} в категории, ` +
                         `ставшей родительской, ${был} ${перемещён} в корневую категорию ` +
                         `«${unsortedCategory?.name || NO_VALUE_LABEL}».`
-                });
+                }));
             }
         }
 
@@ -155,7 +155,7 @@ export default function CategoryEditor({
                 const перемещён = pluralize(movedProductsCount, ['перемещён', 'перемещены',
                     'перемещены']);
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     type: 'warn',
                     dismissible: false,
                     title: 'Внимание!',
@@ -163,7 +163,7 @@ export default function CategoryEditor({
                         `При удалении категории или всей её ветки ${movedProductsCount} ${товар}, ` +
                         `${содержащийся} в этих категориях, ${был} ${перемещён} ` +
                         `в корневую категорию «${unsortedCategory?.name || NO_VALUE_LABEL}».`
-                });
+                }));
 
                 movedProductsCountOnCategoryDeletionRef.current = 0;
             }
@@ -172,11 +172,11 @@ export default function CategoryEditor({
             setOperationBusy(false);
         };
 
-        openConfirmModal({
+        dispatch(openConfirmModal({
             prompt: categoryDeletionPrompt,
             onConfirm: () => processCategoryDeletion(selectedCategoryId),
             onFinalize: () => finalizeCategoryDeletion(selectedCategoryId)
-        });
+        }));
     };
 
     // Очистка при размонтировании

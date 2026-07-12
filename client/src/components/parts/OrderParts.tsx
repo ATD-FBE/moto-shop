@@ -354,12 +354,12 @@ export function OrderRefreshButton({
         logRequestStatus({ context: 'ORDER: LOAD SINGLE', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось обновить состояние заказа',
                 message: 'Ошибка при попытке обновления данных заказа.\nПодробности ошибки в консоли.'
-            });
+            }));
         } else {
             const { order } = responseData;
             refreshOrderState(orderId, order);

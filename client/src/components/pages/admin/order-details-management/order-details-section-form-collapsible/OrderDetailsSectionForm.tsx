@@ -575,7 +575,7 @@ export default function OrderDetailsSectionForm({
                         `\n\n${formatOrderAdjustmentLogs(orderItemAdjustments)}`
                     : '';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
@@ -584,7 +584,7 @@ export default function OrderDetailsSectionForm({
                     onClose: (): void => {
                         dispatch(setNavigationLock(false));
                     }
-                });
+                }));
                 break;
             }
 
@@ -598,7 +598,7 @@ export default function OrderDetailsSectionForm({
 
                 onItemsResponseResult?.({ shouldRefreshItemsAvailability: true });
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'warn',
                     dismissible: false,
@@ -607,7 +607,7 @@ export default function OrderDetailsSectionForm({
                     onClose: (): void => {
                         dispatch(setNavigationLock(false));
                     }
-                });
+                }));
                 break;
             }
 
@@ -653,7 +653,7 @@ export default function OrderDetailsSectionForm({
                         'orderItemAdjustments' in responseData &&
                         responseData.orderItemAdjustments.length > 0
                     ) {
-                        openAlertModal({
+                        dispatch(openAlertModal({
                             type: 'warn',
                             dismissible: false,
                             title: 'Корректировки при изменении товаров в заказе',
@@ -661,7 +661,7 @@ export default function OrderDetailsSectionForm({
                             onClose: (): void => {
                                 dispatch(setNavigationLock(false));
                             }
-                        });
+                        }));
                     }
 
                     changedFields.forEach(name => {

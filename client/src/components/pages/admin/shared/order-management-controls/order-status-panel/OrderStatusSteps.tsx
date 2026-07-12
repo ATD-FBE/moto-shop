@@ -346,12 +346,12 @@ export default function OrderStatusSteps({
             });
             dispatchFieldsState({ type: 'UPDATE', payload: fieldsStateUpdates });
         } else if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось изменить статус заказа',
                 message: 'Ошибка при изменении статуса заказа.\nПодробности ошибки в консоли.'
-            });
+            }));
         }
     
         // Успешный ответ

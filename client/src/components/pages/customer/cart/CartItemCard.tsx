@@ -137,12 +137,12 @@ export default function CartItemCard({
         logRequestStatus({ context: 'CART: REMOVE ITEM', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось удалить товар из корзины',
                 message: 'Ошибка при удалении товара.\nПодробности ошибки в консоли.'
-            });
+            }));
         } else {
             setIsPendingRemoval(true);
             setAnimationState({ active: true, reason: 'pendingRemoval', phase: 'transitioning' });

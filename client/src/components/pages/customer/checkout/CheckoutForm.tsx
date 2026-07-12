@@ -749,7 +749,7 @@ export default function CheckoutForm({
                     '<span className="color-red">Заказ отменён!</span> ' +
                     'Вы будете перенаправлены на страницу корзины.';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
@@ -760,7 +760,7 @@ export default function CheckoutForm({
                         dispatch(clearLockedRoute());
                         navigate(cartPath);
                     }
-                });
+                }));
                 break;
 
             // Сумма заказа меньше минимальной
@@ -791,7 +791,7 @@ export default function CheckoutForm({
                         `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
                     : '';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
@@ -802,7 +802,7 @@ export default function CheckoutForm({
                         dispatch(clearLockedRoute());
                         navigate(cartPath);
                     }
-                });
+                }));
                 
                 break;
             }
@@ -827,7 +827,7 @@ export default function CheckoutForm({
                     `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}` +
                     '\n\n\nПожалуйста, подтвердите заказ ещё раз.';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'warn',
                     dismissible: false,
@@ -844,7 +844,7 @@ export default function CheckoutForm({
                             }, COLLAPSIBLE_ANIMATION_DURATION);
                         }
                     }
-                });
+                }));
 
                 break;
             }

@@ -168,7 +168,7 @@ export default function Checkout(): JSX.Element | null {
                     '<span className="color-red">Заказ отменён!</span> ' +
                     'Вы будете перенаправлены на страницу корзины.';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
@@ -179,7 +179,7 @@ export default function Checkout(): JSX.Element | null {
                         dispatch(clearLockedRoute());
                         navigate(cartPath);
                     }
-                });
+                }));
             } else if (status === FORM_STATUS.LIMITATION) { // Сумма заказа меньше минимальной
                 const {
                     tradeProductList, cartItemList, customerDiscount, orderDraft, orderItemAdjustments
@@ -203,7 +203,7 @@ export default function Checkout(): JSX.Element | null {
                         `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`
                     : '';
 
-                openAlertModal({
+                dispatch(openAlertModal({
                     openDelay: 1000,
                     type: 'error',
                     dismissible: false,
@@ -214,7 +214,7 @@ export default function Checkout(): JSX.Element | null {
                         dispatch(clearLockedRoute());
                         navigate(cartPath);
                     }
-                });
+                }));
             }
 
             return setSubmitStatus(finalStatus);
@@ -234,13 +234,13 @@ export default function Checkout(): JSX.Element | null {
                 '<span className="bold underline">Изменения товаров в заказе:</span>' +
                 `\n\n${formatCheckoutAdjustmentLogs(orderItemAdjustments)}`;
 
-            openAlertModal({
+            dispatch(openAlertModal({
                 openDelay: 1000,
                 type: 'warn',
                 dismissible: false,
                 title: 'Заказ был синхронизирован с текущими данными каталога',
                 message: adjustmentsMsg
-            });
+            }));
         }
     };
 
@@ -287,7 +287,7 @@ export default function Checkout(): JSX.Element | null {
     };
 
     const handleDraftExpiration = (): void => {
-        closeConfirmModal();
+        dispatch(closeConfirmModal());
         cancelOrderDraftAndRedirect();
     };
 
@@ -319,7 +319,7 @@ export default function Checkout(): JSX.Element | null {
         if (lockedStatuses.has(submitStatus)) return; // Закрытый статус => выход
 
         // Показ модального окна подтверждения (с запросом на отмену заказа)
-        openConfirmModal({
+        dispatch(openConfirmModal({
             dismissible: false,
             prompt: 'Вы точно хотите покинуть страницу оформления заказа?',
             confirmBtnLabel: 'Отменить заказ',
@@ -329,7 +329,7 @@ export default function Checkout(): JSX.Element | null {
             onCancel: (): void => {
                 dispatch(setLockedRouteCancelPath(null));
             }
-        });
+        }));
     }, [cancelPath, submitStatus, openConfirmModal, dispatch]);
 
     if (!user || !orderId) return null;

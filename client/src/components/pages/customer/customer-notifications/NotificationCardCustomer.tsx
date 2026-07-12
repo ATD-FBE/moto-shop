@@ -38,12 +38,12 @@ export default function NotificationCardCustomer({
         logRequestStatus({ context: 'NOTIFICATION: MARK AS READ', status, message });
         
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось отметить уведомление как прочитанное',
                 message: 'Ошибка при отметке уведомления.\nПодробности ошибки в консоли.'
-            });
+            }));
         } else {
             updateNotificationState(notificationId, responseData.notificationUpdateData);
     

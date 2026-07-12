@@ -142,14 +142,14 @@ export default function CustomerManagement(): JSX.Element | null {
                 ...(fieldErrors && { fieldErrors }),
                 onComplete: function() {
                     if (!fieldErrors) {
-                        openAlertModal({
+                        dispatch(openAlertModal({
                             type: 'error',
                             dismissible: false,
                             title: 'Не удалось изменить клиентскую скидку',
                             message:
                                 'Ошибка при изменении скидки клиента.\n' +
                                 'Подробности ошибки в консоли.'
-                        });
+                        }));
                     }
                     setCustomerOperationBusy(false);
                 }
@@ -178,14 +178,14 @@ export default function CustomerManagement(): JSX.Element | null {
         logRequestStatus({ context: 'CUSTOMER: TOGGLE BAN', status, message });
 
         if (status !== REQUEST_STATUS.SUCCESS) {
-            openAlertModal({
+            dispatch(openAlertModal({
                 type: 'error',
                 dismissible: false,
                 title: 'Не удалось изменить статус бана',
                 message:
                     'Ошибка при изменении статуса блокировки клиента.\n' +
                     'Подробности ошибки в консоли.'
-            });
+            }));
         } else {
             applyCustomerUpdates(customerId, responseData.customerUpdateData);
         }
