@@ -19,12 +19,12 @@ import type { ICartItem, IProduct } from '@shared/types/index.js';
 
 // Мок localStorage для проверки сохранения гостевой корзины
 const localStorageMock = (() => {
-    let store: Record<string, string> = {};
+    let testStore: Record<string, string> = {};
 
     return {
-        getItem: (key: string) => store[key] || null,
-        setItem: (key: string, value: string) => { store[key] = value.toString(); },
-        clear: () => { store = {}; }
+        getItem: (key: string) => testStore[key] || null,
+        setItem: (key: string, value: string) => { testStore[key] = value.toString(); },
+        clear: () => { testStore = {}; }
     };
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
@@ -130,7 +130,7 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
     // ==========================================
 
     describe('Thunk-функция reconcileCartWithProducts', () => {
-        const CUSTOMER_BASE = {
+        const CUSTOMER_MOCK = {
             name: 'Tested Customer',
             email: 'test-customer@motoshop.ru',
             role: USER_ROLE.CUSTOMER,
@@ -140,14 +140,14 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
         const PROD_1_ID = 'moto-prod-1';
         const PROD_2_ID = 'moto-prod-2';
 
-        const PROD_1_BASE = {
+        const PROD_1_MOCK = {
             id: PROD_1_ID,
             price: 1000,
             available: 5,
             discount: 0,
             isActive: true
         } as IProduct;
-        const PROD_2_BASE = {
+        const PROD_2_MOCK = {
             id: PROD_2_ID,
             price: 2000,
             available: 5,
@@ -155,10 +155,10 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             isActive: true
         } as IProduct;
 
-        const CART_ITEM_1_BASE = { ...defCartItemExtParams, id: PROD_1_ID, quantity: 2 };
-        const CART_ITEM_2_BASE = { ...defCartItemExtParams, id: PROD_2_ID, quantity: 1 };
+        const CART_ITEM_1_MOCK = { ...defCartItemExtParams, id: PROD_1_ID, quantity: 2 };
+        const CART_ITEM_2_MOCK = { ...defCartItemExtParams, id: PROD_2_ID, quantity: 1 };
 
-        let store: EnhancedStore<Pick<
+        let testStore: EnhancedStore<Pick<
             TRootState, 'auth' | 'cart' | 'products'>
         > & {
             dispatch: TAppDispatch
@@ -166,14 +166,14 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
     
         beforeEach(() => {
             // Установка тестовых данных в локальном хранилище
-            localStorageMock.setItem('guestCart', JSON.stringify([CART_ITEM_1_BASE, CART_ITEM_2_BASE]));
+            localStorageMock.setItem('guestCart', JSON.stringify([CART_ITEM_1_MOCK, CART_ITEM_2_MOCK]));
             
             // Создание тестового стора
             const defaultAuthState = authReducer(undefined, { type: '@@INIT' });
             const defaultCartState = cartReducer(undefined, { type: '@@INIT' });
             const defaultProductsState = productsReducer(undefined, { type: '@@INIT' });
 
-            store = configureStore({
+            testStore = configureStore({
                 reducer: {
                     auth: authReducer,
                     cart: cartReducer,
@@ -185,8 +185,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                     cart: {
                         ...defaultCartState,
                         byId: {
-                            [PROD_1_ID]: CART_ITEM_1_BASE,
-                            [PROD_2_ID]: CART_ITEM_2_BASE
+                            [PROD_1_ID]: CART_ITEM_1_MOCK,
+                            [PROD_2_ID]: CART_ITEM_2_MOCK
                         },
                         ids: [PROD_1_ID, PROD_2_ID],
                         rawTotal: 4000,         // 2 * 1000 + 1 * 2000
@@ -195,8 +195,8 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
                     products: {
                         ...defaultProductsState,
                         byId: {
-                            [PROD_1_ID]: PROD_1_BASE,
-                            [PROD_2_ID]: PROD_2_BASE
+                            [PROD_1_ID]: PROD_1_MOCK,
+                            [PROD_2_ID]: PROD_2_MOCK
                         },
                         ids: [PROD_1_ID, PROD_2_ID]
                     }
@@ -209,12 +209,12 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
         });
 
         it('должна оставить товар в корзине без изменений, если сервер не прислал его в списке', () => {
-            const serverProducts = [{ ...PROD_2_BASE }];
+            const serverProducts = [{ ...PROD_2_MOCK }];
 
-            store.dispatch(reconcileCartWithProducts(serverProducts));
+            testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
             // Проверка данных после изменения состояния
-            const resultState = store.getState();
+            const resultState = testStore.getState();
             
             expect(resultState.cart.ids).toEqual([PROD_1_ID, PROD_2_ID]);
             
@@ -237,14 +237,14 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'если товара больше нет в наличии',
             () => {
                 const serverProducts = [
-                    { ...PROD_1_BASE, available: 0 },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK, available: 0 },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 const prod1 = resultState.products.byId[PROD_1_ID];
                 expect(prod1).not.toBeNull();
@@ -257,7 +257,7 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
         
                 const guestCart = loadGuestCartFromLocalStorage();
                 expect(guestCart.length).toBe(1);
-                expect(guestCart[0]).toEqual({ ...CART_ITEM_2_BASE });
+                expect(guestCart[0]).toEqual({ ...CART_ITEM_2_MOCK });
             }
         );
 
@@ -266,14 +266,14 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'если кол-во товара на складе меньше, чем заказно в корзине',
             () => {
                 const serverProducts = [
-                    { ...PROD_1_BASE, available: 1 },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK, available: 1 },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 const prod1 = resultState.products.byId[PROD_1_ID];
                 expect(prod1).not.toBeNull();
@@ -291,7 +291,7 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
         
                 const guestCart = loadGuestCartFromLocalStorage();
                 expect(guestCart.length).toBe(2);
-                expect(guestCart[0]).toEqual({ ...CART_ITEM_1_BASE, quantity: 1 });
+                expect(guestCart[0]).toEqual({ ...CART_ITEM_1_MOCK, quantity: 1 });
             }
         );
 
@@ -300,15 +300,15 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'если его кол-во на складе меньше, чем заказано в корзине',
             () => {
                 const serverProducts = [
-                    { ...PROD_1_BASE, available: 1 },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK, available: 1 },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(login({ user: CUSTOMER_BASE }));
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(login({ user: CUSTOMER_MOCK }));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 expect(resultState.auth.isAuthenticated).toBe(true);
 
@@ -334,15 +334,15 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'если его кол-во на складе больше не доступно',
             () => {
                 const serverProducts = [
-                    { ...PROD_1_BASE },
-                    { ...PROD_2_BASE, available: 0 }
+                    { ...PROD_1_MOCK },
+                    { ...PROD_2_MOCK, available: 0 }
                 ];
         
-                store.dispatch(login({ user: CUSTOMER_BASE }));
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(login({ user: CUSTOMER_MOCK }));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 expect(resultState.auth.isAuthenticated).toBe(true);
 
@@ -368,25 +368,25 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'должна установить флаги quantityReduced и outOfStock в false для товара в корзине покупателя, ' +
             'если его кол-во на складе увеличилось и стало больше или равно заказанному количеству',
             () => {
-                store.dispatch(setCart([
+                testStore.dispatch(setCart([
                     { 
-                        ...CART_ITEM_1_BASE, 
+                        ...CART_ITEM_1_MOCK, 
                         quantityReduced: true, // Инициализация флага в true
                         outOfStock: true       // Инициализация флага в true
                     },
-                    { ...CART_ITEM_2_BASE }
+                    { ...CART_ITEM_2_MOCK }
                 ]));
 
                 const serverProducts = [
-                    { ...PROD_1_BASE, available: 20 },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK, available: 20 },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(login({ user: CUSTOMER_BASE }));
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(login({ user: CUSTOMER_MOCK }));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 expect(resultState.auth.isAuthenticated).toBe(true);
 
@@ -413,15 +413,15 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'если товар не доступен для продажи',
             () => {
                 const serverProducts = [
-                    { ...PROD_1_BASE, isActive: false },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK, isActive: false },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(login({ user: CUSTOMER_BASE }));
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(login({ user: CUSTOMER_MOCK }));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 expect(resultState.auth.isAuthenticated).toBe(true);
 
@@ -445,24 +445,24 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
             'должна установить флаг deleted в false для товара в корзине покупателя, ' +
             'если товар присутствует в серверном списке',
             () => {
-                store.dispatch(setCart([
+                testStore.dispatch(setCart([
                     { 
-                        ...CART_ITEM_1_BASE, 
+                        ...CART_ITEM_1_MOCK, 
                         deleted: true, // Инициализация флага в true
                     },
-                    { ...CART_ITEM_2_BASE }
+                    { ...CART_ITEM_2_MOCK }
                 ]));
 
                 const serverProducts = [
-                    { ...PROD_1_BASE },
-                    { ...PROD_2_BASE }
+                    { ...PROD_1_MOCK },
+                    { ...PROD_2_MOCK }
                 ];
         
-                store.dispatch(login({ user: CUSTOMER_BASE }));
-                store.dispatch(reconcileCartWithProducts(serverProducts));
+                testStore.dispatch(login({ user: CUSTOMER_MOCK }));
+                testStore.dispatch(reconcileCartWithProducts(serverProducts));
         
                 // Проверка данных после изменения состояния
-                const resultState = store.getState();
+                const resultState = testStore.getState();
 
                 expect(resultState.auth.isAuthenticated).toBe(true);
 
@@ -482,14 +482,14 @@ describe('Services Unit Tests - Модуль Cart Service', () => {
 
         it('должна пересчитать суммы заказа, если у товара изменилась цена и/или скидка', () => {
             const serverProducts = [
-                { ...PROD_1_BASE, price: 1500 },
-                { ...PROD_2_BASE, discount: 5 }
+                { ...PROD_1_MOCK, price: 1500 },
+                { ...PROD_2_MOCK, discount: 5 }
             ];
     
-            store.dispatch(reconcileCartWithProducts(serverProducts));
+            testStore.dispatch(reconcileCartWithProducts(serverProducts));
     
             // Проверка данных после изменения состояния
-            const resultState = store.getState();
+            const resultState = testStore.getState();
 
             const prod1 = resultState.products.byId[PROD_1_ID];
             expect(prod1).not.toBeNull();
