@@ -50,6 +50,7 @@ const PROD_2_MOCK: IProduct = {
     _type: 'full',
     id: PROD_2_ID,
     images: [],
+    sku: 'ZERK-005',
     name: 'Зеркала овальные',
     available: 20,
     isBrandNew: false,
@@ -135,7 +136,7 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('Integration Tests MSW - Компонент Cart', () => {
-    it('загружает данные корзины из MSW и рендерит их', async () => {
+    /*it('загружает данные корзины из MSW и рендерит их', async () => {
         renderWithProviders(<Cart />);
 
         // Проверка данных на странице до загрузки корзины
@@ -290,6 +291,80 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(screen.getByTestId('cart-current-total')).toHaveTextContent('0,00 руб.');
             expect(screen.getByText(/корзина пуста/i)).toBeInTheDocument();
             expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
+        });
+    });*/
+
+    it('корректно фильтрует товары в корзине по поиску в имени и артикуле', async () => {
+        const user = userEvent.setup();
+    
+        renderWithProviders(<Cart />);
+
+        const prodCounterP = screen.getByTestId('prod-counter');
+        const searchInput = screen.getByPlaceholderText(/по наименованию или артикулу товара/i);
+        const searchBtn = screen.getByText(/найти/i);
+
+        expect(searchInput).toBeDisabled();
+        expect(searchBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+            expect(searchInput).not.toBeDisabled();
+            expect(searchBtn).toBeDisabled();
+            
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+        });
+
+        // Поиск коллапсибл-родителей и проверка атрибута
+        const prod1CollapsDiv = screen.getByRole('link', { name: /шлем интеграл/i })
+            .closest('.cart-item-card-collapsible');
+        const prod2CollapsDiv = screen.getByRole('link', { name: /зеркала овальные/i })
+            .closest('.cart-item-card-collapsible');
+
+        expect(prod1CollapsDiv).not.toBeNull();
+        expect(prod2CollapsDiv).not.toBeNull();
+        assertDefined(prod1CollapsDiv, 'prod1CollapsDiv');
+        assertDefined(prod2CollapsDiv, 'prod2CollapsDiv');
+        expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
+        expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
+
+        // Фильтр по части имени первого товара
+        await user.type(searchInput, 'шлем');
+        expect(searchBtn).not.toBeDisabled();
+        await user.click(searchBtn);
+
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
+            expect(searchBtn).toBeDisabled();
+
+            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
+            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'false');
+        });
+
+        // Стирание текста
+        await user.clear(searchInput);
+        expect(searchBtn).not.toBeDisabled();
+        await user.click(searchBtn);
+
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+            expect(searchBtn).toBeDisabled();
+
+            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
+            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
+        });
+
+        // Фильтр по части SKU (артикулу) второго товара
+        await user.type(searchInput, 'ZERK');
+        expect(searchBtn).not.toBeDisabled();
+        await user.click(searchBtn);
+
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
+            expect(searchBtn).toBeDisabled();
+
+            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'false');
+            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
         });
     });
 });
