@@ -95,6 +95,7 @@ export default function Collapsible({
         <div
             ref={wrapperRef}
             className={cn(className, 'collapsible', { 'fully-expanded': fullyExpanded })}
+            data-expanded={isExpanded}
         >
             {showContextIndicator && (
                 <div className="context-indicator">
