@@ -1,5 +1,5 @@
 import { userEvent } from '@testing-library/user-event';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { ReactElement } from 'react';
@@ -32,6 +32,7 @@ const CUSTOMER_MOCK: IUser = {
 
 const PROD_1_ID = 'moto-prod-1';
 const PROD_2_ID = 'moto-prod-2';
+const PROD_3_ID = 'moto-prod-3';
 
 const PROD_1_MOCK: IProduct = {
     _type: 'full',
@@ -292,12 +293,18 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(screen.getByText(/корзина пуста/i)).toBeInTheDocument();
             expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
         });
-    });*/
+    });
 
     it('корректно фильтрует товары в корзине по поиску в имени и артикуле', async () => {
         const user = userEvent.setup();
     
         renderWithProviders(<Cart />);
+
+        // Динамические геттеры для элементов
+        const getProd1CollapsDiv = () =>
+            screen.getByRole('link', { name: /шлем интеграл/i }).closest('.cart-item-card-collapsible');
+        const getProd2CollapsDiv = () =>
+            screen.getByRole('link', { name: /зеркала овальные/i }).closest('.cart-item-card-collapsible');
 
         const prodCounterP = screen.getByTestId('prod-counter');
         const searchInput = screen.getByPlaceholderText(/по наименованию или артикулу товара/i);
@@ -311,22 +318,9 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(searchInput).not.toBeDisabled();
             expect(searchBtn).toBeDisabled();
             
-            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
-            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
         });
-
-        // Поиск коллапсибл-родителей и проверка атрибута
-        const prod1CollapsDiv = screen.getByRole('link', { name: /шлем интеграл/i })
-            .closest('.cart-item-card-collapsible');
-        const prod2CollapsDiv = screen.getByRole('link', { name: /зеркала овальные/i })
-            .closest('.cart-item-card-collapsible');
-
-        expect(prod1CollapsDiv).not.toBeNull();
-        expect(prod2CollapsDiv).not.toBeNull();
-        assertDefined(prod1CollapsDiv, 'prod1CollapsDiv');
-        assertDefined(prod2CollapsDiv, 'prod2CollapsDiv');
-        expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
-        expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
 
         // Фильтр по части имени первого товара
         await user.type(searchInput, 'шлем');
@@ -337,8 +331,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
             expect(searchBtn).toBeDisabled();
 
-            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
-            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'false');
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'false');
         });
 
         // Стирание текста
@@ -350,8 +344,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
             expect(searchBtn).toBeDisabled();
 
-            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'true');
-            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
         });
 
         // Фильтр по части SKU (артикулу) второго товара
@@ -363,8 +357,252 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
             expect(searchBtn).toBeDisabled();
 
-            expect(prod1CollapsDiv).toHaveAttribute('data-expanded', 'false');
-            expect(prod2CollapsDiv).toHaveAttribute('data-expanded', 'true');
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'false');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+        });
+    });
+
+    it('корректно фильтрует и проблемные товары в корзине и сбрасывает фильтр', async () => {
+        const user = userEvent.setup();
+    
+        server.use(
+            http.get('/api/cart', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    tradeProductList: [
+                        PROD_1_MOCK,
+                        { ...PROD_2_MOCK, available: 3 }
+                    ],
+                    cartItemList: [
+                        CART_ITEM_1_MOCK,
+                        { ...CART_ITEM_2_MOCK, quantityReduced: true }
+                    ]
+                });
+            })
+        );
+    
+        renderWithProviders(<Cart />);
+    
+        // Динамические геттеры для элементов
+        const getWarningsBtn = () => screen.getByRole('button', { name: /показать проблемные товары/i });
+        const queryAllProdsBtn = () => screen.queryByRole('button', { name: /все товары/i });
+        const getAllProdsBtn = () => screen.getByRole('button', { name: /все товары/i });
+        const getProd1CollapsDiv = () =>
+            screen.getByRole('link', { name: /шлем интеграл/i }).closest('.cart-item-card-collapsible');
+        const getProd2CollapsDiv = () =>
+            screen.getByRole('link', { name: /зеркала овальные/i }).closest('.cart-item-card-collapsible');
+    
+        const prodCounterP = screen.getByTestId('prod-counter');
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+    
+            expect(getWarningsBtn()).toBeInTheDocument();
+            expect(queryAllProdsBtn()).toBeNull();
+            
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+        });
+    
+        // Фильтр по проблемным товарам
+        expect(getWarningsBtn()).not.toBeDisabled();
+        await user.click(getWarningsBtn());
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
+    
+            expect(getWarningsBtn()).toBeInTheDocument();
+            expect(getAllProdsBtn()).toBeInTheDocument();
+    
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'false');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+        });
+    
+        // Очистка фильтра
+        expect(getAllProdsBtn()).not.toBeDisabled();
+        await user.click(getAllProdsBtn());
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+            
+            expect(getWarningsBtn()).toBeInTheDocument();
+            expect(queryAllProdsBtn()).toBeNull();
+    
+            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+        });
+    });
+
+    it('исправляет корзину с уменьшенными по кол-ву и отсутствующие товарами после ошибки', async () => {
+        const user = userEvent.setup();
+    
+        server.use(
+            http.get('/api/cart', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    tradeProductList: [
+                        { ...PROD_1_MOCK, available: 0 },
+                        { ...PROD_2_MOCK, available: 3 }
+                    ],
+                    cartItemList: [
+                        { ...CART_ITEM_1_MOCK, outOfStock: true },
+                        { ...CART_ITEM_2_MOCK, quantityReduced: true }
+                    ]
+                });
+            }),
+            http.patch('/api/cart/warnings', () => {
+                return HttpResponse.json({
+                    message: 'Ошибка при исправлении проблемных товаров в корзине',
+                }, { status: 500 });
+            })
+        );
+    
+        renderWithProviders(<Cart />);
+
+        const prodCounterP = screen.getByTestId('prod-counter');
+
+        expect(screen.queryByRole('button', { name: /исправить вс[её]/i })).toBeNull();
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+
+            expect(screen.getByTestId('cart-original-total')).toHaveTextContent('45 000,00 руб.');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.getByTestId('cart-saved-total')).toHaveTextContent('6 500,00 руб.');
+    
+            expect(screen.getByRole('button', { name: /исправить вс[её]/i })).toBeInTheDocument();
+            
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+        });
+    
+        // Клик на кнопку исправления проблемных товаров -> ошибка
+        const fixWarningsBtn = screen.getByRole('button', { name: /исправить вс[её]/i });
+        expect(fixWarningsBtn).not.toBeDisabled();
+        await user.click(fixWarningsBtn);
+
+        await waitFor(() => {
+            expect(screen.getByText(/ошибка сервера/i)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /повторить/i })).toBeInTheDocument();
+        });
+
+        // Установка успешного ответа для фикса проблем корзины
+        server.use(
+            http.patch('/api/cart/warnings', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    message: 'Проблемные товары в корзине успешно исправлены',
+                    tradeProductList: [
+                        { ...PROD_2_MOCK, available: 3 }
+                    ],
+                    cartItemList: [
+                        { ...CART_ITEM_2_MOCK, quantity: 3 }
+                    ]
+                }, { status: 200 });
+            })
+        );
+
+        // Клик на кнопку исправления проблемных товаров -> успех
+        expect(fixWarningsBtn).not.toBeDisabled();
+        await user.click(fixWarningsBtn);
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 1 товарная позиция');
+
+            // Сумма без скидки: 0 * 20000 + 3 * 1000 = 0 + 3000 = 3000
+            expect(screen.getByTestId('cart-original-total')).toHaveTextContent('3 000,00 руб.');
+
+            // Сумма со скидкой: 0 * (20000 - 15%) + 3 * (1000 - 10%) = 0 + 2700 = 2700
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('2 700,00 руб.');
+
+            // Скидка: 3000 - 2700 = 300
+            expect(screen.getByTestId('cart-saved-total')).toHaveTextContent('300,00 руб.');
+    
+            expect(screen.queryByRole('button', { name: /исправить вс[её]/i })).toBeNull();
+            
+            expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+        });
+    });*/
+
+    it('исправляет неактивные и удалённые из магазина товары в корзине', async () => {
+        const user = userEvent.setup();
+    
+        server.use(
+            http.get('/api/cart', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    tradeProductList: [
+                        { ...PROD_1_MOCK, isActive: false }
+                    ],
+                    cartItemList: [
+                        { ...CART_ITEM_1_MOCK, inactive: true },
+                        {
+                            ...CART_ITEM_2_MOCK,
+                            deleted: true,
+                            productSnapshot: {
+                                _type: 'snapshot',
+                                name: PROD_2_MOCK.name
+                            }
+                        }
+                    ]
+                });
+            }),
+            http.patch('/api/cart/warnings', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    message: 'Проблемные товары в корзине успешно исправлены',
+                    tradeProductList: [],
+                    cartItemList: []
+                });
+            })
+        );
+    
+        renderWithProviders(<Cart />);
+
+        const prodCounterP = screen.getByTestId('prod-counter');
+
+        expect(screen.queryByRole('button', { name: /исправить вс[её]/i })).toBeNull();
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
+
+            // Сумма без скидки: 2 * 20000 + 5 * 0 = 40000 + 0 = 40000
+            expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('40 000,00 руб.');
+
+            // Сумма со скидкой: 2 * (20000 - 15%) + 5 * (0 - 10%) = 34000 + 0 = 34000
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('34 000,00 руб.');
+
+            // Скидка: 40000 - 34000 = 6000
+            expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('6 000,00 руб.');
+    
+            expect(screen.getByRole('button', { name: /исправить вс[её]/i })).toBeInTheDocument();
+            
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.queryByRole('link', { name: /зеркала овальные/i })).toBeNull();
+        
+            const deletedCartItem = screen.getByTestId('deleted-cart-item');
+            expect(within(deletedCartItem).getByText(/зеркала овальные/i)).toBeInTheDocument();
+        });
+    
+        // Клик на кнопку исправления проблемных товаров
+        const fixWarningsBtn = screen.getByRole('button', { name: /исправить вс[её]/i });
+        expect(fixWarningsBtn).not.toBeDisabled();
+        await user.click(fixWarningsBtn);
+    
+        await waitFor(() => {
+            expect(prodCounterP).toHaveTextContent('В корзине 0 товарных позиций');
+
+            expect(screen.queryByTestId('cart-original-total')).toBeNull();
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('0,00 руб.');
+            expect(screen.queryByTestId('cart-saved-total')).toBeNull();
+    
+            expect(screen.queryByRole('button', { name: /исправить вс[её]/i })).toBeNull();
+            
+            expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
+            expect(screen.queryByRole('link', { name: /зеркала овальные/i })).toBeNull();
+            
+            expect(screen.queryByTestId('deleted-cart-item')).toBeNull();
         });
     });
 });
