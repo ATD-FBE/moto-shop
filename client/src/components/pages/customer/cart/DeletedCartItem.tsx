@@ -92,7 +92,7 @@ export default function DeletedCartItem({
     }, []);
 
     return (
-        <div className="cart-item-deleted">
+        <div className="cart-item-deleted" data-testid="deleted-cart-item">
             <div className="cart-item-info">
                 <strong>{highlightText(title, searchQuery)}</strong><br />
                 <span className="cart-item-warning">
