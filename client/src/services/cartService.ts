@@ -58,6 +58,7 @@ export const buildCartProductData = (
     productMap: Record<string, IProduct>
 ): ICartProductDataEntry[] =>
     cartItemList
+        // У удалённых товаров нет доступа к цене для рассчёта сумм -> фильтр по удалённым
         .filter(cartItem => !cartItem.deleted)
         .map(cartItem => {
             const product = productMap[cartItem.id];
