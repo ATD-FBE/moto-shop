@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import parseHTML from 'html-react-parser';
 import cn from 'classnames';
@@ -31,7 +31,7 @@ export default function AlertModal(): JSX.Element | null {
     } = useAppSelector(state => state.modalAlert);
 
     const [isVisible, setIsVisible, isVisibleRef] = useSyncedStateWithRef(false); // Анимация
-    const [isDisabled, setIsDisabled] = useState(false);
+    const [isDisabled, setIsDisabled, isDisabledRef] = useSyncedStateWithRef(false);
 
     const modalRef = useRef<HTMLDivElement | null>(null);
     const isClosingRef = useRef(false);
@@ -42,13 +42,23 @@ export default function AlertModal(): JSX.Element | null {
 
     const { onClose } = getAlertModalActions();
 
+    const startFallbackCloseTimer = () => {
+        clearFallbackCloseTimer(); 
+        
+        // Фоллбэк для закрытия модалки, если анимация закрытия не началась
+        fallbackCloseTimer.current = setTimeout(finalizeClose, MODAL_ANIMATION_DURATION + 30);
+    };
+
     const clearFallbackCloseTimer = (): void => {
-        clearTimeout(fallbackCloseTimer.current);
-        fallbackCloseTimer.current = undefined;
+        if (fallbackCloseTimer.current !== undefined) {
+            clearTimeout(fallbackCloseTimer.current);
+            fallbackCloseTimer.current = undefined;
+        }
     };
 
     const finalizeClose = (): void => {
         if (!isClosingRef.current) return;
+
         isClosingRef.current = false;
 
         clearFallbackCloseTimer();
@@ -61,20 +71,25 @@ export default function AlertModal(): JSX.Element | null {
     };
     
     const handleClose = (): void => {
+        if (isDisabledRef.current) return;
         if (isClosingRef.current) return;
+
         isClosingRef.current = true;
 
         setIsDisabled(true);
         setIsVisible(false);
-
-        // Фоллбэк для отмены через Escape, если анимация закрытия не началась
-        fallbackCloseTimer.current = setTimeout(finalizeClose, MODAL_ANIMATION_DURATION + 30);
+        startFallbackCloseTimer();
     };
 
     // Включение/отключение анимации при открытии/закрытии модального окна
     useEffect(() => {
         if (!isOpen) {
-            return setIsVisible(false);
+            if (!isVisible) return;
+
+            setIsDisabled(true);
+            setIsVisible(false);
+            startFallbackCloseTimer();
+            return;
         }
 
         clearFallbackCloseTimer();
@@ -154,7 +169,13 @@ export default function AlertModal(): JSX.Element | null {
                 </div>
 
                 <div className="button-box">
-                    <button className="dismiss-btn" onClick={handleClose} disabled={isDisabled}>
+                    <button
+                        className="dismiss-btn"
+                        onClick={handleClose}
+                        disabled={isDisabled}
+                        aria-label="ОК"
+                        data-testid="dismiss-modal-btn"
+                    >
                         <span className="icon">✅</span>
                         {dismissBtnLabel}
                     </button>
