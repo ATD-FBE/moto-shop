@@ -160,7 +160,7 @@ export default function AlertModal(): JSX.Element | null {
                     {title}
                 </h3>
 
-                <div className="message">
+                <div className="message" data-testid="alert-modal-message">
                     {message.split(/\r?\n/).map((paragraph, idx) =>
                         paragraph
                             ? <p key={`modal-message-${idx}`}>{parse(paragraph)}</p>
