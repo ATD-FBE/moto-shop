@@ -37,23 +37,18 @@ export default function ConfirmModal(): JSX.Element | null {
 
     const { onConfirm, onFinalize, onCancel, onClose } = getConfirmModalActions();
 
-    const handleConfirm = async () => {
-        try {
-            setIsDisabled(true);
-            setHasError(false);
-            await onConfirm?.();
-            isFinalizeRef.current = true;
-            isClosingRef.current = true;
-            setIsVisible(false);
-        } catch {
-            setIsDisabled(false);
-            setHasError(true);
-        }
+    const startFallbackCloseTimer = () => {
+        clearFallbackCloseTimer(); // Защита от дублирования таймеров
+        
+        // Фоллбэк для закрытия модалки, если анимация закрытия не началась
+        fallbackCloseTimer.current = setTimeout(finalizeClose, MODAL_ANIMATION_DURATION + 30);
     };
 
     const clearFallbackCloseTimer = () => {
-        clearTimeout(fallbackCloseTimer.current);
-        fallbackCloseTimer.current = undefined;
+        if (fallbackCloseTimer.current !== undefined) {
+            clearTimeout(fallbackCloseTimer.current);
+            fallbackCloseTimer.current = undefined;
+        }
     };
 
     const finalizeClose = () => {
@@ -74,6 +69,21 @@ export default function ConfirmModal(): JSX.Element | null {
         if (lastFocusedElemRef.current instanceof HTMLElement) lastFocusedElemRef.current.focus();
         lastFocusedElemRef.current = null;
     };
+
+    const handleConfirm = async () => {
+        try {
+            setIsDisabled(true);
+            setHasError(false);
+            await onConfirm?.();
+            isFinalizeRef.current = true;
+            isClosingRef.current = true;
+            setIsVisible(false);
+            startFallbackCloseTimer();
+        } catch {
+            setIsDisabled(false);
+            setHasError(true);
+        }
+    };
     
     const handleCancel = async () => {
         if (isDisabledRef.current) return;
@@ -84,19 +94,27 @@ export default function ConfirmModal(): JSX.Element | null {
             await onCancel?.();
             isClosingRef.current = true;
             setIsVisible(false);
-
-            // Фоллбэк для отмены через Escape, если анимация закрытия не началась
-            fallbackCloseTimer.current = setTimeout(finalizeClose, MODAL_ANIMATION_DURATION + 30);
+            startFallbackCloseTimer();
         } catch {
             setIsDisabled(false);
             setHasError(true);
         }
     };
 
+    // Очистка fallback-таймер при размонтировании
+    useEffect(() => {
+        return () => clearFallbackCloseTimer();
+    }, []);
+
     // Включение/отключение анимации при открытии/закрытии модального окна
     useEffect(() => {
         if (!isOpen) {
-            return setIsVisible(false);
+            if (!isVisibleRef.current) return;
+
+            setIsDisabled(true);
+            setIsVisible(false);
+            startFallbackCloseTimer();
+            return;
         }
 
         clearFallbackCloseTimer();
@@ -155,7 +173,7 @@ export default function ConfirmModal(): JSX.Element | null {
         <div
             ref={modalRef}
             className={cn('modal-backdrop-portal', { 'visible' : isVisible })}
-            onClick={dismissible && !isDisabled ? handleCancel : undefined}
+            onClick={dismissible ? handleCancel : undefined}
         >
             <div
                 className="confirm-modal"
@@ -181,12 +199,24 @@ export default function ConfirmModal(): JSX.Element | null {
                 </p>
 
                 <div className="buttons-box">
-                    <button className="confirm-btn" onClick={handleConfirm} disabled={isDisabled}>
+                    <button
+                        className="confirm-btn"
+                        onClick={handleConfirm}
+                        disabled={isDisabled}
+                        aria-label="Подтвердить"
+                        data-testid="confirm-modal-btn"
+                    >
                         <span className="icon">✅</span>
                         {confirmBtnLabel}
                     </button>
 
-                    <button className="cancel-btn" onClick={handleCancel} disabled={isDisabled}>
+                    <button
+                        className="cancel-btn"
+                        onClick={handleCancel}
+                        disabled={isDisabled}
+                        aria-label="Отменить"
+                        data-testid="cancel-modal-btn"
+                    >
                         <span className="icon">❌</span>
                         {cancelBtnLabel}
                     </button>
