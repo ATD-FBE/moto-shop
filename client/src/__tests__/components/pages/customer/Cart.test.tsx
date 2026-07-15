@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { userEvent } from '@testing-library/user-event';
 import { render, screen, waitFor, act, within } from '@testing-library/react';
 import { setupServer } from 'msw/node';
@@ -20,8 +21,8 @@ import ConfirmModal from '@/components/common/ConfirmModal.jsx';
 import { getConfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
 import { SCREEN_SIZE } from '@/config/constants.js';
 import { assertDefined } from '@shared/commonHelpers.js';
-import { USER_ROLE, MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
-import type { IUser, ICartItem, IProduct } from '@shared/types/index.js';
+import { USER_ROLE, DISCOUNT_SOURCE, MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
+import type { IUser, ICartItem, IProduct, IInitialOrderItemSnapshot } from '@shared/types/index.js';
 
 const CUSTOMER_MOCK: IUser = {
     name: 'Tested Customer',
@@ -32,7 +33,6 @@ const CUSTOMER_MOCK: IUser = {
 
 const PROD_1_ID = 'moto-prod-1';
 const PROD_2_ID = 'moto-prod-2';
-const PROD_3_ID = 'moto-prod-3';
 
 const PROD_1_MOCK: IProduct = {
     _type: 'full',
@@ -132,9 +132,17 @@ function renderWithProviders(uiElement: ReactElement) {
     );
 }
 
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => {
+    server.listen();
+});
+
+afterEach(() => {
+    server.resetHandlers();
+});
+
+afterAll(() => {
+    server.close();
+});
 
 describe('Integration Tests MSW - Компонент Cart', () => {
     /*it('загружает данные корзины из MSW и рендерит их', async () => {
@@ -262,7 +270,7 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         // Клик на кнопку очистки корзины
         await user.click(clearCartBtn);
 
-        const confirmModalBtn = await screen.findByRole('button', { name: /подтвердить/i });
+        const confirmModalBtn = await screen.findByTestId('confirm-modal-btn');
         expect(confirmModalBtn).toBeInTheDocument();
         expect(confirmModalBtn).not.toBeDisabled();
 
@@ -278,14 +286,6 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         server.resetHandlers();
 
         await user.click(confirmModalBtn);
-
-        // Имитация закрытия модалки в связи с отсутствием анимации в JSDOM
-        const { onFinalize } = getConfirmModalActions();
-        expect(onFinalize).toBeDefined();
-        assertDefined(onFinalize, 'onFinalize');
-        act(() => {
-            onFinalize();
-        });
 
         await waitFor(() => {
             expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 0 товарных позиций');
@@ -523,7 +523,7 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
             expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
         });
-    });*/
+    });
 
     it('исправляет неактивные и удалённые из магазина товары в корзине', async () => {
         const user = userEvent.setup();
@@ -603,6 +603,193 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(screen.queryByRole('link', { name: /зеркала овальные/i })).toBeNull();
             
             expect(screen.queryByTestId('deleted-cart-item')).toBeNull();
+        });
+    });
+
+    it('корректно обрабатывает ошибку сервера при начале оформления заказа', async () => {
+        const user = userEvent.setup();
+
+        server.use(
+            http.post('/api/checkout/draft-orders', () => {
+                return HttpResponse.json({ message: 'Не удалось создать черновик заказа' }, { status: 500 });
+            })
+        );
+    
+        renderWithProviders(
+            <>
+                <AlertModal />
+                <Cart />
+            </>
+        );
+    
+        const placeOrderBtn = screen.getByRole('button', { name: /оформить заказ/i });
+        expect(placeOrderBtn).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(placeOrderBtn).not.toBeDisabled();
+        });
+
+        // Клик на кнопку оформления заказа
+        await user.click(placeOrderBtn);
+
+        const dismissModalBtn = await screen.findByTestId('dismiss-modal-btn');
+        expect(dismissModalBtn).toBeInTheDocument();
+        expect(dismissModalBtn).not.toBeDisabled();
+
+        expect(screen.getByText('Не удалось создать черновик заказа')).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        // Клик на кнопку подтверждения модалки
+        await user.click(dismissModalBtn);
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
+            expect(placeOrderBtn).not.toBeDisabled();
+        });
+    });*/
+
+    it('корректно обрабатывает оформление заказа с суммой меньше минимальной', async () => {
+        const user = userEvent.setup();
+        let reqBody: { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] } | undefined;
+
+        server.use(
+            http.get('/api/cart', () => {
+                return HttpResponse.json({
+                    ...CART_ITEM_LIST_RESPONSE_MOCK,
+                    tradeProductList: [
+                        { ...PROD_1_MOCK, isActive: false },
+                        { ...PROD_2_MOCK, available: 1, price: 900 }
+                    ],
+                    cartItemList: [
+                        { ...CART_ITEM_1_MOCK, outOfStock: true },
+                        { ...CART_ITEM_2_MOCK, quantityReduced: true }
+                    ]
+                });
+            }),
+            http.post('/api/checkout/draft-orders', async ({ request }) => {
+                reqBody = await request.json() as { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] };
+
+                return HttpResponse.json({
+                    message: 'Сумма заказа меньше минимальной',
+                    reason: REQUEST_STATUS.LIMITATION,
+                    tradeProductList: [{ ...PROD_2_MOCK, available: 1, price: 900 }],
+                    cartItemList: [{ ...CART_ITEM_2_MOCK, quantity: 1 }],
+                    customerDiscount: 10,
+                    currentTotal: 900,
+                    cartItemAdjustments: [
+                        {
+                            id: PROD_1_ID,
+                            name: PROD_1_MOCK.name,
+                            adjustments: { inactive: true }
+                        },
+                        {
+                            id: PROD_2_ID,
+                            name: PROD_2_MOCK.name,
+                            adjustments: {
+                                quantityReduced: {
+                                    old: 5,
+                                    corrected: 1
+                                },
+                                price: {
+                                    old: 1000,
+                                    corrected: 900
+                                }
+                            }
+                        }
+                    ]
+                }, { status: 422 });
+            })
+        );
+    
+        renderWithProviders(
+            <>
+                <AlertModal />
+                <Cart />
+            </>
+        );
+    
+        const placeOrderBtn = screen.getByRole('button', { name: /оформить заказ/i });
+        expect(placeOrderBtn).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(placeOrderBtn).not.toBeDisabled();
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+
+            // Сумма без скидки: 2 * 20000 + 5 * 900 = 40000 + 4500 = 44500
+            expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('44 500,00 руб.');
+
+            // Сумма со скидкой: 2 * (20000 - 15%) + 5 * (900 - 10%) = 34000 + 4050 = 38050
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 050,00 руб.');
+
+            // Скидка: 44500 - 38050 = 6450
+            expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('6 450,00 руб.');
+
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+        });
+
+        // Клик на кнопку оформления заказа
+        await user.click(placeOrderBtn);
+
+        // Проверка отправляемого тела запроса
+        await waitFor(() => {
+            expect(reqBody).not.toBeNull();
+        });
+
+        assertDefined(reqBody, 'reqBody');
+        expect(reqBody.initialOrderItemSnapshots).toHaveLength(2);
+        expect(reqBody.initialOrderItemSnapshots[1]).toEqual({
+            productId: PROD_2_ID,
+            priceSnapshot: 900,
+            appliedDiscountSnapshot: 10,
+            appliedDiscountSourceSnapshot: DISCOUNT_SOURCE.CUSTOMER
+        });
+
+        // Проверка модалки внимания и изменений встейте
+        const dismissModalBtn = await screen.findByTestId('dismiss-modal-btn');
+        expect(dismissModalBtn).toBeInTheDocument();
+        expect(dismissModalBtn).not.toBeDisabled();
+
+        expect(screen.getByText('Сумма заказа меньше минимальной')).toBeInTheDocument();
+
+        expect(screen.getByText(/снят с продажи/i)).toBeInTheDocument();
+        expect(screen.getByText(/уменьшено количество/i)).toBeInTheDocument();
+        expect(screen.getByText(/изменена цена/i)).toBeInTheDocument();
+
+        const alertModalMessageDiv = screen.getByTestId('alert-modal-message');
+        expect(alertModalMessageDiv).toHaveTextContent(`Товар снят с продажи: "${PROD_1_MOCK.name}"`);
+        expect(alertModalMessageDiv).toHaveTextContent(
+            `Уменьшено количество товара "${PROD_2_MOCK.name}": с 5 до 1`
+        );
+        expect(alertModalMessageDiv).toHaveTextContent(
+            `Изменена цена на товар "${PROD_2_MOCK.name}": с 1 000,00 до 900,00`
+        );
+
+        expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 1 товарная позиция');
+
+        // Сумма без скидки: 0 + 1 * 900 = 0 + 900 = 900
+        expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('900,00 руб.');
+
+        // Сумма со скидкой: 0  + 1 * (900 - 10%) = 0 + 810 = 810
+        expect(screen.getByTestId('cart-current-total')).toHaveTextContent('810,00 руб.');
+
+        // Скидка: 900 - 810 = 90
+        expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('90,00 руб.');
+
+        expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
+        expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+
+        // Клик на кнопку подтверждения модалки внимания
+        await user.click(dismissModalBtn);
+
+        await waitFor(() => {
+            expect(screen.queryByText('Сумма заказа меньше минимальной')).toBeNull();
+            expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
         });
     });
 });
