@@ -932,6 +932,7 @@ export const CartItem = ({
                     showContextIndicator={false}
                     onExpandEnd={handleExpandEnd}
                     onCollapseEnd={handleCollapseEnd}
+                    data-testid="cart-item-card-collapsible"
                 >
                     <DeletedCartItem
                         id={cartItem.id}
@@ -959,6 +960,7 @@ export const CartItem = ({
                 showContextIndicator={false}
                 onExpandEnd={handleExpandEnd}
                 onCollapseEnd={handleCollapseEnd}
+                data-testid="cart-item-card-collapsible"
             >
                 <CartItemCard
                     id={cartItem.id}
