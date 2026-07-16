@@ -1,6 +1,5 @@
-import { jest } from '@jest/globals';
 import { userEvent } from '@testing-library/user-event';
-import { render, screen, waitFor, act, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { ReactElement } from 'react';
@@ -18,17 +17,26 @@ import productsReducer from '@/redux/slices/productsSlice.js';
 import Cart from '@/components/pages/customer/Cart.jsx';
 import AlertModal from '@/components/common/AlertModal.jsx';
 import ConfirmModal from '@/components/common/ConfirmModal.jsx';
-import { getConfirmModalActions, closeConfirmModal } from '@/services/modalConfirmService.js';
+import GlobalRedirect from '@/components/route-guard/GlobalRedirect.jsx';
+import { useAppLocation } from '@/hooks/storeHooks.js';
+import { routeConfig } from '@/config/appRouting.js';
 import { SCREEN_SIZE } from '@/config/constants.js';
 import { assertDefined } from '@shared/commonHelpers.js';
-import { USER_ROLE, DISCOUNT_SOURCE, MIN_ORDER_AMOUNT, REQUEST_STATUS } from '@shared/constants.js';
+import { USER_ROLE, DISCOUNT_SOURCE, REQUEST_STATUS } from '@shared/constants.js';
+import type { JSX } from 'react';
 import type { IUser, ICartItem, IProduct, IInitialOrderItemSnapshot } from '@shared/types/index.js';
+
+// Микрокомпонент для определения пути маршрута
+const LocationTracker = (): JSX.Element => {
+    const location = useAppLocation();
+    return <div data-testid="current-location">{location.pathname}</div>;
+};
 
 const CUSTOMER_MOCK: IUser = {
     name: 'Tested Customer',
     email: 'test-customer@motoshop.ru',
     role: USER_ROLE.CUSTOMER,
-    discount: 0
+    discount: 10
 };
 
 const PROD_1_ID = 'moto-prod-1';
@@ -65,14 +73,25 @@ const PROD_2_MOCK: IProduct = {
 const CART_ITEM_1_MOCK: ICartItem = { ...defCartItemExtParams, id: PROD_1_ID, quantity: 2 };
 const CART_ITEM_2_MOCK: ICartItem = { ...defCartItemExtParams, id: PROD_2_ID, quantity: 5 };
 
+const ORDER_DRAFT_1_ID = 'order-draft-1';
+const ORDER_DRAFT_2_ID = 'order-draft-2';
+
 const CART_ITEM_LIST_RESPONSE_MOCK = {
     message: 'Корзина успешно загружена',
     tradeProductList: [PROD_1_MOCK, PROD_2_MOCK],
     cartItemList: [CART_ITEM_1_MOCK, CART_ITEM_2_MOCK],
-    customerDiscount: 10
+    customerDiscount: CUSTOMER_MOCK.discount
 };
 const CART_CLEAR_RESPONSE_MOCK = {
     message: 'Корзина успешно очищена'
+};
+const ORDER_DRAFT_CREATE_RESPONSE_MOCK = {
+    message: `Черновик заказа (ID: ${ORDER_DRAFT_1_ID}) успешно создан`,
+    tradeProductList: [PROD_1_MOCK, PROD_2_MOCK],
+    cartItemList: [CART_ITEM_1_MOCK, CART_ITEM_2_MOCK],
+    customerDiscount: CUSTOMER_MOCK.discount,
+    orderId: ORDER_DRAFT_1_ID,
+    cartItemAdjustments: []
 };
 
 // rawTotal: 2 * 20000 + 5 * 1000 = 40000 + 5000 = 45000
@@ -84,6 +103,9 @@ const server = setupServer(
     }),
     http.delete('/api/cart/clear', () => {
         return HttpResponse.json(CART_CLEAR_RESPONSE_MOCK, { status: 200 });
+    }),
+    http.post('/api/checkout/draft-orders', () => {
+        return HttpResponse.json(ORDER_DRAFT_CREATE_RESPONSE_MOCK, { status: 201 });
     })
 );
 
@@ -145,7 +167,7 @@ afterAll(() => {
 });
 
 describe('Integration Tests MSW - Компонент Cart', () => {
-    /*it('загружает данные корзины из MSW и рендерит их', async () => {
+    it('загружает данные корзины из MSW и рендерит их', async () => {
         renderWithProviders(<Cart />);
 
         // Проверка данных на странице до загрузки корзины
@@ -251,8 +273,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
     
         renderWithProviders(
             <>
-                <ConfirmModal />
                 <Cart />
+                <ConfirmModal />
             </>
         );
     
@@ -300,12 +322,6 @@ describe('Integration Tests MSW - Компонент Cart', () => {
     
         renderWithProviders(<Cart />);
 
-        // Динамические геттеры для элементов
-        const getProd1CollapsDiv = () =>
-            screen.getByRole('link', { name: /шлем интеграл/i }).closest('.cart-item-card-collapsible');
-        const getProd2CollapsDiv = () =>
-            screen.getByRole('link', { name: /зеркала овальные/i }).closest('.cart-item-card-collapsible');
-
         const prodCounterP = screen.getByTestId('prod-counter');
         const searchInput = screen.getByPlaceholderText(/по наименованию или артикулу товара/i);
         const searchBtn = screen.getByText(/найти/i);
@@ -317,10 +333,19 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
             expect(searchInput).not.toBeDisabled();
             expect(searchBtn).toBeDisabled();
-            
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
         });
+
+        const cartCardCollapsibles = screen.getAllByTestId('cart-item-card-collapsible');
+        expect(cartCardCollapsibles).toHaveLength(2);
+
+        const prod1Collaps = cartCardCollapsibles[0]!;
+        const prod2Collaps = cartCardCollapsibles[1]!;
+
+        expect(within(prod1Collaps).getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+        expect(within(prod2Collaps).getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+            
+        expect(prod1Collaps).toHaveAttribute('data-expanded', 'true');
+        expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
 
         // Фильтр по части имени первого товара
         await user.type(searchInput, 'шлем');
@@ -331,8 +356,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
             expect(searchBtn).toBeDisabled();
 
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'false');
+            expect(prod1Collaps).toHaveAttribute('data-expanded', 'true');
+            expect(prod2Collaps).toHaveAttribute('data-expanded', 'false');
         });
 
         // Стирание текста
@@ -344,8 +369,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
             expect(searchBtn).toBeDisabled();
 
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(prod1Collaps).toHaveAttribute('data-expanded', 'true');
+            expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
         });
 
         // Фильтр по части SKU (артикулу) второго товара
@@ -357,8 +382,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции (показано 1)');
             expect(searchBtn).toBeDisabled();
 
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'false');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(prod1Collaps).toHaveAttribute('data-expanded', 'false');
+            expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
         });
     });
 
@@ -387,22 +412,26 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         const getWarningsBtn = () => screen.getByRole('button', { name: /показать проблемные товары/i });
         const queryAllProdsBtn = () => screen.queryByRole('button', { name: /все товары/i });
         const getAllProdsBtn = () => screen.getByRole('button', { name: /все товары/i });
-        const getProd1CollapsDiv = () =>
-            screen.getByRole('link', { name: /шлем интеграл/i }).closest('.cart-item-card-collapsible');
-        const getProd2CollapsDiv = () =>
-            screen.getByRole('link', { name: /зеркала овальные/i }).closest('.cart-item-card-collapsible');
     
         const prodCounterP = screen.getByTestId('prod-counter');
     
         await waitFor(() => {
             expect(prodCounterP).toHaveTextContent('В корзине 2 товарные позиции');
-    
             expect(getWarningsBtn()).toBeInTheDocument();
             expect(queryAllProdsBtn()).toBeNull();
-            
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
         });
+
+        const cartCardCollapsibles = screen.getAllByTestId('cart-item-card-collapsible');
+        expect(cartCardCollapsibles).toHaveLength(2);
+
+        const prod1Collaps = cartCardCollapsibles[0]!;
+        const prod2Collaps = cartCardCollapsibles[1]!;
+
+        expect(within(prod1Collaps).getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+        expect(within(prod2Collaps).getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+            
+        expect(prod1Collaps).toHaveAttribute('data-expanded', 'true');
+        expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
     
         // Фильтр по проблемным товарам
         expect(getWarningsBtn()).not.toBeDisabled();
@@ -414,8 +443,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(getWarningsBtn()).toBeInTheDocument();
             expect(getAllProdsBtn()).toBeInTheDocument();
     
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'false');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(prod1Collaps).toHaveAttribute('data-expanded', 'false');
+            expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
         });
     
         // Очистка фильтра
@@ -428,12 +457,12 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             expect(getWarningsBtn()).toBeInTheDocument();
             expect(queryAllProdsBtn()).toBeNull();
     
-            expect(getProd1CollapsDiv()).toHaveAttribute('data-expanded', 'true');
-            expect(getProd2CollapsDiv()).toHaveAttribute('data-expanded', 'true');
+            expect(prod1Collaps).toHaveAttribute('data-expanded', 'true');
+            expect(prod2Collaps).toHaveAttribute('data-expanded', 'true');
         });
     });
 
-    it('исправляет корзину с уменьшенными по кол-ву и отсутствующие товарами после ошибки', async () => {
+    it('исправляет корзину с уменьшенными по кол-ву и отсутствующими товарами после ошибки', async () => {
         const user = userEvent.setup();
     
         server.use(
@@ -606,20 +635,22 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         });
     });
 
-    it('корректно обрабатывает ошибку сервера при начале оформления заказа', async () => {
+    it('создаёт черновик заказа и перенаправляет на страницу его оформления', async () => {
         const user = userEvent.setup();
+        let reqBody: { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] } | undefined;
 
         server.use(
-            http.post('/api/checkout/draft-orders', () => {
-                return HttpResponse.json({ message: 'Не удалось создать черновик заказа' }, { status: 500 });
+            http.post('/api/checkout/draft-orders', async ({ request }) => {
+                reqBody = await request.json() as { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] };
+                return HttpResponse.json(ORDER_DRAFT_CREATE_RESPONSE_MOCK, { status: 201 });
             })
         );
     
         renderWithProviders(
-            <>
-                <AlertModal />
+            <GlobalRedirect>
                 <Cart />
-            </>
+                <LocationTracker />
+            </GlobalRedirect>
         );
     
         const placeOrderBtn = screen.getByRole('button', { name: /оформить заказ/i });
@@ -627,32 +658,164 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         expect(placeOrderBtn).toBeDisabled();
 
         await waitFor(() => {
-            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
-            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
-            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
             expect(placeOrderBtn).not.toBeDisabled();
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+
+            expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('45 000,00 руб.');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('6 500,00 руб.');
+
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
         });
 
         // Клик на кнопку оформления заказа
         await user.click(placeOrderBtn);
 
+        // Проверка отправляемого тела запроса
+        await waitFor(() => {
+            expect(placeOrderBtn).toBeDisabled();
+            expect(reqBody).not.toBeNull();
+            assertDefined(reqBody, 'reqBody');
+            expect(reqBody.initialOrderItemSnapshots).toHaveLength(2);
+            expect(reqBody.initialOrderItemSnapshots[0]).toEqual({
+                productId: PROD_1_ID,
+                priceSnapshot: PROD_1_MOCK.price,
+                appliedDiscountSnapshot: PROD_1_MOCK.discount,
+                appliedDiscountSourceSnapshot: DISCOUNT_SOURCE.PRODUCT
+            });
+        });
+
+        // Проверка перехода на страницу оформления заказа
+        const orderDraftId = ORDER_DRAFT_CREATE_RESPONSE_MOCK.orderId; 
+        const checkoutPath = routeConfig.customerCheckout.generatePath({ orderId: orderDraftId });
+
+        await waitFor(() => {
+            expect(screen.getByTestId('current-location')).toHaveTextContent(checkoutPath);
+        });
+    });
+
+    it('создаёт черновик заказа с изменениями в корзине и перенаправляет для его оформления', async () => {
+        const user = userEvent.setup();
+        let reqBody: { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] } | undefined;
+
+        server.use(
+            http.post('/api/checkout/draft-orders', async ({ request }) => {
+                reqBody = await request.json() as { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] };
+
+                return HttpResponse.json({
+                    message: `Черновик заказа (ID: ${ORDER_DRAFT_2_ID}) успешно создан`,
+                    reason: REQUEST_STATUS.LIMITATION,
+                    tradeProductList: [{ ...PROD_2_MOCK, discount: 12 }],
+                    cartItemList: [CART_ITEM_2_MOCK],
+                    customerDiscount: CUSTOMER_MOCK.discount,
+                    orderId: ORDER_DRAFT_2_ID,
+                    cartItemAdjustments: [
+                        {
+                            id: PROD_1_ID,
+                            name: PROD_1_MOCK.name,
+                            adjustments: { deleted: true }
+                        },
+                        {
+                            id: PROD_2_ID,
+                            name: PROD_2_MOCK.name,
+                            adjustments: {
+                                discount: {
+                                    old: PROD_2_MOCK.discount,
+                                    corrected: 12,
+                                    source: DISCOUNT_SOURCE.PRODUCT
+                                }
+                            }
+                        }
+                    ]
+                }, { status: 201 });
+            })
+        );
+    
+        renderWithProviders(
+            <GlobalRedirect>
+                <Cart />
+                <AlertModal />
+                <LocationTracker />
+            </GlobalRedirect>
+        );
+    
+        const placeOrderBtn = screen.getByRole('button', { name: /оформить заказ/i });
+        expect(placeOrderBtn).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(placeOrderBtn).not.toBeDisabled();
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+
+            expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('45 000,00 руб.');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('6 500,00 руб.');
+
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+        });
+
+        // Клик на кнопку оформления заказа
+        await user.click(placeOrderBtn);
+
+        // Проверка отправляемого тела запроса
+        await waitFor(() => {
+            expect(reqBody).not.toBeNull();
+            assertDefined(reqBody, 'reqBody');
+            expect(reqBody.initialOrderItemSnapshots).toHaveLength(2);
+            expect(reqBody.initialOrderItemSnapshots[1]).toEqual({
+                productId: PROD_2_ID,
+                priceSnapshot: PROD_2_MOCK.price,
+                appliedDiscountSnapshot: CUSTOMER_MOCK.discount,
+                appliedDiscountSourceSnapshot: DISCOUNT_SOURCE.CUSTOMER
+            });
+        });
+
+        // Проверка модалки внимания
         const dismissModalBtn = await screen.findByTestId('dismiss-modal-btn');
         expect(dismissModalBtn).toBeInTheDocument();
         expect(dismissModalBtn).not.toBeDisabled();
 
-        expect(screen.getByText('Не удалось создать черновик заказа')).toBeInTheDocument();
-        expect(placeOrderBtn).toBeDisabled();
+        expect(screen.getByText(
+            'Корзина была синхронизирована с текущими данными каталога'
+        )).toBeInTheDocument();
 
-        // Клик на кнопку подтверждения модалки
+        const alertModalMessageDiv = screen.getByTestId('alert-modal-message');
+        expect(alertModalMessageDiv).toHaveTextContent(`Товар удалён: "${PROD_1_MOCK.name}"`);
+        expect(alertModalMessageDiv).toHaveTextContent(
+            `Изменена скидка на товар "${PROD_2_MOCK.name}": с 0% до 12% (скидка на товар)`
+        );
+
+        // Проверка изменений в состоянии
+        expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 1 товарная позиция');
+
+        // Сумма без скидки: 0 + 5 * 1000 = 0 + 5000 = 5000
+        expect(screen.queryByTestId('cart-original-total')).toHaveTextContent('5 000,00 руб.');
+
+        // Сумма со скидкой: 0  + 5 * (1000 - 12%) = 0 + 4400 = 4400
+        expect(screen.getByTestId('cart-current-total')).toHaveTextContent('4 400,00 руб.');
+
+        // Скидка: 5000 - 4400 = 600
+        expect(screen.queryByTestId('cart-saved-total')).toHaveTextContent('600,00 руб.');
+
+        expect(screen.queryByRole('link', { name: /шлем интеграл/i })).toBeNull();
+        expect(screen.getByRole('link', { name: /зеркала овальные/i })).toBeInTheDocument();
+
+        // Клик на кнопку подтверждения модалки внимания и проверка перехода на страницу оформления заказа
         await user.click(dismissModalBtn);
 
-        await waitFor(() => {
-            expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
-            expect(placeOrderBtn).not.toBeDisabled();
-        });
-    });*/
+        const checkoutPath = routeConfig.customerCheckout.generatePath({ orderId: ORDER_DRAFT_2_ID });
 
-    it('корректно обрабатывает оформление заказа с суммой меньше минимальной', async () => {
+        await waitFor(() => {
+            expect(screen.queryByText('Корзина была синхронизирована с текущими данными каталога')).toBeNull();
+            expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
+            
+            expect(screen.getByTestId('current-location')).toHaveTextContent(checkoutPath);
+        });
+    });
+
+    it('корректно обрабатывает попытку оформить заказ с суммой меньше минимальной', async () => {
         const user = userEvent.setup();
         let reqBody: { initialOrderItemSnapshots: IInitialOrderItemSnapshot[] } | undefined;
 
@@ -678,7 +841,7 @@ describe('Integration Tests MSW - Компонент Cart', () => {
                     reason: REQUEST_STATUS.LIMITATION,
                     tradeProductList: [{ ...PROD_2_MOCK, available: 1, price: 900 }],
                     cartItemList: [{ ...CART_ITEM_2_MOCK, quantity: 1 }],
-                    customerDiscount: 10,
+                    customerDiscount: CUSTOMER_MOCK.discount,
                     currentTotal: 900,
                     cartItemAdjustments: [
                         {
@@ -707,8 +870,8 @@ describe('Integration Tests MSW - Компонент Cart', () => {
     
         renderWithProviders(
             <>
-                <AlertModal />
                 <Cart />
+                <AlertModal />
             </>
         );
     
@@ -739,27 +902,22 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         // Проверка отправляемого тела запроса
         await waitFor(() => {
             expect(reqBody).not.toBeNull();
+            assertDefined(reqBody, 'reqBody');
+            expect(reqBody.initialOrderItemSnapshots).toHaveLength(2);
+            expect(reqBody.initialOrderItemSnapshots[1]).toEqual({
+                productId: PROD_2_ID,
+                priceSnapshot: 900,
+                appliedDiscountSnapshot: CUSTOMER_MOCK.discount,
+                appliedDiscountSourceSnapshot: DISCOUNT_SOURCE.CUSTOMER
+            });
         });
 
-        assertDefined(reqBody, 'reqBody');
-        expect(reqBody.initialOrderItemSnapshots).toHaveLength(2);
-        expect(reqBody.initialOrderItemSnapshots[1]).toEqual({
-            productId: PROD_2_ID,
-            priceSnapshot: 900,
-            appliedDiscountSnapshot: 10,
-            appliedDiscountSourceSnapshot: DISCOUNT_SOURCE.CUSTOMER
-        });
-
-        // Проверка модалки внимания и изменений встейте
+        // Проверка модалки внимания
         const dismissModalBtn = await screen.findByTestId('dismiss-modal-btn');
         expect(dismissModalBtn).toBeInTheDocument();
         expect(dismissModalBtn).not.toBeDisabled();
 
         expect(screen.getByText('Сумма заказа меньше минимальной')).toBeInTheDocument();
-
-        expect(screen.getByText(/снят с продажи/i)).toBeInTheDocument();
-        expect(screen.getByText(/уменьшено количество/i)).toBeInTheDocument();
-        expect(screen.getByText(/изменена цена/i)).toBeInTheDocument();
 
         const alertModalMessageDiv = screen.getByTestId('alert-modal-message');
         expect(alertModalMessageDiv).toHaveTextContent(`Товар снят с продажи: "${PROD_1_MOCK.name}"`);
@@ -770,6 +928,7 @@ describe('Integration Tests MSW - Компонент Cart', () => {
             `Изменена цена на товар "${PROD_2_MOCK.name}": с 1 000,00 до 900,00`
         );
 
+        // Проверка изменений в состоянии
         expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 1 товарная позиция');
 
         // Сумма без скидки: 0 + 1 * 900 = 0 + 900 = 900
@@ -790,6 +949,52 @@ describe('Integration Tests MSW - Компонент Cart', () => {
         await waitFor(() => {
             expect(screen.queryByText('Сумма заказа меньше минимальной')).toBeNull();
             expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
+        });
+    });
+
+    it('корректно обрабатывает ошибку сервера при попытке оформить заказ', async () => {
+        const user = userEvent.setup();
+
+        server.use(
+            http.post('/api/checkout/draft-orders', () => {
+                return HttpResponse.json({ message: 'Не удалось создать черновик заказа' }, { status: 500 });
+            })
+        );
+    
+        renderWithProviders(
+            <>
+                <Cart />
+                <AlertModal />
+            </>
+        );
+    
+        const placeOrderBtn = screen.getByRole('button', { name: /оформить заказ/i });
+        expect(placeOrderBtn).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        await waitFor(() => {
+            expect(screen.getByTestId('prod-counter')).toHaveTextContent('В корзине 2 товарные позиции');
+            expect(screen.getByTestId('cart-current-total')).toHaveTextContent('38 500,00 руб.');
+            expect(screen.getByRole('link', { name: /шлем интеграл/i })).toBeInTheDocument();
+            expect(placeOrderBtn).not.toBeDisabled();
+        });
+
+        // Клик на кнопку оформления заказа
+        await user.click(placeOrderBtn);
+
+        const dismissModalBtn = await screen.findByTestId('dismiss-modal-btn');
+        expect(dismissModalBtn).toBeInTheDocument();
+        expect(dismissModalBtn).not.toBeDisabled();
+
+        expect(screen.getByText('Не удалось создать черновик заказа')).toBeInTheDocument();
+        expect(placeOrderBtn).toBeDisabled();
+
+        // Клик на кнопку подтверждения модалки
+        await user.click(dismissModalBtn);
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('dismiss-modal-btn')).toBeNull();
+            expect(placeOrderBtn).not.toBeDisabled();
         });
     });
 });
