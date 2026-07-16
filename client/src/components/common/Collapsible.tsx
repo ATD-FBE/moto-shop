@@ -25,7 +25,8 @@ export default function Collapsible({
     showContextIndicator = true,
     onExpandEnd,
     onCollapseEnd,
-    children
+    children,
+    ...restProps
 }: ICollapsibleProps): JSX.Element {
     const [fullyExpanded, setFullyExpanded] = useState(false);
     const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +97,7 @@ export default function Collapsible({
             ref={wrapperRef}
             className={cn(className, 'collapsible', { 'fully-expanded': fullyExpanded })}
             data-expanded={isExpanded}
+            {...restProps}
         >
             {showContextIndicator && (
                 <div className="context-indicator">
