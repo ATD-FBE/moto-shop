@@ -4,6 +4,9 @@
     "version": "1.0.0",
     "author": "ATD",
     "type": "module",
+    "engines": {
+        "node": "24.22.1"
+    },
     "dependencies": {
         "@a2seven/yoo-checkout": "^1.1.4",
         "@aws-sdk/client-s3": "^3.1073.0",
@@ -93,6 +96,8 @@
         "msw@2.15.0": true
     },
     "scripts": {
+        "serv:start": "net start MongoDB",
+        "serv:stop": "net stop MongoDB",
         "tsc": "tsc --noEmit",
         "test": "cross-env NODE_OPTIONS=\"--experimental-vm-modules --no-warnings\" jest",
         "start": "cross-env NODE_ENV=development concurrently \"nodemon --exec tsx server/main.ts\" \"npm run dev\" \"npm run ngrok:dev\"",
