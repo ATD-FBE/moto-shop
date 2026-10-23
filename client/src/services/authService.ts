@@ -253,7 +253,7 @@ export const handleLogout = (
     };
 
 const isValidUser = (data: any): data is IUser => {
-    return data && typeof data === 'object' && 'id' in data && 'email' in data && 'role' in data;
+    return data && typeof data === 'object' && 'name' in data && 'email' in data && 'role' in data;
 };
 
 const delayAndShowAlert = (alertOptions: TOpenAlertModalParams, delay = 1000): TAppThunk<void> =>
